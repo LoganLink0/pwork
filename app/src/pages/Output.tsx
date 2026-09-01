@@ -8,6 +8,7 @@ import { searchAll } from '../engine/searchAll'
 const TOOLS: { to: string; icon: string; name: string; desc: string; status: string }[] = [
   { to: '/output/report', icon: '📄', name: '报告生成器', desc: '本周/本月素材自动汇总成稿（Markdown + HTML）', status: '' },
   { to: '/output/read', icon: '🎧', name: '朗读版报告', desc: '通勤场景——用听的回顾一个周期', status: '' },
+  { to: '/output/ppt', icon: '📊', name: 'PPT 导出', desc: '报告数据 → 六七页演示文稿（本地生成 .pptx）', status: '' },
   { to: '/output/card', icon: '🖼', name: '数据快照卡片', desc: '关键数字生成分享卡片图', status: '' },
   { to: '/output/draft', icon: '✍', name: '文章草稿', desc: '速记与洞察聚合 → 博客骨架 + AI 润色', status: 'O4 待办' },
   { to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: 'O5 远期' },
@@ -16,6 +17,8 @@ const TOOLS: { to: string; icon: string; name: string; desc: string; status: str
 const EXTERNAL: { name: string; url: string; desc: string }[] = [
   { name: 'Canva 可画', url: 'https://www.canva.cn/', desc: '长图/海报排版设计' },
   { name: '墨滴 / Md2All', url: 'https://mdnice.com/', desc: 'Markdown 一键排版到公众号' },
+  { name: 'Gamma', url: 'https://gamma.app/', desc: 'AI 生成设计感演示文稿（海外服务）' },
+  { name: '讯飞智文', url: 'https://zhiwen.xfyun.cn/', desc: 'AI 一键生成 PPT（中文友好）' },
 ]
 
 /** 输出模块主页（IT Tools 模式）：场景分类的工具箱——报告 / 朗读 / 卡片 / 草稿（占位） / 外链精选 */
