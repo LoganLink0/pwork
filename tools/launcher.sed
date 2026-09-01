@@ -1,0 +1,42 @@
+[Version]
+Class=IEXPRESS
+SEDVersion=3
+[Options]
+PackagePurpose=InstallApp
+ShowInstallProgramWindow=0
+HideInstallProgram=1
+AppLaunched=%AppLaunched%
+PostInstallCmd=%PostInstallCmd%
+AdminQuietInstCmd=%AdminQuietInstCmd%
+UserQuietInstCmd=%UserQuietInstCmd%
+SourceFiles=SourceFiles
+HideExtractAnimation=0
+UseLongFileName=1
+InsideCompressed=0
+CAB_FixedSize=0
+CAB_ResvCodeSigning=0
+RebootMode=I
+InstallPrompt=%InstallPrompt%
+DisplayLicense=%DisplayLicense%
+FinishMessage=%FinishMessage%
+TargetName=%TargetName%
+FriendlyName=%FriendlyName%
+[Strings]
+InstallPrompt=
+DisplayLicense=
+FinishMessage=
+FriendlyName=PWORK Launcher
+AppLaunched=launch.cmd
+PostInstallCmd=<None>
+AppRemovalCmd=
+Title=PWORK Launcher
+MediaLabel1=PWORK Launcher
+TargetName=E:\AIPROJECT-GLM\PWORK\PWORK-Launcher.exe
+SourceFiles0=E:\AIPROJECT-GLM\PWORK\tools\
+AdminQuietInstCmd=%AdminQuietInstCmd%
+UserQuietInstCmd=%UserQuietInstCmd%
+FILE0="launch.cmd"
+[SourceFiles]
+SourceFiles0=E:\AIPROJECT-GLM\PWORK\tools\
+[SourceFiles0]
+%FILE0%=

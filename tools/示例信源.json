@@ -1,0 +1,7 @@
+[
+  { "name": "阮一峰 · 网络日志", "url": "https://www.ruanyifeng.com/blog/atom.xml", "domain": "frontend", "tier": 1 },
+  { "name": "少数派", "url": "https://sspai.com/feed", "domain": "tool", "tier": 1.5 },
+  { "name": "Hacker News 精选", "url": "https://hnrss.org/best", "domain": "ai", "tier": 1.5 },
+  { "name": "奇客 Solidot", "url": "https://www.solidot.org/index.rss", "domain": "ai", "tier": 1.5 },
+  { "name": "GitHub Blog", "url": "https://github.blog/feed/", "domain": "tool", "tier": 2 }
+]
