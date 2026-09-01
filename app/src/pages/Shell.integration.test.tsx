@@ -21,7 +21,7 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByText('复盘工作台已迁入 · 做一次复盘，行动项自动回流')).toBeInTheDocument()
     // 四模块卡（用卡片副行唯一文案断言）
     expect(screen.getByText('捕获想法 · 喂养流水线')).toBeInTheDocument()
-    expect(screen.getByText('四模态工具箱 · 跨模块检索 · AI 问答')).toBeInTheDocument()
+    expect(screen.getByText('工具箱（文字/音频/图片/视频）· 检索 · AI 问答')).toBeInTheDocument()
     expect(screen.getByText('周期成稿 · 听觉 · 分享')).toBeInTheDocument()
     expect(screen.getByText('CLAP 复盘 · 因果循环 · 认知资产')).toBeInTheDocument()
   })
