@@ -15,6 +15,7 @@ export function Process() {
   const [searched, setSearched] = useState(false)
 
   const [question, setQuestion] = useState('')
+  const [externalCtx, setExternalCtx] = useState('')
   const [answer, setAnswer] = useState('')
   const [sources, setSources] = useState<SearchHit[]>([])
   const [askState, setAskState] = useState<'idle' | 'asking' | 'done' | 'error'>('idle')
@@ -58,11 +59,13 @@ export function Process() {
     try {
       const contextHits = await searchAll(q)
       const ctx = contextHits.slice(0, 8).map((h, i) => `${i + 1}. [${KIND_LABEL[h.kind]}] ${h.title}`)
+      const ext = externalCtx.trim()
       const prompt = [
         `我的问题：${q}`,
         '',
         '我的库里相关内容（检索命中）：',
         ...(ctx.length ? ctx : ['（没有检索到直接相关的内容）']),
+        ...(ext ? ['', '我另外提供的资料（优先参考）：', ext.slice(0, 2000)] : []),
         '',
         '请基于以上内容回答；内容不足时直说需要补充什么记录。',
       ].join('\n')
@@ -176,6 +179,17 @@ export function Process() {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   aria-label="全库提问"
+                />
+              </div>
+              <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                <label style={{ width: 'auto', flex: 'none' }}>外部资料</label>
+                <textarea
+                  className="input"
+                  style={{ flex: 1, minHeight: 52, resize: 'vertical' }}
+                  placeholder="（可选）粘贴工作台之外的资料——默认只用库内数据，这里作补充上下文"
+                  value={externalCtx}
+                  onChange={(e) => setExternalCtx(e.target.value)}
+                  aria-label="外部资料上下文"
                 />
               </div>
               <div className="set-row">

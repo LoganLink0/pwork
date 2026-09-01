@@ -6,7 +6,8 @@ import type PptxGenJS from 'pptxgenjs'
 import type { SlideSpec } from './pptExport'
 import { PPT_COLORS as C } from './pptExport'
 
-const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'
+// PPTX 的 typeface 属性禁含双引号（pptxgenjs 不转义，会炸 XML）——用 Windows 全量预装的微软雅黑
+const FONT = 'Microsoft YaHei'
 
 function addFooter(slide: PptxGenJS.Slide, footer: string, dark: boolean): void {
   slide.addText(footer, {
