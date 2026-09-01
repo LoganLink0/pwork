@@ -277,7 +277,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>云端同步（C2）</h2>
-        <div className="desc">Cloudflare Worker 定时抓取 → 本地拉取合并；云端只是可丢弃暂存层，本地才是 SSOT（AD5）</div>
+        <div className="desc">Cloudflare Worker 定时抓取 → 本地拉取合并；云端数据随时可丢可重建，本地才是你的真实数据</div>
         <div className="set-body">
           <div className="set-row">
             <label>模式</label>

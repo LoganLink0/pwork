@@ -186,7 +186,7 @@ export function Process() {
                 <textarea
                   className="input"
                   style={{ flex: 1, minHeight: 52, resize: 'vertical' }}
-                  placeholder="（可选）粘贴工作台之外的资料——默认只用库内数据，这里作补充上下文"
+                  placeholder="（可选）粘贴工作台之外的资料，给 AI 多一份参考——默认只用库内数据"
                   value={externalCtx}
                   onChange={(e) => setExternalCtx(e.target.value)}
                   aria-label="外部资料上下文"

@@ -137,7 +137,7 @@ export function Home() {
           <Link to="/tasks" className="tile mark-workspace">
             <div className="t-label">到期待办</div>
             <div className="t-num">{taskStats.today > 0 ? `${taskStats.today} 件今天` : `本周 ${taskStats.week} 件`}</div>
-            <div className="t-sub">共 {taskStats.open} 件未闭环 · 行动项 SSOT</div>
+            <div className="t-sub">共 {taskStats.open} 件没做完</div>
             <span className="t-link">去处理 →</span>
           </Link>
         ) : (

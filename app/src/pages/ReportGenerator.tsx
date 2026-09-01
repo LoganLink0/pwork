@@ -123,7 +123,7 @@ export function ReportGenerator() {
               <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报（近 30 天）</button>
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              数据截至 {todayLocal()} · 只读引用，零拷贝
+              数据截至 {todayLocal()} · 数据自动取自各模块
             </span>
           </div>
 

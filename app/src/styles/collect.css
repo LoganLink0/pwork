@@ -435,3 +435,16 @@
     overflow-x: auto;
   }
 }
+
+/* ---------- 待办三分诊栏（一类｜二类｜三类 并排） ---------- */
+.lanes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .lanes-grid {
+    grid-template-columns: 1fr;
+  }
+}

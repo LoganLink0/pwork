@@ -134,10 +134,9 @@ export function Tasks() {
     const meta = LANE_META[lane]
     const list = laneLists.byLane[lane]
     return (
-      <div style={{ marginBottom: 'var(--sp-4)' }}>
+      <div className="lane-col">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
           <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>{meta.name}</h3>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{meta.rule} → {meta.action}</span>
         </div>
         <div className="task-card">
           {list.length === 0 ? (
@@ -168,13 +167,15 @@ export function Tasks() {
         </div>
       </div>
 
-      {renderLaneSection(1)}
-      {renderLaneSection(2)}
-      {renderLaneSection(3)}
+      <div className="lanes-grid">
+        {renderLaneSection(1)}
+        {renderLaneSection(2)}
+        {renderLaneSection(3)}
+      </div>
 
       {laneLists.done.length > 0 && (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
             <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>已闭环</h3>
           </div>
           <div className="task-card">
@@ -184,7 +185,7 @@ export function Tasks() {
       )}
 
       <div className="stats-line">
-        总闭环率 <b>{closedRate}%</b>（{stats.done}/{stats.total}）· 排序三问：①今天不做就过期？②卡住别人等我的？③都可以放一放？——不问"重不重要"，问"不做的代价"
+        总闭环率 <b>{closedRate}%</b>（{stats.done}/{stats.total}）
       </div>
     </section>
   )
