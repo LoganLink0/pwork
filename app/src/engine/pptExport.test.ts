@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildReportSlides } from './pptExport'
+import type { ReportSnapshot } from '../types/models'
 import type { ReportData } from './reportData'
 
 function mkData(over: Partial<ReportData> = {}): ReportData {
@@ -21,9 +22,28 @@ function mkData(over: Partial<ReportData> = {}): ReportData {
 
 /** 幻灯片规格（纯函数）：PPT 渲染前的数据契约 */
 describe('buildReportSlides', () => {
-  it('标题页 + 数据页 + 四个 bullets 页，共 6 页且顺序正确', () => {
+  it('快照 ≥2 时插入趋势图表页（第 2 页），共 8 页', () => {
+    const snaps: ReportSnapshot[] = [
+      { id: 'snap_2026-08-25', day: '2026-08-25', closureRate: 20, closedCount: 2, openCount: 3, overdueCount: 0, goalsActive: 1, insightsCount: 2, notesCount: 5, createdAt: '2026-08-25T00:00:00.000Z' },
+      { id: 'snap_2026-09-01', day: '2026-09-01', closureRate: 45, closedCount: 5, openCount: 2, overdueCount: 1, goalsActive: 1, insightsCount: 4, notesCount: 9, createdAt: '2026-09-01T00:00:00.000Z' },
+    ]
+    const s = buildReportSlides(mkData(), snaps)
+    expect(s).toHaveLength(8)
+    expect(s[1]!.kind).toBe('chart')
+    expect(s[1]!.chart!.labels).toEqual(['08-25', '09-01'])
+    expect(s[1]!.chart!.values).toEqual([20, 45])
+  })
+
+  it('封面与结尾为深色页（三明治结构）', () => {
     const s = buildReportSlides(mkData())
-    expect(s).toHaveLength(6)
+    expect(s[0]!.dark).toBe(true)
+    expect(s[s.length - 1]!.dark).toBe(true)
+    expect(s.slice(1, -1).every((x) => !x.dark)).toBe(true)
+  })
+
+  it('标题页 + 数据页 + 四个 bullets 页 + 结尾，顺序正确（无快照时 7 页）', () => {
+    const s = buildReportSlides(mkData())
+    expect(s).toHaveLength(7)
     expect(s[0]!.kind).toBe('title')
     expect(s[0]!.title).toBe('PWORK 周报')
     expect(s[1]!.kind).toBe('stats')
@@ -35,8 +55,10 @@ describe('buildReportSlides', () => {
       '目标进展',
       '本周洞察',
       '外部环境（高分条目）',
+      '谢谢观看',
     ])
   })
+
 
   it('bullets 内容与空值处理', () => {
     const s = buildReportSlides(mkData({ insights: [], topItems: [] }))

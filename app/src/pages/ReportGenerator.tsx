@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { gatherReportData, type ReportData, type ReportMode } from '../engine/reportData'
 import { reportToHtml, reportToMarkdown, reportTitle } from '../engine/reportRender'
 import { downloadFile } from '../db/repo'
+import { saveSnapshot, latestSnapshotBefore, deltaLabel, listSnapshots } from '../db/snapshots'
+import { exportReportPptx } from '../engine/pptFile'
+import type { ReportSnapshot } from '../types/models'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
 import { todayLocal } from '../engine/datetime'
@@ -17,9 +20,21 @@ export function ReportGenerator() {
   const [aiSummary, setAiSummary] = useState('')
   const [aiState, setAiState] = useState<'idle' | 'running' | 'error'>('idle')
   const [aiError, setAiError] = useState('')
+  const [prevRate, setPrevRate] = useState<number | null>(null)
+  const [pptBusy, setPptBusy] = useState(false)
+  const [pptMsg, setPptMsg] = useState('')
+  const [obsidianVault, setObsidianVault] = useState(() => localStorage.getItem('pwork-obsidian-vault') ?? '')
+  const [obsidianMsg, setObsidianMsg] = useState('')
+  const snapshotsRef = useRef<ReportSnapshot[]>([])
 
   useEffect(() => {
-    void gatherReportData(mode).then(setData)
+    void gatherReportData(mode).then(async (d) => {
+      setData(d)
+      // 每次生成报告即落一行当日快照（趋势与环比的数据源）
+      await saveSnapshot(d)
+      snapshotsRef.current = await listSnapshots(8)
+      setPrevRate((await latestSnapshotBefore())?.closureRate ?? null)
+    })
   }, [mode])
 
   const md = useMemo(() => (data ? reportToMarkdown(data) : ''), [data])
@@ -57,6 +72,38 @@ export function ReportGenerator() {
     downloadFile(`${title}.${kind}`, content, kind === 'md' ? 'text/markdown' : 'text/html')
   }
 
+  const exportPpt = async () => {
+    if (!data || pptBusy) return
+    setPptBusy(true)
+    setPptMsg('')
+    try {
+      const name = await exportReportPptx(data, snapshotsRef.current)
+      setPptMsg(`✅ 已生成 ${name}`)
+    } catch (e) {
+      setPptMsg(`PPT 生成失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setPptBusy(false)
+    }
+  }
+
+  const printPdf = () => {
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(html.replace('</style>', '@media print { body { padding: 0 } } @page { size: A4; margin: 14mm }</style>'))
+    w.document.close()
+    w.focus()
+    w.print()
+  }
+
+  const toObsidian = () => {
+    if (!data) return
+    const params = new URLSearchParams({ file: `PWORK报告/${title}`, content: mdWithAi })
+    if (obsidianVault.trim()) params.set('vault', obsidianVault.trim())
+    window.open(`obsidian://new?${params.toString()}`)
+    localStorage.setItem('pwork-obsidian-vault', obsidianVault.trim())
+    setObsidianMsg('已发送到 Obsidian（若未安装/未授权会无反应）')
+  }
+
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
@@ -83,7 +130,7 @@ export function ReportGenerator() {
           {data && (
             <div className="stats" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', paddingTop: 'var(--sp-2)' }}>
               {[
-                [data.tasks.closureRate + '%', '闭环率'],
+                [data.tasks.closureRate + '%', prevRate !== null ? '闭环率（' + deltaLabel(data.tasks.closureRate, prevRate) + '）' : '闭环率'],
                 [String(data.tasks.closed.length), '本期闭环'],
                 [String(data.goals.active.length), '进行中目标'],
                 [String(data.insights.length), '新增洞察'],
@@ -129,7 +176,25 @@ export function ReportGenerator() {
             </div>
             <button type="button" className="btn-ghost" onClick={() => download('md')} disabled={!data}>⬇ 下载 .md</button>
             <button type="button" className="btn-ghost" onClick={() => download('html')} disabled={!data}>⬇ 下载 .html</button>
+            <button type="button" className="btn-ghost" onClick={() => void exportPpt()} disabled={!data || pptBusy} data-testid="ppt-btn">
+              {pptBusy ? '生成中…' : '⬇ 导出 PPT'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={printPdf} disabled={!data}>🖨 打印 / PDF</button>
             <Link to="/output/read" className="btn-ghost">🎧 朗读版 →</Link>
+          </div>
+          {pptMsg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{pptMsg}</div>}
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>Obsidian</label>
+            <input
+              className="input"
+              style={{ maxWidth: 200 }}
+              placeholder="vault 名（可选）"
+              value={obsidianVault}
+              onChange={(e) => setObsidianVault(e.target.value)}
+              aria-label="Obsidian vault"
+            />
+            <button type="button" className="btn-ghost" onClick={toObsidian} disabled={!data}>📓 写入 Obsidian</button>
+            {obsidianMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{obsidianMsg}</span>}
           </div>
           <pre
             style={{

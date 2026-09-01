@@ -18,6 +18,24 @@ export interface NoteLinks {
 export type TaskOriginKind = 'review' | 'note' | 'item' | 'manual'
 
 /**
+ * 周趋势快照（输出 O1 增补）：每次生成报告时写入一行，
+ * 攒出环比与趋势——商业报告的"较上期 ±X pp"全靠它。
+ */
+export interface ReportSnapshot {
+  id: string
+  /** 本地日 'YYYY-MM-DD'（每日一条，重复生成覆盖） */
+  day: string
+  closureRate: number
+  closedCount: number
+  openCount: number
+  overdueCount: number
+  goalsActive: number
+  insightsCount: number
+  notesCount: number
+  createdAt: string
+}
+
+/**
  * 目标 Goal —— 工作台目标模块拥有（02 §3 字段所有权表）；复盘向导只读引用（C-2 最小形态，
  * 2026-08-31 决议：最小实体先行，完整管理页随处理模块评估）
  */

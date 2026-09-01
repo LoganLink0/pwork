@@ -1,29 +1,44 @@
 /**
- * PPT 导出（输出 O1 增补，用户需求）：ReportData → 幻灯片规格（纯函数可测）
- * → PptxGenJS 本地渲染 .pptx（零 Key、不上传）。
- * 配色为 v3「冷静的工作台」tokens 字面量（Canvas/Pptx 无法读 CSS 变量）。
+ * PPT 导出（输出 O1 增补）：ReportData → 幻灯片规格（纯函数可测）→ PptxGenJS 本地渲染 .pptx。
+ * 设计规范工程化自官方 pptx skill：
+ *  ① 三明治结构——深色封面/结尾 + 浅色内容页；
+ *  ② 每页一个视觉焦点——超大数字或原生图表（禁止"色条+列表"的 AI 模板味）；
+ *  ③ 原生图表（闭环率趋势柱图/闭环率环形图）随快照数据点亮；
+ *  ④ 配色常量集中定义：BG/PRIMARY/ACCENT/TEXT/MUTED（v3 同源），禁止逐页手挑。
+ * 快照 ≥2 条时自动点亮"趋势图表页"。
  */
 import type { ReportData } from './reportData'
+import type { ReportSnapshot } from '../types/models'
 
 export interface SlideSpec {
-  kind: 'title' | 'stats' | 'bullets'
+  kind: 'title' | 'stats' | 'bullets' | 'chart'
   title: string
   bullets: string[]
   stats: [string, string][]
+  /** kind='chart' 时：labels 与 values 等长 */
+  chart?: { labels: string[]; values: number[] }
   footer: string
+  /** 深色页（封面/结尾）标记 */
+  dark?: boolean
 }
 
-export function buildReportSlides(d: ReportData): SlideSpec[] {
-  const modeLabel = d.mode === 'weekly' ? '周报' : '月报'
+// v3 同源配色（字面量：pptx 无法读 CSS 变量）
+export const PPT_COLORS = {
+  BG_DARK: '211E1A',
+  BG_LIGHT: 'FAF9F7',
+  CARD: 'FFFFFF',
+  PRIMARY: 'B0500F',
+  ACCENT: 'E8833A',
+  TEXT: '211E1A',
+  TEXT_INV: 'ECEBE7',
+  MUTED: '97928A',
+  MUTED_INV: '827D73',
+  LINE: 'E6E4DF',
+} as const
+
+function buildContentSlides(d: ReportData): SlideSpec[] {
   const footer = `PWORK · 个人工作台 · ${d.today}`
   const slides: SlideSpec[] = [
-    {
-      kind: 'title',
-      title: `PWORK ${modeLabel}`,
-      bullets: [d.rangeLabel, `生成于 ${d.today}`],
-      stats: [],
-      footer,
-    },
     {
       kind: 'stats',
       title: '本期关键数字',
@@ -74,53 +89,46 @@ export function buildReportSlides(d: ReportData): SlideSpec[] {
   return slides
 }
 
-/** 渲染并触发下载 .pptx（动态引入 pptxgenjs，保持首包精简） */
-export async function exportReportPptx(d: ReportData): Promise<string> {
-  const { default: PptxGenJS } = await import('pptxgenjs')
-  const pptx = new PptxGenJS()
-  pptx.layout = 'LAYOUT_16x9'
-  pptx.author = 'PWORK'
-  pptx.title = `PWORK ${d.mode === 'weekly' ? '周报' : '月报'}`
+export function buildReportSlides(d: ReportData, snapshots: ReportSnapshot[] = []): SlideSpec[] {
+  const modeLabel = d.mode === 'weekly' ? '周报' : '月报'
+  const footer = `PWORK · 个人工作台 · ${d.today}`
+  const slides: SlideSpec[] = []
 
-  const INK = '211E1A'
-  const SOFT = '66625A'
-  const FAINT = '97928A'
-  const ACCENT = 'B0500F'
-  const BG = 'FAF9F7'
+  // 封面（深色，大字焦点）
+  slides.push({
+    kind: 'title',
+    title: `PWORK ${modeLabel}`,
+    bullets: [d.rangeLabel],
+    stats: [],
+    footer,
+    dark: true,
+  })
 
-  for (const spec of buildReportSlides(d)) {
-    const slide = pptx.addSlide()
-    slide.background = { color: BG }
-    // 页脚
-    slide.addText(spec.footer, { x: 0.5, y: 5.1, w: 9, h: 0.3, fontSize: 10, color: FAINT })
-    if (spec.kind === 'title') {
-      slide.addText(spec.title, { x: 0.6, y: 1.8, w: 8.8, h: 0.9, fontSize: 40, bold: true, color: INK })
-      slide.addShape(pptx.ShapeType.rect, { x: 0.65, y: 2.75, w: 0.08, h: 0.7, fill: { color: ACCENT } })
-      slide.addText(spec.bullets.join('\n'), { x: 0.9, y: 2.7, w: 8, h: 0.9, fontSize: 16, color: SOFT })
-    } else if (spec.kind === 'stats') {
-      slide.addText(spec.title, { x: 0.6, y: 0.5, w: 9, h: 0.6, fontSize: 26, bold: true, color: INK })
-      spec.stats.forEach(([v, l], i) => {
-        const x = 0.6 + (i % 2) * 4.6
-        const y = 1.5 + Math.floor(i / 2) * 1.7
-        slide.addShape(pptx.ShapeType.rect, { x, y, w: 4.2, h: 1.4, fill: { color: 'FFFFFF' }, line: { color: 'E6E4DF' } })
-        slide.addShape(pptx.ShapeType.rect, { x, y, w: 0.06, h: 1.4, fill: { color: ACCENT } })
-        slide.addText(v, { x: x + 0.25, y: y + 0.15, w: 3.6, h: 0.7, fontSize: 32, bold: true, color: INK })
-        slide.addText(l, { x: x + 0.25, y: y + 0.9, w: 3.6, h: 0.35, fontSize: 12, color: FAINT })
-      })
-    } else {
-      slide.addText(spec.title, { x: 0.6, y: 0.5, w: 9, h: 0.6, fontSize: 26, bold: true, color: INK })
-      if (spec.bullets.length) {
-        slide.addText(
-          spec.bullets.map((b) => ({ text: b, options: { bullet: false, breakLine: true } })),
-          { x: 0.7, y: 1.3, w: 8.9, h: 3.6, fontSize: 15, color: SOFT, lineSpacingMultiple: 1.4 },
-        )
-      } else {
-        slide.addText('（本期无记录）', { x: 0.7, y: 1.5, w: 8, h: 0.5, fontSize: 14, color: FAINT })
-      }
-    }
+  // 趋势图表页（快照 ≥2 时点亮；原生图表，焦点即图）
+  if (snapshots.length >= 2) {
+    slides.push({
+      kind: 'chart',
+      title: '任务闭环率趋势',
+      bullets: [],
+      stats: [],
+      chart: {
+        labels: snapshots.map((s) => s.day.slice(5)), // MM-DD
+        values: snapshots.map((s) => s.closureRate),
+      },
+      footer,
+    })
   }
 
-  const filename = `PWORK-${d.mode === 'weekly' ? 'weekly' : 'monthly'}-${d.today}.pptx`
-  await pptx.writeFile({ fileName: filename })
-  return filename
+  slides.push(...buildContentSlides(d))
+
+  // 结尾（深色）
+  slides.push({
+    kind: 'title',
+    title: '谢谢观看',
+    bullets: [`PWORK ${modeLabel} · 数据来自本机工作台`],
+    stats: [],
+    footer,
+    dark: true,
+  })
+  return slides
 }
