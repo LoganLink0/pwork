@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PWORK 个人工作台 · 低保真原型</title>
+<!--
+  附件：06-个人工作台PRD.md 的可视低保真原型（单文件，无构建依赖）
+  设计令牌：FUPAN/app/src/styles/tokens.css · v3「冷静的工作台」
+  纪律：唯一字族；中性灰+唯一琥珀强调；类别色只作 3px 边线与 12px 标签；字号 8 级阶梯。
+-->
+<style>
+/* ============ v3 令牌（原样迁入） ============ */
+:root{
+  color-scheme: light;
+  --bg:#f5f4f1; --surface:#ffffff; --surface-2:#faf9f7;
+  --line:#e6e4df; --line-strong:#cfcac1;
+  --ink:#211e1a; --ink-soft:#66625a; --ink-faint:#97928a;
+  --accent:#e8833a; --accent-deep:#b0500f; --accent-text:#a34e12;
+  --cat-good:#2f7d52; --cat-need:#b85c38; --cat-insight:#3d6e9e; --cat-action:#a05353;
+  --danger:#b8443a; --ok:#2f7d52;
+  --font-body:-apple-system,'PingFang SC','Microsoft YaHei','Noto Sans SC','Segoe UI',sans-serif;
+  --fs-xs:12px; --fs-sm:13px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-h1:28px; --fs-hero:32px; --fs-num:24px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --shadow-1:0 1px 2px rgba(33,30,26,.06);
+  --shadow-2:0 2px 4px rgba(33,30,26,.06),0 8px 20px rgba(33,30,26,.08);
+  --shadow-pop:0 12px 32px rgba(33,30,26,.14);
+  --content-w:1200px; --nav-h:60px;
+  /* 模块标记（复用既有令牌，仅 3px 边线与 12px 标签） */
+  --m-input:#3d6e9e; --m-process:#2f7d52; --m-output:#a05353; --m-review:#e8833a;
+  --sidebar-w:240px; --topbar-h:56px;
+}
+:root[data-theme='dark']{
+  color-scheme: dark;
+  --bg:#191816; --surface:#222019; --surface-2:#2a2721;
+  --line:#38352e; --line-strong:#4c473d;
+  --ink:#ecebe7; --ink-soft:#b3afa5; --ink-faint:#827d73;
+  --accent:#e8833a; --accent-deep:#c96a2e; --accent-text:#eda868;
+  --cat-good:#5aab7f; --cat-need:#d3805c; --cat-insight:#6d9cc7; --cat-action:#c47a7a;
+  --ok:#5aab7f;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4);
+  --shadow-2:0 2px 4px rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.45);
+  --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font-body);font-size:var(--fs-md);color:var(--ink);background:var(--bg);line-height:1.6}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(232,131,58,.25)}
+
+/* ============ 应用壳 ============ */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:var(--sp-4) var(--sp-3);overflow-y:auto}
+.logo{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3) var(--sp-4);font-weight:700;font-size:var(--fs-lg)}
+.logo .mark{width:22px;height:22px;border-radius:var(--r-sm);background:var(--accent);color:#fff;display:grid;place-items:center;font-size:var(--fs-xs);font-weight:700}
+.nav-group{font-size:var(--fs-xs);color:var(--ink-faint);letter-spacing:.12em;padding:var(--sp-4) var(--sp-3) var(--sp-1)}
+.nav-item{display:flex;align-items:center;gap:var(--sp-2);padding:7px var(--sp-3);border-radius:var(--r-sm);color:var(--ink-soft);font-size:var(--fs-sm);cursor:pointer;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{background:var(--surface-2)}
+.nav-item.active{background:var(--surface-2);color:var(--ink);border-left-color:var(--mark,var(--accent));font-weight:600}
+.nav-item.dim{color:var(--ink-faint)}
+.nav-item.dim::after{content:'规划中';margin-left:auto;font-size:var(--fs-xs);color:var(--ink-faint);opacity:.7}
+.nav-sub{padding-left:14px}
+.nav-item .ico{width:18px;text-align:center;flex:none;font-size:var(--fs-sm)}
+.nav-item .cnt{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-faint)}
+.sidebar .spacer{flex:1}
+.sidebar .foot{font-size:var(--fs-xs);color:var(--ink-faint);padding:var(--sp-3);border-top:1px solid var(--line);line-height:1.5}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:var(--topbar-h);flex:none;display:flex;align-items:center;gap:var(--sp-4);padding:0 var(--sp-5);border-bottom:1px solid var(--line);background:var(--bg)}
+.crumb{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-sm);color:var(--ink-soft);min-width:0}
+.crumb .mod-dot{width:8px;height:8px;border-radius:2px;flex:none}
+.crumb b{color:var(--ink);font-size:var(--fs-md);font-weight:600}
+.searchbox{margin-left:auto;display:flex;align-items:center;gap:var(--sp-2);min-width:220px;padding:6px var(--sp-3);border:1px solid var(--line-strong);border-radius:var(--r-sm);color:var(--ink-faint);font-size:var(--fs-sm);background:var(--surface)}
+.searchbox:hover{border-color:var(--accent)}
+.searchbox kbd{margin-left:auto;font-family:inherit;font-size:var(--fs-xs);border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--ink-faint);background:var(--surface-2)}
+.iconbtn{width:36px;height:36px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-soft);font-size:var(--fs-lg)}
+.iconbtn:hover{background:var(--surface-2)}
+.quicknote-btn{display:flex;align-items:center;gap:6px;padding:7px var(--sp-4);border:1.5px solid var(--accent);color:var(--accent-text);border-radius:var(--r-sm);font-size:var(--fs-sm);font-weight:600}
+.quicknote-btn:hover{background:rgba(232,131,58,.08)}
+.content{flex:1;overflow-y:auto;padding:var(--sp-6) var(--sp-5) 96px}
+.content-inner{max-width:var(--content-w);margin:0 auto}
+.page{display:none}
+.page.show{display:block;animation:fade .18s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.page.show{animation:none}}
+
+/* ============ 首页 ============ */
+.greet-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.greet .date{font-size:var(--fs-sm);color:var(--ink-soft)}
+.greet h1{font-size:var(--fs-h1);font-weight:700;margin-top:2px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4);margin-bottom:var(--sp-6)}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1);padding:var(--sp-4) var(--sp-5);cursor:pointer;transition:box-shadow .15s ease-out,transform .15s ease-out;position:relative;overflow:hidden}
+.tile:hover{box-shadow:var(--shadow-2);transform:translateY(-1px)}
+.tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--mark,var(--line-strong))}
+.tile .t-label{font-size:var(--fs-xs);color:var(--ink-faint)}
+.tile .t-num{font-size:var(--fs-num);font-weight:700;font-variant-numeric:tabular-nums;margin:2px 0}
+.tile .t-sub{font-size:var(--fs-sm);color:var(--ink-soft)}
+.tile .t-link{display:inline-block;margin-top:var(--sp-2);font-size:var(--fs-sm);color:var(--mark,var(--accent-text));font-weight:600}
+.tile.hot .t-link{background:var(--accent-deep);color:#fff;padding:3px 10px;border-radius:var(--r-sm)}
+.sec-title{font-size:var(--fs-xl);font-weight:700;margin-bottom:var(--sp-4)}
+.module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-4)}
+.mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-1);padding:var(--sp-5);cursor:pointer;transition:box-shadow .15s ease-out;display:flex;flex-direction:column}
+.mcard:hover{box-shadow:var(--shadow-2)}
+.mcard.planned{justify-content:center;gap:var(--sp-2)}
+.mcard .m-head{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px}
+.mcard .m-ico{font-size:var(--fs-xl);width:26px;text-align:center}
+.mcard .m-name{font-size:var(--fs-lg);font-weight:700}
+.mcard .m-tag{margin-left:auto;font-size:var(--fs-xs);color:var(--mark);border:1px solid var(--mark);border-radius:99px;padding:0 8px;line-height:18px;white-space:nowrap}
+.mcard .m-sub{font-size:var(--fs-sm);color:var(--ink-soft);margin-bottom:var(--sp-3)}
+.mcard .m-links{display:flex;flex-direction:column;gap:6px}
+.mcard .m-link{display:flex;justify-content:space-between;font-size:var(--fs-sm);color:var(--ink);padding:4px 6px;border-radius:var(--r-sm)}
+.mcard .m-link:hover{background:var(--surface-2)}
+.mcard .m-link .cnt{color:var(--ink-faint);font-size:var(--fs-xs)}
+.mcard.planned{opacity:.62;border-style:dashed;cursor:pointer}
+.mcard.planned .m-tag{color:var(--ink-faint);border-color:var(--line-strong)}
+
+/* ============ 通用页头 ============ */
+.page-head{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.page-head h1{font-size:var(--fs-h1);font-weight:700}
+.page-head .sub{font-size:var(--fs-sm);color:var(--ink-soft)}
+.page-head .right{margin-left:auto;display:flex;gap:var(--sp-2);align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px var(--sp-4);border:1px solid var(--line-strong);border-radius:var(--r-sm);font-size:var(--fs-sm);color:var(--ink);background:var(--surface)}
+.btn:hover{border-color:var(--accent);color:var(--accent-text)}
+.btn.primary{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border:1px solid var(--line);border-radius:99px;font-size:var(--fs-xs);color:var(--ink-soft);background:var(--surface-2);cursor:pointer}
+.chip.on{border-color:var(--accent);color:var(--accent-text);font-weight:600}
+
+/* ============ 速记 ============ */
+.notes-wrap{display:grid;grid-template-columns:320px 1fr;gap:var(--sp-5);align-items:start}
+.note-list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.note-item{padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--line);cursor:pointer}
+.note-item:last-child{border-bottom:none}
+.note-item:hover{background:var(--surface-2)}
+.note-item.on{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--m-input)}
+.note-item .n-time{font-size:var(--fs-xs);color:var(--ink-faint)}
+.note-item .n-title{font-size:var(--fs-sm);font-weight:600;margin:1px 0}
+.note-item .n-meta{font-size:var(--fs-xs);color:var(--ink-faint)}
+.editor{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1)}
+.editor-head{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--line)}
+.editor-head .saved{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-faint)}
+.e-title{width:100%;border:none;outline:none;background:transparent;font-size:var(--fs-xl);font-weight:700;color:var(--ink);padding:var(--sp-4) var(--sp-5) 0;font-family:inherit}
+.e-toolbar{display:flex;gap:var(--sp-1);padding:var(--sp-2) var(--sp-5)}
+.e-toolbar button{padding:2px 8px;border-radius:var(--r-sm);font-size:var(--fs-sm);color:var(--ink-soft)}
+.e-toolbar button:hover{background:var(--surface-2);color:var(--ink)}
+.e-body{width:100%;min-height:260px;border:none;outline:none;background:transparent;color:var(--ink);font-family:inherit;font-size:var(--fs-md);line-height:1.75;padding:var(--sp-2) var(--sp-5) var(--sp-4);resize:vertical}
+.fm{border-top:1px dashed var(--line-strong);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-xs);color:var(--ink-soft);background:var(--surface-2)}
+.fm summary{cursor:pointer;color:var(--ink-faint);font-size:var(--fs-xs);list-style:none}
+.fm summary::before{content:'▸ '}
+.fm[open] summary::before{content:'▾ '}
+.fm code{font-family:ui-monospace,Consolas,monospace;font-size:var(--fs-xs);color:var(--cat-insight)}
+.editor-foot{display:flex;gap:var(--sp-2);padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line)}
+
+/* ============ Digest ============ */
+.digest-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);display:flex;gap:var(--sp-4)}
+.score{flex:none;width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.score .s-num{font-size:var(--fs-num);font-weight:700;line-height:1.1}
+.score .s-cap{font-size:var(--fs-xs);color:var(--ink-faint)}
+.score.hi .s-num{color:var(--accent-text)}
+.score.mid .s-num{color:var(--ink)}
+.score.lo .s-num{color:var(--ink-faint)}
+.d-main{flex:1;min-width:0}
+.d-title{font-size:var(--fs-md);font-weight:600;display:flex;align-items:center;gap:6px}
+.d-title a:hover{color:var(--accent-text)}
+.d-title .ext{font-size:var(--fs-xs);color:var(--ink-faint)}
+.d-summary{font-size:var(--fs-sm);color:var(--ink-soft);margin:4px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.d-meta{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--ink-faint)}
+.tagchip{border:1px solid var(--line);border-radius:4px;padding:0 6px;color:var(--ink-soft)}
+.otflag{display:inline-flex;align-items:center;gap:3px;border:1px solid currentColor;border-radius:4px;padding:0 6px;font-weight:600}
+.ot-opp{color:var(--cat-insight)}
+.ot-threat{color:var(--cat-need)}
+.ot-trend{color:var(--cat-good)}
+.d-ops{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;justify-content:center}
+.stars-cap{font-size:var(--fs-xs);color:var(--ink-faint)}
+.stars{font-size:var(--fs-sm);letter-spacing:2px;color:var(--ink-faint);cursor:pointer;user-select:none}
+.stars .on{color:var(--accent)}
+.mini-btn{font-size:var(--fs-xs);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:2px 8px;color:var(--ink-soft)}
+.mini-btn:hover{border-color:var(--accent);color:var(--accent-text)}
+
+/* ============ 任务库 ============ */
+.tabs{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-4);flex-wrap:wrap}
+.task-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1);overflow:hidden}
+.task-row{display:flex;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-bottom:1px solid var(--line)}
+.task-row:last-child{border-bottom:none}
+.task-row:hover{background:var(--surface-2)}
+.checkbox{width:18px;height:18px;flex:none;border:1.5px solid var(--line-strong);border-radius:4px;cursor:pointer;display:grid;place-items:center;color:transparent;font-size:12px}
+.task-row.done .checkbox{background:var(--ok);border-color:var(--ok);color:#fff}
+.task-row.done .t-name{color:var(--ink-faint);text-decoration:line-through}
+.t-name{font-size:var(--fs-md);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.origin{flex:none;font-size:var(--fs-xs);border:1px solid var(--line);background:var(--surface-2);border-radius:4px;padding:0 6px;cursor:pointer}
+.origin[data-k='review']{color:var(--accent-text)}
+.origin[data-k='info'],.origin[data-k='note']{color:var(--cat-insight)}
+.origin[data-k='manual']{color:var(--ink-faint)}
+.t-due{flex:none;font-size:var(--fs-xs);color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.t-due.over{color:var(--danger);font-weight:600}
+.stats-line{font-size:var(--fs-sm);color:var(--ink-soft);margin-top:var(--sp-3)}
+.stats-line b{color:var(--ok)}
+
+/* ============ 设置 ============ */
+.settings{display:flex;flex-direction:column;gap:var(--sp-4);max-width:840px}
+.set-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1)}
+.set-card h2{font-size:var(--fs-lg);font-weight:700;padding:var(--sp-4) var(--sp-5) 0}
+.set-card .desc{font-size:var(--fs-xs);color:var(--ink-faint);padding:0 var(--sp-5);margin-top:2px}
+.set-body{padding:var(--sp-4) var(--sp-5) var(--sp-5)}
+.set-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-2) 0;flex-wrap:wrap}
+.set-row label{font-size:var(--fs-sm);color:var(--ink-soft);width:130px;flex:none}
+.set-row .val{font-size:var(--fs-sm)}
+.input{flex:1;min-width:180px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:var(--fs-sm);padding:6px 10px}
+.input:focus{outline:none;border-color:var(--accent)}
+.input[readonly]{color:var(--ink-faint);cursor:not-allowed}
+.radio{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden}
+.radio button{padding:5px 14px;font-size:var(--fs-sm);color:var(--ink-soft)}
+.radio button.on{background:var(--accent-deep);color:#fff;font-weight:600}
+.notice{border-left:3px solid var(--accent);background:var(--surface-2);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);color:var(--ink-soft)}
+.notice b{color:var(--accent-text)}
+.usage{display:flex;flex-direction:column;gap:6px}
+.usage .bar{height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.usage .bar i{display:block;height:100%;background:var(--accent)}
+.usage .u-label{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--ink-faint)}
+.chips{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+
+/* ============ 占位页 ============ */
+.placeholder{max-width:640px;margin:var(--sp-7) auto;text-align:center}
+.placeholder .p-ico{font-size:40px;color:var(--ink-faint)}
+.placeholder h2{font-size:var(--fs-xl);margin:var(--sp-3) 0 var(--sp-2)}
+.placeholder p{font-size:var(--fs-sm);color:var(--ink-soft);margin-bottom:var(--sp-2)}
+.placeholder .will{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-1);padding:var(--sp-4) var(--sp-5);text-align:left;margin:var(--sp-4) 0}
+.placeholder .will h3{font-size:var(--fs-sm);color:var(--ink-faint);font-weight:600;margin-bottom:6px}
+.placeholder .will p{font-size:var(--fs-sm);color:var(--ink);margin:0}
+.placeholder .go{display:inline-block;margin-top:var(--sp-2)}
+
+/* ============ 命令面板 / 速记浮层 / Toast ============ */
+.overlay{position:fixed;inset:0;background:rgba(33,30,26,.35);display:none;z-index:50;padding-top:12vh;justify-content:center;align-items:flex-start}
+:root[data-theme='dark'] .overlay{background:rgba(0,0,0,.5)}
+.overlay.show{display:flex}
+.palette{width:640px;max-width:92vw;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);overflow:hidden}
+.palette .p-input{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--line)}
+.palette .p-input input{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--fs-md);color:var(--ink)}
+.palette .p-list{max-height:46vh;overflow-y:auto;padding:var(--sp-2)}
+.p-group{font-size:var(--fs-xs);color:var(--ink-faint);padding:var(--sp-2) var(--sp-3) 2px}
+.p-item{display:flex;align-items:center;gap:var(--sp-3);padding:8px var(--sp-3);border-radius:var(--r-sm);font-size:var(--fs-sm);cursor:pointer}
+.p-item .p-sub{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-faint)}
+.p-item:hover,.p-item.sel{background:var(--surface-2)}
+.p-item .mark-act{color:var(--accent-text);font-weight:600}
+.palette .p-foot{display:flex;gap:var(--sp-4);padding:var(--sp-2) var(--sp-5);border-top:1px solid var(--line);font-size:var(--fs-xs);color:var(--ink-faint)}
+.qn-modal{width:560px;max-width:92vw;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);overflow:hidden}
+.qn-modal textarea{width:100%;min-height:120px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--fs-md);color:var(--ink);padding:var(--sp-4) var(--sp-5) var(--sp-2);line-height:1.7;resize:vertical}
+.qn-foot{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4) var(--sp-4)}
+.qn-foot .tag-in{flex:1}
+.qn-foot .hint{font-size:var(--fs-xs);color:var(--ink-faint);margin-right:auto}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--bg);font-size:var(--fs-sm);padding:8px 18px;border-radius:99px;box-shadow:var(--shadow-pop);opacity:0;transition:all .2s ease-out;z-index:99;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+/* ============ 底部导航（移动端） ============ */
+.bottomnav{display:none;position:fixed;left:0;right:0;bottom:0;height:60px;background:var(--surface);border-top:1px solid var(--line);z-index:40;justify-content:space-around;align-items:center}
+.bottomnav .bn{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:var(--fs-xs);color:var(--ink-faint);padding:6px 10px;border-radius:var(--r-sm)}
+.bottomnav .bn .ico{font-size:var(--fs-lg)}
+.bottomnav .bn.on{color:var(--accent-text);font-weight:600}
+@media (max-width:768px){
+  .sidebar{display:none}
+  .bottomnav{display:flex}
+  .searchbox{min-width:0}
+  .searchbox span{display:none}
+  .content{padding:var(--sp-4) var(--sp-4) 96px}
+  .tiles{display:flex;overflow-x:auto;padding-bottom:var(--sp-2);scroll-snap-type:x mandatory}
+  .tile{flex:none;width:78%;scroll-snap-align:start}
+  .module-grid{grid-template-columns:1fr}
+  .notes-wrap{grid-template-columns:1fr}
+  .note-list{max-height:220px;overflow-y:auto}
+  .digest-item{flex-wrap:wrap}
+  .d-ops{flex-direction:row;width:100%;justify-content:flex-start;border-top:1px dashed var(--line);padding-top:var(--sp-2)}
+}
+@media (min-width:769px) and (max-width:1279px){
+  .sidebar{width:200px}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .module-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= 侧边栏 ================= -->
+  <aside class="sidebar">
+    <div class="logo"><span class="mark">P</span>PWORK <span style="font-size:var(--fs-xs);color:var(--ink-faint);font-weight:400">个人工作台</span></div>
+
+    <div class="nav-group">工作区</div>
+    <div class="nav-item active" data-page="home" style="--mark:var(--accent)"><span class="ico">◈</span>今日</div>
+    <div class="nav-item" data-page="tasks" style="--mark:var(--accent)"><span class="ico">✓</span>待办<span class="cnt">2</span></div>
+
+    <div class="nav-group">模块</div>
+    <div class="nav-item" data-mod style="--mark:var(--m-input)"><span class="ico">⚡</span><b style="font-weight:600">输入</b></div>
+    <div class="nav-sub">
+      <div class="nav-item" data-page="notes" style="--mark:var(--m-input)"><span class="ico">✎</span>速记<span class="cnt">12</span></div>
+      <div class="nav-item" data-page="digest" style="--mark:var(--m-input)"><span class="ico">📰</span>今日 Digest</div>
+      <div class="nav-item" data-page="ph:sources" style="--mark:var(--m-input)"><span class="ico">⛓</span>信源</div>
+      <div class="nav-item" data-page="ph:items" style="--mark:var(--m-input)"><span class="ico">🗂</span>条目库</div>
+    </div>
+    <div class="nav-item dim" data-page="ph:process"><span class="ico">⚗</span>处理</div>
+    <div class="nav-item dim" data-page="ph:output"><span class="ico">📤</span>输出</div>
+    <div class="nav-item" data-page="ph:review" style="--mark:var(--m-review)"><span class="ico">◐</span><b style="font-weight:600">回路</b></div>
+    <div class="nav-sub">
+      <div class="nav-item" data-page="ph:review-list" style="--mark:var(--m-review)"><span class="ico">▤</span>复盘档案<span class="cnt">38</span></div>
+      <div class="nav-item" data-page="ph:review-new" style="--mark:var(--m-review)"><span class="ico">＋</span>新建复盘</div>
+      <div class="nav-item" data-page="ph:review-assets" style="--mark:var(--m-review)"><span class="ico">◆</span>认知资产<span class="cnt">61</span></div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="nav-item" data-page="settings" style="--mark:var(--accent)"><span class="ico">⚙</span>设置</div>
+    <div class="foot">低保真原型 · 06-附件<br>规格以 PRD §4–5 为准</div>
+  </aside>
+
+  <!-- ================= 主区 ================= -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><span class="mod-dot" id="crumbDot" style="background:var(--accent)"></span><b id="crumbTitle">今日</b><span id="crumbPath">工作台 · 首页</span></div>
+      <button class="searchbox" id="searchTrigger">🔍 <span>搜索或跳转…</span> <kbd>Ctrl K</kbd></button>
+      <button class="quicknote-btn" id="qnTrigger">⚡ 速记</button>
+      <button class="iconbtn" id="themeBtn" title="切换主题">◐</button>
+    </header>
+
+    <div class="content"><div class="content-inner">
+
+      <!-- ========== 页 1 · 今日（首页） ========== -->
+      <section class="page show" id="page-home">
+        <div class="greet-row">
+          <div class="greet">
+            <div class="date">8月30日 · 周日</div>
+            <h1>早安。今天有 2 件事到期。</h1>
+          </div>
+          <button class="btn primary" onclick="openQn()">⚡ 记一条</button>
+        </div>
+
+        <div class="tiles">
+          <div class="tile" style="--mark:var(--m-input)" data-go="digest">
+            <div class="t-label">今日 DIGEST</div>
+            <div class="t-num">10 条 · 2 分钟</div>
+            <div class="t-sub">8月30日已就绪（Top N 硬顶）</div>
+            <span class="t-link">去扫读 →</span>
+          </div>
+          <div class="tile" style="--mark:var(--accent)" data-go="tasks">
+            <div class="t-label">到期待办</div>
+            <div class="t-num">2 件今天</div>
+            <div class="t-sub">本周共 7 件 · 来源：复盘 3 / 速记 2 / 信息 2</div>
+            <span class="t-link">去处理 →</span>
+          </div>
+          <div class="tile hot" style="--mark:var(--m-review)" data-go="ph:review-new">
+            <div class="t-label">复盘节奏</div>
+            <div class="t-num">距上次 6 天</div>
+            <div class="t-sub">连续 4 周 · 预填已就绪（任务/目标/外部环境）</div>
+            <span class="t-link">开始周复盘 →</span>
+          </div>
+        </div>
+
+        <div class="sec-title">模块</div>
+        <div class="module-grid">
+          <div class="mcard" style="--mark:var(--m-input)" data-go="notes">
+            <div class="m-head"><span class="m-ico">⚡</span><span class="m-name">输入</span><span class="m-tag">活跃</span></div>
+            <div class="m-sub">捕获想法 · 喂养流水线</div>
+            <div class="m-links">
+              <div class="m-link">速记<span class="cnt">12 条</span></div>
+              <div class="m-link">今日 Digest<span class="cnt">就绪 ✓</span></div>
+              <div class="m-link">信源<span class="cnt">8 个</span></div>
+            </div>
+          </div>
+          <div class="mcard planned" style="--mark:var(--m-process)" data-go="ph:process">
+            <div class="m-head"><span class="m-ico">⚗</span><span class="m-name">处理</span><span class="m-tag">规划中</span></div>
+            <div class="m-sub">AI 提纯 · 检索 · 知识整理</div>
+            <div class="m-links"><div class="m-link">W5 起步 · 跨模块检索<span class="cnt">→</span></div></div>
+          </div>
+          <div class="mcard planned" style="--mark:var(--m-output)" data-go="ph:output">
+            <div class="m-head"><span class="m-ico">📤</span><span class="m-name">输出</span><span class="m-tag">规划中</span></div>
+            <div class="m-sub">报告 · 交付物</div>
+            <div class="m-links"><div class="m-link">形态待处理模块验证<span class="cnt">→</span></div></div>
+          </div>
+          <div class="mcard" style="--mark:var(--m-review)" data-go="ph:review-list">
+            <div class="m-head"><span class="m-ico">◐</span><span class="m-name">回路</span><span class="m-tag">已建成</span></div>
+            <div class="m-sub">CLAP 复盘 · 因果循环 · 认知资产</div>
+            <div class="m-links">
+              <div class="m-link">复盘档案<span class="cnt">38</span></div>
+              <div class="m-link">新建复盘<span class="cnt">预填就绪</span></div>
+              <div class="m-link">认知资产<span class="cnt">61</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 页 2 · 速记 ========== -->
+      <section class="page" id="page-notes">
+        <div class="page-head">
+          <h1>速记</h1><span class="sub">12 条 · 捕获 ≤3 次交互（N 键随时唤起）</span>
+          <div class="right"><button class="chip on">全部 12</button><button class="chip">#想法 5</button><button class="chip">#复盘 4</button><button class="chip">导出视图</button></div>
+        </div>
+        <div class="notes-wrap">
+          <div class="note-list">
+            <div class="note-item on"><div class="n-time">今天 09:12</div><div class="n-title">关于采集评分的权重反馈</div><div class="n-meta">#想法 · 已转待办 ✓</div></div>
+            <div class="note-item"><div class="n-time">昨天 22:40</div><div class="n-title">周会注意点：先写后亮</div><div class="n-meta">#复盘</div></div>
+            <div class="note-item"><div class="n-time">昨天 14:05</div><div class="n-title">Digest 里 AIHOT 那条可挂假设校验</div><div class="n-meta">#想法 · 已挂条目 itm_2f</div></div>
+            <div class="note-item"><div class="n-time">8月28日 08:55</div><div class="n-title">速记浮层 Esc 应存草稿</div><div class="n-meta">#复盘</div></div>
+            <div class="note-item"><div class="n-time">8月27日 21:12</div><div class="n-title">独立开发分发渠道备选：Gumroad / Lemon</div><div class="n-meta">#想法</div></div>
+          </div>
+          <div class="editor">
+            <div class="editor-head"><span style="font-size:var(--fs-xs);color:var(--ink-faint)">Markdown · 自动保存</span><span class="saved">已保存 09:13</span></div>
+            <input class="e-title" value="关于采集评分的权重反馈">
+            <div class="e-toolbar"><button><b>B</b></button><button><b>I</b></button><button>• 列表</button><button>❝ 引用</button><button>⟨⟩ 代码</button><button style="color:var(--accent-text)"># 标签</button></div>
+            <textarea class="e-body">连续三天 stars ≤2 的条目都来自 tier 2 源，
+说明 **weight 0.4 还是偏高**。
+
+下一步：
+- 在设置·采集偏好里把 tier 2 默认权重降到 0.3 试两周
+- 观察 kept 率是否回到 10% 左右
+
+> 评分权重"先人工调参，不训练模型"（04 §4.1）</textarea>
+            <details class="fm"><summary>frontmatter</summary>
+              <div style="padding-top:8px">
+                <code>tags: [想法]</code><br>
+                <code>links.itemIds: [itm_2f]</code>　<code>links.taskIds: [task_9c]</code>
+              </div>
+            </details>
+            <div class="editor-foot">
+              <button class="btn" onclick="toast('已创建任务（原型示意）')">转待办</button>
+              <button class="btn" onclick="toast('已写入 links.reviewIds（原型示意）')">挂到复盘</button>
+              <button class="btn">导出 md</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 页 3 · 今日 Digest ========== -->
+      <section class="page" id="page-digest">
+        <div class="page-head">
+          <h1>今日 Digest</h1><span class="sub">8月30日 · Top 10 ｜ 约 2 分钟扫完</span>
+          <div class="right"><button class="chip" onclick="toast('设计红线：无未读数——语义用「已处理/已归档」，不做红点心理债（04 §8）')">❗ 无未读数</button><button class="btn" onclick="toast('抓取中：并发 ≤5，单源 10s（原型示意）')">⟳ 立即抓取</button><button class="btn">订阅 RSS</button></div>
+        </div>
+
+        <div class="digest-item">
+          <div class="score hi"><div class="s-num">82</div><div class="s-cap">评分</div></div>
+          <div class="d-main">
+            <div class="d-title"><a href="#" onclick="return false">新模型开源并商用可用，长上下文成本再降一档</a><span class="ext">↗</span></div>
+            <div class="d-summary">某实验室开源新一代模型权重，商用许可宽松；长上下文价格较上代下降约 40%，摘要质量在独立评测中进入第一梯队……</div>
+            <div class="d-meta"><span>AIHOT</span><span class="tagchip">#模型发布</span><span class="tagchip">#开源</span><span class="otflag ot-opp">🎯 机会</span><span>AI 评分 · 理由见悬浮</span></div>
+          </div>
+          <div class="d-ops"><div class="stars-cap">我的星级</div><div class="stars" title="星级是你的评分，反馈回流权重（04 §4.1）"><span class="on">★</span>☆☆☆☆</div><button class="mini-btn" onclick="toast('已转行动卡，溯源 itm_31（原型示意）')">转行动卡</button></div>
+        </div>
+
+        <div class="digest-item">
+          <div class="score hi"><div class="s-num">79</div><div class="s-cap">评分</div></div>
+          <div class="d-main">
+            <div class="d-title"><a href="#" onclick="return false">独立开发者冷启动增长打法复盘：三个真实案例</a><span class="ext">↗</span></div>
+            <div class="d-summary">作者拆解三个独立产品从 0 到 1000 付费用户的路径，共性是"先社区后产品"；案例含完整定价迭代时间线，可直接借鉴……</div>
+            <div class="d-meta"><span>Indie Hackers 周刊</span><span class="tagchip">#独立开发</span><span class="tagchip">#增长</span><span class="otflag ot-trend">📈 趋势</span></div>
+          </div>
+          <div class="d-ops"><div class="stars-cap">我的星级</div><div class="stars"><span class="on">★</span><span class="on">★</span><span class="on">★</span>☆☆</div><button class="mini-btn" onclick="toast('已转行动卡，溯源 itm_32（原型示意）')">转行动卡</button></div>
+        </div>
+
+        <div class="digest-item">
+          <div class="score mid"><div class="s-num">71</div><div class="s-cap">评分</div></div>
+          <div class="d-main">
+            <div class="d-title"><a href="#" onclick="return false">浏览器端 SQLite 实践：OPFS 落地笔记</a><span class="ext">↗</span></div>
+            <div class="d-summary">作者记录把 5 万行结构化数据迁到浏览器 SQLite（OPFS 后端）的完整踩坑：并发锁、持久化配额、iOS 兼容……</div>
+            <div class="d-meta"><span>前端早读课</span><span class="tagchip">#前端工程化</span><span class="otflag ot-opp">🎯 机会</span></div>
+          </div>
+          <div class="d-ops"><div class="stars-cap">我的星级</div><div class="stars">☆☆☆☆☆</div><button class="mini-btn" onclick="toast('已转行动卡（原型示意）')">转行动卡</button></div>
+        </div>
+
+        <div class="digest-item">
+          <div class="score mid"><div class="s-num">64</div><div class="s-cap">评分</div></div>
+          <div class="d-main">
+            <div class="d-title"><a href="#" onclick="return false">某大厂发布企业知识库新品，主打私有化部署</a><span class="ext">↗</span></div>
+            <div class="d-summary">新品瞄准合规敏感行业，与个人工作台定位重叠度低；关注其对本地优先叙事的引用即可……</div>
+            <div class="d-meta"><span>36kr</span><span class="tagchip">#企业服务</span><span class="otflag ot-threat">⚠ 威胁</span></div>
+          </div>
+          <div class="d-ops"><div class="stars-cap">我的星级</div><div class="stars">☆☆☆☆☆</div><button class="mini-btn" onclick="toast('已转行动卡（原型示意）')">转行动卡</button></div>
+        </div>
+
+        <div style="text-align:center;margin-top:var(--sp-4)"><button class="btn">查看 8月29日及更早 日报 →</button></div>
+      </section>
+
+      <!-- ========== 页 4 · 待办（任务库） ========== -->
+      <section class="page" id="page-tasks">
+        <div class="page-head">
+          <h1>待办</h1><span class="sub">行动项唯一存在地（SSOT）· 其他模块仅 ID 引用</span>
+          <div class="right"><button class="btn primary">＋ 新建任务</button></div>
+        </div>
+        <div class="tabs">
+          <button class="chip on">今天 2</button><button class="chip">本周 7</button><button class="chip">全部 23</button><button class="chip">已完成</button>
+        </div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox" onclick="this.parentElement.classList.toggle('done')">✓</div>
+            <div class="t-name">把评分权重反馈整理进兴趣域配置</div>
+            <span class="origin" data-k="review" onclick="toast('溯源：复盘档案 rev_0823 · P 步行动项（原型示意）')">来源:复盘</span>
+            <span class="t-due over">今天</span>
+          </div>
+          <div class="task-row">
+            <div class="checkbox" onclick="this.parentElement.classList.toggle('done')">✓</div>
+            <div class="t-name">回复合作邮件</div>
+            <span class="origin" data-k="note" onclick="toast('溯源：速记 note_a1（原型示意）')">来源:速记</span>
+            <span class="t-due over">今天</span>
+          </div>
+          <div class="task-row">
+            <div class="checkbox" onclick="this.parentElement.classList.toggle('done')">✓</div>
+            <div class="t-name">读"冷启动增长打法"原文并写批注</div>
+            <span class="origin" data-k="info" onclick="toast('溯源：条目 itm_32（原型示意）')">来源:信息</span>
+            <span class="t-due">周四</span>
+          </div>
+          <div class="task-row">
+            <div class="checkbox" onclick="this.parentElement.classList.toggle('done')">✓</div>
+            <div class="t-name">体检 + 预约牙医</div>
+            <span class="origin" data-k="manual">来源:手动</span>
+            <span class="t-due">周五</span>
+          </div>
+          <div class="task-row done">
+            <div class="checkbox">✓</div>
+            <div class="t-name">完成采集 C1 信源初筛（5–10 源）</div>
+            <span class="origin" data-k="manual">来源:手动</span>
+            <span class="t-due">昨天 · 已闭环</span>
+          </div>
+        </div>
+        <div class="stats-line">本周行动项闭环率 <b>71%</b>（5/7）· 复盘来源 7 日闭环率 <b>60%</b> · 逾期 2 次 above 将触发复盘信号（W5）</div>
+      </section>
+
+      <!-- ========== 页 5 · 设置 ========== -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><h1>设置</h1><span class="sub">壳级配置 · 凭据只存 localStorage，永不进备份</span></div>
+        <div class="settings">
+
+          <div class="set-card">
+            <h2>外观</h2><div class="desc">v3「冷静的工作台」· 明暗机制沿用既有实现</div>
+            <div class="set-body">
+              <div class="set-row"><label>主题</label>
+                <div class="radio" id="themeRadio"><button data-t="light">明亮</button><button data-t="dark">暗色</button><button data-t="auto">跟随系统</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <h2>AI · BYOK</h2><div class="desc">自带 Key；失败自动回落规则引擎——AI 挂了系统照常转</div>
+            <div class="set-body">
+              <div class="set-row"><label>服务商</label><input class="input" value="DeepSeek"></div>
+              <div class="set-row"><label>Base URL</label><input class="input" value="https://api.deepseek.com/v1"></div>
+              <div class="set-row"><label>API Key</label><input class="input" type="password" value="sk-********（只存 localStorage）"></div>
+              <div class="set-row"><label></label><button class="btn" onclick="toast('连接正常 · 便宜模型预筛 + 强模型评分（原型示意）')">测试连接</button></div>
+              <div class="notice" style="margin-top:var(--sp-3)"><b>L2 外发明示</b>：开启后，Digest 条目标题与摘要、复盘措辞检查文本将发往你配置的服务商；其余数据一律留在本机（L1）。云端 raw 层 TTL 14 天，不进备份。</div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <h2>数据</h2><div class="desc">备份先行：任何删除/迁移/清理前，先全量导出</div>
+            <div class="set-body">
+              <div class="set-row"><label>全量备份</label>
+                <button class="btn primary" onclick="toast('导出 {version, exportedAt, entities}（原型示意）')">⬇ 全量导出</button>
+                <button class="btn" onclick="toast('导入：按 id+updatedAt last-writer-wins（原型示意）')">⬆ 导入</button>
+                <span class="val" style="color:var(--ink-faint);font-size:var(--fs-xs)">上次备份：8月23日</span>
+              </div>
+              <div class="set-row"><label>月度备份提醒</label><div class="radio"><button class="on" style="pointer-events:none">开启</button><button style="pointer-events:none">关闭</button></div></div>
+              <div class="usage" style="margin-top:var(--sp-3)">
+                <div class="u-label"><span>复盘（Curated · 全量备份）</span><span>12.4 MB</span></div>
+                <div class="bar"><i style="width:52%"></i></div>
+                <div class="u-label"><span>采集条目（Curated）</span><span>8.1 MB</span></div>
+                <div class="bar"><i style="width:34%"></i></div>
+                <div class="u-label"><span>速记 + 任务</span><span>0.6 MB</span></div>
+                <div class="bar"><i style="width:6%"></i></div>
+                <div class="u-label"><span>raw 暂存层（TTL 14 天 · 不备份）</span><span>—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <h2>采集偏好</h2><div class="desc">兴趣域是评分的锚点——你的经验物化点，随使用持续修订</div>
+            <div class="set-body">
+              <div class="set-row"><label>兴趣域</label>
+                <div class="chips"><span class="chip on">AI 应用</span><span class="chip on">独立开发</span><span class="chip on">前端工程化</span><button class="chip">＋</button></div>
+              </div>
+              <div class="set-row"><label>兴趣域 Context</label><input class="input" value="我在做个人复盘工具与信息采集系统，关注能直接借鉴的产品与增长打法"></div>
+              <div class="set-row"><label>评分权重</label><span class="val">source .30 · novelty .25 · relevance .25 · utility .20　<span style="color:var(--ink-faint);font-size:var(--fs-xs)">（随 stars 反馈人工调参，不训练模型）</span></span></div>
+              <div class="set-row"><label>每日 Top N</label><input class="input" readonly value="10（只读）"><span class="val" style="color:var(--ink-faint);font-size:var(--fs-xs)">推送量是产品设计，不是用户设置</span></div>
+              <div class="set-row"><label>Token 熔断</label><input class="input" value="300,000 tok / 日"></div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <h2>关于</h2><div class="desc">本地优先的四模块个人操作系统 · 数据只属于你</div>
+            <div class="set-body">
+              <div class="set-row"><label>版本</label><span class="val">原型 v1.0 · 对应 PRD v1.0（2026-08-30）</span></div>
+              <div class="set-row"><label>里程碑</label><span class="val">W1 壳+速记 → W2 采集C1 → W3 迁入+任务库 → W4 上云+联动 → W5 自动化</span></div>
+              <div class="set-row"><label>致谢</label><span class="val" style="color:var(--ink-soft)">壳形态借鉴 IT Tools（开源） · 复盘方法论底座见 FUPAN</span></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========== 占位页（JS 填充） ========== -->
+      <section class="page" id="page-ph">
+        <div class="placeholder" id="phBody"></div>
+      </section>
+
+    </div></div>
+  </div>
+</div>
+
+<!-- ================= 底部导航（移动端） ================= -->
+<nav class="bottomnav">
+  <button class="bn on" data-page="home"><span class="ico">◈</span>今日</button>
+  <button class="bn" data-page="digest"><span class="ico">⚡</span>输入</button>
+  <button class="bn" data-page="tasks"><span class="ico">✓</span>待办</button>
+  <button class="bn" data-page="ph:review-list"><span class="ico">◐</span>回路</button>
+  <button class="bn" data-page="settings"><span class="ico">⋯</span>更多</button>
+</nav>
+
+<!-- ================= 命令面板 ================= -->
+<div class="overlay" id="paletteOverlay">
+  <div class="palette" role="dialog" aria-label="命令面板">
+    <div class="p-input">🔍 <input id="paletteInput" placeholder="搜索页面 / 速记 / 条目 / 档案 / 洞察 / 任务，或执行动作…"><kbd style="font-size:var(--fs-xs);color:var(--ink-faint)">Esc</kbd></div>
+    <div class="p-list">
+      <div class="p-group">快速动作</div>
+      <div class="p-item" onclick="openQn()"><span class="mark-act">⚡</span>新速记<span class="p-sub">N</span></div>
+      <div class="p-item" data-page="ph:review-new"><span class="mark-act">＋</span>新建复盘（预填就绪）</div>
+      <div class="p-item" data-page="digest"><span class="mark-act">⟳</span>立即抓取今日 Digest</div>
+      <div class="p-group">页面</div>
+      <div class="p-item" data-page="home">◈ 今日<span class="p-sub">工作区</span></div>
+      <div class="p-item" data-page="tasks">✓ 待办<span class="p-sub">2 件今天到期</span></div>
+      <div class="p-item" data-page="notes">✎ 速记<span class="p-sub">12 条</span></div>
+      <div class="p-item" data-page="digest">📰 今日 Digest<span class="p-sub">10 条就绪</span></div>
+      <div class="p-group">速记</div>
+      <div class="p-item" data-page="notes">关于采集评分的权重反馈<span class="p-sub">今天 09:12 · #想法</span></div>
+      <div class="p-item" data-page="notes">周会注意点：先写后亮<span class="p-sub">昨天 22:40 · #复盘</span></div>
+      <div class="p-group">条目</div>
+      <div class="p-item" data-page="digest">新模型开源并商用可用<span class="p-sub">评分 82 · AIHOT</span></div>
+      <div class="p-group">档案 / 洞察</div>
+      <div class="p-item" data-page="ph:review-list">W34 周复盘：采集评分调参<span class="p-sub">8月23日 · 已归档</span></div>
+    </div>
+    <div class="p-foot"><span>↑↓ 选择</span><span>↵ 跳转</span><span>Esc 关闭</span><span style="margin-left:auto">W3 起接入全库检索</span></div>
+  </div>
+</div>
+
+<!-- ================= 速记浮层 ================= -->
+<div class="overlay" id="qnOverlay">
+  <div class="qn-modal" role="dialog" aria-label="速记">
+    <textarea id="qnText" placeholder="想到什么写什么……（Markdown）"></textarea>
+    <div class="qn-foot">
+      <input class="input tag-in" placeholder="#标签（可选）" style="flex:none;width:140px">
+      <span class="hint">Esc 存草稿关闭</span>
+      <button class="btn" onclick="toast('已转任务库（原型示意）');closeQn()">转待办</button>
+      <button class="btn primary" onclick="toast('已保存速记（原型示意）');closeQn()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- 占位页内容 ---------- */
+const PH = {
+  'process': {ico:'⚗', title:'处理 · 规划中（W5 起步）', lead:'将要解决：AI 提纯 / 跨模块检索 / 知识整理。',
+    will:[['为什么现在没有','闭环优先：先有料，后有加工。输入模块先验证信源价值（W2–W4），处理模块才有东西可提纯。'],['现在能做什么','速记搜索、条目库筛选、复盘聚合分析页已覆盖近似需求。']], go:['去速记搜索','notes'], mark:'var(--m-process)'},
+  'output': {ico:'📤', title:'输出 · 规划中（远期）', lead:'将要解决：报告 / 交付物工作区。',
+    will:[['为什么现在没有','输出形态依赖处理模块验证后的数据结构，现在定义会做死。'],['现在能做什么','月度 HTML 报告（复盘模块已有）、列表页"导出当前视图"已可用。']], go:['看聚合分析','ph:review-list'], mark:'var(--m-output)'},
+  'sources': {ico:'⛓', title:'信源管理', lead:'本原型未包含该页。规格见 PRD §4.4：tier 徽章 / health 点（failStreak≥3 自动停用）/ JSON 导入导出。', will:[], go:['去今日 Digest','digest'], mark:'var(--m-input)'},
+  'items': {ico:'🗂', title:'条目库', lead:'本原型未包含该页。规格见 PRD §4.4：stage/score/tag/otFlag 筛选 + 详情抽屉 + TTL 标注。', will:[], go:['去今日 Digest','digest'], mark:'var(--m-input)'},
+  'review': {ico:'◐', title:'回路 · 复盘工作台', lead:'已建成（M0–M7 + A/B 组，109 测试）。W3 迁入工作台壳。', will:[], go:['看复盘档案','ph:review-list'], mark:'var(--m-review)'},
+  'review-list': {ico:'▤', title:'复盘档案（38）', lead:'已建成能力，W3 迁入。本原型不重复其页面——完整规格见 FUPAN/PRD.md。', will:[], go:['回今日','home'], mark:'var(--m-review)'},
+  'review-new': {ico:'＋', title:'新建复盘 · 预填就绪', lead:'周复盘预填：本周任务完成/延期 5 条 · 目标 delta · Digest 高分条目 3 条（外部环境段）。W4–W5 落地。', will:[], go:['回今日','home'], mark:'var(--m-review)'},
+  'review-assets': {ico:'◆', title:'认知资产库（61）', lead:'洞察卡池 / 模式警示（第 3 次高亮）/ 周期回访。已建成，W3 迁入。', will:[], go:['回今日','home'], mark:'var(--m-review)'}
+};
+
+/* ---------- 页面切换 ---------- */
+const PAGEMETA = {
+  'home':['今日','工作台 · 首页','var(--accent)'],
+  'notes':['速记','输入 · 速记','var(--m-input)'],
+  'digest':['今日 Digest','输入 · 信息采集','var(--m-input)'],
+  'tasks':['待办','工作区 · 任务库','var(--accent)'],
+  'settings':['设置','工作台','var(--accent)'],
+  'ph:sources':['信源','输入 · 信息采集','var(--m-input)'],
+  'ph:items':['条目库','输入 · 信息采集','var(--m-input)'],
+  'ph:process':['处理','模块 · 规划中','var(--m-process)'],
+  'ph:output':['输出','模块 · 规划中','var(--m-output)'],
+  'ph:review':['回路','模块 · 复盘','var(--m-review)'],
+  'ph:review-list':['复盘档案','回路 · 复盘工作台','var(--m-review)'],
+  'ph:review-new':['新建复盘','回路 · 复盘工作台','var(--m-review)'],
+  'ph:review-assets':['认知资产','回路 · 复盘工作台','var(--m-review)']
+};
+function renderPH(key){
+  const p = PH[key]; if(!p) return;
+  const body = document.getElementById('phBody');
+  const will = p.will.map(w=>`<div class="will"><h3>${w[0]}</h3><p>${w[1]}</p></div>`).join('');
+  body.innerHTML = `<div class="p-ico">${p.ico}</div><h2>${p.title}</h2><p>${p.lead}</p>${will}
+    <button class="btn primary go" data-go="${p.go[1]}">${p.go[0]} →</button>`;
+}
+function go(id){
+  if(id.startsWith('ph:')){ renderPH(id.slice(3)); }
+  document.querySelectorAll('.page').forEach(s=>s.classList.remove('show'));
+  document.getElementById('page-'+(id.startsWith('ph:')?'ph':id)).classList.add('show');
+  const m = PAGEMETA[id]||PAGEMETA['home'];
+  document.getElementById('crumbTitle').textContent = m[0];
+  document.getElementById('crumbPath').textContent = m[1];
+  document.getElementById('crumbDot').style.background = m[2];
+  document.querySelectorAll('.nav-item,.bn').forEach(n=>n.classList.toggle('active',n.dataset.page===id));
+  document.querySelectorAll('.bn').forEach(n=>n.classList.toggle('on',n.dataset.page===id));
+  closePalette();
+  document.querySelector('.content').scrollTop = 0;
+}
+document.addEventListener('click',e=>{
+  const t = e.target.closest('[data-page],[data-go]');
+  if(t){ const id = t.dataset.page||t.dataset.go; if(id) go(id); }
+});
+
+/* ---------- 主题 ---------- */
+const themeBtn = document.getElementById('themeBtn');
+const root = document.documentElement;
+function setTheme(t){
+  if(t==='auto'){ localStorage.removeItem('proto-theme'); root.removeAttribute('data-theme'); }
+  else { localStorage.setItem('proto-theme',t); root.setAttribute('data-theme',t); }
+  syncThemeRadio();
+}
+themeBtn.onclick = ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+function syncThemeRadio(){
+  const cur = localStorage.getItem('proto-theme')||'auto';
+  document.querySelectorAll('#themeRadio button').forEach(b=>b.classList.toggle('on',b.dataset.t===cur));
+}
+document.querySelectorAll('#themeRadio button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
+if(localStorage.getItem('proto-theme')) root.setAttribute('data-theme',localStorage.getItem('proto-theme'));
+syncThemeRadio();
+
+/* ---------- 命令面板 ---------- */
+const pal = document.getElementById('paletteOverlay');
+const palInput = document.getElementById('paletteInput');
+function openPalette(){ pal.classList.add('show'); palInput.value=''; palInput.focus(); }
+function closePalette(){ pal.classList.remove('show'); }
+document.getElementById('searchTrigger').onclick = openPalette;
+pal.addEventListener('click',e=>{ if(e.target===pal) closePalette(); });
+
+/* ---------- 速记浮层 ---------- */
+const qn = document.getElementById('qnOverlay');
+function openQn(){ qn.classList.add('show'); setTimeout(()=>document.getElementById('qnText').focus(),0); }
+function closeQn(){ qn.classList.remove('show'); document.getElementById('qnText').value=''; }
+document.getElementById('qnTrigger').onclick = openQn;
+qn.addEventListener('click',e=>{ if(e.target===qn) closeQn(); });
+
+/* ---------- 全局快捷键 ---------- */
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
+  if(e.key==='Escape'){ closePalette(); if(qn.classList.contains('show')) closeQn(); return; }
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if(!typing && e.key.toLowerCase()==='n'){ e.preventDefault(); openQn(); }
+});
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),2200);
+}
+</script>
+</body>
+</html>
