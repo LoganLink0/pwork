@@ -27,6 +27,7 @@ const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
 const Process = lazy(() => import('./pages/Process').then((m) => ({ default: m.Process })))
+const ProcessToolPage = lazy(() => import('./pages/ProcessToolPage').then((m) => ({ default: m.ProcessToolPage })))
 const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })))
 
 // 回路模块（W3 自 FUPAN 迁入，03 §5）：页面组件零改动，路由收敛为 /review/* 子路由
@@ -105,6 +106,7 @@ export default function App() {
                   <Route path="/input/sources" element={<Sources />} />
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/process" element={<Process />} />
+                  <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
                   <Route path="/output" element={<Ph kind="output" />} />
                   <Route
                     path="/review"

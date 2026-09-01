@@ -42,7 +42,7 @@ export const MODULE_NAV: NavModule[] = [
       { to: '/input/items', icon: '🗂', label: '条目库' },
     ],
   },
-  { key: 'process', icon: '⚗', label: '处理', status: 'planned', mark: 'mark-process', to: '/process' },
+  { key: 'process', icon: '⚗', label: '处理', status: 'active', mark: 'mark-process', to: '/process' },
   { key: 'output', icon: '📤', label: '输出', status: 'planned', mark: 'mark-output', to: '/output' },
   {
     key: 'review',
@@ -69,7 +69,8 @@ export const PAGE_META: Record<string, [string, string, string]> = {
   '/input/digest': ['信息日报', '输入 · 信息采集', 'mark-input'],
   '/input/sources': ['信源', '输入 · 信息采集', 'mark-input'],
   '/input/items': ['条目库', '输入 · 信息采集', 'mark-input'],
-  '/process': ['处理', '模块 · 跨模块检索（W5 起步）', 'mark-process'],
+  '/process': ['处理', '模块 · 工具箱与检索', 'mark-process'],
+  '/process/t': ['工具', '模块 · 处理工具箱', 'mark-process'],
   '/output': ['输出', '模块 · 规划中', 'mark-output'],
   '/review': ['复盘档案', '回路 · 复盘工作台', 'mark-review'],
   '/review/new': ['新建复盘', '回路 · 复盘工作台', 'mark-review'],

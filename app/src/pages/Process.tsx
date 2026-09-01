@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { searchAll, KIND_LABEL, type SearchHit, type SearchKind } from '../engine/searchAll'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 
 /**
- * 处理模块起步（W5，05 路线图）：跨模块检索 + AI 全库问答（BYOK）。
- * 不做黑盒：问答的上下文来源全部列出来源链接；未配置 BYOK 时明示引导。
+ * 处理模块主页：四模态工具箱（IT Tools 式）+ 跨模块检索 + AI 全库问答。
+ * 工具注册表见 content/processTools.ts——加新工具先注册再实现组件。
  */
 export function Process() {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [searched, setSearched] = useState(false)
 
-  // AI 问答
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [sources, setSources] = useState<SearchHit[]>([])
@@ -22,7 +22,6 @@ export function Process() {
   const coachReady = Boolean(loadCoachConfig().apiKey)
   const timer = useRef<number | undefined>(undefined)
 
-  // 防抖检索
   useEffect(() => {
     window.clearTimeout(timer.current)
     const q = query.trim()
@@ -58,7 +57,6 @@ export function Process() {
     setAnswer('')
     try {
       const contextHits = await searchAll(q)
-      // 上下文：命中条目的标题/摘要（速记带正文前 200 字），上限 8 条
       const ctx = contextHits.slice(0, 8).map((h, i) => `${i + 1}. [${KIND_LABEL[h.kind]}] ${h.title}`)
       const prompt = [
         `我的问题：${q}`,
@@ -87,7 +85,40 @@ export function Process() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>处理</h1>
-        <span className="sub">跨模块检索 · AI 全库问答（BYOK）——处理模块的起步形态（W5）</span>
+        <span className="sub">四模态工具箱 · 跨模块检索 · AI 全库问答（BYOK）</span>
+      </div>
+
+      <div className="set-card">
+        <h2>工具箱</h2>
+        <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频（易理解程度依次增大）；本地引擎离线可用，生成类为 BYOK 占位</div>
+        <div className="set-body">
+          <div className="module-grid">
+            {CATEGORY_ORDER.map((cat) => {
+              const meta = CATEGORY_META[cat]
+              const tools = PROCESS_TOOLS.filter((t) => t.category === cat)
+              return (
+                <div key={cat} className="mcard" style={{ borderLeft: '3px solid ' + meta.mark }}>
+                  <div className="m-head">
+                    <span className="m-ico" aria-hidden>{meta.icon}</span>
+                    <span className="m-name">{meta.name}</span>
+                  </div>
+                  <div className="m-sub">{meta.desc}</div>
+                  <div className="m-links">
+                    {tools.map((t) => (
+                      <Link key={t.id} to={toolRoute(t.id)} className="m-link" style={t.status === 'byok-pending' ? { opacity: 0.55 } : undefined}>
+                        <span>
+                          {t.status === 'byok-pending' && <span aria-hidden>🔑 </span>}
+                          {t.name}
+                        </span>
+                        <span className="cnt">{t.status === 'ready' ? ENGINE_LABEL[t.engine].replace('本地 · ', '') : '需 Key'}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="set-card">

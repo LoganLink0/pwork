@@ -185,15 +185,16 @@ export function Home() {
           <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} />
         </div>
 
-        <Link to={process.to ?? '/'} className={`mcard planned ${process.mark}`}>
+        <Link to={process.to ?? '/'} className={`mcard ${process.mark}`}>
           <div className="m-head">
             <span className="m-ico" aria-hidden>{process.icon}</span>
             <span className="m-name">{process.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[process.status]}</span>
           </div>
-          <div className="m-sub">AI 提纯 · 检索 · 知识整理</div>
+          <div className="m-sub">四模态工具箱 · 跨模块检索 · AI 问答</div>
           <div className="m-links">
-            <div className="m-link">W5 起步 · 跨模块检索<span className="cnt">→</span></div>
+            <div className="m-link">工具箱<span className="cnt">文字/音频/图片/视频</span></div>
+            <div className="m-link">检索与问答<span className="cnt">→</span></div>
           </div>
         </Link>
 
