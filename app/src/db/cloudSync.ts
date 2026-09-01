@@ -1,0 +1,305 @@
+/**
+ * 云端同步客户端（W4/C2，04 §2/§9）。两种模式按网络环境选择：
+ *
+ * ① 端点模式：走 Worker 的 /api/items（workers.dev——大陆网络常不可达，海外/自有域名下用）。
+ * ② D1 直连模式：直接调 Cloudflare API 查询 D1（api.cloudflare.com，大陆网络实测可达）——
+ *    cron 在云端照常抓取入库，本地绕过 workers.dev 拿数据。需要只读 API Token（设置页有创建指引）。
+ *
+ * 不变式（AD5）：云端只是可丢弃暂存层；合并按指纹去重，本地已有的不动。
+ */
+import { db } from './schema'
+import { normalizeItem } from './collect'
+import { listActiveSources } from './collect'
+import type { Item } from '../types/models'
+
+const ENDPOINT_KEY = 'pwork-cloud-endpoint'
+const TOKEN_KEY = 'pwork-cloud-token'
+const LASTSYNC_KEY = 'pwork-cloud-lastsync'
+const MODE_KEY = 'pwork-cloud-mode'
+const ACCOUNT_KEY = 'pwork-cloud-account'
+const DBID_KEY = 'pwork-cloud-dbid'
+
+export type CloudMode = 'endpoint' | 'd1'
+
+export interface CloudConfig {
+  mode: CloudMode
+  endpoint: string
+  token: string
+  accountId: string
+  databaseId: string
+}
+
+export function loadCloudConfig(): CloudConfig {
+  return {
+    mode: (localStorage.getItem(MODE_KEY) as CloudMode) || 'endpoint',
+    endpoint: localStorage.getItem(ENDPOINT_KEY) ?? '',
+    token: localStorage.getItem(TOKEN_KEY) ?? '',
+    accountId: localStorage.getItem(ACCOUNT_KEY) ?? '',
+    databaseId: localStorage.getItem(DBID_KEY) ?? '',
+  }
+}
+
+export function saveCloudConfig(config: CloudConfig): void {
+  localStorage.setItem(MODE_KEY, config.mode)
+  localStorage.setItem(ENDPOINT_KEY, config.endpoint.trim())
+  localStorage.setItem(TOKEN_KEY, config.token.trim())
+  localStorage.setItem(ACCOUNT_KEY, config.accountId.trim())
+  localStorage.setItem(DBID_KEY, config.databaseId.trim())
+}
+
+export function lastSyncAt(): string | null {
+  return localStorage.getItem(LASTSYNC_KEY)
+}
+
+interface SyncResult {
+  ok: boolean
+  newCount: number
+  skipCount: number
+  serverTime: string | null
+  error: string | null
+}
+
+interface PushResult {
+  ok: boolean
+  imported: number
+  skipped: number
+  error: string | null
+}
+
+function markSynced(serverTime: string | null): void {
+  localStorage.setItem(LASTSYNC_KEY, serverTime ?? new Date().toISOString())
+}
+
+/** 云端条目 → 本地 Item 形态（Curated：expiresAt 置空，本地负责保留策略） */
+function cloudToLocal(raw: Record<string, unknown>): Item {
+  const score = (raw.score ?? {}) as Record<string, number>
+  const now = String(raw.fetchedAt ?? new Date().toISOString())
+  return normalizeItem({
+    id: `itmc_${String(raw.cloudId ?? raw.fingerprint ?? Math.random().toString(36).slice(2, 8))}`,
+    sourceId: String(raw.sourceId ?? ''),
+    sourceName: String(raw.sourceName ?? ''),
+    url: String(raw.url ?? ''),
+    title: String(raw.title ?? ''),
+    summary: String(raw.summary ?? ''),
+    fingerprint: String(raw.fingerprint ?? ''),
+    eventGroup: null,
+    publishedAt: (raw.publishedAt as string) ?? null,
+    fetchedAt: now,
+    stage: 'scored',
+    score: {
+      total: Number(score.total ?? 0),
+      source: Number(score.source ?? 0),
+      novelty: Number(score.novelty ?? 0),
+      relevance: Number(score.relevance ?? 0),
+      utility: Number(score.utility ?? 0),
+    },
+    scoreReason: String(raw.scoreReason ?? ''),
+    aiBy: 'rules',
+    tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
+    otFlag: (raw.otFlag as Item['otFlag']) ?? null,
+    expiresAt: null,
+    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    createdAt: now,
+    updatedAt: now,
+    schemaVersion: 1,
+  })
+}
+
+/** D1 行（snake_case）→ 本地 Item */
+function d1RowToLocal(r: Record<string, unknown>): Item {
+  return cloudToLocal({
+    cloudId: r.id,
+    sourceId: r.source_id,
+    sourceName: r.source_name,
+    url: r.url,
+    title: r.title,
+    summary: r.summary,
+    fingerprint: r.fingerprint,
+    publishedAt: r.published_at,
+    fetchedAt: r.fetched_at,
+    score: {
+      total: r.score_total,
+      source: r.score_source,
+      novelty: r.score_novelty,
+      relevance: r.score_relevance,
+      utility: r.score_utility,
+    },
+    scoreReason: r.score_reason,
+    tags: safeTags(r.tags),
+    otFlag: r.ot_flag,
+  })
+}
+
+function safeTags(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v
+  if (typeof v === 'string') {
+    try {
+      const p = JSON.parse(v)
+      return Array.isArray(p) ? p : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+async function mergeItems(incoming: Item[]): Promise<{ newCount: number; skipCount: number }> {
+  let newCount = 0
+  let skipCount = 0
+  for (const item of incoming) {
+    if (!item.fingerprint) {
+      skipCount++
+      continue
+    }
+    const existing = await db.items.where('fingerprint').equals(item.fingerprint).first()
+    if (existing) {
+      skipCount++
+      continue
+    }
+    await db.items.put(item)
+    newCount++
+  }
+  return { newCount, skipCount }
+}
+
+/* ------------------------------ ① 端点模式 ------------------------------ */
+
+async function syncViaEndpoint(config: CloudConfig, since: string): Promise<SyncResult> {
+  if (!config.endpoint) return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: '未配置同步端点' }
+  const resp = await fetch(
+    `${config.endpoint.replace(/\/$/, '')}/api/items?since=${encodeURIComponent(since)}`,
+    { headers: config.token ? { authorization: `Bearer ${config.token}` } : {} },
+  )
+  if (!resp.ok) return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: `HTTP ${resp.status}` }
+  const data = (await resp.json()) as { serverTime?: string; items?: Record<string, unknown>[] }
+  const { newCount, skipCount } = await mergeItems((data.items ?? []).map(cloudToLocal))
+  const serverTime = data.serverTime ?? new Date().toISOString()
+  return { ok: true, newCount, skipCount, serverTime, error: null }
+}
+
+async function pushViaEndpoint(config: CloudConfig): Promise<PushResult> {
+  const sources = await listActiveSources()
+  const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/sources`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(config.token ? { authorization: `Bearer ${config.token}` } : {}) },
+    body: JSON.stringify({
+      sources: sources.map((s) => ({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight })),
+    }),
+  })
+  if (!resp.ok) return { ok: false, imported: 0, skipped: 0, error: `HTTP ${resp.status}` }
+  const data = (await resp.json()) as { imported?: number; skipped?: number }
+  return { ok: true, imported: data.imported ?? 0, skipped: data.skipped ?? 0, error: null }
+}
+
+/* ------------------------------ ② D1 直连模式 ------------------------------ */
+
+async function d1Query(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
+  const resp = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+      body: JSON.stringify({ sql, params }),
+    },
+  )
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '')
+    throw new Error(`Cloudflare API HTTP ${resp.status}${body ? `：${body.slice(0, 120)}` : ''}`)
+  }
+  const data = (await resp.json()) as { success?: boolean; errors?: { message?: string }[]; result?: { results?: Record<string, unknown>[] }[] }
+  if (!data.success) throw new Error(data.errors?.[0]?.message ?? 'Cloudflare API 返回失败')
+  return data.result?.[0]?.results ?? []
+}
+
+async function syncViaD1(config: CloudConfig, since: string): Promise<SyncResult> {
+  if (!config.accountId || !config.databaseId || !config.token) {
+    return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token（设置里有创建指引）' }
+  }
+  const rows = await d1Query(
+    config,
+    "SELECT * FROM items WHERE stage = 'scored' AND fetched_at > ? ORDER BY fetched_at DESC LIMIT 500",
+    [since],
+  )
+  const { newCount, skipCount } = await mergeItems(rows.map(d1RowToLocal))
+  const serverTime = new Date().toISOString()
+  return { ok: true, newCount, skipCount, serverTime, error: null }
+}
+
+async function pushViaD1(config: CloudConfig): Promise<PushResult> {
+  if (!config.accountId || !config.databaseId || !config.token) {
+    return { ok: false, imported: 0, skipped: 0, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token' }
+  }
+  const sources = await listActiveSources()
+  let imported = 0
+  let skipped = 0
+  for (const s of sources) {
+    try {
+      const rows = await d1Query(config, 'SELECT id FROM sources WHERE url = ?', [s.url])
+      if (rows.length > 0) {
+        skipped++
+        continue
+      }
+      await d1Query(
+        config,
+        `INSERT INTO sources (id, name, url, domain, tier, weight, active, fail_streak, created_at, updated_at)
+         VALUES ('src_l_' || lower(hex(randomblob(8))), ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
+        [s.name, s.url, s.domain, s.tier, s.weight, new Date().toISOString(), new Date().toISOString()],
+      )
+      imported++
+    } catch (e) {
+      skipped++
+      void e
+    }
+  }
+  return { ok: true, imported, skipped, error: null }
+}
+
+/* ------------------------------ 统一入口 ------------------------------ */
+
+export async function syncFromCloud(): Promise<SyncResult> {
+  const config = loadCloudConfig()
+  const since = localStorage.getItem(LASTSYNC_KEY) ?? ''
+  try {
+    const r =
+      config.mode === 'd1' ? await syncViaD1(config, since) : await syncViaEndpoint(config, since)
+    if (r.ok) markSynced(r.serverTime)
+    return r
+  } catch (e) {
+    return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: e instanceof Error ? e.message : '网络失败' }
+  }
+}
+
+export async function pushSourcesToCloud(): Promise<PushResult> {
+  const config = loadCloudConfig()
+  try {
+    return config.mode === 'd1' ? await pushViaD1(config) : await pushViaEndpoint(config)
+  } catch (e) {
+    return { ok: false, imported: 0, skipped: 0, error: e instanceof Error ? e.message : '网络失败' }
+  }
+}
+
+/** 测试当前配置的连通性（不打数据）：端点模式拉 1 条；D1 直连查一条 counts */
+export async function testConnection(): Promise<{ ok: boolean; message: string }> {
+  const config = loadCloudConfig()
+  try {
+    if (config.mode === 'd1') {
+      if (!config.accountId || !config.databaseId || !config.token) return { ok: false, message: '先填齐账户 ID / 数据库 ID / API Token' }
+      const rows = await d1Query(config, 'SELECT count(*) AS n FROM sources', [])
+      const n = (rows[0]?.n as number) ?? 0
+      return { ok: true, message: `连接成功！云端已有 ${n} 个信源` }
+    }
+    if (!config.endpoint) return { ok: false, message: '先填写部署输出的端点地址' }
+    const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/digest?n=1`, {
+      headers: config.token ? { authorization: `Bearer ${config.token}` } : {},
+    })
+    return resp.ok ? { ok: true, message: '连接成功！' } : { ok: false, message: `端点可达但返回 HTTP ${resp.status}` }
+  } catch {
+    return {
+      ok: false,
+      message:
+        config.mode === 'endpoint'
+          ? '连不上（workers.dev 在大陆网络常被阻断）——建议切到 D1 直连模式'
+          : '连不上：检查账户 ID / 数据库 ID / Token 是否正确',
+    }
+  }
+}

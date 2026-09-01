@@ -1,0 +1,132 @@
+/**
+ * 设计令牌 v3 —— 「冷静的工作台」（自 FUPAN/app 迁入，为全工作台设计系统的第一层）
+ * 纪律：①全局唯一字族（无衬线），层级只靠字号/字重/留白；②中性灰 + 唯一琥珀强调色；
+ * ③类别色只作 3px 边线与 12px 标签，不作大面积填充；④字号 8 级阶梯，组件禁止自造数值。
+ *
+ * 工作台层新增（PRD §5.2）：四模块标记色 —— 全部复用既有令牌取值，零新增色。
+ * 用途仅三种：侧边栏选中项 3px 左边线 / 模块卡片 12px 状态标签 / 面包屑标记点。
+ * 禁止大面积填充、禁止按钮着色。
+ */
+:root {
+  color-scheme: light;
+
+  /* ------- 中性灰（微暖） ------- */
+  --bg: #f5f4f1;
+  --surface: #ffffff;
+  --surface-2: #faf9f7;
+  --line: #e6e4df;
+  --line-strong: #cfcac1;
+  --ink: #211e1a;
+  --ink-soft: #66625a;
+  --ink-faint: #97928a;
+
+  /* ------- 唯一强调色：琥珀（三级） ------- */
+  --accent: #e8833a;
+  --accent-deep: #b0500f;
+  --accent-text: #a34e12;
+
+  /* ------- 类别标记色（仅边线与 12px 标签） ------- */
+  --cat-good: #2f7d52;
+  --cat-need: #b85c38;
+  --cat-insight: #3d6e9e;
+  --cat-action: #a05353;
+
+  /* ------- 语义 ------- */
+  --danger: #b8443a;
+  --ok: #2f7d52;
+
+  /* ------- 模块标记（PRD §5.2，复用取值） ------- */
+  --m-input: var(--cat-insight); /* 输入 = 蓝 */
+  --m-process: var(--cat-good); /* 处理 = 绿 */
+  --m-output: var(--cat-action); /* 输出 = 赭 */
+  --m-review: var(--accent); /* 回路 = 琥珀（闭环枢纽与品牌同源） */
+
+  /* ------- 字体：全局唯一字族 ------- */
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC',
+    'Segoe UI', sans-serif;
+  --font-display: var(--font-body);
+  --font-hand: var(--font-body);
+
+  /* ------- 字号阶梯（8 级，唯一来源） ------- */
+  --fs-xs: 12px; /* 标签、说明 */
+  --fs-sm: 13px; /* 次要文本 */
+  --fs-md: 16px; /* 正文 */
+  --fs-lg: 18px; /* 卡片标题 */
+  --fs-xl: 20px; /* 区块标题 h2 */
+  --fs-h1: 28px; /* 页面标题 */
+  --fs-hero: 32px; /* 仪表盘主标语 */
+  --fs-num: 24px; /* 统计数字 */
+
+  /* ------- 间距（8px 基） ------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ------- 圆角与阴影（单阴影体系） ------- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --shadow-1: 0 1px 2px rgba(33, 30, 26, 0.06);
+  --shadow-2: 0 2px 4px rgba(33, 30, 26, 0.06), 0 8px 20px rgba(33, 30, 26, 0.08);
+  --shadow-pop: 0 12px 32px rgba(33, 30, 26, 0.14);
+  --shadow-card-hover: var(--shadow-2);
+
+  /* ------- 布局 ------- */
+  --content-w: 1200px;
+  --nav-h: 60px;
+  --sidebar-w: 240px;
+  --topbar-h: 56px;
+}
+
+/* ------- 暗色 ------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #191816;
+    --surface: #222019;
+    --surface-2: #2a2721;
+    --line: #38352e;
+    --line-strong: #4c473d;
+    --ink: #ecebe7;
+    --ink-soft: #b3afa5;
+    --ink-faint: #827d73;
+    --accent: #e8833a;
+    --accent-deep: #c96a2e;
+    --accent-text: #eda868;
+    --cat-good: #5aab7f;
+    --cat-need: #d3805c;
+    --cat-insight: #6d9cc7;
+    --cat-action: #c47a7a;
+    --ok: #5aab7f;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #191816;
+  --surface: #222019;
+  --surface-2: #2a2721;
+  --line: #38352e;
+  --line-strong: #4c473d;
+  --ink: #ecebe7;
+  --ink-soft: #b3afa5;
+  --ink-faint: #827d73;
+  --accent: #e8833a;
+  --accent-deep: #c96a2e;
+  --accent-text: #eda868;
+  --cat-good: #5aab7f;
+  --cat-need: #d3805c;
+  --cat-insight: #6d9cc7;
+  --cat-action: #c47a7a;
+  --ok: #5aab7f;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+}

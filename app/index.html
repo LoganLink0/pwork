@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="个人工作台 PWORK——本地优先的四模块个人操作系统，输入 → 处理 → 输出 → 回路，数据只属于你" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f4f1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#191816" />
+    <title>个人工作台 PWORK</title>
+    <script>
+      // 诊断：记录最后一次未捕获异常（本地优先应用无遥测，给"打不开"留一条线索）
+      window.addEventListener('error', function (e) {
+        try { localStorage.setItem('__pwork-lasterr', (e.message || 'unknown') + ' @ ' + (e.filename || '').split('/').pop() + ':' + (e.lineno || '?')) } catch (_) {}
+      })
+      window.addEventListener('unhandledrejection', function (e) {
+        try { var r = e.reason; localStorage.setItem('__pwork-lasterr', 'rej: ' + ((r && (r.stack || r.message)) || String(r)).slice(0, 400)) } catch (_) {}
+      })
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

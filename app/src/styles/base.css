@@ -1,0 +1,170 @@
+/**
+ * 基础排版与全局元素（「冷静的工作台」v3，自 FUPAN 延续）。
+ * 规范：单一字族；h1/h2 用字号阶梯；只动 transform/opacity；focus 可见。
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.7;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 var(--sp-3);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: var(--fs-xl);
+}
+
+h3 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+p {
+  margin: 0 0 var(--sp-3);
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent-text);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 数字场景一律等宽 */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 按钮 ---------- */
+.btn-primary {
+  background: var(--accent-deep);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 8px var(--sp-4);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+
+.btn-primary:disabled {
+  background: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 7px var(--sp-4);
+  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease-out;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+  transform: translateY(-1px);
+}
+
+.btn-ghost:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* ---------- 无障碍跳转 ---------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--accent-deep);
+  color: #fff;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 0 0 var(--r-sm) 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ---------- 存储降级横幅 ---------- */
+.storage-banner {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  background: var(--danger);
+  color: #fff;
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
