@@ -14,10 +14,10 @@ const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
 }
 
 /** 任务三分类（客观事实取代主观重要/紧急），命名沿用用户原话：一类/二类/三类 */
-const LANE_META: Record<TaskLane, { name: string; rule: string; action: string }> = {
-  1: { name: '一类 · 今天必须做', rule: '今天不完成，这件事的时间窗口直接消失（不可逆损失）', action: '今日必须优先处理' },
-  2: { name: '二类 · 卡住别人的', rule: '缺我的输出，整件事卡住推进不了（非我不可）', action: '尽快解除，不要长期搁置' },
-  3: { name: '三类 · 可以绕开我', rule: '就算我不做，事情也能继续（可交人/可推迟/可删除）', action: '碎片时间处理，或干脆删掉' },
+const LANE_META: Record<TaskLane, { name: string; rule: string }> = {
+  1: { name: '一类 · 今天必须做', rule: '今天不完成，这件事的时间窗口直接消失（不可逆损失）' },
+  2: { name: '二类 · 卡住别人的', rule: '缺我的输出，整件事卡住推进不了（非我不可）' },
+  3: { name: '三类 · 可以绕开我', rule: '就算我不做，事情也能继续（可交人/可推迟/可删除）' },
 }
 
 /** 本地日期展示：今天 / 明天 / M月D日 */
@@ -48,7 +48,7 @@ function OriginBadge({ task }: { task: TaskItem }) {
 }
 
 export function Tasks() {
-  const { tasks, stats, create, setStatus, postpone, remove, load } = useTasks()
+  const { tasks, stats, create, setStatus, postpone, remove, setLane, load } = useTasks()
   const [draft, setDraft] = useState('')
   const today = todayLocal()
 
@@ -59,17 +59,17 @@ export function Tasks() {
 
   const laneLists = useMemo(() => {
     const byLane: Record<TaskLane, TaskItem[]> = { 1: [], 2: [], 3: [] }
-    const done: TaskItem[] = []
+    const closed: TaskItem[] = []
     for (const t of tasks) {
-      const isDone = t.status === 'done' || t.status === 'dropped'
-      if (isDone) {
-        done.push(t)
+      const isClosed = t.status === 'done' || t.status === 'dropped'
+      if (isClosed) {
+        closed.push(t)
         continue
       }
       byLane[resolveLane(t, today)]!.push(t)
     }
-    return { byLane, done }
-  }, [tasks])
+    return { byLane, closed }
+  }, [tasks, today])
 
   const submit = async () => {
     if (!draft.trim()) return
@@ -79,16 +79,25 @@ export function Tasks() {
 
   const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
 
-  const renderRow = (t: TaskItem, done: boolean) => {
+  /**
+   * 状态流转矩阵（待办/目标同一套规则）：
+   *  - 复选框是唯一状态开关：进行中 → 勾选闭环；已结束（含已放弃）→ 再点恢复为进行中
+   *  - 分类下拉：手动选择后以手动为准，自动分诊不再覆盖
+   *  - 放弃 = 不做了但留底（可恢复）；删除 = 移出列表（软删除，备份可找回）
+   */
+  const renderRow = (t: TaskItem) => {
+    const closed = t.status === 'done' || t.status === 'dropped'
     const d = dueLabel(t.due, today)
+    const lane = resolveLane(t, today)
     return (
-      <div key={t.id} className={`task-row${done ? ' done' : ''}`} data-testid="task-row">
+      <div key={t.id} className="task-row" data-testid="task-row" data-status={t.status}>
         <div
           className="checkbox"
           role="checkbox"
           aria-checked={t.status === 'done'}
-          aria-label={`完成：${t.title}`}
-          onClick={() => void setStatus(t.id, done ? 'todo' : 'done')}
+          aria-label={closed ? `恢复为进行中：${t.title}` : `完成：${t.title}`}
+          title={closed ? '恢复为进行中' : '标记完成'}
+          onClick={() => void setStatus(t.id, closed ? 'todo' : 'done')}
         >
           ✓
         </div>
@@ -97,19 +106,66 @@ export function Tasks() {
             <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
               {t.title}
             </div>
-            <span className={`t-due${d.over && !done ? ' over' : ''}`}>
-              {done ? (t.status === 'dropped' ? '已放弃' : '已闭环') : d.text}
-            </span>
+            {closed ? (
+              <span className={`status-badge${t.status === 'done' ? ' okb' : ' offb'}`}>
+                {t.status === 'done' ? '已闭环' : '已放弃'}
+              </span>
+            ) : (
+              <span className={`t-due${d.over ? ' over' : ''}`} title={t.due ? `期限 ${t.due}` : undefined}>
+                {d.text}
+              </span>
+            )}
           </div>
           <div className="task-row-meta">
-            <OriginBadge task={t} />
-            {!done && (
+            {closed ? (
               <>
-                <button type="button" className="mini-btn" title="推迟 7 天" onClick={() => void postpone(t.id, 7)}>推迟 7 天</button>
+                <OriginBadge task={t} />
+                <span className="meta-spacer" />
                 <button
                   type="button"
                   className="mini-btn"
-                  title="删除（软删除，导出备份中仍可找回）"
+                  title="从列表移除（软删除，导出备份中仍可找回）"
+                  onClick={() => {
+                    if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
+                  }}
+                >
+                  删除
+                </button>
+              </>
+            ) : (
+              <>
+                <select
+                  className="lane-select"
+                  data-testid="lane-select"
+                  data-lane={lane}
+                  value={lane}
+                  aria-label={`调整分类：${t.title}`}
+                  title="调整分类（选定后以手动为准）"
+                  onChange={(e) => void setLane(t.id, Number(e.target.value) as TaskLane)}
+                >
+                  <option value={1}>一类 · 今天必须做</option>
+                  <option value={2}>二类 · 卡住别人的</option>
+                  <option value={3}>三类 · 可以绕开我</option>
+                </select>
+                <OriginBadge task={t} />
+                <span className="meta-spacer" />
+                <button type="button" className="mini-btn" title="期限顺延 7 天" onClick={() => void postpone(t.id, 7)}>
+                  推迟
+                </button>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="不做了但保留记录，可随时恢复"
+                  onClick={() => {
+                    if (window.confirm(`放弃「${t.title}」？它会移入下方"已结束"区，随时可恢复。`)) void setStatus(t.id, 'dropped')
+                  }}
+                >
+                  放弃
+                </button>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="从列表移除（软删除，导出备份中仍可找回）"
                   onClick={() => {
                     if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
                   }}
@@ -129,25 +185,29 @@ export function Tasks() {
     const list = laneLists.byLane[lane]
     return (
       <div className="lane-col">
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
-          <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>{meta.name}</h3>
-        </div>
+        <h3 style={{ fontSize: 'var(--fs-md)', margin: '0 0 var(--sp-2)' }} title={meta.rule}>
+          {meta.name}
+          <span className="lane-count">{list.length}</span>
+        </h3>
         <div className="task-card">
           {list.length === 0 ? (
-            <div style={{ padding: 'var(--sp-3) var(--sp-5)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>（无）</div>
+            <div style={{ padding: 'var(--sp-3) var(--sp-4)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>（无）</div>
           ) : (
-            list.map((t) => renderRow(t, false))
+            list.map((t) => renderRow(t))
           )}
         </div>
       </div>
     )
   }
 
+  const doneClosed = laneLists.closed.filter((t) => t.status === 'done').length
+  const droppedClosed = laneLists.closed.length - doneClosed
+
   return (
     <section>
       <div className="page-head">
         <h1>待办</h1>
-        <span className="sub">三个问题定顺序：① 今天不做就过期？② 卡住别人等我的？③ 都不是？——按一类＞二类＞三类执行</span>
+        <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「放弃」留底</span>
       </div>
 
       <div className="quick-add" data-testid="quick-add">
@@ -168,13 +228,19 @@ export function Tasks() {
         {renderLaneSection(3)}
       </div>
 
-      {laneLists.done.length > 0 && (
+      {laneLists.closed.length > 0 && (
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
-            <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>已闭环</h3>
+            <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
+              已结束
+              <span className="lane-count">
+                {doneClosed} 闭环 · {droppedClosed} 放弃
+              </span>
+            </h3>
+            <span className="sub">点复选框可恢复为进行中</span>
           </div>
           <div className="task-card">
-            {laneLists.done.map((t) => renderRow(t, true))}
+            {laneLists.closed.map((t) => renderRow(t))}
           </div>
         </>
       )}
