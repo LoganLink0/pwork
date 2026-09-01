@@ -10,7 +10,7 @@ import type { Goal } from '../types/models'
  *  - 放弃 = 不追了但留底（可恢复），入口在进行中行的操作区
  */
 export function Goals() {
-  const { goals, create, setStatus } = useGoals()
+  const { goals, create, setStatus, updateProgress } = useGoals()
   const [draft, setDraft] = useState('')
   const today = todayLocal()
 
@@ -37,10 +37,17 @@ export function Goals() {
         <div
           className="checkbox"
           role="checkbox"
+          tabIndex={0}
           aria-checked={g.status === 'done'}
           aria-label={closed ? `恢复为进行中：${g.title}` : `达成：${g.title}`}
           title={closed ? '恢复为进行中' : '标记达成'}
           onClick={() => void setStatus(g.id, closed ? 'active' : 'done')}
+          onKeyDown={(e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+              e.preventDefault()
+              void setStatus(g.id, closed ? 'active' : 'done')
+            }
+          }}
         >
           ✓
         </div>
@@ -67,6 +74,17 @@ export function Goals() {
                 </span>
               )}
               <span className="meta-spacer" />
+              <button
+                type="button"
+                className="mini-btn"
+                title="记录当前进展，周复盘时随目标带出"
+                onClick={() => {
+                  const note = window.prompt(`「${g.title}」的当前进度：`, g.progressNote ?? '')
+                  if (note && note.trim()) void updateProgress(g.id, note.trim())
+                }}
+              >
+                记进度
+              </button>
               <button
                 type="button"
                 className="mini-btn"

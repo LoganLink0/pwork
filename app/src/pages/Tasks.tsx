@@ -94,10 +94,17 @@ export function Tasks() {
         <div
           className="checkbox"
           role="checkbox"
+          tabIndex={0}
           aria-checked={t.status === 'done'}
           aria-label={closed ? `恢复为进行中：${t.title}` : `完成：${t.title}`}
           title={closed ? '恢复为进行中' : '标记完成'}
           onClick={() => void setStatus(t.id, closed ? 'todo' : 'done')}
+          onKeyDown={(e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+              e.preventDefault()
+              void setStatus(t.id, closed ? 'todo' : 'done')
+            }
+          }}
         >
           ✓
         </div>

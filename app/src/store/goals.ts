@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { createGoal, listAllGoals, setGoalStatus, type CreateGoalInput } from '../db/goalsRepo'
+import { createGoal, listAllGoals, setGoalStatus, updateProgress, type CreateGoalInput } from '../db/goalsRepo'
 import type { Goal } from '../types/models'
 
 interface GoalsState {
@@ -8,6 +8,7 @@ interface GoalsState {
   load: () => Promise<void>
   create: (input: CreateGoalInput) => Promise<void>
   setStatus: (id: string, status: Goal['status']) => Promise<void>
+  updateProgress: (id: string, progressNote: string) => Promise<void>
 }
 
 export const useGoals = create<GoalsState>((set) => ({
@@ -22,6 +23,10 @@ export const useGoals = create<GoalsState>((set) => ({
   },
   setStatus: async (id, status) => {
     await setGoalStatus(id, status)
+    set({ goals: await listAllGoals() })
+  },
+  updateProgress: async (id, progressNote) => {
+    await updateProgress(id, progressNote)
     set({ goals: await listAllGoals() })
   },
 }))

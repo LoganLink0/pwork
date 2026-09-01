@@ -10,7 +10,7 @@ import type { TaskItem, TaskLane } from '../types/models'
 import { todayLocal } from './datetime'
 
 export function resolveLane(t: TaskItem, today = todayLocal()): TaskLane {
-  const open = t.status === 'todo' || t.status === 'doing'
+  const open = t.status === 'todo'
   if (!open) return t.lane ?? 3
   if (t.lane != null) return t.lane
   if (t.due && t.due <= today) return 1

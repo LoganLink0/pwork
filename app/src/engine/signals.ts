@@ -56,7 +56,7 @@ export async function gatherSignals(now = new Date()): Promise<Signal[]> {
   ])
   const today = todayLocal(now)
   const openTasks = tasks
-    .filter((t) => t.deletedAt === null && (t.status === 'todo' || t.status === 'doing'))
+    .filter((t) => t.deletedAt === null && t.status === 'todo')
     .map((t) => ({ title: t.title, due: t.due }))
   void today
   const patternCounts: Record<string, number> = {}

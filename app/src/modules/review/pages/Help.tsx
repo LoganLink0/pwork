@@ -103,7 +103,7 @@ export function Help() {
               {HELP.labels.why}① 没有每周检查点，拖延无法被发现<br />
               {HELP.labels.why}② 拖延积累后，学习变成了"下次再说"
             </p>
-            <p className="help-why">{HELP.labels.counter}：同样忙的项目周反而完成了任务——不是时间问题，是计划颗粒度问题</p>
+            <p className="help-why">{HELP.labels.counter}：同样忙的项目周反而完成了任务——不是时间问题，是计划切得粗细的问题</p>
           </div>
         </div>
 
@@ -115,7 +115,7 @@ export function Help() {
           </div>
           <div className="cause-card">
             <p className="help-filled">
-              计划要拆到"每周可验收"的颗粒度，并配固定检查点
+              计划要拆到"每周都能验收的一小步"，并配固定检查点
               <span className="coach-say">　【归纳·待验证】{HELP.labels.confidence}：{CONFIDENCE_LABEL[2]}</span>
             </p>
             <p className="help-why">验证方式：连续两周执行周日核对，看是否兑现</p>

@@ -56,7 +56,7 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
   const closed = live
     .filter((t) => t.status === 'done' && inRange(t.closedAt))
     .map((t) => ({ title: t.title, closedAt: t.closedAt! }))
-  const open = live.filter((t) => t.status === 'todo' || t.status === 'doing')
+  const open = live.filter((t) => t.status === 'todo')
   const today = todayLocal(now)
   const overdueCount = open.filter((t) => (t.due ?? '9999') < today).length
   const closureRate = live.length === 0 ? 0 : Math.round((live.filter((t) => t.status === 'done').length / live.length) * 100)

@@ -66,7 +66,7 @@ export interface Goal {
 export interface TaskItem {
   id: string
   title: string
-  status: 'todo' | 'doing' | 'done' | 'dropped'
+  status: 'todo' | 'done' | 'dropped'
   /** 'YYYY-MM-DD' 本地日期（逾期判断） */
   due?: string
   /** 若来自复盘行动项，保留 if-then 执行意图 */

@@ -720,3 +720,10 @@ a.origin:hover {
   font-size: var(--fs-xs);
   color: var(--ink-faint);
 }
+/* 标签芯片容器（设置页兴趣域等） */
+.chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}

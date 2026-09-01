@@ -139,7 +139,7 @@ export async function postponeTask(id: string, days = 7): Promise<void> {
 /** 首页/侧边栏统计：今天到期（含逾期）、本周 */
 export async function dueStats(now = new Date()): Promise<{ today: number; week: number; open: number; done: number; total: number }> {
   const all = await db.tasks.toArray()
-  const open = all.filter((t) => t.deletedAt === null && (t.status === 'todo' || t.status === 'doing'))
+  const open = all.filter((t) => t.deletedAt === null && t.status === 'todo')
   const today = todayDue(now)
   const week = weekEnd(now)
   return {

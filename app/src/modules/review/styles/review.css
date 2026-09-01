@@ -1251,3 +1251,53 @@
   color: var(--accent-text);
   user-select: none;
 }
+
+/* ---------- 审计补全：TSX 引用但从未定义的类（开发复盘 1.14 教训） ---------- */
+/* 复盘向导双栏：主列 + 引导师笔记栏 */
+.review-root .wizard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .review-root .wizard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.review-root .wizard-main {
+  min-width: 0;
+}
+/* 教练按钮容器 */
+.review-root .coach-ask {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+}
+.review-root .coach-ask-btn {
+  flex: none;
+}
+/* 逻辑树节点（缩进由内联样式按深度控制） */
+.review-root .tree-node {
+  padding: 2px 0;
+}
+/* 引导师笔记：类比句 */
+.review-root .guide-tip-analogy {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+/* 回路帮助页宽度约束 */
+.review-root .container {
+  max-width: var(--content-w);
+  margin: 0 auto;
+}
+/* 打印时隐藏交互面板（归档详情页的双检面板） */
+@media print {
+  .review-root .DoubleCheck-hide-on-print {
+    display: none !important;
+  }
+}
