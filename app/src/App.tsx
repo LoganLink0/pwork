@@ -29,6 +29,10 @@ const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })
 const Process = lazy(() => import('./pages/Process').then((m) => ({ default: m.Process })))
 const ProcessToolPage = lazy(() => import('./pages/ProcessToolPage').then((m) => ({ default: m.ProcessToolPage })))
 const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })))
+const Output = lazy(() => import('./pages/Output').then((m) => ({ default: m.Output })))
+const ReportGenerator = lazy(() => import('./pages/ReportGenerator').then((m) => ({ default: m.ReportGenerator })))
+const ReadOutLoud = lazy(() => import('./pages/ReadOutLoud').then((m) => ({ default: m.ReadOutLoud })))
+const DataCard = lazy(() => import('./pages/DataCard').then((m) => ({ default: m.DataCard })))
 
 // 回路模块（W3 自 FUPAN 迁入，03 §5）：页面组件零改动，路由收敛为 /review/* 子路由
 const ReviewDashboard = lazy(() => import('./modules/review/pages/Dashboard').then((m) => ({ default: m.Dashboard })))
@@ -107,7 +111,12 @@ export default function App() {
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/process" element={<Process />} />
                   <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
-                  <Route path="/output" element={<Ph kind="output" />} />
+                  <Route path="/output" element={<Output />} />
+                  <Route path="/output/report" element={<ReportGenerator />} />
+                  <Route path="/output/read" element={<ReadOutLoud />} />
+                  <Route path="/output/card" element={<DataCard />} />
+                  <Route path="/output/draft" element={<Ph kind="draft" />} />
+                  <Route path="/output/video" element={<Ph kind="video" />} />
                   <Route
                     path="/review"
                     element={<ReviewLayout />}

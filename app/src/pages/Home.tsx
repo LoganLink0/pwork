@@ -198,15 +198,16 @@ export function Home() {
           </div>
         </Link>
 
-        <Link to={output.to ?? '/'} className={`mcard planned ${output.mark}`}>
+        <Link to={output.to ?? '/output'} className={`mcard ${output.mark}`}>
           <div className="m-head">
             <span className="m-ico" aria-hidden>{output.icon}</span>
             <span className="m-name">{output.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[output.status]}</span>
           </div>
-          <div className="m-sub">报告 · 交付物</div>
+          <div className="m-sub">周期成稿 · 听觉 · 分享</div>
           <div className="m-links">
-            <div className="m-link">形态待处理模块验证<span className="cnt">→</span></div>
+            <div className="m-link">报告生成器<span className="cnt">→</span></div>
+            <div className="m-link">朗读版<span className="cnt">→</span></div>
           </div>
         </Link>
 

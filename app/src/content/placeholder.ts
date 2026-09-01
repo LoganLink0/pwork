@@ -13,15 +13,26 @@ export interface PlaceholderContent {
 }
 
 export const PLACEHOLDER: Record<string, PlaceholderContent> = {
-  output: {
-    icon: '📤',
-    title: '输出 · 规划中（远期）',
-    lead: '将要解决：报告 / 交付物工作区。',
+  draft: {
+    icon: '✍',
+    title: '文章草稿（O4 待办）',
+    lead: '将要解决：速记与洞察聚合 → 博客文章骨架 + AI 润色。',
     will: [
-      ['为什么现在没有', '输出形态依赖处理模块验证后的数据结构，现在定义会做死。'],
-      ['现在能做什么', '月度 HTML 报告（复盘工作台独立版已有）、速记导出 md 已可用。'],
+      ['为什么现在没有', '文章形态等真实写作场景出现后定义（处理模块的多模态工具刚起步）。'],
+      ['现在能做什么', 'AI 全库问答（处理页）可以帮你把散落想法先汇总起来。'],
     ],
-    goLabel: '去速记',
-    goTo: '/input/notes',
+    goLabel: '去处理',
+    goTo: '/process',
+  },
+  video: {
+    icon: '🎬',
+    title: '数据视频（O5 远期）',
+    lead: '将要解决：数据变化 → 短视频。',
+    will: [
+      ['为什么现在没有', '依赖多模态生成能力与真实需求，立占位不实现。'],
+      ['现在能做什么', '数据快照卡片已可分享关键数字。'],
+    ],
+    goLabel: '去数据卡片',
+    goTo: '/output/card',
   },
 }

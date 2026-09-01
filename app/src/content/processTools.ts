@@ -11,6 +11,7 @@ export type ToolEngine =
   | 'local-tesseract'
   | 'local-ffmpeg'
   | 'local-canvas'
+  | 'external'
   | 'byok'
 export type ToolStatus = 'ready' | 'byok-pending'
 
@@ -25,6 +26,8 @@ export interface ProcessTool {
   requires?: string
   /** 限制与提示（如实告知） */
   note?: string
+  /** engine='external' 时必填：外部工具地址（新标签打开） */
+  externalUrl?: string
 }
 
 export const CATEGORY_ORDER: ToolCategory[] = ['text', 'audio', 'image', 'video']
@@ -42,6 +45,7 @@ export const ENGINE_LABEL: Record<ToolEngine, string> = {
   'local-tesseract': '本地 · Tesseract',
   'local-ffmpeg': '本地 · FFmpeg',
   'local-canvas': '本地 · Canvas',
+  external: '外部工具 ↗',
   byok: 'BYOK 云端',
 }
 
@@ -110,6 +114,26 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     status: 'byok-pending',
     requires: '语音识别服务 Key（OpenAI Whisper 兼容 / 阿里百炼）',
   },
+  {
+    id: 'ext-ttsmaker',
+    category: 'audio',
+    name: 'TTSMaker 在线配音',
+    desc: '更多音色与情感的在线文字转语音，免费额度可用（外部工具，跳转官网）',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://ttsmaker.com/zh-cn',
+    note: '外部工具，与本工作台无数据互通',
+  },
+  {
+    id: 'ext-capcut',
+    category: 'video',
+    name: '剪映网页版',
+    desc: '专业级视频剪辑与字幕，含文字成片模板（外部工具，跳转官网）',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://www.capcut.cn/',
+    note: '外部工具；重度视频处理推荐用它，本工作台的 wasm 转换适合轻量场景',
+  },
   // ── 图片 ──
   {
     id: 'ocr',
@@ -128,6 +152,16 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     engine: 'local-canvas',
     status: 'ready',
   },
+  {
+    id: 'ext-iloveimg',
+    category: 'image',
+    name: 'iLoveIMG 图片全家桶',
+    desc: '批量压缩/裁剪/转换/去背景，功能覆盖更全（外部工具，跳转官网）',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://www.iloveimg.com/zh-cn',
+    note: '外部工具，与本工作台无数据互通',
+  },
   // ── 视频 ──
   {
     id: 'video-convert',
@@ -137,6 +171,16 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     engine: 'local-ffmpeg',
     status: 'ready',
     note: 'wasm 软编码，适合短视频（建议 ≤5 分钟或 ≤100MB）；长视频建议用剪映等本地工具',
+  },
+  {
+    id: 'ext-removebg',
+    category: 'image',
+    name: 'Remove.bg 一键抠图',
+    desc: '自动去除图片背景，效果优于本地方案（外部工具，跳转官网）',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://www.remove.bg/zh',
+    note: '外部工具，免费额度有限',
   },
 ]
 

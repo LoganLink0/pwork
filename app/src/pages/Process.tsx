@@ -104,15 +104,22 @@ export function Process() {
                   </div>
                   <div className="m-sub">{meta.desc}</div>
                   <div className="m-links">
-                    {tools.map((t) => (
-                      <Link key={t.id} to={toolRoute(t.id)} className="m-link" style={t.status === 'byok-pending' ? { opacity: 0.55 } : undefined}>
-                        <span>
-                          {t.status === 'byok-pending' && <span aria-hidden>🔑 </span>}
-                          {t.name}
-                        </span>
-                        <span className="cnt">{t.status === 'ready' ? ENGINE_LABEL[t.engine].replace('本地 · ', '') : '需 Key'}</span>
-                      </Link>
-                    ))}
+                    {tools.map((t) =>
+                      t.engine === 'external' ? (
+                        <a key={t.id} href={t.externalUrl} target="_blank" rel="noreferrer noopener" className="m-link">
+                          <span>↗ {t.name}</span>
+                          <span className="cnt">外部</span>
+                        </a>
+                      ) : (
+                        <Link key={t.id} to={toolRoute(t.id)} className="m-link" style={t.status === 'byok-pending' ? { opacity: 0.55 } : undefined}>
+                          <span>
+                            {t.status === 'byok-pending' && <span aria-hidden>🔑 </span>}
+                            {t.name}
+                          </span>
+                          <span className="cnt">{t.status === 'ready' ? ENGINE_LABEL[t.engine].replace('本地 · ', '') : '需 Key'}</span>
+                        </Link>
+                      )
+                    )}
                   </div>
                 </div>
               )

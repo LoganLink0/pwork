@@ -23,7 +23,9 @@ describe('processTools 注册表', () => {
 
   it('ready 工具必须是本地引擎；byok 占位必须说明点亮条件', () => {
     for (const t of PROCESS_TOOLS) {
-      if (t.status === 'ready') {
+      if (t.status === 'ready' && t.engine === 'external') {
+        expect(t.externalUrl).toMatch(/^https:\/\//)
+      } else if (t.status === 'ready') {
         expect(t.engine.startsWith('local-')).toBe(true)
       } else {
         expect(t.engine).toBe('byok')
