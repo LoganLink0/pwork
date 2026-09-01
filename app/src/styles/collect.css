@@ -489,3 +489,39 @@
   color: var(--ink-faint);
   white-space: nowrap;
 }
+
+/* ---------- 任务行两行布局（标题行 + 来源/操作行） ---------- */
+.task-row {
+  align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4);
+}
+.task-row + .task-row {
+  border-top: 1px solid var(--line);
+}
+.task-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.task-row-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.task-row-top .t-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}

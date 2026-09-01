@@ -48,7 +48,7 @@ function OriginBadge({ task }: { task: TaskItem }) {
 }
 
 export function Tasks() {
-  const { tasks, stats, create, setStatus, setLane, postpone, remove, load } = useTasks()
+  const { tasks, stats, create, setStatus, postpone, remove, load } = useTasks()
   const [draft, setDraft] = useState('')
   const today = todayLocal()
 
@@ -79,12 +79,6 @@ export function Tasks() {
 
   const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
 
-  const cycleLane = (t: TaskItem) => {
-    const cur = resolveLane(t, today)
-    const next: TaskLane = cur === 1 ? 2 : cur === 2 ? 3 : 1
-    void setLane(t.id, next)
-  }
-
   const renderRow = (t: TaskItem, done: boolean) => {
     const d = dueLabel(t.due, today)
     return (
@@ -98,34 +92,34 @@ export function Tasks() {
         >
           ✓
         </div>
-        <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
-          {t.title}
+        <div className="task-row-body">
+          <div className="task-row-top">
+            <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
+              {t.title}
+            </div>
+            <span className={`t-due${d.over && !done ? ' over' : ''}`}>
+              {done ? (t.status === 'dropped' ? '已放弃' : '已闭环') : d.text}
+            </span>
+          </div>
+          <div className="task-row-meta">
+            <OriginBadge task={t} />
+            {!done && (
+              <>
+                <button type="button" className="mini-btn" title="推迟 7 天" onClick={() => void postpone(t.id, 7)}>推迟 7 天</button>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="删除（软删除，导出备份中仍可找回）"
+                  onClick={() => {
+                    if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
+                  }}
+                >
+                  删除
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        <OriginBadge task={t} />
-        <span className={`t-due${d.over && !done ? ' over' : ''}`}>{done ? (t.status === 'dropped' ? '已放弃' : '已闭环') : d.text}</span>
-        {!done && (
-          <>
-            <button
-              type="button"
-              className="mini-btn"
-              title={`挪到${resolveLane(t, today) === 1 ? '二类' : resolveLane(t, today) === 2 ? '三类' : '一类'}`}
-              onClick={() => cycleLane(t)}
-            >
-              挪一下
-            </button>
-            <button type="button" className="mini-btn" title="推迟 7 天" onClick={() => void postpone(t.id, 7)}>+7天</button>
-            <button
-              type="button"
-              className="mini-btn"
-              title="删除（软删除）"
-              onClick={() => {
-                if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
-              }}
-            >
-              删
-            </button>
-          </>
-        )}
       </div>
     )
   }
