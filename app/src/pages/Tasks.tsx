@@ -154,17 +154,18 @@ export function Tasks() {
       <div className="page-head">
         <h1>待办</h1>
         <span className="sub">三个问题定顺序：① 今天不做就过期？② 卡住别人等我的？③ 都不是？——按一类＞二类＞三类执行</span>
-        <div className="right">
-          <input
-            className="input"
-            style={{ maxWidth: 220 }}
-            placeholder="新任务标题，回车添加"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void submit()}
-            aria-label="新任务标题"
-          />
-        </div>
+      </div>
+
+      <div className="quick-add" data-testid="quick-add">
+        <span className="qa-plus" aria-hidden>＋</span>
+        <input
+          placeholder="想到什么要做的，一句话记下，回车添加"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void submit()}
+          aria-label="新任务标题"
+        />
+        <span className="qa-hint">↵ 添加</span>
       </div>
 
       <div className="lanes-grid">

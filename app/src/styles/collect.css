@@ -448,3 +448,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- 快速添加栏（待办 / 目标 共用） ---------- */
+.quick-add {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-5);
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.quick-add:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+}
+.quick-add .qa-plus {
+  color: var(--accent-deep);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  flex: none;
+}
+.quick-add input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--fs-md);
+  color: var(--ink);
+}
+.quick-add input::placeholder {
+  color: var(--ink-faint);
+}
+.quick-add .qa-hint {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
