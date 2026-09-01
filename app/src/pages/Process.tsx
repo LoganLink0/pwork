@@ -6,7 +6,7 @@ import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 
 /**
- * 处理模块主页：四模态工具箱（IT Tools 式）+ 跨模块检索 + AI 全库问答。
+ * 处理模块主页：工具箱 + 跨模块检索 + AI 全库问答。
  * 工具注册表见 content/processTools.ts——加新工具先注册再实现组件。
  */
 export function Process() {
@@ -88,12 +88,12 @@ export function Process() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>处理</h1>
-        <span className="sub">四模态工具箱 · 跨模块检索 · AI 全库问答（BYOK）</span>
+        <span className="sub">工具箱（文字/音频/图片/视频）· 跨模块检索 · AI 问答</span>
       </div>
 
       <div className="set-card">
         <h2>工具箱</h2>
-        <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频（易理解程度依次增大）；本地引擎离线可用，生成类为 BYOK 占位</div>
+        <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频；本地引擎离线可用，生成类为 BYOK 占位</div>
         <div className="set-body">
           <div className="module-grid">
             {CATEGORY_ORDER.map((cat) => {

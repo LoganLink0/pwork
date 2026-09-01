@@ -6,7 +6,7 @@ import { db } from './schema'
 import { newId } from './repo'
 import { closeAction } from '../modules/review/db/repo'
 import type { ActionItem } from '../modules/review/types/models'
-import type { TaskItem, TaskOriginKind } from '../types/models'
+import type { TaskItem, TaskLane, TaskOriginKind } from '../types/models'
 import { todayLocal } from '../engine/datetime'
 
 export const TASK_SCHEMA_VERSION = 1
@@ -15,6 +15,7 @@ export interface CreateTaskInput {
   title: string
   due?: string
   ifThen?: string
+  lane?: TaskLane
   origin?: { kind: TaskOriginKind; refId?: string | null }
 }
 
@@ -22,6 +23,7 @@ function normalizeTask(raw: TaskItem): TaskItem {
   return {
     ...raw,
     status: raw.status ?? 'todo',
+    lane: raw.lane ?? undefined,
     due: raw.due ?? undefined,
     ifThen: raw.ifThen ?? undefined,
     origin: raw.origin ?? { kind: 'manual', refId: null },
@@ -39,6 +41,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
     id: newId('task'),
     title: input.title.trim(),
     status: 'todo',
+    lane: input.lane,
     due: input.due,
     ifThen: input.ifThen,
     origin: { kind: input.origin?.kind ?? 'manual', refId: input.origin?.refId ?? null },
@@ -104,6 +107,33 @@ export function weekEnd(now = new Date()): string {
   const end = new Date(now)
   end.setDate(now.getDate() + (7 - day))
   return todayLocal(end)
+}
+
+/** 软删除任务（铁律 3；三类任务的"直接删除"出口） */
+export async function softDeleteTask(id: string): Promise<void> {
+  const raw = await db.tasks.get(id)
+  if (!raw || raw.deletedAt) return
+  await db.tasks.put({ ...normalizeTask(raw), deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+}
+
+/** 调整分类（用户手动覆盖） */
+export async function setTaskLane(id: string, lane: TaskLane): Promise<void> {
+  const raw = await db.tasks.get(id)
+  if (!raw) return
+  await db.tasks.put({ ...normalizeTask(raw), lane, updatedAt: new Date().toISOString() })
+}
+
+/** 推迟：due 顺延 N 天（无期限则设为今天+N） */
+export async function postponeTask(id: string, days = 7): Promise<void> {
+  const raw = await db.tasks.get(id)
+  if (!raw) return
+  const base = raw.due && raw.due > todayLocal() ? new Date(raw.due + 'T12:00:00') : new Date()
+  base.setDate(base.getDate() + days)
+  await db.tasks.put({
+    ...normalizeTask(raw),
+    due: todayLocal(base),
+    updatedAt: new Date().toISOString(),
+  })
 }
 
 /** 首页/侧边栏统计：今天到期（含逾期）、本周 */

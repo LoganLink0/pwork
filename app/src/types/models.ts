@@ -15,7 +15,16 @@ export interface NoteLinks {
 }
 
 /** 任务来源（溯源引用；任务库是行动项的 SSOT，02 铁律 4） */
-export type TaskOriginKind = 'review' | 'note' | 'item' | 'manual'
+export type TaskOriginKind = 'review' | 'note' | 'item' | 'manual' | 'bid' | 'bid'
+
+/**
+ * 任务三分类车道（用户三问分诊法，客观事实取代主观重要/紧急）：
+ * 1 = 今日窗口（今天不完成窗口消失，不可逆损失）
+ * 2 = 阻塞链路（缺我的输出链路卡住，非我不可）
+ * 3 = 可绕开（可委派/推迟/删除）
+ * 到期日到达时任何车道自动升为 1（窗口到了就是到了）
+ */
+export type TaskLane = 1 | 2 | 3
 
 /**
  * 周趋势快照（输出 O1 增补）：每次生成报告时写入一行，
@@ -62,6 +71,8 @@ export interface TaskItem {
   due?: string
   /** 若来自复盘行动项，保留 if-then 执行意图 */
   ifThen?: string
+  /** 分诊车道（缺省 3=可绕开；due 到期日自动升为 1 显示） */
+  lane?: TaskLane
   origin: { kind: TaskOriginKind; refId: string | null }
   closedAt: string | null
   createdAt: string

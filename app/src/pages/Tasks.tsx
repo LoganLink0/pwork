@@ -2,13 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTasks } from '../store/tasks'
 import { todayLocal } from '../engine/datetime'
-import type { TaskItem, TaskOriginKind } from '../types/models'
+import { resolveLane } from '../engine/taskLane'
+import type { TaskItem, TaskLane, TaskOriginKind } from '../types/models'
 
 const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
   review: '来源:复盘',
   note: '来源:速记',
   item: '来源:信息',
   manual: '来源:手动',
+  bid: '来源:投标',
+}
+
+/** 任务三分类（客观事实取代主观重要/紧急），命名沿用用户原话：一类/二类/三类 */
+const LANE_META: Record<TaskLane, { name: string; rule: string; action: string }> = {
+  1: { name: '一类 · 今天必须做', rule: '今天不完成，这件事的时间窗口直接消失（不可逆损失）', action: '今日必须优先处理' },
+  2: { name: '二类 · 卡住别人的', rule: '缺我的输出，整件事卡住推进不了（非我不可）', action: '尽快解除，不要长期搁置' },
+  3: { name: '三类 · 可以绕开我', rule: '就算我不做，事情也能继续（可交人/可推迟/可删除）', action: '碎片时间处理，或干脆删掉' },
 }
 
 /** 本地日期展示：今天 / 明天 / M月D日 */
@@ -38,12 +47,8 @@ function OriginBadge({ task }: { task: TaskItem }) {
   )
 }
 
-type Group = 'today' | 'week' | 'all' | 'done'
-
-/** 待办 · 任务库（PRD §4.5）：行动项唯一存在地；来源标记让闭环回流可见 */
 export function Tasks() {
-  const { tasks, stats, create, setStatus, load } = useTasks()
-  const [group, setGroup] = useState<Group>('today')
+  const { tasks, stats, create, setStatus, setLane, postpone, remove, load } = useTasks()
   const [draft, setDraft] = useState('')
   const today = todayLocal()
 
@@ -52,30 +57,19 @@ export function Tasks() {
     void load()
   }, [load])
 
-  const filtered = useMemo(() => {
-    const weekEnd = (() => {
-      const now = new Date()
-      const day = now.getDay() === 0 ? 7 : now.getDay()
-      const end = new Date(now)
-      end.setDate(now.getDate() + (7 - day))
-      return todayLocal(end)
-    })()
-    return tasks.filter((t) => {
-      const done = t.status === 'done' || t.status === 'dropped'
-      if (group === 'done') return done
-      if (done) return false
-      const due = t.due ?? '9999'
-      if (group === 'today') return due <= today
-      if (group === 'week') return due <= weekEnd
-      return true
-    })
-  }, [tasks, group, today])
-
-  const counts = useMemo(() => {
-    const done = tasks.filter((t) => t.status === 'done' || t.status === 'dropped').length
-    const open = tasks.length - done
-    return { today: stats.today, week: stats.today + stats.week, all: open, done }
-  }, [tasks, stats])
+  const laneLists = useMemo(() => {
+    const byLane: Record<TaskLane, TaskItem[]> = { 1: [], 2: [], 3: [] }
+    const done: TaskItem[] = []
+    for (const t of tasks) {
+      const isDone = t.status === 'done' || t.status === 'dropped'
+      if (isDone) {
+        done.push(t)
+        continue
+      }
+      byLane[resolveLane(t, today)]!.push(t)
+    }
+    return { byLane, done }
+  }, [tasks])
 
   const submit = async () => {
     if (!draft.trim()) return
@@ -85,11 +79,82 @@ export function Tasks() {
 
   const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
 
+  const cycleLane = (t: TaskItem) => {
+    const cur = resolveLane(t, today)
+    const next: TaskLane = cur === 1 ? 2 : cur === 2 ? 3 : 1
+    void setLane(t.id, next)
+  }
+
+  const renderRow = (t: TaskItem, done: boolean) => {
+    const d = dueLabel(t.due, today)
+    return (
+      <div key={t.id} className={`task-row${done ? ' done' : ''}`} data-testid="task-row">
+        <div
+          className="checkbox"
+          role="checkbox"
+          aria-checked={t.status === 'done'}
+          aria-label={`完成：${t.title}`}
+          onClick={() => void setStatus(t.id, done ? 'todo' : 'done')}
+        >
+          ✓
+        </div>
+        <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
+          {t.title}
+        </div>
+        <OriginBadge task={t} />
+        <span className={`t-due${d.over && !done ? ' over' : ''}`}>{done ? (t.status === 'dropped' ? '已放弃' : '已闭环') : d.text}</span>
+        {!done && (
+          <>
+            <button
+              type="button"
+              className="mini-btn"
+              title={`挪到${resolveLane(t, today) === 1 ? '二类' : resolveLane(t, today) === 2 ? '三类' : '一类'}`}
+              onClick={() => cycleLane(t)}
+            >
+              挪一下
+            </button>
+            <button type="button" className="mini-btn" title="推迟 7 天" onClick={() => void postpone(t.id, 7)}>+7天</button>
+            <button
+              type="button"
+              className="mini-btn"
+              title="删除（软删除）"
+              onClick={() => {
+                if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
+              }}
+            >
+              删
+            </button>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const renderLaneSection = (lane: TaskLane) => {
+    const meta = LANE_META[lane]
+    const list = laneLists.byLane[lane]
+    return (
+      <div style={{ marginBottom: 'var(--sp-4)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+          <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>{meta.name}</h3>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{meta.rule} → {meta.action}</span>
+        </div>
+        <div className="task-card">
+          {list.length === 0 ? (
+            <div style={{ padding: 'var(--sp-3) var(--sp-5)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>（无）</div>
+          ) : (
+            list.map((t) => renderRow(t, false))
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <section>
       <div className="page-head">
         <h1>待办</h1>
-        <span className="sub">行动项唯一存在地（SSOT）· 其他模块仅 ID 引用</span>
+        <span className="sub">三个问题定顺序：① 今天不做就过期？② 卡住别人等我的？③ 都不是？——按一类＞二类＞三类执行</span>
         <div className="right">
           <input
             className="input"
@@ -103,47 +168,23 @@ export function Tasks() {
         </div>
       </div>
 
-      <div className="tabs" role="tablist">
-        {(['today', 'week', 'all', 'done'] as Group[]).map((g) => (
-          <button key={g} type="button" className={`chip${group === g ? ' on' : ''}`} onClick={() => setGroup(g)}>
-            {{ today: `今天 ${counts.today}`, week: `本周 ${counts.week}`, all: `全部 ${counts.all}`, done: `已完成 ${counts.done}` }[g]}
-          </button>
-        ))}
-      </div>
+      {renderLaneSection(1)}
+      {renderLaneSection(2)}
+      {renderLaneSection(3)}
 
-      <div className="task-card">
-        {filtered.length === 0 ? (
-          <div style={{ padding: 'var(--sp-5)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-            {group === 'today' ? '今天没有到期任务。' : group === 'done' ? '还没有闭环记录。' : '没有任务——做一次复盘，行动项会自动出现在这里。'}
+      {laneLists.done.length > 0 && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+            <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>已闭环</h3>
           </div>
-        ) : (
-          filtered.map((t) => {
-            const done = t.status === 'done' || t.status === 'dropped'
-            const d = dueLabel(t.due, today)
-            return (
-              <div key={t.id} className={`task-row${done ? ' done' : ''}`} data-testid="task-row">
-                <div
-                  className="checkbox"
-                  role="checkbox"
-                  aria-checked={t.status === 'done'}
-                  aria-label={`完成：${t.title}`}
-                  onClick={() => void setStatus(t.id, done ? 'todo' : 'done')}
-                >
-                  ✓
-                </div>
-                <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
-                  {t.title}
-                </div>
-                <OriginBadge task={t} />
-                <span className={`t-due${d.over && !done ? ' over' : ''}`}>{done ? (t.status === 'dropped' ? '已放弃' : '已闭环') : d.text}</span>
-              </div>
-            )
-          })
-        )}
-      </div>
+          <div className="task-card">
+            {laneLists.done.map((t) => renderRow(t, true))}
+          </div>
+        </>
+      )}
 
       <div className="stats-line">
-        总闭环率 <b>{closedRate}%</b>（{stats.done}/{stats.total}）· 复盘产出的行动项自动出现在这里（任务库是 SSOT，复盘侧仅持 taskId 引用）
+        总闭环率 <b>{closedRate}%</b>（{stats.done}/{stats.total}）· 排序三问：①今天不做就过期？②卡住别人等我的？③都可以放一放？——不问"重不重要"，问"不做的代价"
       </div>
     </section>
   )

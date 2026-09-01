@@ -5,9 +5,12 @@ import {
   listTasks,
   setTaskStatus,
   dueStats,
+  softDeleteTask,
+  postponeTask,
+  setTaskLane,
   type CreateTaskInput,
 } from '../db/tasksRepo'
-import type { TaskItem } from '../types/models'
+import type { TaskItem, TaskLane } from '../types/models'
 
 export interface DueStats {
   today: number
@@ -25,6 +28,9 @@ interface TasksState {
   load: () => Promise<void>
   create: (input: CreateTaskInput) => Promise<TaskItem>
   setStatus: (id: string, status: TaskItem['status']) => Promise<void>
+  postpone: (id: string, days?: number) => Promise<void>
+  remove: (id: string) => Promise<void>
+  setLane: (id: string, lane: TaskLane) => Promise<void>
 }
 
 async function reload(): Promise<Pick<TasksState, 'tasks' | 'stats'>> {
@@ -49,6 +55,21 @@ export const useTasks = create<TasksState>((set) => ({
 
   setStatus: async (id, status) => {
     await setTaskStatus(id, status)
+    set(await reload())
+  },
+
+  postpone: async (id, days = 7) => {
+    await postponeTask(id, days)
+    set(await reload())
+  },
+
+  remove: async (id) => {
+    await softDeleteTask(id)
+    set(await reload())
+  },
+
+  setLane: async (id, lane) => {
+    await setTaskLane(id, lane)
     set(await reload())
   },
 }))
