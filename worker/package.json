@@ -1,0 +1,18 @@
+{
+  "name": "pwork-collect-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "db:init": "wrangler d1 execute pwork-collect --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute pwork-collect --local --file=./schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.11"
+  }
+}

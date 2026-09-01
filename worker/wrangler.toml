@@ -1,0 +1,31 @@
+name = "pwork-collect"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# 免费档额度核算（04 §2 C2）：6 源 × 12 次/天 ≈ 72 调用/天（额度 10 万）；
+# 日写入 <100 行（额度 10 万）；¥0/月。抓取频率改这里。
+[triggers]
+crons = ["0 3,7,11,15 * * *"] # 每天 4 次（UTC 3/7/11/15 ≈ 北京 11/15/19/23 点）
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pwork-collect"
+database_id = "b60c68f9-b121-4c4f-a1ee-004b9b8a0adf"
+
+# ── 配置（wrangler.toml 改 vars；密钥用 npx wrangler secret put）────────
+[vars]
+# 抓取 Token：写操作必须携带（Authorization: Bearer <TOKEN>）；读操作可选开放
+# 初始值请在部署前修改，或用 `npx wrangler secret put TOKEN` 覆盖为 secret
+TOKEN = "change-me-before-deploy"
+# AI 两级筛选（AD4：BYOK；留空 API_KEY 则整链走规则评分，系统照常转）
+AI_BASE_URL = "https://api.deepseek.com/v1"
+AI_MODEL_CHEAP = "deepseek-chat"   # 4a 预筛（便宜模型）
+AI_MODEL_STRONG = "deepseek-chat"  # 4b 评分打标（强模型，可配不同）
+AI_DAILY_TOKEN_BUDGET = "300000"   # 每日 token 熔断（04 §10）
+# 兴趣域配置（评分锚点，04 §4.2——你的经验物化点，随使用修订）
+INTERESTS = "AI 应用,独立开发,前端工程化"
+DISLIKES = "融资,八卦,软文"
+CONTEXT = "我在做个人复盘工具与信息采集系统，关注能直接借鉴的产品与增长打法"
+
+# secrets（不进 git，命令行设置）：
+#   npx wrangler secret put AI_API_KEY
