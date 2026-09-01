@@ -46,7 +46,7 @@ export function ProcessToolPage() {
         </div>
         <div className="placeholder" style={{ margin: 'var(--sp-6) auto' }}>
           <div className="p-ico" aria-hidden>🔑</div>
-          <h2>待点亮：需要多模态服务 Key</h2>
+          <h2>待点亮：需要对应的 AI 服务 Key</h2>
           <p>{tool.desc}</p>
           <div className="will">
             <h3>点亮条件</h3>

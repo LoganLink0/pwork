@@ -163,7 +163,7 @@ export function Process() {
 
       <div className="set-card">
         <h2>AI 全库问答</h2>
-        <div className="desc">检索命中作为上下文，BYOK 调用——回答附来源，可溯源</div>
+        <div className="desc">AI 回答会参考检索到的内容，并标注来源</div>
         <div className="set-body">
           {!coachReady ? (
             <div className="notice">
@@ -189,7 +189,7 @@ export function Process() {
                   placeholder="（可选）粘贴工作台之外的资料，给 AI 多一份参考——默认只用库内数据"
                   value={externalCtx}
                   onChange={(e) => setExternalCtx(e.target.value)}
-                  aria-label="外部资料上下文"
+                  aria-label="外部资料"
                 />
               </div>
               <div className="set-row">
