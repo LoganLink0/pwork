@@ -575,6 +575,10 @@
   color: var(--danger);
   font-weight: 600;
 }
+.t-due.soon {
+  color: var(--cat-need);
+  font-weight: 600;
+}
 .status-badge {
   flex: none;
   font-size: var(--fs-xs);
@@ -586,9 +590,12 @@
 .status-badge.okb {
   color: var(--ok);
   border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
 }
 .status-badge.offb {
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--ink-faint) 14%, transparent);
 }
 .task-row-meta {
   display: flex;
@@ -621,17 +628,18 @@
   border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 .lane-select[data-lane='2'] {
-  color: var(--cat-need);
-  border-color: color-mix(in srgb, var(--cat-need) 45%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .lane-select[data-lane='3'] {
-  color: var(--ink-faint);
+  color: var(--cat-insight);
+  border-color: color-mix(in srgb, var(--cat-insight) 45%, transparent);
 }
-/* 来源徽章：链式可溯源（复盘/速记/信息），手动为纯文本 */
+/* 来源徽章：链式可溯源，按所属模块标记着色（PRD §5.2 模块标记复用，零新增色） */
 .origin {
   flex: none;
   font-size: var(--fs-xs);
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   text-decoration: none;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -641,10 +649,27 @@
   text-overflow: ellipsis;
   max-width: 14em;
 }
-a.origin:hover {
-  border-color: var(--accent);
-  color: var(--accent-text);
+.origin[data-k='review'] {
+  color: var(--m-review);
+  border-color: color-mix(in srgb, var(--m-review) 40%, transparent);
+  background: color-mix(in srgb, var(--m-review) 8%, transparent);
 }
+.origin[data-k='note'],
+.origin[data-k='item'] {
+  color: var(--m-input);
+  border-color: color-mix(in srgb, var(--m-input) 40%, transparent);
+  background: color-mix(in srgb, var(--m-input) 8%, transparent);
+}
+.origin[data-k='bid'] {
+  color: var(--cat-need);
+  border-color: color-mix(in srgb, var(--cat-need) 45%, transparent);
+  background: color-mix(in srgb, var(--cat-need) 8%, transparent);
+}
+a.origin:hover {
+  filter: brightness(1.15);
+}
+/* 分类识别色（PRD §4.5.1）：一类=danger 红（今天必须）· 二类=accent 琥珀（卡住别人）
+   · 三类=cat-insight 蓝（从容绕开）——零新增色，按模块标记纪律只作 3px 边线与标签 */
 .lane-count {
   margin-left: var(--sp-2);
   font-size: var(--fs-xs);
@@ -653,6 +678,42 @@ a.origin:hover {
 }
 .lane-col {
   min-width: 0;
+}
+.lane-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: 1px;
+  background: var(--ink-faint);
+}
+.lane-col[data-lane='1'] .lane-dot {
+  background: var(--danger);
+}
+.lane-col[data-lane='2'] .lane-dot {
+  background: var(--accent);
+}
+.lane-col[data-lane='3'] .lane-dot {
+  background: var(--cat-insight);
+}
+.lane-col[data-lane='1'] .lane-count {
+  color: var(--danger);
+}
+.lane-col[data-lane='2'] .lane-count {
+  color: var(--accent);
+}
+.lane-col[data-lane='3'] .lane-count {
+  color: var(--cat-insight);
+}
+.lane-col[data-lane='1'] .task-card {
+  border-top: 3px solid var(--danger);
+}
+.lane-col[data-lane='2'] .task-card {
+  border-top: 3px solid var(--accent);
+}
+.lane-col[data-lane='3'] .task-card {
+  border-top: 3px solid var(--cat-insight);
 }
 .stats-line {
   margin-top: var(--sp-4);

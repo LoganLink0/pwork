@@ -20,15 +20,15 @@ const LANE_META: Record<TaskLane, { name: string; rule: string }> = {
   3: { name: '三类 · 可以绕开我', rule: '就算我不做，事情也能继续（可交人/可推迟/可删除）' },
 }
 
-/** 本地日期展示：今天 / 明天 / M月D日 */
-function dueLabel(due: string | undefined, today: string): { text: string; over: boolean } {
-  if (!due) return { text: '无期限', over: false }
+/** 本地日期展示：今天（红）/ 明天（橙）/ M月D日 */
+function dueLabel(due: string | undefined, today: string): { text: string; over: boolean; soon: boolean } {
+  if (!due) return { text: '无期限', over: false, soon: false }
   const diff = Math.round((new Date(due + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86_400_000)
-  if (diff === 0) return { text: '今天', over: true }
-  if (diff === 1) return { text: '明天', over: false }
-  if (diff < 0) return { text: `逾期 ${-diff} 天`, over: true }
+  if (diff === 0) return { text: '今天', over: true, soon: false }
+  if (diff === 1) return { text: '明天', over: false, soon: true }
+  if (diff < 0) return { text: `逾期 ${-diff} 天`, over: true, soon: false }
   const d = new Date(due + 'T12:00:00')
-  return { text: `${d.getMonth() + 1}月${d.getDate()}日`, over: false }
+  return { text: `${d.getMonth() + 1}月${d.getDate()}日`, over: false, soon: false }
 }
 
 /** 来源徽章 → 溯源跳转 */
@@ -111,7 +111,7 @@ export function Tasks() {
                 {t.status === 'done' ? '已闭环' : '已放弃'}
               </span>
             ) : (
-              <span className={`t-due${d.over ? ' over' : ''}`} title={t.due ? `期限 ${t.due}` : undefined}>
+              <span className={`t-due${d.over ? ' over' : d.soon ? ' soon' : ''}`} title={t.due ? `期限 ${t.due}` : undefined}>
                 {d.text}
               </span>
             )}
@@ -184,8 +184,9 @@ export function Tasks() {
     const meta = LANE_META[lane]
     const list = laneLists.byLane[lane]
     return (
-      <div className="lane-col">
+      <div className="lane-col" data-lane={lane}>
         <h3 style={{ fontSize: 'var(--fs-md)', margin: '0 0 var(--sp-2)' }} title={meta.rule}>
+          <span className="lane-dot" aria-hidden />
           {meta.name}
           <span className="lane-count">{list.length}</span>
         </h3>
