@@ -269,7 +269,7 @@ export function Settings() {
             <input
               className="input"
               value={contextDraft ?? config.context}
-              placeholder="我在做……关注……（进入 AI 评分提示词，W4 生效；当前作备忘）"
+              placeholder="我在做……关注……（云端评分锚点以部署配置为准（wrangler.toml INTERESTS 等）；此处目前仅作本地备忘）"
               onChange={(e) => setContextDraft(e.target.value)}
               onBlur={() => contextDraft !== null && setConfig({ context: contextDraft })}
             />

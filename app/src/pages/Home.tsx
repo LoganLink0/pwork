@@ -127,7 +127,7 @@ export function Home() {
         <Link to="/input/digest" className="tile mark-input">
           <div className="t-label">信息日报</div>
           <div className="t-num">{digest.length} 条 · 2 分钟</div>
-          <div className="t-sub">每日 {config.topN} 条硬顶 · 规则评分（AI 两级筛选 W4 接入）</div>
+          <div className="t-sub">每日 {config.topN} 条硬顶 · 规则评分（云端 AI 两级筛选随同步并入）</div>
           <span className="t-link">去扫读 →</span>
         </Link>
       ) : (

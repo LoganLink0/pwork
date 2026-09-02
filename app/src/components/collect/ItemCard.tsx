@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Item } from '../../types/models'
 import { fmtLocal } from '../../engine/datetime'
+import { useNotes } from '../../store/notes'
 
 const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string; icon: string }> = {
   opportunity: { text: '机会', cls: 'ot-opp', icon: '🎯' },
@@ -36,6 +38,21 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const a = item.annotation
   const ot = item.otFlag ? OT_LABEL[item.otFlag] : null
+  const navigate = useNavigate()
+  const createNote = useNotes((s) => s.create)
+
+  /** 条目 → 速记（写入 links.itemIds，双向挂接的另一半） */
+  const writeNote = async () => {
+    const note = await createNote({
+      body: `【${item.title}】(${item.url})
+
+`,
+      tags: [],
+      source: 'manual',
+      links: { itemIds: [item.id], reviewIds: [], taskIds: [] },
+    })
+    navigate(`/input/notes/${note.id}`)
+  }
 
   return (
     <div className="digest-item" data-testid="item-card">
@@ -90,6 +107,9 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               </button>
               <button type="button" className="mini-btn" onClick={onKeep}>
                 {a.keepForever ? '★ 永久保留（点击取消）' : '永久保留'}
+              </button>
+              <button type="button" className="mini-btn" title="以这条条目为引写速记，速记自动挂回本条目" onClick={() => void writeNote()}>
+                写速记
               </button>
               <span className="ttl-note">O/T 标记进入复盘 SWOT 候选池</span>
             </div>

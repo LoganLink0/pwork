@@ -112,7 +112,7 @@ export function Sidebar() {
         设置
       </NavLink>
       <div className="foot">
-        W1 · 壳 + 速记
+        W0–W5 全程交付
         <br />
         <NavLink to="/design">设计系统样例</NavLink>
       </div>

@@ -24,7 +24,7 @@ function loadDraft(): Draft {
 /**
  * 全局速记浮层（PRD §3.4 F1）：捕获 ≤3 次交互（N → 输入 → Esc）。
  * 关闭卸载、打开重挂；草稿在关闭时写 localStorage，重开恢复。
- * 「转待办」W3 任务库上线后开放。
+ * 「转待办」：先落速记再以速记为源建任务（origin.note 溯源）。
  */
 export function QuickNote() {
   const open = useUi((s) => s.quickOpen)

@@ -68,7 +68,7 @@ function PaletteDialog() {
         key: 'act-review',
         group: '快速动作',
         icon: '＋',
-        label: '新建复盘（W3 迁入后开放）',
+        label: '新建复盘',
         run: () => { close(); navigate('/review/new') },
       })
     }

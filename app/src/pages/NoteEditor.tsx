@@ -189,7 +189,7 @@ export function NoteEditor() {
             <>
               <br /><code>created: {note.createdAt}</code>
               <br /><code>source: {note.source}</code>
-              <br /><code>links: items {note.links.itemIds.length} · reviews {note.links.reviewIds.length} · tasks {note.links.taskIds.length}（W2/W3 起可挂接）</code>
+              <br /><code>links: items {note.links.itemIds.length} · reviews {note.links.reviewIds.length} · tasks {note.links.taskIds.length}（转待办/挂到复盘自动维护）</code>
             </>
           )}
         </div>

@@ -3,7 +3,7 @@
  * 纪律：软删除优先（铁律 3）；读取侧防御可选字段（铁律 2）；导出统一包裹（02 §4）。
  */
 import { db } from './schema'
-import type { ExportBundle, Note } from '../types/models'
+import type { ExportBundle, Note, NoteLinks } from '../types/models'
 
 /** 生成本地唯一 ID（无需 uuid 依赖） */
 export function newId(prefix: string): string {
@@ -38,6 +38,8 @@ export interface CreateNoteInput {
   body: string
   tags?: string[]
   source?: 'quick' | 'manual'
+  /** 初始挂接（如条目卡"写速记"写入 links.itemIds） */
+  links?: NoteLinks
 }
 
 /** 标题缺省取正文首行（截 30 字） */
@@ -53,7 +55,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
     title: input.title?.trim() || deriveTitle(input.body),
     body: input.body,
     tags: input.tags ?? [],
-    links: { itemIds: [], reviewIds: [], taskIds: [] },
+    links: input.links ?? { itemIds: [], reviewIds: [], taskIds: [] },
     source: input.source ?? 'manual',
     createdAt: now,
     updatedAt: now,
