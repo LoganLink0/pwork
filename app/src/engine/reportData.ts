@@ -3,6 +3,7 @@
  * 周期：weekly = 近 7 天，monthly = 近 30 天（滚动窗口，本地日判定用 localDateOf）。
  */
 import { db } from '../db/schema'
+import { listBlocks } from '../db/blocksRepo'
 import { localDateOf, todayLocal } from './datetime'
 import { gatherSignals, type Signal } from './signals'
 
@@ -25,6 +26,8 @@ export interface ReportData {
   reviews: { count: number; titles: string[] }
   notesCount: number
   signals: Signal[]
+  /** 外部数据块（输出扩展）：工作台外带来的结构化片段，行内"键: 值"解析为 kv */
+  blocks: { title: string; kv: { k: string; v: string }[]; text: string[] }[]
 }
 
 const WINDOW_DAYS: Record<ReportMode, number> = { weekly: 7, monthly: 30 }
@@ -83,6 +86,9 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
 
   const signals = await gatherSignals(now)
 
+  const rawBlocks = await listBlocks()
+  const blocks = rawBlocks.map((b) => ({ title: b.title, ...parseBlockLines(b.content) }))
+
   return {
     mode,
     rangeLabel,
@@ -95,5 +101,20 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
     reviews: { count: reviewsInRange.length, titles: reviewsInRange.map((r) => r.title).slice(0, 3) },
     notesCount,
     signals,
+    blocks,
   }
+}
+
+/** 数据块内容解析：行内 "键: 值"（键 ≤24 字，中英冒号均可）→ 指标行；其余为文本行 */
+export function parseBlockLines(content: string): { kv: { k: string; v: string }[]; text: string[] } {
+  const kv: { k: string; v: string }[] = []
+  const text: string[] = []
+  for (const raw of content.split('\n')) {
+    const line = raw.trim()
+    if (!line) continue
+    const m = line.match(/^([^：:]{1,24})[：:]\s*(.+)$/)
+    if (m) kv.push({ k: m[1].trim(), v: m[2].trim() })
+    else text.push(line)
+  }
+  return { kv, text }
 }

@@ -5,6 +5,7 @@ import { reportToHtml, reportToMarkdown, reportTitle } from '../engine/reportRen
 import { downloadFile } from '../db/repo'
 import { saveSnapshot, latestSnapshotBefore, deltaLabel, listSnapshots } from '../db/snapshots'
 import { exportReportPptx } from '../engine/pptFile'
+import { useBlocks } from '../store/blocks'
 import type { ReportSnapshot } from '../types/models'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
@@ -12,7 +13,7 @@ import { todayLocal } from '../engine/datetime'
 
 const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
-/** 报告生成器（输出 O1）：素材自动汇总 → Markdown/HTML 成稿 → 下载/朗读/AI 润色 */
+/** 报告生成器（输出 O1）：素材自动汇总 + 外部数据块 → Markdown/HTML 成稿 → 下载/朗读/AI 润色 */
 export function ReportGenerator() {
   const [mode, setMode] = useState<ReportMode>('weekly')
   const [data, setData] = useState<ReportData | null>(null)
@@ -26,6 +27,13 @@ export function ReportGenerator() {
   const [obsidianVault, setObsidianVault] = useState(() => localStorage.getItem('pwork-obsidian-vault') ?? '')
   const [obsidianMsg, setObsidianMsg] = useState('')
   const snapshotsRef = useRef<ReportSnapshot[]>([])
+  const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
+  const [blockEditing, setBlockEditing] = useState<{ id?: string; title: string; content: string } | null>(null)
+  const [dataVersion, setDataVersion] = useState(0)
+
+  useEffect(() => {
+    void loadBlocks()
+  }, [loadBlocks])
 
   useEffect(() => {
     void gatherReportData(mode).then(async (d) => {
@@ -35,7 +43,7 @@ export function ReportGenerator() {
       snapshotsRef.current = await listSnapshots(8)
       setPrevRate((await latestSnapshotBefore())?.closureRate ?? null)
     })
-  }, [mode])
+  }, [mode, dataVersion])
 
   const md = useMemo(() => (data ? reportToMarkdown(data) : ''), [data])
   const html = useMemo(() => (data ? reportToHtml(data) : ''), [data])
@@ -140,6 +148,86 @@ export function ReportGenerator() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{l}</div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>外部数据块</h2>
+        <div className="desc">
+          把工作台之外的数据带进报告（业务指标、系统导出的周数据……）。一行一条，"键: 值"形态渲染成指标行，其余为文字；保存后自动并入报告、朗读与 PPT
+        </div>
+        <div className="set-body">
+          {blocks.length === 0 && !blockEditing && (
+            <div className="notice">还没有数据块。粘一段你每周要汇报的数据进来，报告会多出一个"外部数据"章节。</div>
+          )}
+          {blocks.map((b) => (
+            <div className="set-row" key={b.id} style={{ alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>{b.title}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', whiteSpace: 'pre-wrap' }}>{b.content}</div>
+              </div>
+              <button
+                type="button"
+                className="mini-btn"
+                onClick={() => setBlockEditing({ id: b.id, title: b.title, content: b.content })}
+              >
+                编辑
+              </button>
+              <button
+                type="button"
+                className="mini-btn"
+                onClick={() => {
+                  if (window.confirm(`删除数据块「${b.title}」？（软删除，备份中仍可找回）`))
+                    void removeBlock(b.id).then(() => setDataVersion((v) => v + 1))
+                }}
+              >
+                删除
+              </button>
+            </div>
+          ))}
+          {blockEditing ? (
+            <div className="set-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--sp-2)' }}>
+              <input
+                className="input"
+                placeholder="数据块名称（如：销售周数据）"
+                value={blockEditing.title}
+                aria-label="数据块名称"
+                onChange={(e) => setBlockEditing({ ...blockEditing, title: e.target.value })}
+              />
+              <textarea
+                className="input"
+                rows={5}
+                placeholder={'一行一条，支持"键: 值"形态，例如：\n新增线索: 23\n成交金额: 86万\n也可以写普通文字行'}
+                value={blockEditing.content}
+                aria-label="数据块内容"
+                onChange={(e) => setBlockEditing({ ...blockEditing, content: e.target.value })}
+              />
+              <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={!blockEditing.title.trim()}
+                  onClick={() => {
+                    void saveBlock(blockEditing).then(() => {
+                      setBlockEditing(null)
+                      setDataVersion((v) => v + 1)
+                    })
+                  }}
+                >
+                  保存并并入报告
+                </button>
+                <button type="button" className="btn-ghost" onClick={() => setBlockEditing(null)}>
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="set-row">
+              <button type="button" className="btn-ghost" onClick={() => setBlockEditing({ title: '', content: '' })}>
+                ＋ 新数据块
+              </button>
             </div>
           )}
         </div>

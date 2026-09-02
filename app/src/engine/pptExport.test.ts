@@ -16,12 +16,28 @@ function mkData(over: Partial<ReportData> = {}): ReportData {
     reviews: { count: 1, titles: [] },
     notesCount: 3,
     signals: [],
+    blocks: [],
     ...over,
   }
 }
 
 /** 幻灯片规格（纯函数）：PPT 渲染前的数据契约 */
 describe('buildReportSlides', () => {
+  it('外部数据块：每块追加一页（bullets），无内容块跳过', () => {
+    const d = mkData({
+      blocks: [
+        { title: '销售周数据', kv: [{ k: '新增线索', v: '23' }], text: [] },
+        { title: '空块', kv: [], text: [] },
+      ],
+    })
+    const s = buildReportSlides(d)
+    const blockSlide = s.find((x) => x.title === '销售周数据')
+    expect(blockSlide).toBeDefined()
+    expect(blockSlide!.kind).toBe('bullets')
+    expect(blockSlide!.bullets).toEqual(['新增线索：23'])
+    expect(s.find((x) => x.title === '空块')).toBeUndefined()
+  })
+
   it('快照 ≥2 时插入趋势图表页（第 2 页），共 8 页', () => {
     const snaps: ReportSnapshot[] = [
       { id: 'snap_2026-08-25', day: '2026-08-25', closureRate: 20, closedCount: 2, openCount: 3, overdueCount: 0, goalsActive: 1, insightsCount: 2, notesCount: 5, createdAt: '2026-08-25T00:00:00.000Z' },

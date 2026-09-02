@@ -45,6 +45,20 @@ export interface ReportSnapshot {
 }
 
 /**
+ * 外部数据块（输出扩展）：从工作台之外带来的结构化片段
+ * （业务指标、系统导出的周数据等）。行内 "键: 值" 形态渲染为指标行，
+ * 其余行为普通文本。报告/朗读/PPT 管线自动并入——数据从输入侧进管线，输出不做旁路。
+ */
+export interface DataBlock {
+  id: string
+  title: string
+  content: string
+  updatedAt: string
+  deletedAt: string | null
+  schemaVersion: number
+}
+
+/**
  * 目标 Goal —— 工作台目标模块拥有（02 §3 字段所有权表）；复盘向导只读引用（C-2 最小形态，
  * 2026-08-31 决议：最小实体先行，完整管理页随处理模块评估）
  */

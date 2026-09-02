@@ -121,6 +121,19 @@ export function buildReportSlides(d: ReportData, snapshots: ReportSnapshot[] = [
 
   slides.push(...buildContentSlides(d))
 
+  // 外部数据块（输出扩展）：每个块一页，"键: 值"行渲染为指标行
+  for (const b of d.blocks) {
+    const bullets = [...b.kv.map((r) => `${r.k}：${r.v}`), ...b.text].slice(0, 6)
+    if (bullets.length === 0) continue
+    slides.push({
+      kind: 'bullets',
+      title: b.title,
+      bullets,
+      stats: [],
+      footer,
+    })
+  }
+
   // 结尾（深色）
   slides.push({
     kind: 'title',

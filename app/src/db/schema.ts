@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Goal, Item, Note, Source, TaskItem } from '../types/models'
-import type { ReportSnapshot } from '../types/models'
+import type { DataBlock, ReportSnapshot } from '../types/models'
 import type { ActionItem, InsightRecord, ReviewRecord } from '../modules/review/types/models'
 
 /** 存储降级状态：探针失败后为 true，UI 据此显示"数据不会保留"横幅（FUPAN 降级方案延续） */
@@ -40,6 +40,7 @@ export class PworkDB extends Dexie {
   tasks!: Table<TaskItem, string>
   goals!: Table<Goal, string>
   snapshots!: Table<ReportSnapshot, string>
+  blocks!: Table<DataBlock, string>
 
   constructor() {
     super('pwork-workbench')
@@ -64,6 +65,10 @@ export class PworkDB extends Dexie {
     // v5：周趋势快照（输出 O1 增补）
     this.version(5).stores({
       snapshots: 'id, day, createdAt',
+    })
+    // v6（输出扩展）：外部数据块——用户从工作台外带来的结构化片段，报告/朗读/PPT 管线并入
+    this.version(6).stores({
+      blocks: 'id, updatedAt',
     })
   }
 }

@@ -48,6 +48,17 @@ export function reportToMarkdown(d: ReportData): string {
   L.push(`- 录入速记 ${d.notesCount} 条`)
   for (const s of d.signals) L.push(`- ⚡ ${s.message}`)
   L.push('')
+  if (d.blocks.length > 0) {
+    L.push('## 六、外部数据')
+    L.push('')
+    for (const b of d.blocks) {
+      L.push(`### ${b.title}`)
+      L.push('')
+      for (const row of b.kv) L.push(`- ${row.k}：**${row.v}**`)
+      for (const line of b.text) L.push(`- ${line}`)
+      L.push('')
+    }
+  }
   L.push('---')
   L.push(`*PWORK 自动成稿 · ${reportTitle(d)}*`)
   return L.join('\n')
@@ -74,6 +85,12 @@ export function reportToHtml(d: ReportData): string {
   const signalHtml = d.signals.length
     ? `<div class="notice">⚡ ${d.signals.map((s) => esc(s.message)).join('；')}</div>`
     : ''
+  const blockHtml = d.blocks
+    .map(
+      (b) => `<h3>${esc(b.title)}</h3>
+    <ul>${b.kv.map((r) => `<li>${esc(r.k)}：<b>${esc(r.v)}</b></li>`).join('')}${b.text.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`,
+    )
+    .join('')
 
   return `<!doctype html>
 <html lang="zh-CN">
@@ -121,6 +138,7 @@ export function reportToHtml(d: ReportData): string {
     <h2>复盘与信号</h2>
     <p>本期复盘 ${d.reviews.count} 次 · 录入速记 ${d.notesCount} 条</p>
     ${signalHtml}
+    ${d.blocks.length ? `<h2>外部数据</h2>${blockHtml}` : ''}
   </div>
   <div class="foot">PWORK 自动成稿 · 数据来自本机工作台</div>
 </div>

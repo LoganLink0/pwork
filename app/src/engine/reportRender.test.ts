@@ -20,6 +20,7 @@ function mkData(over: Partial<ReportData> = {}): ReportData {
     reviews: { count: 1, titles: ['日复盘 · 2026/9/1'] },
     notesCount: 4,
     signals: [{ kind: 'review-due', message: '距上次复盘已经 7 天' }],
+    blocks: [],
     ...over,
   }
 }
@@ -45,6 +46,33 @@ describe('reportToMarkdown（输出 O1）', () => {
 
   it('月报标题正确', () => {
     expect(reportTitle({ ...mkData(), mode: 'monthly' })).toContain('月报')
+  })
+})
+
+describe('外部数据块（输出扩展）', () => {
+  const blocks = [{ title: '销售周数据', kv: [{ k: '新增线索', v: '23' }], text: ['备注：CRM 周一导出'] }]
+  it('Markdown：块标题 + 指标行 + 文本行，空块不出章节', () => {
+    const md = reportToMarkdown(mkData({ blocks }))
+    expect(md).toContain('## 六、外部数据')
+    expect(md).toContain('### 销售周数据')
+    expect(md).toContain('- 新增线索：**23**')
+    expect(md).toContain('- 备注：CRM 周一导出')
+    expect(reportToMarkdown(mkData({ blocks: [] }))).not.toContain('外部数据')
+  })
+  it('HTML：章节渲染且转义生效', () => {
+    const html = reportToHtml(mkData({ blocks: [{ title: '<x>', kv: [], text: ['a<b'] }] }))
+    expect(html).toContain('外部数据')
+    expect(html).toContain('&lt;x&gt;')
+    expect(html).toContain('a&lt;b')
+  })
+  it('parseBlockLines：中英冒号混排，超长键归文本', async () => {
+    const { parseBlockLines } = await import('./reportData')
+    const r = parseBlockLines('新增线索: 23\n成交金额：86万\n普通备注一行')
+    expect(r.kv).toEqual([
+      { k: '新增线索', v: '23' },
+      { k: '成交金额', v: '86万' },
+    ])
+    expect(r.text).toEqual(['普通备注一行'])
   })
 })
 
