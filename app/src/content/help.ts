@@ -33,6 +33,20 @@ export const QUICK_START: QuickStep[] = [
     action: '新建复盘',
     to: '/review/new',
   },
+  {
+    step: '4',
+    title: '带上外部数据',
+    desc: '把别的系统里的数据带进来：输入 → 外部数据 粘贴或导入 CSV/JSON，有 API 的话直接推送。',
+    action: '去外部数据',
+    to: '/input/blocks',
+  },
+  {
+    step: '5',
+    title: '一键成稿',
+    desc: '报告生成器把任务、目标、洞察、外部数据汇成周报月报——可下载 Markdown/HTML、导出 PPT、朗读。',
+    action: '去报告',
+    to: '/output/report',
+  },
 ]
 
 export interface ModuleIntro {
@@ -88,7 +102,7 @@ export interface DataPoint {
 export const DATA_POINTS: DataPoint[] = [
   { title: '数据都在本机', desc: '全部数据存于本机 IndexedDB（pwork-workbench 库），无账号无服务器。换机迁移用 设置 → 数据 → 全量导出/导入。' },
   { title: '备份先行', desc: '任何删除、迁移、清理之前先全量导出——设置页一键完成。月度备份提醒建议保持开启。' },
-  { title: '删除皆可恢复', desc: '所有删除都是软删除：速记进回收站可恢复；物理清理只发生在「过 TTL 且无标注」的数据上。' },
+  { title: '删除皆可恢复', desc: '所有删除都是软删除：速记进回收站可恢复；条目删除后保留 14 天。物理清理只发生在「过 TTL 且无标注」或「用户删除满 14 天」的数据上。' },
   { title: 'AI 外发是明示的', desc: '不开 BYOK 一切留在本机（L1）；开启后仅条目标题摘要等发往你配置的服务商（L2，设置页有明示清单），失败自动回落规则引擎。' },
 ]
 
@@ -113,6 +127,16 @@ export const FAQ: FaqEntry[] = [
     q: '我的数据存在哪、会丢吗？',
     a: '存在浏览器本机 IndexedDB。注意：在浏览器里清除「站点数据」会连库一起删——重要节点先用设置页全量导出。程序自身的删除都是软删除，可恢复。',
     link: { label: '去备份', to: '/settings' },
+  },
+  {
+    q: '怎么把一条速记变成待办或复盘素材？',
+    a: '打开这条速记，编辑器左下角有两个按钮：「转待办」以它为源创建一条待办（任务上会显示"来源:速记"，可点回这条速记）；「挂到复盘」选择场景后，这条速记会挂在向导顶部，归档后永久保留在复盘档案里。',
+    link: { label: '去速记', to: '/input/notes' },
+  },
+  {
+    q: '外部系统的数据怎么进报告？',
+    a: '三个办法，按方便程度选：① 输入 → 外部数据 直接粘贴；② 导入 CSV/JSON 文件（首行表头自动转成"键: 值"）；③ 有程序的话向 Worker 的 /api/ingest 推送（见 worker/README）。数据块保存后，报告和 PPT 自动多出"外部数据"章节。',
+    link: { label: '去外部数据', to: '/input/blocks' },
   },
   {
     q: '为什么还有"占位"的功能？',

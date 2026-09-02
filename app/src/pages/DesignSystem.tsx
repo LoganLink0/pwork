@@ -227,7 +227,7 @@ export function DesignSystem() {
         <h2 style={{ fontSize: 'var(--fs-lg)' }}>页面索引</h2>
         <p style={{ fontSize: 'var(--fs-sm)' }}>
           <Link to="/">今日</Link> · <Link to="/input/notes">速记</Link> · <Link to="/settings">设置</Link> ·{' '}
-          <Link to="/process">处理（工具箱）</Link> · <Link to="/review">回路（占位）</Link>
+          <Link to="/process">处理（工具箱）</Link> · <Link to="/review">回路（已建成）</Link>
         </p>
       </div>
     </section>
