@@ -9,11 +9,18 @@ import './modules/review/styles/review.css'
 import App from './App.tsx'
 import { applyTheme, loadTheme } from './engine/appearance.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
+import { useUi } from './store/ui.ts'
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
 // PWA Service Worker：离线可用、安装到主屏
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  // 新版本就绪后不自动刷新（prompt 模式）：顶栏出更新按钮，用户点了再 reload
+  onNeedRefresh() {
+    useUi.getState().setUpdateReady(true)
+  },
+})
 
 // IndexedDB 探针：不可用则降级内存模式，并挂横幅
 void initStorage().then(() => {

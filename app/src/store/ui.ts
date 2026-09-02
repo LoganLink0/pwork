@@ -12,6 +12,10 @@ interface UiState {
   openQuick: () => void
   closeQuick: () => void
   setTheme: (pref: ThemePref) => void
+  /** PWA 新版本就绪（prompt 模式）：Topbar 出更新按钮，点击应用并刷新 */
+  updateReady: boolean
+  applyUpdate: () => void
+  setUpdateReady: (ready: boolean, apply?: () => void) => void
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -28,4 +32,7 @@ export const useUi = create<UiState>((set) => ({
     saveTheme(pref)
     set({ theme: pref })
   },
+  updateReady: false,
+  applyUpdate: () => set((s) => { s.applyUpdate?.(); return { updateReady: false } }),
+  setUpdateReady: (ready, apply) => set({ updateReady: ready, applyUpdate: ready ? (apply ?? (() => location.reload())) : undefined }),
 }))
