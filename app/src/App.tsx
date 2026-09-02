@@ -23,6 +23,7 @@ const Placeholder = lazy(() => import('./pages/Placeholder').then((m) => ({ defa
 const Sources = lazy(() => import('./pages/Sources').then((m) => ({ default: m.Sources })))
 const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Digest })))
 const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
+const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
@@ -110,6 +111,7 @@ export default function App() {
                   <Route path="/input/digest" element={<Digest />} />
                   <Route path="/input/sources" element={<Sources />} />
                   <Route path="/input/items" element={<Items />} />
+                  <Route path="/input/blocks" element={<InputBlocks />} />
                   <Route path="/process" element={<Process />} />
                   <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
                   <Route path="/output" element={<Output />} />
