@@ -4,6 +4,7 @@ import {
   deleteSource,
   digestDates,
   digestFor,
+  softDeleteItem,
   getItem,
   importSources,
   itemsPerSource7d,
@@ -55,6 +56,7 @@ interface CollectState {
   setStars: (itemId: string, stars: number) => Promise<void>
   setNotes: (itemId: string, notes: string) => Promise<void>
   toggleKeep: (itemId: string) => Promise<void>
+  deleteItem: (itemId: string) => Promise<void>
   cycleOt: (itemId: string) => Promise<void>
   setConfig: (patch: Partial<CollectConfig>) => void
 }
@@ -85,6 +87,13 @@ export const useCollect = create<CollectState>((set, get) => ({
 
   setDigestDate: async (date) => {
     set({ digestDate: date })
+    set(await reloadDigest(get()))
+  },
+
+  deleteItem: async (itemId) => {
+    await softDeleteItem(itemId)
+    const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
+    set({ sources, items, items7d })
     set(await reloadDigest(get()))
   },
 

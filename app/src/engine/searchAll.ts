@@ -56,7 +56,7 @@ export async function searchAll(qRaw: string): Promise<SearchHit[]> {
     if (out.filter((x) => x.kind === 'task').length >= 5) break
   }
   for (const i of items) {
-    if (i.stage === 'discarded') continue
+    if (i.deletedAt || i.stage === 'discarded') continue
     const h = hit('item', i.id, i.title, `${i.sourceName} · ${i.score.total} 分`, '/input/items', q)
     if (h) out.push(h)
     if (out.filter((x) => x.kind === 'item').length >= 5) break

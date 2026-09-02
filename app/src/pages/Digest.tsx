@@ -21,6 +21,7 @@ export function Digest() {
     setNotes,
     toggleKeep,
     cycleOt,
+    deleteItem,
   } = useCollect()
   const createTask = useTasks((s) => s.create)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -109,6 +110,9 @@ export function Digest() {
               onCycleOt={() => void cycleOt(item.id)}
               onConvert={() => convert(item.id, item.title)}
               converted={converted.has(item.id)}
+              onDelete={() => {
+                if (window.confirm(`删除「${item.title.slice(0, 24)}」？（软删除，从日报/条目库移除，备份中 14 天内可找回）`)) void deleteItem(item.id)
+              }}
             />
           ))}
           <div style={{ textAlign: 'center', marginTop: 'var(--sp-4)' }}>

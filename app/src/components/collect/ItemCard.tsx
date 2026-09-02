@@ -27,10 +27,12 @@ export interface ItemCardProps {
   converted?: boolean
   /** 显示 stage 徽章与 TTL 标注（条目库视图） */
   showStage?: boolean
+  /** 软删除（不传则按钮不显示）；删除后所有列表/日报/报告即刻过滤 */
+  onDelete?: () => void
 }
 
 /** 条目卡（PRD §4.4）：评分徽章 + 标题外链 + 摘要 + 元信息 + 我的星级 + 展开标注 */
-export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, onCycleOt, onConvert, converted, showStage }: ItemCardProps) {
+export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete }: ItemCardProps) {
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const a = item.annotation
   const ot = item.otFlag ? OT_LABEL[item.otFlag] : null
@@ -89,7 +91,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               <button type="button" className="mini-btn" onClick={onKeep}>
                 {a.keepForever ? '★ 永久保留（点击取消）' : '永久保留'}
               </button>
-              <span className="ttl-note">O/T 候选池接入复盘 SWOT：W4</span>
+              <span className="ttl-note">O/T 标记进入复盘 SWOT 候选池</span>
             </div>
           </div>
         )}
@@ -110,6 +112,16 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
         <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert}>
           {converted ? '已转待办 ✓' : '转行动卡'}
         </button>
+        {onDelete && (
+          <button
+            type="button"
+            className="mini-btn"
+            title="从日报/条目库移除（软删除，14 天内可从备份找回）"
+            onClick={onDelete}
+          >
+            删除
+          </button>
+        )}
       </div>
     </div>
   )

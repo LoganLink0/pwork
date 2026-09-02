@@ -8,7 +8,7 @@ type StageFilter = 'all' | 'scored' | 'kept' | 'discarded'
 
 /** 条目库页（PRD §4.4）：stage/分数筛选 + 搜索 + 展开详情与标注 */
 export function Items() {
-  const { items, setStars, setNotes, toggleKeep, cycleOt } = useCollect()
+  const { items, setStars, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
   const [stage, setStage] = useState<StageFilter>('all')
   const [minScore, setMinScore] = useState(0)
   const [query, setQuery] = useState('')
@@ -93,6 +93,9 @@ export function Items() {
             onKeep={() => void toggleKeep(item.id)}
             onCycleOt={() => void cycleOt(item.id)}
             onConvert={() => convert(item.id, item.title)}
+              onDelete={() => {
+                if (window.confirm(`删除「${item.title.slice(0, 24)}」？（软删除，从日报/条目库移除，备份中 14 天内可找回）`)) void deleteItem(item.id)
+              }}
             converted={converted.has(item.id)}
           />
         ))

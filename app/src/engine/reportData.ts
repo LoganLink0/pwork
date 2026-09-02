@@ -75,7 +75,7 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
     .slice(0, 8)
 
   const topItems = allItems
-    .filter((i) => i.stage === 'scored' || i.stage === 'kept')
+    .filter((i) => !i.deletedAt && (i.stage === 'scored' || i.stage === 'kept'))
     .filter((i) => inRange(i.fetchedAt) && i.score.total >= 60)
     .sort((a, b) => b.score.total - a.score.total)
     .slice(0, 5)

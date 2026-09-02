@@ -85,6 +85,13 @@ export async function updateSource(id: string, patch: Partial<SourceInput> & { a
   })
 }
 
+/** 条目软删除（铁律 3）：所有列表/日报/报告即刻过滤，TTL 清理时物理移除 */
+export async function softDeleteItem(id: string): Promise<void> {
+  const raw = await db.items.get(id)
+  if (!raw || raw.deletedAt) return
+  await db.items.put({ ...normalizeItem(raw), deletedAt: new Date().toISOString() })
+}
+
 /** 信源软删除（铁律 3） */
 export async function deleteSource(id: string): Promise<void> {
   const s = await db.sources.get(id)
@@ -170,7 +177,9 @@ export async function findItemByFingerprint(fp: string): Promise<Item | undefine
 export async function listRecentItems(days = 30): Promise<Item[]> {
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   const all = await db.items.where('fetchedAt').above(since).toArray()
-  return all.sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt))
+  return all
+    .filter((i) => !i.deletedAt)
+    .sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt))
 }
 
 /** 读取防御（铁律 2）：旧数据可能缺 annotation/score 细分 */
@@ -181,6 +190,7 @@ export function normalizeItem(raw: Item): Item {
     otFlag: raw.otFlag ?? null,
     eventGroup: raw.eventGroup ?? null,
     expiresAt: raw.expiresAt ?? null,
+    deletedAt: raw.deletedAt ?? undefined,
     annotation: {
       notes: raw.annotation?.notes ?? '',
       stars: raw.annotation?.stars ?? 0,
@@ -207,7 +217,7 @@ export async function digestFor(dateLocal: string, topN: number): Promise<Item[]
 export async function itemsOfLocalDay(dateLocal: string): Promise<Item[]> {
   const all = await db.items.toArray()
   return all
-    .filter((i) => localDateOf(i.fetchedAt) === dateLocal)
+    .filter((i) => !i.deletedAt && localDateOf(i.fetchedAt) === dateLocal)
     .map(normalizeItem)
 }
 
@@ -215,7 +225,7 @@ export async function itemsOfLocalDay(dateLocal: string): Promise<Item[]> {
 export async function digestDates(): Promise<string[]> {
   const all = await db.items.toArray()
   const dates = new Set(
-    all.filter((i) => i.stage === 'scored' || i.stage === 'kept').map((i) => localDateOf(i.fetchedAt)),
+    all.filter((i) => !i.deletedAt && (i.stage === 'scored' || i.stage === 'kept')).map((i) => localDateOf(i.fetchedAt)),
   )
   return [...dates].sort().reverse()
 }
@@ -258,6 +268,8 @@ export async function cleanupExpired(now = new Date()): Promise<number> {
   const nowIso = now.toISOString()
   const all = await db.items.toArray()
   const doomed = all.filter((i) => {
+    // 已软删除的条目：任意 stage，删除满 TTL 即物理移除（14 天后悔期）
+    if (i.deletedAt) return nowIso > i.deletedAt
     if (i.stage !== 'raw' && i.stage !== 'discarded') return false
     if (!i.expiresAt || i.expiresAt >= nowIso) return false
     const a = i.annotation
@@ -268,10 +280,10 @@ export async function cleanupExpired(now = new Date()): Promise<number> {
   return doomed.length
 }
 
-/** 备份导出用：Curated 条目（scored/kept；raw/discarded 不备份，04 §3.4） */
+/** 备份导出用：Curated 条目（scored/kept 且未删除；raw/discarded 不备份，04 §3.4） */
 export async function curatedItems(): Promise<Item[]> {
   const all = await db.items.toArray()
-  return all.filter((i) => i.stage === 'scored' || i.stage === 'kept').map(normalizeItem)
+  return all.filter((i) => !i.deletedAt && (i.stage === 'scored' || i.stage === 'kept')).map(normalizeItem)
 }
 
 /** 统计：各源近 7 天产出（信源管理页"日均"列） */

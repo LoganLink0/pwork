@@ -201,6 +201,8 @@ export interface Item {
   publishedAt: string | null
   fetchedAt: string
   stage: 'raw' | 'prefiltered' | 'scored' | 'kept' | 'discarded'
+  /** 软删除（铁律 3）：删除后 14 天 TTL 清理时物理移除；列表/日报/报告均过滤 */
+  deletedAt?: string
   score: ScoreBreakdown
   /** ≤30 字评分理由（可解释性红线，04 §5） */
   scoreReason: string
