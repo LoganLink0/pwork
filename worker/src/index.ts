@@ -224,7 +224,7 @@ export default {
     if (path === '/') {
       return json({
         name: 'pwork-collect',
-        endpoints: ['/api/items?since=&minScore=&ot=', '/api/digest?n=', '/api/sources', '/api/fetch (POST, auth)', '/rss/daily.xml'],
+        endpoints: ['/api/items?since=&minScore=&ot=', '/api/digest?n=', '/api/sources', '/api/fetch (POST, auth)', '/api/ingest (POST 推送 / GET 拉取, auth)', '/rss/daily.xml'],
       })
     }
 
