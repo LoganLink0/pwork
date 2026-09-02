@@ -51,3 +51,13 @@ CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- 外部数据推送暂存（输入第三通道的机器入口；鉴权读写；应用侧按 created_at 增量拉取）
+CREATE TABLE IF NOT EXISTS ingest_blocks (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL DEFAULT 'api',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ingest_created ON ingest_blocks(created_at);

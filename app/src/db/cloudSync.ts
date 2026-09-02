@@ -10,6 +10,7 @@
 import { db } from './schema'
 import { normalizeItem } from './collect'
 import { listActiveSources } from './collect'
+import { saveBlock } from './blocksRepo'
 import type { Item } from '../types/models'
 
 const ENDPOINT_KEY = 'pwork-cloud-endpoint'
@@ -18,6 +19,7 @@ const LASTSYNC_KEY = 'pwork-cloud-lastsync'
 const MODE_KEY = 'pwork-cloud-mode'
 const ACCOUNT_KEY = 'pwork-cloud-account'
 const DBID_KEY = 'pwork-cloud-dbid'
+const INGEST_SINCE_KEY = 'pwork-ingest-since'
 
 export type CloudMode = 'endpoint' | 'd1'
 
@@ -302,4 +304,73 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
           : '连不上：检查账户 ID / 数据库 ID / Token 是否正确',
     }
   }
+}
+
+
+/* ------------------------------ 外部数据推送拉取（/api/ingest） ------------------------------ */
+
+export interface IngestPullResult {
+  ok: boolean
+  pulled: number
+  error: string | null
+}
+
+interface IngestRow {
+  id: string
+  source: string
+  title: string
+  content: string
+  created_at: string
+}
+
+/** 推送数据拉取水位（created_at > since 增量；本地块按 extId 去重兜底） */
+function ingestSince(): string {
+  return localStorage.getItem(INGEST_SINCE_KEY) ?? ''
+}
+
+/**
+ * 拉取云端 /api/ingest 的推送数据 → 本地数据块。
+ * 端点模式走 Worker；D1 直连走 api.cloudflare.com（大陆可达）。两种模式同一套去重与水位。
+ */
+export async function syncIngestBlocks(): Promise<IngestPullResult> {
+  const config = loadCloudConfig()
+  const since = ingestSince()
+  let rows: IngestRow[] = []
+  try {
+    if (config.mode === 'd1') {
+      if (!config.accountId || !config.databaseId || !config.token) {
+        return { ok: false, pulled: 0, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token（设置里有创建指引）' }
+      }
+      const r = await d1Query(
+        config,
+        'SELECT id, source, title, content, created_at FROM ingest_blocks WHERE created_at > ? ORDER BY created_at LIMIT 200',
+        [since],
+      )
+      rows = r as unknown as IngestRow[]
+    } else {
+      if (!config.endpoint || !config.token) return { ok: false, pulled: 0, error: '端点模式需要：Worker 地址 + TOKEN' }
+      const resp = await fetch(
+        `${config.endpoint.replace(/\/$/, '')}/api/ingest?since=${encodeURIComponent(since)}&token=${encodeURIComponent(config.token)}`,
+      )
+      if (!resp.ok) return { ok: false, pulled: 0, error: `拉取失败（HTTP ${resp.status}）` }
+      const body = (await resp.json()) as { blocks?: IngestRow[] }
+      rows = body.blocks ?? []
+    }
+  } catch (e) {
+    return { ok: false, pulled: 0, error: e instanceof Error ? e.message : String(e) }
+  }
+
+  let pulled = 0
+  let newest = since
+  for (const row of rows) {
+    if (!row.id || !row.title || !row.content) continue
+    const dup = await db.blocks.where('extId').equals(row.id).first()
+    if (dup) continue
+    const source = row.source && row.source !== 'api' ? `${row.source} · ${row.title}` : row.title
+    await saveBlock({ title: source, content: row.content, extId: row.id })
+    pulled++
+    if (row.created_at > newest) newest = row.created_at
+  }
+  if (newest) localStorage.setItem(INGEST_SINCE_KEY, newest)
+  return { ok: true, pulled, error: null }
 }

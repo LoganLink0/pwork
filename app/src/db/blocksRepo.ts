@@ -13,6 +13,7 @@ function normalizeBlock(raw: DataBlock): DataBlock {
     ...raw,
     title: raw.title ?? '未命名数据块',
     content: raw.content ?? '',
+    extId: raw.extId ?? undefined,
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? BLOCK_SCHEMA_VERSION,
@@ -25,6 +26,8 @@ export interface SaveBlockInput {
   id?: string
   title: string
   content: string
+  /** 云端推送源 id（增量去重用） */
+  extId?: string
 }
 
 /** 新建或更新（按 id）；标题取首行非空，最多 40 字 */
@@ -35,6 +38,7 @@ export async function saveBlock(input: SaveBlockInput): Promise<DataBlock> {
     id: existing?.id ?? newId('block'),
     title: input.title.trim().slice(0, 40) || '未命名数据块',
     content: input.content.trim(),
+    extId: input.extId ?? existing?.extId,
     updatedAt: now,
     deletedAt: existing?.deletedAt ?? null,
     schemaVersion: BLOCK_SCHEMA_VERSION,

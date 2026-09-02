@@ -53,6 +53,8 @@ export interface DataBlock {
   id: string
   title: string
   content: string
+  /** 云端推送数据的源 id（/api/ingest），用于增量拉取去重；手动创建无此字段 */
+  extId?: string
   updatedAt: string
   deletedAt: string | null
   schemaVersion: number

@@ -6,6 +6,8 @@
  *   GET  /api/digest?date=&n=              当日 Top N
  *   GET  /api/sources                      信源清单
  *   POST /api/sources                      推送信源清单（覆盖式合并）
+ *   POST /api/ingest                       外部数据推送（单块或 { blocks: [...] }，鉴权）
+ *   GET  /api/ingest?since=                拉取推送数据（鉴权——业务数据默认敏感）
  *   POST /api/fetch                        手动触发一轮抓取
  *   GET  /rss/daily.xml                    当日 Top N 对外输出
  */
@@ -21,6 +23,9 @@ const CORS = {
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
 }
+
+/** ingest_blocks 建表只需每个 isolate 做一次（D1 无迁移机制，端点内幂等确保） */
+let ingestEnsured = false
 
 function checkAuth(request: Request, env: Env): boolean {
   const header = request.headers.get('authorization') ?? ''
@@ -117,6 +122,49 @@ export default {
         imported++
       }
       return json({ imported, skipped })
+    }
+
+    // ── 外部数据推送（输入第三通道的机器入口）：业务数据默认敏感，读写都鉴权（复用 TOKEN） ──
+    if (path === '/api/ingest' && (request.method === 'POST' || request.method === 'GET')) {
+      if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
+      if (!ingestEnsured) {
+        await env.DB.prepare(
+          'CREATE TABLE IF NOT EXISTS ingest_blocks (id TEXT PRIMARY KEY, source TEXT NOT NULL DEFAULT \'api\', title TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)',
+        ).run()
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_ingest_created ON ingest_blocks(created_at)').run()
+        ingestEnsured = true
+      }
+      if (request.method === 'POST') {
+        const body = (await request.json().catch(() => null)) as { blocks?: unknown; title?: unknown; content?: unknown; source?: unknown } | null
+        const raw: Record<string, unknown>[] = Array.isArray(body?.blocks)
+          ? (body!.blocks as Record<string, unknown>[])
+          : body && typeof body === 'object' && body.title !== undefined
+            ? [body]
+            : []
+        const ids: string[] = []
+        let skipped = 0
+        for (const b of raw) {
+          const title = typeof b.title === 'string' ? b.title.trim().slice(0, 40) : ''
+          const content = typeof b.content === 'string' ? b.content.trim().slice(0, 20000) : ''
+          if (!title || !content) {
+            skipped++
+            continue
+          }
+          const id = `ing_${crypto.randomUUID().slice(0, 13)}`
+          await env.DB.prepare('INSERT INTO ingest_blocks (id, source, title, content, created_at) VALUES (?, ?, ?, ?, ?)')
+            .bind(id, String(b.source ?? 'api').slice(0, 40), title, content, new Date().toISOString())
+            .run()
+          ids.push(id)
+        }
+        return json({ accepted: ids.length, ids, skipped })
+      }
+      const since = url.searchParams.get('since') ?? ''
+      const { results } = await env.DB.prepare(
+        'SELECT id, source, title, content, created_at FROM ingest_blocks WHERE created_at > ? ORDER BY created_at LIMIT 200',
+      )
+        .bind(since)
+        .all()
+      return json({ blocks: results })
     }
 
     // ── 读操作：开放 ──

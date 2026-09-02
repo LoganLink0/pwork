@@ -39,6 +39,23 @@ curl -X POST -H "Authorization: Bearer <你的TOKEN>" "$BASE/api/fetch"   # 手�
 
 然后在**工作台 → 设置 → 云端同步（C2）**填入端点与 Token：「推送信源清单」把本地活跃源上云，「立即同步」拉取条目（按指纹合并，本地已有的不动）。
 
+## 外部数据推送接口（/api/ingest）
+
+让外部系统（脚本、n8n、公司系统导出器）把数据推进工作台，应用侧经「设置 → 拉取推送数据」拉到 `输入 → 外部数据`，自动并入报告/PPT。
+
+```bash
+# 推送（单块或 { blocks: [...] } 批量；鉴权复用同步 TOKEN）
+curl -X POST "$BASE/api/ingest" \
+  -H "Authorization: Bearer <你的TOKEN>" -H "content-type: application/json" \
+  -d '{"source": "CRM", "title": "销售周数据", "content": "新增线索: 23\n成交金额: 86万"}'
+
+# 拉取增量（应用同步走同一路径；业务数据默认敏感，读写都要求 TOKEN）
+curl "$BASE/api/ingest?since=2026-09-01T00:00:00Z&token=<你的TOKEN>"
+```
+
+- 表 `ingest_blocks` 首次调用时自动建（存量 D1 无需手工迁移）；数据在 D1 保留，应用按 `extId` 去重、按 `created_at` 水位增量拉取。
+- **部署提醒**：更新代码后需 `npx wrangler deploy`；无需新密钥（复用 TOKEN）。
+
 ## 已知限制与对策（04 §2/§12）
 
 | 限制 | 对策 |

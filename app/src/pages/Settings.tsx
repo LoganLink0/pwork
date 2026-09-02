@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle } from '../db/backup'
-import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, type CloudConfig } from '../db/cloudSync'
+import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncIngestBlocks, type CloudConfig } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
@@ -61,6 +61,17 @@ export function Settings() {
     try {
       const r = await pushSourcesToCloud()
       setCloudMsg(r.ok ? `信源已推送：云端导入 ${r.imported} 个` : `推送失败：${r.error}`)
+    } finally {
+      setCloudBusy(false)
+    }
+  }
+
+  const doIngest = async () => {
+    setCloudBusy(true)
+    setCloudMsg(null)
+    try {
+      const r = await syncIngestBlocks()
+      setCloudMsg(r.ok ? `推送数据已拉取：新 ${r.pulled} 块（去 输入 → 外部数据 查看）` : `拉取失败：${r.error}`)
     } finally {
       setCloudBusy(false)
     }
@@ -362,6 +373,9 @@ export function Settings() {
             </button>
             <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doPush()}>
               ⬆ 推送信源清单
+            </button>
+            <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doIngest()} data-testid="ingest-pull">
+              ⬇ 拉取推送数据
             </button>
             <button
               type="button"

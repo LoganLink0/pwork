@@ -70,6 +70,10 @@ export class PworkDB extends Dexie {
     this.version(6).stores({
       blocks: 'id, updatedAt',
     })
+    // v7（外部数据推送）：blocks 加 extId 索引——云端 /api/ingest 增量拉取去重
+    this.version(7).stores({
+      blocks: 'id, updatedAt, extId',
+    })
   }
 }
 
