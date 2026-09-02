@@ -32,7 +32,8 @@ export function collectSignals(input: SignalInput): Signal[] {
     })
   }
   if (input.lastReviewCreatedAt) {
-    const days = Math.floor((Date.now() - new Date(input.lastReviewCreatedAt).getTime()) / 86_400_000)
+    const now = (input.now ?? new Date()).getTime()
+    const days = Math.floor((now - new Date(input.lastReviewCreatedAt).getTime()) / 86_400_000)
     if (days >= 7) {
       signals.push({ kind: 'review-due', message: `距上次复盘已经 ${days} 天——节奏是每周一次小小的经营分析会` })
     }

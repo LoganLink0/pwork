@@ -727,3 +727,71 @@ a.origin:hover {
   flex-wrap: wrap;
   gap: var(--sp-2);
 }
+/* ---------- 目标：时间条 / 期限输入 / 进度轨迹 ---------- */
+/* 时间条：整条 = 创建→期限（"要多久"），填充 = 已走过（"现在怎样"），剩多少看右端距离 */
+.goal-timeline {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-faint) 22%, transparent);
+  overflow: hidden;
+}
+.goal-timeline-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.goal-timeline-fill[data-over] {
+  background: var(--danger);
+}
+/* 期限输入：原生日期控件，紧凑融入行内 */
+.goal-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+.goal-due input {
+  height: 22px;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 0 4px;
+  color-scheme: light dark;
+}
+/* 进度轨迹：原样 details，展开看每次带日期的记录 */
+.goal-progress {
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+/* 进度行内编辑器（不用弹窗：内嵌浏览器环境 prompt 会挂起） */
+.progress-editor {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.progress-editor .input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  font-size: var(--fs-sm);
+}
+.goal-progress summary {
+  cursor: pointer;
+  color: var(--ink-faint);
+  user-select: none;
+}
+.goal-progress summary:hover {
+  color: var(--ink-soft);
+}
+.goal-progress ul {
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

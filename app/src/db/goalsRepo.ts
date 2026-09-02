@@ -14,6 +14,7 @@ function normalizeGoal(raw: Goal): Goal {
     status: raw.status ?? 'active',
     due: raw.due ?? undefined,
     progressNote: raw.progressNote ?? undefined,
+    progressLog: raw.progressLog ?? undefined,
     closedAt: raw.closedAt ?? null,
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? GOAL_SCHEMA_VERSION,
@@ -76,9 +77,18 @@ export async function setGoalStatus(id: string, status: Goal['status']): Promise
   })
 }
 
-/** 预填用：更新进度快照（复盘时人工/自动写入） */
+/** 预填用：更新进度快照（复盘时人工/自动写入）；轨迹追加不改写（02 铁律 2） */
 export async function updateProgress(id: string, progressNote: string): Promise<void> {
   const raw = await db.goals.get(id)
   if (!raw) return
-  await db.goals.put({ ...normalizeGoal(raw), progressNote, updatedAt: new Date().toISOString() })
+  const now = new Date().toISOString()
+  const log = [...(raw.progressLog ?? []), { at: now, note: progressNote }]
+  await db.goals.put({ ...normalizeGoal(raw), progressNote, progressLog: log, updatedAt: now })
+}
+
+/** 设定/清除目标期限（SMART 的 Time-bound：字段已有，此处补入口） */
+export async function updateDue(id: string, due: string | undefined): Promise<void> {
+  const raw = await db.goals.get(id)
+  if (!raw) return
+  await db.goals.put({ ...normalizeGoal(raw), due: due || undefined, updatedAt: new Date().toISOString() })
 }

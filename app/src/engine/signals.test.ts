@@ -23,13 +23,13 @@ describe('collectSignals（03 §4 信号触发）', () => {
     expect(s.find((x) => x.kind === 'tasks-overdue')).toBeUndefined()
   })
 
-  it('距上次复盘 ≥7 天 → review-due', () => {
-    const s = collectSignals(input({ lastReviewCreatedAt: '2026-08-20T00:00:00.000Z' }))
-    expect(s.find((x) => x.kind === 'review-due')?.message).toContain('12 天')
+  it('距上次复盘 ≥7 天 → review-due（种子日期相对注入的 now=08-31 为 8 天）', () => {
+    const s = collectSignals(input({ lastReviewCreatedAt: '2026-08-23T00:00:00.000Z' }))
+    expect(s.find((x) => x.kind === 'review-due')?.message).toContain('8 天')
   })
 
-  it('6 天不触发', () => {
-    const s = collectSignals(input({ lastReviewCreatedAt: '2026-08-26T00:00:00.000Z' }))
+  it('不足 7 天不触发（种子相对注入 now 为 3 天）', () => {
+    const s = collectSignals(input({ lastReviewCreatedAt: '2026-08-28T00:00:00.000Z' }))
     expect(s.find((x) => x.kind === 'review-due')).toBeUndefined()
   })
 

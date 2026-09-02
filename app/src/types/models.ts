@@ -53,8 +53,10 @@ export interface Goal {
   title: string
   status: 'active' | 'done' | 'dropped'
   due?: string
-  /** W5 预填用：上次复盘时的进度快照（自由文本，复盘时更新） */
+  /** W5 预填用：最近一次进度快照（自由文本，随记录更新） */
   progressNote?: string
+  /** 进度轨迹（追加不改写；progressNote 恒等于最后一条）——字段只增不删（02 铁律 2） */
+  progressLog?: { at: string; note: string }[]
   closedAt: string | null
   createdAt: string
   updatedAt: string
