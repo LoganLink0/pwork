@@ -18,7 +18,7 @@ function OtPicker({ flag, onPick }: { flag: 'opportunity' | 'threat'; onPick: (l
   // filter/slice 内联在 selector 里会每次返回新数组，导致无限重渲染
   const items = useCollect((s) => s.items)
   const candidates = useMemo(() => items.filter((i) => i.otFlag === flag).slice(0, 8), [items, flag])
-  const label = flag === 'opportunity' ? 'O' : 'T'
+  const label = flag === 'opportunity' ? '机会' : '威胁'
   if (candidates.length === 0) {
     return (
       <details className="ot-picker">

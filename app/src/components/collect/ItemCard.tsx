@@ -102,8 +102,13 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               aria-label={`批注：${item.title}`}
             />
             <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
-              <button type="button" className="mini-btn" onClick={onCycleOt}>
-                {item.otFlag ? `O/T：${OT_LABEL[item.otFlag].text}（切换）` : '标记 O/T'}
+              <button
+                type="button"
+                className="mini-btn"
+                title="在 机会 → 威胁 → 趋势 → 取消 之间切换；标记后进入复盘 SWOT 候选池"
+                onClick={onCycleOt}
+              >
+                {item.otFlag ? `${OT_LABEL[item.otFlag].icon} ${OT_LABEL[item.otFlag].text}（点击换/取消）` : '标记机会/威胁/趋势'}
               </button>
               <button type="button" className="mini-btn" onClick={onKeep}>
                 {a.keepForever ? '★ 永久保留（点击取消）' : '永久保留'}
@@ -111,7 +116,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               <button type="button" className="mini-btn" title="以这条条目为引写速记，速记自动挂回本条目" onClick={() => void writeNote()}>
                 写速记
               </button>
-              <span className="ttl-note">O/T 标记进入复盘 SWOT 候选池</span>
+              <span className="ttl-note">标记后进入复盘 SWOT 候选池</span>
             </div>
           </div>
         )}

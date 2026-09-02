@@ -161,8 +161,9 @@ export const useCollect = create<CollectState>((set, get) => ({
 
   cycleOt: async (itemId) => {
     const cur = await getItem(itemId)
-    const order: NonNullable<Item['otFlag']>[] = ['opportunity', 'threat', 'trend']
-    const next = cur?.otFlag ? order[(order.indexOf(cur.otFlag) + 1) % order.length]! : 'opportunity'
+    const order: (Item['otFlag'])[] = ['opportunity', 'threat', 'trend', null]
+    const idx = cur?.otFlag ? order.indexOf(cur.otFlag) : order.length - 1
+    const next = order[(idx + 1) % order.length]!
     await updateAnnotation(itemId, { otFlag: next })
     set({ items: await refreshItem(itemId, get().items) })
     set(await reloadDigest(get()))

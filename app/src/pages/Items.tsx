@@ -64,7 +64,7 @@ export function Items() {
             ≥{n} 分
           </button>
         ))}
-        <button type="button" className={`chip${otOnly ? ' on' : ''}`} onClick={() => setOtOnly(!otOnly)}>🎯 O/T</button>
+        <button type="button" className={`chip${otOnly ? ' on' : ''}`} onClick={() => setOtOnly(!otOnly)}>🎯 机会/威胁/趋势</button>
         <input
           className="input"
           style={{ maxWidth: 220, marginLeft: 'auto' }}
