@@ -15,6 +15,7 @@ import {
   type ScenarioKey,
 } from '../types/models'
 import { addInsight, getReview, newId, saveReview, upsertActions } from '../db/repo'
+import { attachReviewToNote } from '../../../db/repo'
 import { generateSummary } from '../engine/summary'
 import { hashTheme } from '../engine/theme'
 import { ARCHIVE } from '../content/copy'
@@ -27,6 +28,8 @@ interface StartOpts {
   scenario: ScenarioKey
   title: string
   quick: boolean
+  /** 从速记"挂到复盘"带入的速记 id */
+  noteIds?: string[]
 }
 
 interface DraftState {
@@ -61,11 +64,16 @@ export const useDraft = create<DraftState>((set, get) => ({
       status: 'in-progress',
       quick: opts.quick,
       clap: emptyClap(),
+      noteIds: opts.noteIds?.length ? opts.noteIds : undefined,
       meeting: opts.type === 'team' ? defaultMeeting() : undefined,
       summary: [],
     }
     set({ draft, step: 0 })
     await saveReview(draft)
+    // 反向回写 note.links.reviewIds（铁律 4：ID 引用双向可溯源）
+    if (opts.noteIds?.length) {
+      for (const nid of opts.noteIds) await attachReviewToNote(nid, draft.id)
+    }
   },
 
   updateMeeting: async (fn) => {

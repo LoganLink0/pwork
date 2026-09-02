@@ -5,6 +5,8 @@ import { getPack } from '../content/scenario-packs'
 import { CLAP_STEPS, DETAIL, MODE_LABEL, WIZARD } from '../content/copy'
 import { useDraft } from '../store/draft'
 import { deleteReview } from '../db/repo'
+import { getNote } from '../../../db/repo'
+import { Link } from 'react-router-dom'
 import type { ReviewRecord } from '../types/models'
 import { StepComparison } from '../components/wizard/StepComparison'
 import { StepLogic } from '../components/wizard/StepLogic'
@@ -100,12 +102,32 @@ function QuickTimer() {
   )
 }
 
+/** 挂载速记条：向导内随时看到这次复盘带着哪条速记来 */
+function AttachedNoteChips({ ids }: { ids: string[] }) {
+  const [titles, setTitles] = useState<Record<string, string>>({})
+  useEffect(() => {
+    void Promise.all(ids.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
+      setTitles(Object.fromEntries(pairs))
+    })
+  }, [ids.join(',')])
+  return (
+    <div className="seg" style={{ marginTop: 'var(--sp-2)' }} aria-label="挂载的速记">
+      {ids.map((id) => (
+        <Link key={id} className="seg-item seg-item--on" to={`/input/notes/${id}`} style={{ textDecoration: 'none' }}>
+          ✎ {titles[id] ?? id}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
 export function Wizard() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const templateId = params.get('template') ?? 'personal-daily'
   const resumeId = params.get('resume')
   const quick = params.get('mode') === 'quick'
+  const noteParam = params.get('note') ?? ''
   const template = getTemplate(templateId)
 
   const draft = useDraft((s) => s.draft)
@@ -155,11 +177,12 @@ export function Wizard() {
         scenario: template.scenario,
         title: `${template.name} · ${new Date().toLocaleDateString('zh-CN')}`,
         quick,
+        noteIds: noteParam ? [noteParam] : undefined,
       })
     }
     // 刻意只依赖 URL 参数：草稿状态一律从 getState 读取，避免创建竞态
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateId, resumeId, quick])
+  }, [templateId, resumeId, quick, noteParam])
 
   // 归档后不再展示表单（防止向已归档档案继续写入）
   const draftReady = draft !== null && (resumeId ? draft.id === resumeId : draft.templateId === templateId)
@@ -202,6 +225,7 @@ export function Wizard() {
         {template && (
           <p className="coach-say">{getPack(draft?.scenario ?? template.scenario)?.intro ?? WIZARD.modeHint}</p>
         )}
+        {draftReady && draft?.noteIds?.length ? <AttachedNoteChips ids={draft.noteIds} /> : null}
         {modeSwitchable && (
           <div className="seg" role="radiogroup" aria-label="模式切换">
             {([false, true] as const).map((q) => (

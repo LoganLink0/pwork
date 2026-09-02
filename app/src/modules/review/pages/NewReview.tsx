@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TEMPLATES } from '../content/templates'
 import { StickyCard } from '../components/ui/StickyCard'
 import { useTasks } from '../../../store/tasks'
@@ -60,6 +60,7 @@ function MaterialCard() {
 /** ② 新建复盘：模板选择（M2 增加症状问诊路由器） */
 export function NewReview() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   return (
     <div className="container">
       <header className="page-head">
@@ -86,9 +87,11 @@ export function NewReview() {
             title={t.name}
             tagline={t.tagline}
             milestone={t.milestone}
-            onClick={() =>
-              navigate(t.mode === 'meeting' ? `/review/meeting?template=${t.id}` : `/review/wizard?template=${t.id}`)
-            }
+            onClick={() => {
+              const note = searchParams.get('note') ?? ''
+              const tail = note ? `&note=${encodeURIComponent(note)}` : ''
+              navigate(t.mode === 'meeting' ? `/review/meeting?template=${t.id}` : `/review/wizard?template=${t.id}${tail}`)
+            }}
           />
         ))}
       </div>

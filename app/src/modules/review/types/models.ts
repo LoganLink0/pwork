@@ -242,6 +242,8 @@ export interface ReviewRecord {
   /** 3 分钟快答版 */
   quick: boolean
   clap: ClapSections
+  /** 挂载的速记（输入第三语义：速记 → 复盘素材；反向写 note.links.reviewIds） */
+  noteIds?: string[]
   meeting?: MeetingMeta
   doubleCheck?: DoubleCheckState
   summary: string[]

@@ -77,9 +77,33 @@ export async function saveNote(note: Note): Promise<void> {
  * 原子增量更新：读-改-写包在同一个读写事务里（开发复盘 1.2 的连点竞态——
  * 同批次两次 update 不同字段，后一个不得基于旧值整体覆盖）。
  */
+/** 反向挂接维护：复盘 id 写入 note.links.reviewIds（去重） */
+export async function attachReviewToNote(noteId: string, reviewId: string): Promise<void> {
+  await db.transaction('rw', db.notes, async () => {
+    const raw = await db.notes.get(noteId)
+    if (!raw) return
+    const note = normalizeNote(raw)
+    if (note.links.reviewIds.includes(reviewId)) return
+    note.links.reviewIds.push(reviewId)
+    await db.notes.put({ ...note, updatedAt: new Date().toISOString() })
+  })
+}
+
+/** 反向挂接维护：任务 id 写入 note.links.taskIds（去重） */
+export async function attachTaskToNote(noteId: string, taskId: string): Promise<void> {
+  await db.transaction('rw', db.notes, async () => {
+    const raw = await db.notes.get(noteId)
+    if (!raw) return
+    const note = normalizeNote(raw)
+    if (note.links.taskIds.includes(taskId)) return
+    note.links.taskIds.push(taskId)
+    await db.notes.put({ ...note, updatedAt: new Date().toISOString() })
+  })
+}
+
 export async function updateNoteFields(
   id: string,
-  patch: Partial<Pick<Note, 'body' | 'title' | 'tags'>>,
+  patch: Partial<Pick<Note, 'body' | 'title' | 'tags' | 'links'>>,
 ): Promise<void> {
   await db.transaction('rw', db.notes, async () => {
     const raw = await db.notes.get(id)

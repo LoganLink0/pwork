@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getNote, noteToMarkdown, downloadFile } from '../db/repo'
+import { getNote, noteToMarkdown, downloadFile, attachTaskToNote } from '../db/repo'
+import { useTasks } from '../store/tasks'
 import { useNotes } from '../store/notes'
 import { fmtLocal } from '../engine/datetime'
 import type { Note } from '../types/models'
@@ -27,6 +28,8 @@ export function NoteEditor() {
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(!isNew)
   const [notFound, setNotFound] = useState(false)
+  const createTask = useTasks((s) => s.create)
+  const [taskCreated, setTaskCreated] = useState(false)
 
   // noteRef 供卸载时的 flush 使用（Hook 全部先于早退 return —— 开发复盘 1.1）
   const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false })
@@ -192,8 +195,31 @@ export function NoteEditor() {
         </div>
       </details>
       <div className="editor-foot">
-        <button type="button" className="btn-ghost" disabled title="W3 任务库上线后开放">转待办</button>
-        <button type="button" className="btn-ghost" disabled title="W3 回路模块迁入后开放">挂到复盘</button>
+        <button
+          type="button"
+          className="btn-ghost"
+          disabled={!note || taskCreated}
+          title={taskCreated ? '已在待办库创建，可去 待办 页查看（来源:速记 可溯源）' : '以这条速记为源创建一条待办'}
+          onClick={() => {
+            if (!note || taskCreated) return
+            const title = note.title || note.body.split('\n')[0].trim().slice(0, 60)
+            void createTask({ title, origin: { kind: 'note', refId: note.id } }).then(async (t) => {
+              await attachTaskToNote(note.id, t.id)
+              setTaskCreated(true)
+            })
+          }}
+        >
+          {taskCreated ? '✅ 已入待办' : '转待办'}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost"
+          disabled={!note}
+          title="带着这条速记做一次复盘：选场景后它会作为挂载素材出现在向导里"
+          onClick={() => note && navigate(`/review/new?note=${encodeURIComponent(note.id)}`)}
+        >
+          挂到复盘
+        </button>
         <button
           type="button"
           className="btn-ghost"

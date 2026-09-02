@@ -4,10 +4,30 @@ import { ARCHIVE, DETAIL, GREETING, MEETING, SCENARIO_LABEL } from '../content/c
 import { reviewToMarkdown } from '../engine/markdown'
 import { fmtLocal } from '../engine/datetime'
 import { deleteReview, getReview, listActionsByReview } from '../db/repo'
+import { getNote } from '../../../db/repo'
 import type { ActionItem, ReviewRecord } from '../types/models'
 import { DeltaBadge } from '../components/ui/DeltaBadge'
 import { CONTROL_LABEL, CONFIDENCE_LABEL } from '../content/copy'
 import { DoubleCheckPanel } from '../components/doublecheck/DoubleCheckPanel'
+
+/** 挂载速记条：档案页回看这次复盘带着哪条速记来 */
+function AttachedNotes({ ids }: { ids: string[] }) {
+  const [titles, setTitles] = useState<Record<string, string>>({})
+  useEffect(() => {
+    void Promise.all(ids.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
+      setTitles(Object.fromEntries(pairs))
+    })
+  }, [ids.join(',')])
+  return (
+    <div className="seg" aria-label="挂载的速记">
+      {ids.map((id) => (
+        <Link key={id} className="seg-item seg-item--on" to={`/input/notes/${id}`} style={{ textDecoration: 'none' }}>
+          ✎ {titles[id] ?? id}
+        </Link>
+      ))}
+    </div>
+  )
+}
 
 /** 档案详情：小结 3 条 + 思考题 + 四环节回看 + Markdown 导出（归档四件套的产品化） */
 export function ArchiveDetail() {
@@ -83,6 +103,7 @@ export function ArchiveDetail() {
         </div>
         <h1>{rec.title}</h1>
         <p className="coach-say">{ARCHIVE.done}</p>
+        {rec.noteIds?.length ? <AttachedNotes ids={rec.noteIds} /> : null}
       </header>
 
       <section className="detail-section">
