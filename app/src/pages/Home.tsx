@@ -5,13 +5,14 @@ import { useUi } from '../store/ui'
 import { useNotes, todayNoteCount } from '../store/notes'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
+import { useBlocks } from '../store/blocks'
 import { greetWord, relTime, weekdayLocal } from '../engine/datetime'
 import { gatherSignals, type Signal } from '../engine/signals'
 import { db } from '../db/schema'
 import { shouldRemindBackup, snoozeBackupReminder, getSnoozeDate } from '../engine/backupReminder'
 
-/** 输入模块卡的直达行（W1：速记；W2：Digest/信源随采集 C1 点亮） */
-function InputCardLinks({ noteCount, sourceCount, digestCount }: { noteCount: number; sourceCount: number; digestCount: number }) {
+/** 输入模块卡的直达行（三通道：速记 = 我想到的；信源 = 网上来的；外部数据 = 从别的系统带来的） */
+function InputCardLinks({ noteCount, sourceCount, digestCount, blockCount }: { noteCount: number; sourceCount: number; digestCount: number; blockCount: number }) {
   return (
     <div className="m-links">
       <Link className="m-link" to="/input/notes">
@@ -22,6 +23,9 @@ function InputCardLinks({ noteCount, sourceCount, digestCount }: { noteCount: nu
       </Link>
       <Link className="m-link" to="/input/sources">
         信源<span className="cnt">{sourceCount} 个</span>
+      </Link>
+      <Link className="m-link" to="/input/blocks">
+        外部数据<span className="cnt">{blockCount > 0 ? `${blockCount} 块` : '＋'}</span>
       </Link>
     </div>
   )
@@ -47,6 +51,7 @@ function ReviewCardLinks() {
 export function Home() {
   const openQuick = useUi((s) => s.openQuick)
   const notes = useNotes((s) => s.notes)
+  const blockCount = useBlocks((s) => s.blocks.length)
   const loaded = useNotes((s) => s.loaded)
   const digest = useCollect((s) => s.digest)
   const sources = useCollect((s) => s.sources)
@@ -182,7 +187,7 @@ export function Home() {
             <span className="m-tag">{MODULE_STATUS_LABEL[input.status]}</span>
           </div>
           <div className="m-sub">捕获想法 · 喂养流水线</div>
-          <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} />
+          <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} blockCount={blockCount} />
         </div>
 
         <Link to={process.to ?? '/'} className={`mcard ${process.mark}`}>

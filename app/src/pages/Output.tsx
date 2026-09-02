@@ -6,7 +6,7 @@ import { useNotes } from '../store/notes'
 import { searchAll } from '../engine/searchAll'
 
 const TOOLS: { to: string; icon: string; name: string; desc: string; status: string }[] = [
-  { to: '/output/report', icon: '📄', name: '报告生成器', desc: '本周/本月素材自动汇总成稿（Markdown + HTML）', status: '' },
+  { to: '/output/report', icon: '📄', name: '报告生成器', desc: '本周/本月素材 + 外部数据块自动成稿（Markdown + HTML）', status: '' },
   { to: '/output/read', icon: '🎧', name: '朗读版报告', desc: '通勤场景——用听的回顾一个周期', status: '' },
   { to: '/output/ppt', icon: '📊', name: 'PPT 导出', desc: '报告数据 → 六七页演示文稿（本地生成 .pptx）', status: '' },
   { to: '/output/card', icon: '🖼', name: '数据快照卡片', desc: '关键数字生成分享卡片图', status: '' },

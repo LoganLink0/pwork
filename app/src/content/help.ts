@@ -44,9 +44,9 @@ export interface ModuleIntro {
 }
 
 export const MODULES: ModuleIntro[] = [
-  { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '速记 + 信息采集：捕获想法、抓取信源、规则评分、每日精选', to: '/input/notes' },
-  { name: '处理', mark: 'var(--m-process)', status: '规划中（W5）', desc: 'AI 提纯 / 跨模块检索 / 知识整理——先有料，后有加工' },
-  { name: '输出', mark: 'var(--m-output)', status: '规划中（远期）', desc: '报告 / 交付物——形态待处理模块验证后定义' },
+  { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
+  { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '报告生成器（Markdown/HTML）+ 朗读版 + PPT 导出 + 数据卡片——外部数据块自动并入', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察回流为下一轮输入', to: '/review' },
 ]
 
@@ -76,6 +76,8 @@ export const GLOSSARY: GlossaryEntry[] = [
   { term: '每日硬顶', def: '信息日报每天最多 10 条（Top N 硬顶）。推送量是产品设计，不是用户设置；无未读数，不做红点心理债。' },
   { term: 'TTL', def: '原始抓取与已筛除条目 14 天后物理清理；有标注（星级/批注/永久保留）的条目豁免，随全量备份。' },
   { term: '健康列', def: '信源抓取失败计数：连败 3 次自动停用并告警——死源静默污染数据是最常见死法。' },
+  { term: '三问分诊', def: '待办分类不问"重不重要"，问"不做的代价"：今天不做就过期 → 一类；卡住别人等我的 → 二类；都不是 → 三类。手动调整后以手动为准。' },
+  { term: '外部数据块', def: '输入的第三通道：从别的系统带来的结构化片段（业务指标、系统周数据）。行内"键: 值"渲染为指标行，自动并入报告与 PPT——数据在输入管理，输出只引用。' },
 ]
 
 export interface DataPoint {
