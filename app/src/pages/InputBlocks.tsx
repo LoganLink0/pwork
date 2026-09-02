@@ -1,17 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useBlocks } from '../store/blocks'
+import { fileToBlockContent } from '../engine/fileImport'
 
 /**
  * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。
  * 数据在这里管理（模块归属规则：数据在哪里管理就属于哪个模块），保存后自动并入报告/朗读/PPT——输出只按引用取，不另存一份。
+ * 支持导入 CSV/JSON 文件：解析成行后进编辑器预览，确认后保存。
  */
 export function InputBlocks() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
   const [editing, setEditing] = useState<{ id?: string; title: string; content: string } | null>(null)
+  const [importMsg, setImportMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     void loadBlocks()
   }, [loadBlocks])
+
+  const onFile = async (file: File) => {
+    try {
+      const text = await file.text()
+      const r = fileToBlockContent(file.name, text)
+      const title = file.name.replace(/\.[^.]+$/, '')
+      setEditing({ title, content: r.content })
+      setImportMsg(`${r.note}——确认内容后点"保存"`)
+    } catch (e) {
+      setImportMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
+    }
+  }
 
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
@@ -76,12 +92,22 @@ export function InputBlocks() {
                   className="btn-ghost"
                   disabled={!editing.title.trim()}
                   onClick={() => {
-                    void saveBlock(editing).then(() => setEditing(null))
+                    void saveBlock(editing).then(() => {
+                      setEditing(null)
+                      setImportMsg('')
+                    })
                   }}
                 >
                   保存
                 </button>
-                <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    setEditing(null)
+                    setImportMsg('')
+                  }}
+                >
                   取消
                 </button>
               </div>
@@ -91,6 +117,26 @@ export function InputBlocks() {
               <button type="button" className="btn-ghost" onClick={() => setEditing({ title: '', content: '' })} data-testid="add-block">
                 ＋ 新数据块
               </button>
+              <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} data-testid="import-file">
+                ⬆ 导入文件（CSV/JSON）
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,.json,.txt,.tsv"
+                style={{ display: 'none' }}
+                aria-label="选择要导入的文件"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void onFile(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
+          )}
+          {importMsg && (
+            <div className="set-row" role="status">
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{importMsg}</span>
             </div>
           )}
         </div>
