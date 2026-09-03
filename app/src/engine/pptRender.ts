@@ -59,6 +59,35 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
     return
   }
 
+  if (spec.kind === 'section') {
+    // 章节分隔：左侧琥珀竖条 + 章节大字（视觉焦点=章节转场）
+    slide.addShape(pptx.ShapeType.rect, { x: 0.65, y: 2.3, w: 0.09, h: 0.9, fill: { color: C.ACCENT } })
+    slide.addText(spec.title, {
+      x: 0.95, y: 2.2, w: 8.5, h: 1.1, fontSize: 32, bold: true,
+      color: dark ? C.TEXT_INV : C.TEXT, fontFace: FONT,
+    })
+    return
+  }
+
+  if (spec.kind === 'table' && spec.table) {
+    const th = spec.table.headers.map((h) => ({
+      text: h,
+      options: { bold: true, color: 'FFFFFF', fill: { color: C.PRIMARY }, fontSize: 12, fontFace: FONT },
+    }))
+    const body = spec.table.rows.map((r, ri) =>
+      r.map((c) => ({
+        text: String(c),
+        options: { fontSize: 11, color: C.TEXT, fontFace: FONT, fill: { color: ri % 2 === 1 ? C.BG_LIGHT : C.CARD } },
+      })),
+    )
+    slide.addTable([th, ...body], {
+      x: 0.6, y: 1.35, w: 8.9,
+      border: { type: 'solid', color: C.LINE, pt: 0.75 },
+      colW: spec.table.headers.length ? Array(spec.table.headers.length).fill(8.9 / spec.table.headers.length) : undefined,
+    })
+    return
+  }
+
   if (spec.kind === 'chart' && spec.chart) {
     // 焦点=原生柱状图（数值标签直出）
     slide.addChart(pptx.ChartType.bar, spec.chart.values.map((v, i) => ({

@@ -24,6 +24,7 @@ const Sources = lazy(() => import('./pages/Sources').then((m) => ({ default: m.S
 const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Digest })))
 const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
 const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
+const PptWriter = lazy(() => import('./pages/PptWriter').then((m) => ({ default: m.PptWriter })))
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
@@ -119,6 +120,7 @@ export default function App() {
                   <Route path="/output/read" element={<ReadOutLoud />} />
                   <Route path="/output/card" element={<DataCard />} />
                   <Route path="/output/ppt" element={<PptExport />} />
+                  <Route path="/output/write" element={<PptWriter />} />
                   <Route path="/output/draft" element={<Ph kind="draft" />} />
                   <Route path="/output/video" element={<Ph kind="video" />} />
                   <Route

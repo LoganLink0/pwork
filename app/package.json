@@ -16,6 +16,8 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "dexie": "^4.4.5",
+    "mammoth": "^1.12.2",
+    "pdfjs-dist": "^6.3.289",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

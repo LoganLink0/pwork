@@ -11,12 +11,14 @@ import type { ReportData } from './reportData'
 import type { ReportSnapshot } from '../types/models'
 
 export interface SlideSpec {
-  kind: 'title' | 'stats' | 'bullets' | 'chart'
+  kind: 'title' | 'stats' | 'bullets' | 'chart' | 'section' | 'table'
   title: string
   bullets: string[]
   stats: [string, string][]
   /** kind='chart' 时：labels 与 values 等长 */
   chart?: { labels: string[]; values: number[] }
+  /** kind='table' 时：表格页（报告撰写用） */
+  table?: { headers: string[]; rows: string[][] }
   footer: string
   /** 深色页（封面/结尾）标记 */
   dark?: boolean
