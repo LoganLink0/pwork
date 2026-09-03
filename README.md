@@ -5,7 +5,7 @@
 
 ## 快速开始（30 秒）
 
-1. **使用**：双击 [PWORK-Launcher.exe](./PWORK-Launcher.exe)（或 `app` 目录下 `npm run dev`）→ 浏览器自动打开；首次进入有引导页，按提示导入 5 个实测可用的信源即可开始
+1. **使用**：双击 [PWORK-Launcher.exe](./PWORK-Launcher.exe)（或 `app` 目录下 `npm run dev`）→ 浏览器自动打开；首次进入按引导操作，首页可一键导入 13 个按主题精选、实测可用的推荐信源（AI/云计算/架构/数据治理/PM/政策）
 2. **可选上云**（7×24 自动抓取 + AI 筛选，免费档 ¥0/月）：双击 `worker\部署向导.cmd`，按中文提示走完（含 Cloudflare 注册引导），再把输出的地址和 Token 填回工作台
 3. 前置软件仅 Node.js ≥ 20；所有命令都在**本机终端**于对应目录内执行（详见 [app/README](./app/README.md) 与 [worker/README](./worker/README.md)）
 
