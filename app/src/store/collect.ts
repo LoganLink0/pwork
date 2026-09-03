@@ -20,6 +20,7 @@ import {
   loadCollectConfig,
   saveCollectConfig,
   SAMPLE_SOURCES,
+  RECOMMENDED_SOURCES,
 } from '../content/collect'
 import { exportBundle as exportNotesBundle } from '../db/repo'
 import { curatedItems } from '../db/collect'
@@ -52,6 +53,7 @@ interface CollectState {
   toggleActive: (id: string, active: boolean) => Promise<void>
   removeSource: (id: string) => Promise<void>
   importSample: () => Promise<{ imported: number; skipped: number }>
+  importRecommended: () => Promise<{ imported: number; skipped: number }>
   importJson: (text: string) => Promise<{ imported: number; skipped: number }>
   setStars: (itemId: string, stars: number) => Promise<void>
   setNotes: (itemId: string, notes: string) => Promise<void>
@@ -129,6 +131,12 @@ export const useCollect = create<CollectState>((set, get) => ({
 
   importSample: async () => {
     const r = await importSources(SAMPLE_SOURCES)
+    set({ sources: await listAllSources() })
+    return r
+  },
+
+  importRecommended: async () => {
+    const r = await importSources(RECOMMENDED_SOURCES)
     set({ sources: await listAllSources() })
     return r
   },

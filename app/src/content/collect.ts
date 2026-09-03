@@ -64,3 +64,23 @@ export const SAMPLE_SOURCES: { name: string; url: string; domain: string; tier: 
   { name: '奇客 Solidot', url: 'https://www.solidot.org/index.rss', domain: 'ai', tier: 1.5 },
   { name: 'GitHub Blog', url: 'https://github.blog/feed/', domain: 'tool', tier: 2 },
 ]
+
+/**
+ * 推荐信源包（2026-09-02）：按主题精选（AI/云计算/架构/数据治理/PM/政策），
+ * 全部在本机网络逐个实测可达。与 SAMPLE_SOURCES 按地址去重，可安全重复导入。
+ */
+export const RECOMMENDED_SOURCES: { name: string; url: string; domain: string; tier: 1 | 1.5 | 2 }[] = [
+  { name: 'AIHOT 精选', url: 'https://aihot.virxact.com/rss', domain: 'ai', tier: 1 },
+  { name: '量子位', url: 'https://www.qbitai.com/feed', domain: 'ai', tier: 1 },
+  { name: 'Latent Space', url: 'https://www.latent.space/feed', domain: 'ai', tier: 1.5 },
+  { name: 'CNCF Blog', url: 'https://www.cncf.io/blog/feed/', domain: 'cloud', tier: 1.5 },
+  { name: 'AWS News Blog', url: 'https://aws.amazon.com/blogs/aws/feed/', domain: 'cloud', tier: 1.5 },
+  { name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/', domain: 'cloud', tier: 2 },
+  { name: '美团技术团队', url: 'https://tech.meituan.com/feed', domain: 'arch', tier: 1 },
+  { name: 'Martin Fowler', url: 'https://martinfowler.com/feed.atom', domain: 'arch', tier: 1.5 },
+  { name: 'The New Stack', url: 'https://thenewstack.io/feed/', domain: 'arch', tier: 1.5 },
+  { name: 'dbt Labs Blog', url: 'https://www.getdbt.com/blog/feed.xml', domain: 'data', tier: 1.5 },
+  { name: '人人都是产品经理', url: 'https://www.woshipm.com/feed', domain: 'pm', tier: 1.5 },
+  { name: "Rebel's Guide to Project Management", url: 'https://www.girlsguidetopm.com/feed/', domain: 'pm', tier: 2 },
+  { name: '国家统计局 · 最新发布', url: 'https://www.stats.gov.cn/sj/zxfb/rss.xml', domain: 'policy', tier: 1 },
+]

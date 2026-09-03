@@ -52,6 +52,8 @@ export function Home() {
   const openQuick = useUi((s) => s.openQuick)
   const notes = useNotes((s) => s.notes)
   const blockCount = useBlocks((s) => s.blocks.length)
+  const importRecommended = useCollect((s) => s.importRecommended)
+  const [importMsg, setImportMsg] = useState<string | null>(null)
   const loaded = useNotes((s) => s.loaded)
   const digest = useCollect((s) => s.digest)
   const sources = useCollect((s) => s.sources)
@@ -103,6 +105,27 @@ export function Home() {
         </button>
       </div>
 
+      {activeSources === 0 && (
+        <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="sources-reminder">
+          📰 还没有添加信源——可一键导入 13 个按主题精选、实测可达的推荐信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策）。
+          <button
+            type="button"
+            className="mini-btn"
+            style={{ marginLeft: 'var(--sp-2)', fontWeight: 600 }}
+            data-testid="import-recommended"
+            onClick={() => {
+              setImportMsg(null)
+              void importRecommended().then((r) => {
+                setImportMsg(`已导入 ${r.imported} 个信源（跳过 ${r.skipped} 个已存在）。去「信息日报」点⟳立即抓取试试。`)
+              })
+            }}
+          >
+            ⬇ 一键导入推荐信源
+          </button>
+          <Link to="/input/sources" style={{ marginLeft: 'var(--sp-2)' }}>去信源管理 →</Link>
+          {importMsg && <div style={{ marginTop: 'var(--sp-1)', fontSize: 'var(--fs-xs)' }}>{importMsg}</div>}
+        </div>
+      )}
       {backupWarn && (
         <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="backup-reminder">
           ⏳ 距上次全量备份已超过 30 天——本地优先应用，备份是唯一的安全网。

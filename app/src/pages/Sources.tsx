@@ -26,7 +26,7 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
-  const { sources, items7d, addSource, editSource, toggleActive, removeSource, importSample, importJson, fetch: fetchState } = useCollect()
+  const { sources, items7d, addSource, editSource, toggleActive, removeSource, importSample, importJson, fetch: fetchState, importRecommended } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -66,6 +66,19 @@ export function Sources() {
         <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · C1 手动抓取，无定时</span>
         <div className="right">
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>⬇ 导出 JSON</button>
+          <button
+            type="button"
+            className="btn-ghost"
+            title="13 个按主题精选的信源（AI/云计算/架构/数据治理/PM/政策），全部实测可达，按地址去重"
+            onClick={() => {
+              setMsg(null)
+              void importRecommended().then((r) => {
+                setMsg(`推荐信源包：新导入 ${r.imported} 个，跳过 ${r.skipped} 个（已存在）`)
+              })
+            }}
+          >
+            ⬇ 导入推荐信源包
+          </button>
           <label className="btn-ghost" style={{ cursor: 'pointer' }}>
             ⬆ 导入 JSON
             <input
