@@ -5,6 +5,7 @@ import { reportToHtml, reportToMarkdown, reportTitle } from '../engine/reportRen
 import { downloadFile } from '../db/repo'
 import { saveSnapshot, latestSnapshotBefore, deltaLabel, listSnapshots } from '../db/snapshots'
 import { exportReportPptx } from '../engine/pptFile'
+import { buildReportSlides } from '../engine/pptExport'
 import type { ReportSnapshot } from '../types/models'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
@@ -108,7 +109,7 @@ export function ReportGenerator() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>报告生成器</h1>
-        <span className="sub">素材自动汇总（任务/目标/洞察/外部环境/外部数据）→ 一键成稿</span>
+        <span className="sub">素材自动汇总（任务/目标/洞察/外部数据）→ 一键成稿：Markdown / HTML / PPT</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
         </div>
@@ -189,6 +190,22 @@ export function ReportGenerator() {
             <Link to="/output/read" className="btn-ghost">🎧 朗读版 →</Link>
           </div>
           {pptMsg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{pptMsg}</div>}
+          {data && (
+            <div style={{ paddingTop: 'var(--sp-3)' }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 6 }}>
+                PPT 幻灯片结构（{buildReportSlides(data, snapshotsRef.current).length} 页）
+              </div>
+              {buildReportSlides(data, snapshotsRef.current).map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline', padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
+                  <span className="tnum" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', width: 20 }}>{i + 1}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: s.kind === 'title' ? 700 : 400 }}>{s.title}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                    {s.kind === 'stats' ? '关键数字' : s.kind === 'chart' ? '趋势图表' : s.kind === 'section' ? '章节页' : s.kind === 'table' ? '表格' : s.kind === 'title' ? (s.dark ? '封面' : '结尾') : '内容页'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="set-row" style={{ alignItems: 'flex-start' }}>
             <label>Obsidian</label>
             <input

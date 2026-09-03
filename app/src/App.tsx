@@ -35,7 +35,6 @@ const Output = lazy(() => import('./pages/Output').then((m) => ({ default: m.Out
 const ReportGenerator = lazy(() => import('./pages/ReportGenerator').then((m) => ({ default: m.ReportGenerator })))
 const ReadOutLoud = lazy(() => import('./pages/ReadOutLoud').then((m) => ({ default: m.ReadOutLoud })))
 const DataCard = lazy(() => import('./pages/DataCard').then((m) => ({ default: m.DataCard })))
-const PptExport = lazy(() => import('./pages/PptExport').then((m) => ({ default: m.PptExport })))
 
 // 回路模块（W3 自 FUPAN 迁入，03 §5）：页面组件零改动，路由收敛为 /review/* 子路由
 const ReviewDashboard = lazy(() => import('./modules/review/pages/Dashboard').then((m) => ({ default: m.Dashboard })))
@@ -119,7 +118,7 @@ export default function App() {
                   <Route path="/output/report" element={<ReportGenerator />} />
                   <Route path="/output/read" element={<ReadOutLoud />} />
                   <Route path="/output/card" element={<DataCard />} />
-                  <Route path="/output/ppt" element={<PptExport />} />
+                  <Route path="/output/ppt" element={<Navigate to="/output/report" replace />} />
                   <Route path="/output/write" element={<PptWriter />} />
                   <Route path="/output/draft" element={<Ph kind="draft" />} />
                   <Route path="/output/video" element={<Ph kind="video" />} />

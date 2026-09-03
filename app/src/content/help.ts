@@ -60,7 +60,7 @@ export interface ModuleIntro {
 export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '报告生成器（Markdown/HTML）+ 朗读版 + PPT 导出 + 报告撰写（材料 → PPT）+ 数据卡片——外部数据块自动并入', to: '/output' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '报告生成器一站式成稿与导出（Markdown / HTML / PPT，含幻灯片结构预览）+ 朗读版 + 报告撰写（材料 → PPT）+ 数据卡片——外部数据块自动并入', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察回流为下一轮输入', to: '/review' },
 ]
 
