@@ -234,8 +234,8 @@ export function Home() {
           </div>
           <div className="m-sub">周期成稿 · 听觉 · 分享</div>
           <div className="m-links">
-            <div className="m-link">报告生成器<span className="cnt">→</span></div>
-            <div className="m-link">朗读版<span className="cnt">→</span></div>
+            <div className="m-link">HTML/PPT 导出<span className="cnt">→</span></div>
+            <div className="m-link">朗读音频<span className="cnt">→</span></div>
           </div>
         </Link>
 

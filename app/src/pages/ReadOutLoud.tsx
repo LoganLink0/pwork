@@ -49,7 +49,7 @@ export function ReadOutLoud() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>朗读版报告</h1>
+        <h1>周报导出为朗读音频</h1>
         <span className="sub">报告正文 → 浏览器本地语音（通勤场景"听你的周报"）</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>

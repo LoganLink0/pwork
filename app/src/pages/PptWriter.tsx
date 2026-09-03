@@ -131,7 +131,7 @@ export function PptWriter() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>报告撰写</h1>
+        <h1>PPT 撰写</h1>
         <span className="sub">材料 → AI 大纲（你审核修改）→ 可编辑 PPT——每个文字框都是原生对象，不是图片</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>

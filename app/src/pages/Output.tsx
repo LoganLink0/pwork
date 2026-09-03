@@ -6,10 +6,10 @@ import { useNotes } from '../store/notes'
 import { searchAll } from '../engine/searchAll'
 
 const TOOLS: { to: string; icon: string; name: string; desc: string; status: string }[] = [
-  { to: '/output/report', icon: '📄', name: '报告 / PPT 导出', desc: '本周本月素材 + 外部数据块自动成稿：Markdown / HTML / PPT（含幻灯片结构预览）', status: '' },
-  { to: '/output/read', icon: '🎧', name: '朗读版报告', desc: '通勤场景——用听的回顾一个周期', status: '' },
-  { to: '/output/write', icon: '🧩', name: '报告撰写（材料 → PPT）', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '' },
-  { to: '/output/card', icon: '🖼', name: '数据快照卡片', desc: '关键数字生成分享卡片图', status: '' },
+  { to: '/output/report', icon: '📄', name: '周报导出为 HTML/PPT', desc: '本周/本月素材 + 外部数据块自动成稿：Markdown / HTML / PPT（含幻灯片结构预览）', status: '' },
+  { to: '/output/read', icon: '🎧', name: '周报导出为朗读音频', desc: '通勤场景——用听的回顾一个周期', status: '' },
+  { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '从零撰写：粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '' },
+  { to: '/output/card', icon: '🖼', name: '周报导出为数据卡片', desc: '关键数字生成分享卡片图', status: '' },
   { to: '/output/draft', icon: '✍', name: '文章草稿', desc: '速记与洞察聚合 → 博客骨架 + AI 润色', status: 'O4 待办' },
   { to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: 'O5 远期' },
 ]
@@ -21,7 +21,7 @@ const EXTERNAL: { name: string; url: string; desc: string }[] = [
   { name: '讯飞智文', url: 'https://zhiwen.xfyun.cn/', desc: 'AI 一键生成 PPT（中文友好）' },
 ]
 
-/** 输出模块主页（IT Tools 模式）：场景分类的工具箱——报告 / 朗读 / 卡片 / 草稿（占位） / 外链精选 */
+/** 输出模块主页（IT Tools 模式）：场景分类的工具箱——HTML·PPT / 朗读音频 / 数据卡片 / 草稿（占位） / 外链精选 */
 export function Output() {
   const stats = useTasks((s) => s.stats)
   const goals = useGoals((s) => s.goals)

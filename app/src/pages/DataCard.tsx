@@ -70,7 +70,7 @@ export function DataCard() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>数据快照卡片</h1>
+        <h1>周报导出为数据卡片</h1>
         <span className="sub">本期关键数字 → 分享卡片图（Canvas 本地渲染）</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>

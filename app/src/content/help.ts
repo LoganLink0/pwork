@@ -43,7 +43,7 @@ export const QUICK_START: QuickStep[] = [
   {
     step: '5',
     title: '一键成稿',
-    desc: '报告生成器把任务、目标、洞察、外部数据汇成周报月报——可下载 Markdown/HTML、导出 PPT、朗读。',
+    desc: '「周报导出为 HTML/PPT」把任务、目标、洞察、外部数据汇成周报月报——可下载 Markdown/HTML、导出 PPT、导出朗读音频。',
     action: '去报告',
     to: '/output/report',
   },
@@ -60,7 +60,7 @@ export interface ModuleIntro {
 export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '报告生成器一站式成稿与导出（Markdown / HTML / PPT，含幻灯片结构预览）+ 朗读版 + 报告撰写（材料 → PPT）+ 数据卡片——外部数据块自动并入', to: '/output' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '四个导出工具：周报导出为 HTML/PPT、周报导出为朗读音频、周报导出为数据卡片，以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察回流为下一轮输入', to: '/review' },
 ]
 
@@ -130,8 +130,8 @@ export const FAQ: FaqEntry[] = [
   },
   {
     q: '怎么从一堆材料快速产出一份可编辑的 PPT？',
-    a: '用 输出 → 报告撰写：粘贴文字或上传 Word/PDF/Markdown 材料，AI 起草报告大纲（内部/外部措辞不同），你逐页审核修改后导出 .pptx——每一页都是原生文字框和表格，可直接编辑。没有 AI Key 也可以用内置模板手动填写。',
-    link: { label: '去报告撰写', to: '/output/write' },
+    a: '用 输出 → PPT 撰写：粘贴文字或上传 Word/PDF/Markdown 材料，AI 起草报告大纲（内部/外部措辞不同），你逐页审核修改后导出 .pptx——每一页都是原生文字框和表格，可直接编辑。没有 AI Key 也可以用内置模板手动填写。',
+    link: { label: '去 PPT 撰写', to: '/output/write' },
   },
   {
     q: '怎么把一条速记变成待办或复盘素材？',

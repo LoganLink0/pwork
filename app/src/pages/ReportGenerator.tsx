@@ -108,7 +108,7 @@ export function ReportGenerator() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>报告生成器</h1>
+        <h1>周报导出为 HTML/PPT</h1>
         <span className="sub">素材自动汇总（任务/目标/洞察/外部数据）→ 一键成稿：Markdown / HTML / PPT</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
