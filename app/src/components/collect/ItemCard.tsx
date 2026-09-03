@@ -105,7 +105,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               <button
                 type="button"
                 className="mini-btn"
-                title="在 机会 → 威胁 → 趋势 → 取消 之间切换；标记后进入复盘 SWOT 候选池"
+                title="在 机会 → 威胁 → 趋势 → 取消 之间切换；标记后可在复盘的 SWOT 里直接引用"
                 onClick={onCycleOt}
               >
                 {item.otFlag ? `${OT_LABEL[item.otFlag].icon} ${OT_LABEL[item.otFlag].text}（点击换/取消）` : '标记机会/威胁/趋势'}
@@ -116,7 +116,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
               <button type="button" className="mini-btn" title="以这条条目为引写速记，速记自动挂回本条目" onClick={() => void writeNote()}>
                 写速记
               </button>
-              <span className="ttl-note">标记后进入复盘 SWOT 候选池</span>
+              <span className="ttl-note">标记后可在复盘的 SWOT 里直接引用</span>
             </div>
           </div>
         )}
@@ -126,7 +126,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
         <button
           type="button"
           className="stars"
-          title="星级是你的评分，反馈回流权重（04 §4.1）"
+          title="星级是你的评分，会用来调整评分标准"
           onClick={() => onStars((a.stars % 5) + 1)}
           aria-label={`星级：${a.stars} 星，点击加一星`}
         >

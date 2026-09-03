@@ -18,9 +18,9 @@ describe('工作台壳（W1）', () => {
     // 三瓦片（Digest 引导态 + 待办空态引导 + 复盘引导——用副行唯一文案断言）
     expect(screen.getByText('先去信源管理添加 5–10 个源')).toBeInTheDocument()
     expect(screen.getByText('复盘产出的行动项会自动出现在任务库')).toBeInTheDocument()
-    expect(screen.getByText('复盘工作台已迁入 · 做一次复盘，行动项自动回流')).toBeInTheDocument()
+    expect(screen.getByText('复盘工作台已迁入 · 做一次复盘，行动项自动进待办')).toBeInTheDocument()
     // 四模块卡（用卡片副行唯一文案断言）
-    expect(screen.getByText('捕获想法 · 喂养流水线')).toBeInTheDocument()
+    expect(screen.getByText('捕获想法，进入后续处理')).toBeInTheDocument()
     expect(screen.getByText('工具箱（文字/音频/图片/视频）· 检索 · AI 问答')).toBeInTheDocument()
     expect(screen.getByText('周期成稿 · 听觉 · 分享')).toBeInTheDocument()
     expect(screen.getByText('CLAP 复盘 · 因果循环 · 认知资产')).toBeInTheDocument()

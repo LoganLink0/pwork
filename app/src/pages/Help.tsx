@@ -34,7 +34,7 @@ export function Help() {
 
       <div className="set-card">
         <h2>四模块模型</h2>
-        <div className="desc">输入 → 处理 → 输出 → 回路：复盘是回路不是末端，产出回流为下一轮输入</div>
+        <div className="desc">输入 → 处理 → 输出 → 回路：复盘是回路不是终点，产出的内容又变成下一轮的输入</div>
         <div className="set-body">
           {MODULES.map((m) => (
             <div className="set-row" key={m.name}>

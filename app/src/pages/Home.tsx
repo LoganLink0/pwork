@@ -150,7 +150,7 @@ export function Home() {
         <Link to="/input/digest" className="tile mark-input">
           <div className="t-label">信息日报</div>
           <div className="t-num">{digest.length} 条 · 2 分钟</div>
-          <div className="t-sub">每日 {config.topN} 条硬顶 · 规则评分（云端 AI 两级筛选随同步并入）</div>
+          <div className="t-sub">每天最多 {config.topN} 条 · 规则评分（云端 AI 两级筛选随同步并入）</div>
           <span className="t-link">去扫读 →</span>
         </Link>
       ) : (
@@ -195,7 +195,7 @@ export function Home() {
           <Link to="/review" className="tile mark-review">
             <div className="t-label">复盘节奏</div>
             <div className="t-num">已建成</div>
-            <div className="t-sub">复盘工作台已迁入 · 做一次复盘，行动项自动回流</div>
+            <div className="t-sub">复盘工作台已迁入 · 做一次复盘，行动项自动进待办</div>
             <span className="t-link">了解回路模块 →</span>
           </Link>
         )}
@@ -209,7 +209,7 @@ export function Home() {
             <span className="m-name">{input.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[input.status]}</span>
           </div>
-          <div className="m-sub">捕获想法 · 喂养流水线</div>
+          <div className="m-sub">捕获想法，进入后续处理</div>
           <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} blockCount={blockCount} />
         </div>
 

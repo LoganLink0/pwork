@@ -70,7 +70,7 @@ export function Digest() {
         </div>
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 'var(--sp-4)' }}>
-        每日精选 {config.topN} 条硬顶 ｜ 约 2 分钟扫完 ｜ <span style={{ color: 'var(--ink-faint)' }}>设计红线：无未读数——已处理/已归档，不做红点心理债（04 §8）</span>
+        每天最多精选 {config.topN} 条 ｜ 约 2 分钟扫完 ｜ <span style={{ color: 'var(--ink-faint)' }}>没有未读数和红点提醒——看完就处理或归档，不积攒</span>
       </div>
 
       {fetchState.summary && (

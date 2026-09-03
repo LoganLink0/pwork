@@ -50,7 +50,7 @@ export function Items() {
     <section>
       <div className="page-head">
         <h1>条目库</h1>
-        <span className="sub">近 30 天 {items.length} 条 · 已筛除层 14 天 TTL 后物理清理（有标注豁免）</span>
+        <span className="sub">近 30 天 {items.length} 条 · 已筛除的条目保留 14 天后自动清除（有标注的除外）</span>
       </div>
 
       <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap', alignItems: 'center' }}>

@@ -22,7 +22,7 @@ export const QUICK_START: QuickStep[] = [
   {
     step: '2',
     title: '每日两分钟',
-    desc: '信源页添加原生 RSS（或导入示例信源），日报页「立即抓取」；星级反馈会回流评分权重。',
+    desc: '信源页添加原生 RSS（或导入示例信源），日报页「立即抓取」；星级反馈会调整评分标准。',
     action: '去信源管理',
     to: '/input/sources',
   },
@@ -61,7 +61,7 @@ export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
   { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '五个工具：周报导出为 HTML/PPT、朗读音频、数据卡片、文章草稿（速记洞察 → 文章），以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入', to: '/output' },
-  { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察回流为下一轮输入', to: '/review' },
+  { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察又变成下一轮的输入', to: '/review' },
 ]
 
 export interface Shortcut {
@@ -83,11 +83,11 @@ export interface GlossaryEntry {
 }
 
 export const GLOSSARY: GlossaryEntry[] = [
-  { term: '闭环', def: '输入 → 处理 → 输出 → 回路：复盘产出的行动项、洞察与修正目标回流为下一轮输入。若把复盘当线性末端，系统退化成年终仪式。' },
+  { term: '闭环', def: '输入 → 处理 → 输出 → 回路：复盘产出的行动项、洞察和修正目标，都会变成下一轮的输入。把复盘当成一年一次的总结，就失去了它的作用。' },
   { term: 'SSOT', def: '每类数据只有一个拥有者模块，其他模块只持 ID 引用——双记账是个人管理系统失败的头号原因。行动项的 SSOT 是任务库。' },
   { term: 'BYOK', def: '自带 AI Key。凭据只存 localStorage、永不进备份；AI 失败自动回落规则引擎——拔掉 AI 产品完整可用。' },
   { term: '机会/威胁标记', def: '信息条目可以标记为机会、威胁或趋势。标记后进入复盘 SWOT 的候选列表，做复盘时直接选用，不用重新翻找。' },
-  { term: '每日硬顶', def: '信息日报每天最多 10 条（Top N 硬顶）。推送量是产品设计，不是用户设置；无未读数，不做红点心理债。' },
+  { term: '每日精选上限', def: '信息日报每天最多 10 条。数量是产品设计，不是用户设置；没有未读数和红点提醒，看完就处理或归档。' },
   { term: 'TTL', def: '原始抓取与已筛除条目 14 天后物理清理；有标注（星级/批注/永久保留）的条目豁免，随全量备份。' },
   { term: '健康列', def: '信源抓取失败计数：连败 3 次自动停用并告警——死源静默污染数据是最常见死法。' },
   { term: '三问分诊', def: '待办分类不问"重不重要"，问"不做的代价"：今天不做就过期 → 一类；卡住别人等我的 → 二类；都不是 → 三类。手动调整后以手动为准。' },
