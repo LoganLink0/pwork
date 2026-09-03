@@ -60,7 +60,7 @@ export interface ModuleIntro {
 export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '四个导出工具：周报导出为 HTML/PPT、周报导出为朗读音频、周报导出为数据卡片，以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入', to: '/output' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '五个工具：周报导出为 HTML/PPT、朗读音频、数据卡片、文章草稿（速记洞察 → 文章），以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察回流为下一轮输入', to: '/review' },
 ]
 
@@ -145,7 +145,7 @@ export const FAQ: FaqEntry[] = [
   },
   {
     q: '为什么还有"占位"的功能？',
-    a: '四大模块已全部上线。剩余占位只有两个诚实标了路线的：文章草稿（O4）与数据视频（O5）——未上线的功能以占位页说明，不做假功能、不留死链接。',
+    a: '四大模块已全部上线，文章草稿也已实装。剩余占位只有一个：数据视频（O5，远期）——未上线的功能以占位页说明，不做假功能、不留死链接。',
     link: { label: '看路线图', to: '/process' },
   },
 ]

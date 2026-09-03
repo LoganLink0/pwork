@@ -10,7 +10,7 @@ const TOOLS: { to: string; icon: string; name: string; desc: string; status: str
   { to: '/output/read', icon: '🎧', name: '周报导出为朗读音频', desc: '通勤场景——用听的回顾一个周期', status: '' },
   { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '从零撰写：粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '' },
   { to: '/output/card', icon: '🖼', name: '周报导出为数据卡片', desc: '关键数字生成分享卡片图', status: '' },
-  { to: '/output/draft', icon: '✍', name: '文章草稿', desc: '速记与洞察聚合 → 博客骨架 + AI 润色', status: 'O4 待办' },
+  { to: '/output/article', icon: '✍', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架 → 导出 Markdown', status: '' },
   { to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: 'O5 远期' },
 ]
 
@@ -21,7 +21,7 @@ const EXTERNAL: { name: string; url: string; desc: string }[] = [
   { name: '讯飞智文', url: 'https://zhiwen.xfyun.cn/', desc: 'AI 一键生成 PPT（中文友好）' },
 ]
 
-/** 输出模块主页（IT Tools 模式）：场景分类的工具箱——HTML·PPT / 朗读音频 / 数据卡片 / 草稿（占位） / 外链精选 */
+/** 输出模块主页（IT Tools 模式）：场景分类的工具箱——HTML·PPT / 朗读音频 / 数据卡片 / 文章草稿 / 外链精选 */
 export function Output() {
   const stats = useTasks((s) => s.stats)
   const goals = useGoals((s) => s.goals)

@@ -25,6 +25,7 @@ const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Dig
 const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
 const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
 const PptWriter = lazy(() => import('./pages/PptWriter').then((m) => ({ default: m.PptWriter })))
+const ArticleDraftPage = lazy(() => import('./pages/ArticleDraftPage').then((m) => ({ default: m.ArticleDraftPage })))
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
@@ -120,7 +121,8 @@ export default function App() {
                   <Route path="/output/card" element={<DataCard />} />
                   <Route path="/output/ppt" element={<Navigate to="/output/report" replace />} />
                   <Route path="/output/write" element={<PptWriter />} />
-                  <Route path="/output/draft" element={<Ph kind="draft" />} />
+                  <Route path="/output/article" element={<ArticleDraftPage />} />
+                  <Route path="/output/draft" element={<Navigate to="/output/article" replace />} />
                   <Route path="/output/video" element={<Ph kind="video" />} />
                   <Route
                     path="/review"

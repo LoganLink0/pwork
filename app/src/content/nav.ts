@@ -79,6 +79,7 @@ export const PAGE_META: Record<string, [string, string, string]> = {
   '/output/card': ['周报导出为数据卡片', '输出 · 分享', 'mark-output'],
   '/output/ppt': ['报告 / PPT 导出', '输出 · 成稿', 'mark-output'],
   '/output/write': ['PPT 撰写', '输出 · 材料 → PPT', 'mark-output'],
+  '/output/article': ['文章草稿', '输出 · 文章草稿', 'mark-output'],
   '/review': ['复盘档案', '回路 · 复盘工作台', 'mark-review'],
   '/review/new': ['新建复盘', '回路 · 复盘工作台', 'mark-review'],
   '/review/wizard': ['复盘向导', '回路 · 复盘工作台', 'mark-review'],
