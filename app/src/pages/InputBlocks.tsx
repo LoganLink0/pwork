@@ -91,7 +91,7 @@ export function InputBlocks() {
         llmConfigFrom(loadCoachConfig()),
         ARTICLE_SYSTEM_PROMPT,
         buildArticleUserPrompt({ materials: analysisMaterials, view, scopeLabel: analysisScope?.name }),
-        { maxTokens: 4000 },
+        { maxTokens: 8000, timeoutMs: 90000 },
       )
       setDraft(parseArticle(text))
     } catch (e) {

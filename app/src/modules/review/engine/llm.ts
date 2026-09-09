@@ -46,9 +46,10 @@ export async function chatCompletion(
       throw new Error(`HTTP ${res.status}${body ? `：${body.slice(0, 120)}` : ''}`)
     }
     const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[]
+      choices?: { message?: { content?: string; reasoning_content?: string } }[]
     }
-    const text = data.choices?.[0]?.message?.content
+    const msg = data.choices?.[0]?.message
+    const text = msg?.content?.trim() ? msg.content : (msg?.reasoning_content ?? '')
     if (typeof text !== 'string' || text.trim() === '') throw new Error('响应为空')
     return text
   } catch (err) {

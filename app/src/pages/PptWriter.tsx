@@ -75,7 +75,7 @@ export function PptWriter() {
         llmConfigFrom(loadCoachConfig()),
         OUTLINE_SYSTEM_PROMPT,
         buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
-        { maxTokens: 4000 },
+        { maxTokens: 8000, timeoutMs: 90000 },
       )
       setOutline(parseOutline(text))
     } catch (e) {

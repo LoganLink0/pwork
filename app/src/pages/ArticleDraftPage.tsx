@@ -51,7 +51,7 @@ export function ArticleDraftPage() {
         llmConfigFrom(loadCoachConfig()),
         ARTICLE_SYSTEM_PROMPT,
         buildArticleUserPrompt({ days, materials, view }),
-        { maxTokens: 4000 },
+        { maxTokens: 8000, timeoutMs: 90000 },
       )
       setDraft(parseArticle(text))
     } catch (e) {
