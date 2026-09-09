@@ -32,6 +32,9 @@ export interface CoachConfig {
   baseURL: string
   apiKey: string
   model: string
+  /** 接入方式（MIND 设计）：gateway = Key 只存本机 .env.local，浏览器经本地网关调用（推荐）；direct = Key 存 localStorage */
+  viaGateway?: boolean
+  gatewayUrl?: string
 }
 
 export const PROVIDER_PRESETS: Partial<Record<CoachProvider, { name: string; baseURL: string; model: string }>> = {
@@ -55,7 +58,7 @@ export function loadCoachConfig(): CoachConfig {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULT_COACH_CONFIG }
     const parsed = JSON.parse(raw) as Partial<CoachConfig>
-    return { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && parsed.apiKey ? 'llm' : 'rule' }
+    return { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && (parsed.apiKey || parsed.viaGateway) ? 'llm' : 'rule' }
   } catch {
     return { ...DEFAULT_COACH_CONFIG }
   }
@@ -69,7 +72,14 @@ export function saveCoachConfig(cfg: CoachConfig): void {
   }
 }
 
+export const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8788'
+
 export function llmConfigFrom(cfg: CoachConfig): LlmConfig {
+  // 网关模式：Key 由网关注入，浏览器侧不带真实 Key（sentinel 占位）
+  if (cfg.viaGateway) {
+    const base = (cfg.gatewayUrl || DEFAULT_GATEWAY_URL).replace(/\/+$/, '')
+    return { baseURL: /\/v\d+$/.test(base) ? base : `${base}/v1`, apiKey: 'pwork-gateway', model: cfg.model }
+  }
   return { baseURL: cfg.baseURL, apiKey: cfg.apiKey, model: cfg.model }
 }
 

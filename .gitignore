@@ -8,3 +8,9 @@ dist/
 .wrangler/
 .zcode/
 ~.DDF
+
+# 本地网关密钥文件（永进仓库）
+app/.env.local
+app/.env
+.env.local
+.env

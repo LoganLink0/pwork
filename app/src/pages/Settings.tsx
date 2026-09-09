@@ -425,28 +425,85 @@ export function Settings() {
           {ai.mode === 'llm' && (
             <>
               <div className="set-row">
-                <label>Base URL</label>
-                <input className="input" value={ai.baseURL} onChange={(e) => saveAi({ ...ai, baseURL: e.target.value })} aria-label="Base URL" />
+                <label>接入方式</label>
+                <div className="radio">
+                  <button type="button" className={ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: true, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })}>本地网关（推荐）</button>
+                  <button type="button" className={!ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: false })}>浏览器直连</button>
+                </div>
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  {ai.viaGateway ? 'Key 只存本机 .env.local，浏览器接触不到' : 'Key 明文存 localStorage，仅限本机个人使用'}
+                </span>
               </div>
+              {ai.viaGateway ? (
+                <>
+                  <div className="set-row">
+                    <label>网关地址</label>
+                    <input
+                      className="input"
+                      style={{ flex: 1 }}
+                      value={ai.gatewayUrl ?? 'http://127.0.0.1:8788'}
+                      aria-label="网关地址"
+                      onChange={(e) => saveAi({ ...ai, gatewayUrl: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={async () => {
+                        setAiTesting(true)
+                        setAiTestMsg('')
+                        try {
+                          const base = (ai.gatewayUrl || 'http://127.0.0.1:8788').replace(/\/+$/, '')
+                          const r = await fetch(`${base}/health`)
+                          const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean }
+                          setAiTestOk(Boolean(j.ok && j.chatConfigured))
+                          setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但 .env.local 还没配置 PWORK_LLM_API_KEY')
+                        } catch {
+                          setAiTestOk(false)
+                          setAiTestMsg('无法连接网关——先在 app 目录运行 npm run gateway')
+                        } finally {
+                          setAiTesting(false)
+                        }
+                      }}
+                    >
+                      {aiTesting ? '检测中…' : '测试网关'}
+                    </button>
+                  </div>
+                  {aiTestMsg && (
+                    <div className="set-row">
+                      <span className="val" style={{ fontSize: 'var(--fs-xs)', color: aiTestOk ? 'var(--ok)' : 'var(--danger)' }}>{aiTestMsg}</span>
+                    </div>
+                  )}
+                  <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
+                    启动：app 目录运行 <b>npm run gateway</b>（仅绑定 127.0.0.1）。Key 配置：复制 <b>app/tools/.env.example</b> 为 <b>app/.env.local</b>，填写 PWORK_LLM_API_KEY 后重启网关。
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="set-row">
+                    <label>Base URL</label>
+                    <input className="input" value={ai.baseURL} onChange={(e) => saveAi({ ...ai, baseURL: e.target.value })} aria-label="Base URL" />
+                  </div>
+                  <div className="set-row">
+                    <label>API Key</label>
+                    <input className="input" type="password" value={ai.apiKey} placeholder="只存 localStorage，永不进备份" onChange={(e) => saveAi({ ...ai, apiKey: e.target.value })} aria-label="API Key" />
+                  </div>
+                  <div className="set-row">
+                    <label></label>
+                    <button type="button" className="btn-ghost" disabled={aiTesting} onClick={() => void testAi()} data-testid="ai-test">
+                      {aiTesting ? '测试中…' : '测试连接'}
+                    </button>
+                    {aiTestMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: aiTestOk ? 'var(--ok)' : 'var(--danger)' }}>{aiTestMsg}</span>}
+                  </div>
+                </>
+              )}
               <div className="set-row">
                 <label>模型</label>
                 <input className="input" value={ai.model} onChange={(e) => saveAi({ ...ai, model: e.target.value })} aria-label="模型" />
               </div>
-              <div className="set-row">
-                <label>API Key</label>
-                <input className="input" type="password" value={ai.apiKey} placeholder="只存 localStorage，永不进备份" onChange={(e) => saveAi({ ...ai, apiKey: e.target.value })} aria-label="API Key" />
-              </div>
-              <div className="set-row">
-                <label></label>
-                <button type="button" className="btn-ghost" disabled={aiTesting} onClick={() => void testAi()} data-testid="ai-test">
-                  {aiTesting ? '测试中…' : '测试连接'}
-                </button>
-                {aiTestMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: aiTestOk ? 'var(--ok)' : 'var(--danger)' }}>{aiTestMsg}</span>}
-              </div>
             </>
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            <b>L2 外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机（L1）。Key 只存 localStorage，永不进入导出备份。拔掉 AI，规则引擎兜底，产品完整可用。
+            <b>L2 外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机（L1）。网关模式下 Key 只存本机 .env.local，浏览器不接触。拔掉 AI，规则引擎兜底，产品完整可用。
           </div>
         </div>
       </div>
