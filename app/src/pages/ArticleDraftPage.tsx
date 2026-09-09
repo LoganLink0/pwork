@@ -13,6 +13,8 @@ import {
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { exportArticleDocx, ARTICLE_VIEWS, type ArticleView } from '../engine/articleWriter'
+import { ArticleEditor } from '../components/writer/ArticleEditor'
 
 const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
@@ -26,6 +28,8 @@ export function ArticleDraftPage() {
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
   const [exportMsg, setExportMsg] = useState('')
+  const [view, setView] = useState<ArticleView>(ARTICLE_VIEWS[0]!)
+  const [docxMsg, setDocxMsg] = useState('')
 
   useEffect(() => {
     void gatherArticleMaterials(days).then((m) => {
@@ -46,7 +50,7 @@ export function ArticleDraftPage() {
       const text = await chatCompletion(
         llmConfigFrom(loadCoachConfig()),
         ARTICLE_SYSTEM_PROMPT,
-        buildArticleUserPrompt(days, materials),
+        buildArticleUserPrompt({ days, materials, view }),
         { maxTokens: 4000 },
       )
       setDraft(parseArticle(text))
@@ -63,18 +67,7 @@ export function ArticleDraftPage() {
     setExportMsg(`✅ 已下载 ${draft.title}.md`)
   }
 
-  const updateSection = (i: number, patch: Partial<{ heading: string; body: string }>) => {
-    if (!draft) return
-    setDraft({ ...draft, sections: draft.sections.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) })
-  }
-  const moveSection = (i: number, dir: -1 | 1) => {
-    if (!draft) return
-    const j = i + dir
-    if (j < 0 || j >= draft.sections.length) return
-    const sections = [...draft.sections]
-    ;[sections[i], sections[j]] = [sections[j]!, sections[i]!]
-    setDraft({ ...draft, sections })
-  }
+
 
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
@@ -121,6 +114,18 @@ export function ArticleDraftPage() {
         <h2>二、AI 整理骨架（可选）</h2>
         <div className="desc">AI 把素材组织成有标题、有开头、分了节的草稿。事实与数字只来自素材，缺的地方会标注（此处待补充）。</div>
         <div className="set-body">
+          {draft === null && materials.length > 0 && (
+            <div className="set-row">
+              <label>整理视角</label>
+              <div className="radio">
+                {ARTICLE_VIEWS.map((v) => (
+                  <button key={v.id} type="button" className={view.id === v.id ? 'on' : ''} onClick={() => setView(v)}>
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {draft === null ? (
             <div className="set-row" style={{ flexWrap: 'wrap' }}>
               <button
@@ -157,70 +162,7 @@ export function ArticleDraftPage() {
         <div className="set-card">
           <h2>三、文章草稿（可编辑）</h2>
           <div className="set-body">
-            <div className="set-row">
-              <label>标题</label>
-              <input
-                className="input"
-                style={{ flex: 1 }}
-                value={draft.title}
-                aria-label="文章标题"
-                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-              />
-            </div>
-            <div className="set-row" style={{ alignItems: 'flex-start' }}>
-              <label>开头</label>
-              <textarea
-                className="input"
-                rows={3}
-                value={draft.intro}
-                aria-label="文章开头"
-                onChange={(e) => setDraft({ ...draft, intro: e.target.value })}
-              />
-            </div>
-            {draft.sections.map((s, i) => (
-              <div
-                key={i}
-                className="set-row"
-                style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--sp-2)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: 'var(--sp-3)' }}
-              >
-                <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
-                  <span className="val tnum" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{i + 1}</span>
-                  <input
-                    className="input"
-                    style={{ flex: 1 }}
-                    value={s.heading}
-                    aria-label={`第 ${i + 1} 节标题`}
-                    onChange={(e) => updateSection(i, { heading: e.target.value })}
-                  />
-                  <button type="button" className="mini-btn" title="上移" onClick={() => moveSection(i, -1)}>↑</button>
-                  <button type="button" className="mini-btn" title="下移" onClick={() => moveSection(i, 1)}>↓</button>
-                  <button
-                    type="button"
-                    className="mini-btn"
-                    onClick={() => setDraft({ ...draft, sections: draft.sections.filter((_, idx) => idx !== i) })}
-                  >
-                    删除
-                  </button>
-                </div>
-                <textarea
-                  className="input"
-                  rows={4}
-                  value={s.body}
-                  aria-label={`第 ${i + 1} 节内容`}
-                  onChange={(e) => updateSection(i, { body: e.target.value })}
-                />
-              </div>
-            ))}
-            <div className="set-row">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setDraft({ ...draft, sections: [...draft.sections, { heading: '新的一节', body: '（待填）' }] })}
-              >
-                ＋ 加一节
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setDraft(null)}>丢弃草稿</button>
-            </div>
+            <ArticleEditor draft={draft} onChange={setDraft} />
           </div>
         </div>
       )}
@@ -232,6 +174,19 @@ export function ArticleDraftPage() {
             <button type="button" className="btn-primary" disabled={!draft} onClick={doExport} data-testid="article-export">
               ⬇ 下载 Markdown
             </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={!draft}
+              onClick={async () => {
+                if (!draft) return
+                const name = await exportArticleDocx(draft)
+                setDocxMsg(`✅ 已下载 ${name}`)
+              }}
+            >
+              ⬇ 下载 Word（.docx）
+            </button>
+            {docxMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{docxMsg}</span>}
             {exportMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{exportMsg}</span>}
           </div>
         </div>

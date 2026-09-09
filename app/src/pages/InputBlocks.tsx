@@ -1,22 +1,46 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useBlocks } from '../store/blocks'
 import { useProfiles } from '../store/profiles'
 import { fileToBlockContent } from '../engine/fileImport'
+import {
+  ARTICLE_VIEWS,
+  ARTICLE_SYSTEM_PROMPT,
+  articleToMarkdown,
+  buildArticleUserPrompt,
+  exportArticleDocx,
+  parseArticle,
+  type ArticleDraft,
+  type ArticleMaterial,
+  type ArticleView,
+} from '../engine/articleWriter'
+import { downloadFile } from '../db/repo'
+import { chatCompletion } from '../modules/review/engine/llm'
+import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { ArticleEditor } from '../components/writer/ArticleEditor'
+
+const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
 /**
  * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。
- * 数据按「调研对象」归组（一家公司、一个客户……），分析产出（报告撰写）从对象取材料——
- * 模块归属规则：数据在哪里管理就属于哪个模块；输出只按引用取，不另存一份。
+ * 数据按「调研对象」归组；对象下可发起分析（选视角 + 用途），产出交付文档（Markdown / Word）。
  */
 export function InputBlocks() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
   const { profiles, load: loadProfiles, save: saveProfile, remove: removeProfile } = useProfiles()
-  const [editing, setEditing] = useState<{ id?: string; title: string; content: string; profileId?: string } | null>(null)
+  const [editing, setEditing] = useState<{ id?: string; title: string; content: string; profileId?: string; usage?: 'internal' | 'client' } | null>(null)
   const [importMsg, setImportMsg] = useState('')
   const [filter, setFilter] = useState<'all' | 'none' | string>('all')
   const [newProfileName, setNewProfileName] = useState('')
   const [newProfileKind, setNewProfileKind] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // 分析
+  const [view, setView] = useState<ArticleView>(ARTICLE_VIEWS[0]!)
+  const [audience, setAudience] = useState<'internal' | 'client'>('client')
+  const [draft, setDraft] = useState<ArticleDraft | null>(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     void loadBlocks()
@@ -27,7 +51,8 @@ export function InputBlocks() {
     try {
       const text = await file.text()
       const r = fileToBlockContent(file.name, text)
-      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId: filter !== 'all' && filter !== 'none' ? filter : undefined })
+      const profileId = filter !== 'all' && filter !== 'none' ? filter : undefined
+      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId, usage: audience === 'client' ? 'client' : 'internal' })
       setImportMsg(`${r.note}——确认内容后点"保存"`)
     } catch (e) {
       setImportMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
@@ -39,6 +64,15 @@ export function InputBlocks() {
     if (filter === 'none') return !b.profileId
     return b.profileId === filter
   })
+  const analysisScope = filter === 'all' || filter === 'none' ? null : (profiles.find((p) => p.id === filter) ?? null)
+  const analysisMaterials: ArticleMaterial[] = (analysisScope ? blocks.filter((b) => b.profileId === analysisScope.id) : blocks).map((b) => ({
+    id: b.id,
+    kind: 'note' as const,
+    title: b.title,
+    body: b.content,
+    createdAt: b.updatedAt,
+    sourceLabel: '外部材料',
+  }))
 
   const addProfile = async () => {
     if (!newProfileName.trim()) return
@@ -48,22 +82,50 @@ export function InputBlocks() {
     setFilter(p.id)
   }
 
+  const generateAnalysis = async () => {
+    if (aiBusy || analysisMaterials.length === 0) return
+    setAiBusy(true)
+    setAiError('')
+    try {
+      const text = await chatCompletion(
+        llmConfigFrom(loadCoachConfig()),
+        ARTICLE_SYSTEM_PROMPT,
+        buildArticleUserPrompt({ materials: analysisMaterials, view, scopeLabel: analysisScope?.name }),
+        { maxTokens: 4000 },
+      )
+      setDraft(parseArticle(text))
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  const doExport = (kind: 'md' | 'docx') => {
+    if (!draft) return
+    if (kind === 'md') {
+      downloadFile(`${draft.title}.md`, articleToMarkdown(draft), 'text/markdown')
+    } else {
+      void exportArticleDocx(draft)
+    }
+  }
+
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>外部数据</h1>
-        <span className="sub">输入 · 第三通道——从别的系统带来的数据按调研对象归组，报告撰写从这里取材料</span>
+        <span className="sub">输入 · 第三通道——从别的系统带来的数据按调研对象归组，分析也从这里发起</span>
       </div>
 
       <div className="set-card">
         <h2>调研对象</h2>
-        <div className="desc">一家公司、一个客户……材料挂在对象下面，做分析时按对象一键带出。标签随意填（客户 / 目标公司 / 供应商）。</div>
+        <div className="desc">一家公司、一个客户……材料挂在对象下面，分析按对象发起。标签随意填（客户 / 目标公司 / 供应商）。</div>
         <div className="set-body">
           <div className="set-row">
             <input
               className="input"
-              style={{ maxWidth: 220 }}
-              placeholder="对象名称（如：XX 银行）"
+              style={{ maxWidth: 260 }}
+              placeholder="对象名称（如：XX 银行 · 张三简历定制）"
               value={newProfileName}
               aria-label="新调研对象名称"
               onChange={(e) => setNewProfileName(e.target.value)}
@@ -106,9 +168,7 @@ export function InputBlocks() {
 
       <div className="set-card">
         <h2>材料（数据块）</h2>
-        <div className="desc">
-          一行一条，"键: 值"形态渲染成指标行，其余为文字。保存后自动并入周报、月报与 PPT；归属到调研对象后，报告撰写可按对象一键带入。
-        </div>
+        <div className="desc">一行一条，"键: 值"形态渲染成指标行，其余为文字。用途标"给客户"后，可在交付文档整理时优先参考。</div>
         <div className="set-body">
           <div className="set-row" style={{ flexWrap: 'wrap' }}>
             <button type="button" className={`chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>
@@ -123,16 +183,21 @@ export function InputBlocks() {
               </button>
             ))}
           </div>
-          {editing === null && visible.length === 0 && filter !== 'all' && filter !== 'none' && (
-            <div className="notice">该对象下还没有材料——在下方添加或导入，会自动归属到这个对象。</div>
+          {editing === null && visible.length === 0 && (
+            <div className="notice">没有符合条件的材料——在下方添加或导入文件。</div>
           )}
           {visible.map((b) => (
             <div className="set-row" key={b.id} style={{ alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>{b.title}</div>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>
+                  {b.title}
+                  {b.usage === 'client' && (
+                    <span className="val" style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>给客户</span>
+                  )}
+                </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', whiteSpace: 'pre-wrap' }}>{b.content}</div>
               </div>
-              <button type="button" className="mini-btn" onClick={() => setEditing({ id: b.id, title: b.title, content: b.content, profileId: b.profileId })}>
+              <button type="button" className="mini-btn" onClick={() => setEditing({ id: b.id, title: b.title, content: b.content, profileId: b.profileId, usage: b.usage })}>
                 编辑
               </button>
               <button
@@ -174,6 +239,13 @@ export function InputBlocks() {
                 aria-label="材料内容"
                 onChange={(e) => setEditing({ ...editing, content: e.target.value })}
               />
+              <div className="set-row">
+                <label>用途</label>
+                <div className="radio">
+                  <button type="button" className={(editing.usage ?? 'internal') === 'internal' ? 'on' : ''} onClick={() => setEditing({ ...editing, usage: 'internal' })}>自己用</button>
+                  <button type="button" className={editing.usage === 'client' ? 'on' : ''} onClick={() => setEditing({ ...editing, usage: 'client' })}>给客户</button>
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
                 <button
                   type="button"
@@ -211,6 +283,7 @@ export function InputBlocks() {
                     title: '',
                     content: '',
                     profileId: filter !== 'all' && filter !== 'none' ? filter : undefined,
+                    usage: audience === 'client' ? 'client' : 'internal',
                   })
                 }
                 data-testid="add-block"
@@ -243,25 +316,75 @@ export function InputBlocks() {
       </div>
 
       <div className="set-card">
-        <h2>这些数据会去哪里</h2>
+        <h2>从材料生成分析</h2>
+        <div className="desc">
+          范围：{analysisScope ? `调研对象「${analysisScope.name}」` : '当前筛选下的全部材料'} · 用途：{audience === 'client' ? '给客户（措辞正式，可直接交付）' : '自己用（可直写问题与判断）'}
+        </div>
         <div className="set-body">
           <div className="set-row">
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-              周报 / 月报：新增"外部数据"章节（<code>output/report</code> 可预览下载）
-            </span>
+            <label>视角</label>
+            <div className="radio">
+              {ARTICLE_VIEWS.map((v) => (
+                <button key={v.id} type="button" className={view.id === v.id ? 'on' : ''} onClick={() => setView(v)}>
+                  {v.name}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="set-row">
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-              PPT 导出：每个数据块一页
-            </span>
+            <label>用途</label>
+            <div className="radio">
+              <button type="button" className={audience === 'client' ? 'on' : ''} onClick={() => setAudience('client')}>给客户</button>
+              <button type="button" className={audience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>自己用</button>
+            </div>
           </div>
-          <div className="set-row">
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-              报告撰写：按调研对象一键带入材料，生成分析文档
-            </span>
-          </div>
+          {draft === null ? (
+            <div className="set-row" style={{ flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!analysisMaterials.length || aiBusy || !coachReady()}
+                onClick={() => void generateAnalysis()}
+                data-testid="article-generate"
+              >
+                {aiBusy ? '⟳ AI 整理中…' : '🤖 AI 整理成分析草稿'}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setDraft(view.skeleton())}>
+                用手动骨架（不需要 AI）
+              </button>
+              {!coachReady() && (
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置。
+                </span>
+              )}
+              {!analysisMaterials.length && (
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>当前范围没有材料。</span>
+              )}
+              {aiError && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{aiError}</span>}
+            </div>
+          ) : (
+            <div className="set-row">
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>草稿已生成，在下方"分析草稿（可编辑）"逐节修改。</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {draft && (
+        <div className="set-card">
+          <h2>分析草稿（可编辑）</h2>
+          <div className="set-body">
+            <div className="set-row">
+              <label>导出</label>
+              <button type="button" className="btn-ghost" onClick={() => doExport('md')}>⬇ Markdown</button>
+              <button type="button" className="btn-ghost" onClick={() => doExport('docx')}>⬇ Word（.docx）</button>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>PDF 可在 Word 中另存</span>
+              <button type="button" className="mini-btn" onClick={() => setDraft(null)}>丢弃草稿</button>
+            </div>
+            <ArticleEditor draft={draft} onChange={setDraft} />
+          </div>
+        </div>
+      )}
     </section>
   )
 }

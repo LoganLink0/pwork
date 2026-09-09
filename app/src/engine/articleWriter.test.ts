@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { articleToMarkdown, buildArticleUserPrompt, defaultArticleSkeleton, parseArticle } from './articleWriter'
+import { ARTICLE_VIEWS, articleToMarkdown, buildArticleUserPrompt, defaultArticleSkeleton, parseArticle } from './articleWriter'
 
 describe('parseArticle（AI 返回文本 → 文章草稿）', () => {
   it('标准 JSON 解析', () => {
@@ -23,10 +23,13 @@ describe('parseArticle（AI 返回文本 → 文章草稿）', () => {
 
 describe('buildArticleUserPrompt', () => {
   it('含天数/素材全文/类型标注/JSON 格式说明', () => {
-    const p = buildArticleUserPrompt(7, [
-      { id: '1', kind: 'note', title: '速记甲', body: '素材正文', createdAt: '2026-09-01T08:00:00.000Z' },
-      { id: '2', kind: 'insight', title: '洞察卡', body: '复盘结论', createdAt: '2026-09-02T08:00:00.000Z' },
-    ])
+    const p = buildArticleUserPrompt({
+      days: 7,
+      materials: [
+        { id: '1', kind: 'note', title: '速记甲', body: '素材正文', createdAt: '2026-09-01T08:00:00.000Z' },
+        { id: '2', kind: 'insight', title: '洞察卡', body: '复盘结论', createdAt: '2026-09-02T08:00:00.000Z' },
+      ],
+    })
     expect(p).toContain('7 天')
     expect(p).toContain('【素材1｜速记｜速记甲】')
     expect(p).toContain('【素材2｜洞察卡｜洞察卡】')
@@ -35,8 +38,18 @@ describe('buildArticleUserPrompt', () => {
     expect(p).toContain('"sections"')
   })
   it('超长素材截断并注明', () => {
-    const p = buildArticleUserPrompt(7, [{ id: '1', kind: 'note', title: '长素材', body: '长'.repeat(3000), createdAt: 'x' }])
+    const p = buildArticleUserPrompt({ days: 7, materials: [{ id: '1', kind: 'note', title: '长素材', body: '长'.repeat(3000), createdAt: 'x' }] })
     expect(p).toContain('（截断）')
+  })
+  it('按调研对象聚合：scopeLabel 替代天数，材料可用自定义来源叫法', () => {
+    const p = buildArticleUserPrompt({
+      materials: [{ id: '1', kind: 'note', title: 'XX 银行工商信息', body: '注册资本 5000 万', createdAt: 'x', sourceLabel: '外部材料' }],
+      view: ARTICLE_VIEWS.find((v) => v.id === 'company-profile'),
+      scopeLabel: 'XX 银行',
+    })
+    expect(p).toContain('调研对象「XX 银行」')
+    expect(p).not.toContain('7 天')
+    expect(p).toContain('【素材1｜外部材料｜XX 银行工商信息】')
   })
 })
 

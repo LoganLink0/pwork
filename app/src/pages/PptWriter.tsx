@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  defaultTemplate,
   extractMaterial,
   exportWriterPptx,
   buildOutlineUserPrompt,
@@ -13,20 +14,11 @@ import {
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
-import { getWriterTemplate, WRITER_TEMPLATES, type WriterTemplateId } from '../engine/pptWriter'
-import { useBlocks } from '../store/blocks'
-import { useProfiles } from '../store/profiles'
 
 const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
-const LAYOUT_LABEL: Record<WriterSlide['layout'], string> = {
-  cover: '封面',
-  section: '章节页',
-  bullets: '要点页',
-  table: '表格页',
-}
-
-/** 报告撰写（输出 O 扩展）：材料 → AI 大纲（人审核）→ 可编辑 .pptx。与周报导出分开的独立功能。 */
+/** PPT 撰写（输出）：从零起草一份 PPT——主题 + 材料 → AI 大纲（逐页审核修改）→ 可编辑 .pptx。
+ *  调研对象材料的分析在 输入 → 外部数据 的对象工作台里做（分工：那里管材料与分析，这里管从零成稿）。 */
 export function PptWriter() {
   const [materials, setMaterials] = useState<WriterMaterial[]>([])
   const [pasteName, setPasteName] = useState('')
@@ -35,17 +27,8 @@ export function PptWriter() {
   const [extractErr, setExtractErr] = useState('')
 
   const [topic, setTopic] = useState('')
-  const [audience, setAudience] = useState<'internal' | 'external' | undefined>(undefined)
-  const [templateId, setTemplateId] = useState<WriterTemplateId>('business-analysis')
-  const [profileId, setProfileId] = useState('')
-  const [profileLoaded, setProfileLoaded] = useState(false)
+  const [audience, setAudience] = useState<'internal' | 'external'>('internal')
   const [pageTarget, setPageTarget] = useState(12)
-  const blocks = useBlocks((s) => s.blocks)
-  const loadBlocks = useBlocks((s) => s.load)
-  const profiles = useProfiles((s) => s.profiles)
-  const loadProfiles = useProfiles((s) => s.load)
-  const template = getWriterTemplate(templateId)
-  const effAudience = audience ?? template.audience
 
   const [outline, setOutline] = useState<WriterOutline | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -53,22 +36,6 @@ export function PptWriter() {
   const [exportBusy, setExportBusy] = useState(false)
   const [exportMsg, setExportMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    void loadBlocks()
-    void loadProfiles().then(() => setProfileLoaded(true))
-  }, [loadBlocks, loadProfiles])
-
-  /** 把调研对象名下的数据块带入材料（按标题去重） */
-  const pullProfileBlocks = () => {
-    const items = blocks.filter((b) => b.profileId === profileId)
-    if (items.length === 0) return
-    setMaterials((ms) => {
-      const have = new Set(ms.map((m) => m.name))
-      const fresh = items.filter((b) => !have.has(b.title)).map((b) => ({ name: b.title, text: b.content }))
-      return [...ms, ...fresh]
-    })
-  }
 
   const totalChars = materials.reduce((n, m) => n + m.text.length, 0)
 
@@ -107,9 +74,7 @@ export function PptWriter() {
       const text = await chatCompletion(
         llmConfigFrom(loadCoachConfig()),
         OUTLINE_SYSTEM_PROMPT,
-        buildOutlineUserPrompt({ topic: topic.trim(), audience: effAudience, pageTarget }, materials) +
-        '\n\n模板视角：' +
-        template.guide,
+        buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
         { maxTokens: 4000 },
       )
       setOutline(parseOutline(text))
@@ -161,7 +126,7 @@ export function PptWriter() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>PPT 撰写</h1>
-        <span className="sub">材料 → AI 大纲（你审核修改）→ 可编辑 PPT——每个文字框都是原生对象，不是图片</span>
+        <span className="sub">从零起草：主题 + 材料 → AI 大纲（你逐页审核修改）→ 可编辑 PPT</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
         </div>
@@ -169,13 +134,13 @@ export function PptWriter() {
 
       <div className="set-card">
         <h2>一、材料</h2>
-        <div className="desc">三种形态都支持：直接粘贴文字；上传 .md / .txt；上传 Word（.docx）与 PDF（自动提取文字）。材料越完整，大纲越靠谱。</div>
+        <div className="desc">直接粘贴文字；上传 .md / .txt；上传 Word（.docx）与 PDF（自动提取文字）。</div>
         <div className="set-body">
           <div className="set-row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
               <input
                 className="input"
-                placeholder="粘贴材料名称（如：客户提供的工商信息）"
+                placeholder="粘贴材料名称（可选）"
                 value={pasteName}
                 aria-label="粘贴材料名称"
                 onChange={(e) => setPasteName(e.target.value)}
@@ -208,30 +173,6 @@ export function PptWriter() {
                   }}
                 />
               </div>
-              {profileLoaded && profiles.length > 0 && (
-                <div className="set-row" style={{ width: '100%' }}>
-                  <select
-                    className="lane-select"
-                    value={profileId}
-                    aria-label="选择调研对象"
-                    onChange={(e) => setProfileId(e.target.value)}
-                  >
-                    <option value="">选择调研对象（带入其材料）…</option>
-                    {profiles.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    disabled={!profileId}
-                    title="把该对象名下的数据块作为材料带入"
-                    onClick={pullProfileBlocks}
-                  >
-                    ⬇ 带入该对象的材料
-                  </button>
-                </div>
-              )}
             </div>
           </div>
           {extractErr && (
@@ -264,16 +205,6 @@ export function PptWriter() {
         <h2>二、主题与受众</h2>
         <div className="set-body">
           <div className="set-row">
-            <label>模板</label>
-            <div className="radio" role="radiogroup" aria-label="撰写模板">
-              {WRITER_TEMPLATES.map((t) => (
-                <button key={t.id} type="button" className={templateId === t.id ? 'on' : ''} onClick={() => setTemplateId(t.id)}>
-                  {t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="set-row">
             <label>报告主题</label>
             <input
               className="input"
@@ -287,8 +218,8 @@ export function PptWriter() {
           <div className="set-row">
             <label>受众</label>
             <div className="radio">
-              <button type="button" className={effAudience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>内部（同事 / 领导）</button>
-              <button type="button" className={effAudience === 'external' ? 'on' : ''} onClick={() => setAudience('external')}>外部（客户 / 合作方）</button>
+              <button type="button" className={audience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>内部（同事 / 领导）</button>
+              <button type="button" className={audience === 'external' ? 'on' : ''} onClick={() => setAudience('external')}>外部（客户 / 合作方）</button>
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               内部可直写问题与风险；外部结论先行、措辞正式
@@ -328,7 +259,7 @@ export function PptWriter() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => setOutline(template.skeleton(topic.trim() || '业务分析', effAudience))}
+                onClick={() => setOutline(defaultTemplate(topic.trim() || '业务分析', audience))}
               >
                 用内置模板手填（不需要 AI）
               </button>
@@ -464,6 +395,13 @@ export function PptWriter() {
       </div>
     </section>
   )
+}
+
+const LAYOUT_LABEL: Record<WriterSlide['layout'], string> = {
+  cover: '封面',
+  section: '章节页',
+  bullets: '要点页',
+  table: '表格页',
 }
 
 /** 大纲的 Markdown 存档（便于留底与二次编辑） */

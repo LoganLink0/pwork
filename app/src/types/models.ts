@@ -55,6 +55,8 @@ export interface DataBlock {
   content: string
   /** 归属的调研对象（输入第三通道的对象档案；空 = 未归类） */
   profileId?: string
+  /** 用途：internal 自己用 / client 给客户——决定哪些材料可进入对外交付 */
+  usage?: 'internal' | 'client'
   /** 云端推送数据的源 id（/api/ingest），用于增量拉取去重；手动创建无此字段 */
   extId?: string
   updatedAt: string

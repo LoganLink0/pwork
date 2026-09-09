@@ -15,6 +15,7 @@ function normalizeBlock(raw: DataBlock): DataBlock {
     content: raw.content ?? '',
     extId: raw.extId ?? undefined,
     profileId: raw.profileId ?? undefined,
+    usage: raw.usage ?? undefined,
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? BLOCK_SCHEMA_VERSION,
@@ -31,6 +32,8 @@ export interface SaveBlockInput {
   extId?: string
   /** 归属的调研对象 */
   profileId?: string
+  /** 用途：自己用 / 给客户 */
+  usage?: 'internal' | 'client'
 }
 
 /** 新建或更新（按 id）；标题取首行非空，最多 40 字 */
@@ -43,6 +46,7 @@ export async function saveBlock(input: SaveBlockInput): Promise<DataBlock> {
     content: input.content.trim(),
     extId: input.extId ?? existing?.extId,
     profileId: input.profileId ?? existing?.profileId,
+    usage: input.usage ?? existing?.usage,
     updatedAt: now,
     deletedAt: existing?.deletedAt ?? null,
     schemaVersion: BLOCK_SCHEMA_VERSION,
