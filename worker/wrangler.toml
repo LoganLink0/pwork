@@ -17,6 +17,9 @@ database_id = "b60c68f9-b121-4c4f-a1ee-004b9b8a0adf"
 # 抓取 Token：写操作必须携带（Authorization: Bearer <TOKEN>）；读操作可选开放
 # 初始值请在部署前修改，或用 `npx wrangler secret put TOKEN` 覆盖为 secret
 TOKEN = "change-me-before-deploy"
+# LLM 代理口令（/api/llm/chat/completions）：内容工厂工作台等本地工具填这个当"Key"
+# 真 AI Key 在 secret（AI_API_KEY）永不出服务端；此口令泄露只损失调用量，换掉即止血
+LLM_TOKEN = "change-me-llm-token"
 # AI 两级筛选（AD4：BYOK；留空 API_KEY 则整链走规则评分，系统照常转）
 AI_BASE_URL = "https://api.deepseek.com/v1"
 AI_MODEL_CHEAP = "deepseek-chat"   # 4a 预筛（便宜模型）

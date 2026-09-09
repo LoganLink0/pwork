@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { listBlocks, saveBlock, softDeleteBlock, type SaveBlockInput } from '../db/blocksRepo'
+import { assignBlockProfile, listBlocks, saveBlock, softDeleteBlock, type SaveBlockInput } from '../db/blocksRepo'
 import type { DataBlock } from '../types/models'
 
 /** 外部数据块状态（输出模块拥有）：报告/朗读/PPT 管线引用 */
@@ -9,6 +9,7 @@ interface BlocksState {
   load: () => Promise<void>
   save: (input: SaveBlockInput) => Promise<DataBlock>
   remove: (id: string) => Promise<void>
+  assignProfile: (id: string, profileId: string | undefined) => Promise<void>
 }
 
 export const useBlocks = create<BlocksState>((set) => ({
@@ -24,6 +25,10 @@ export const useBlocks = create<BlocksState>((set) => ({
   },
   remove: async (id) => {
     await softDeleteBlock(id)
+    set({ blocks: await listBlocks() })
+  },
+  assignProfile: async (id, profileId) => {
+    await assignBlockProfile(id, profileId)
     set({ blocks: await listBlocks() })
   },
 }))

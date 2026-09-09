@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  defaultTemplate,
   extractMaterial,
   exportWriterPptx,
   buildOutlineUserPrompt,
@@ -14,6 +13,9 @@ import {
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { getWriterTemplate, WRITER_TEMPLATES, type WriterTemplateId } from '../engine/pptWriter'
+import { useBlocks } from '../store/blocks'
+import { useProfiles } from '../store/profiles'
 
 const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
@@ -33,8 +35,17 @@ export function PptWriter() {
   const [extractErr, setExtractErr] = useState('')
 
   const [topic, setTopic] = useState('')
-  const [audience, setAudience] = useState<'internal' | 'external'>('internal')
+  const [audience, setAudience] = useState<'internal' | 'external' | undefined>(undefined)
+  const [templateId, setTemplateId] = useState<WriterTemplateId>('business-analysis')
+  const [profileId, setProfileId] = useState('')
+  const [profileLoaded, setProfileLoaded] = useState(false)
   const [pageTarget, setPageTarget] = useState(12)
+  const blocks = useBlocks((s) => s.blocks)
+  const loadBlocks = useBlocks((s) => s.load)
+  const profiles = useProfiles((s) => s.profiles)
+  const loadProfiles = useProfiles((s) => s.load)
+  const template = getWriterTemplate(templateId)
+  const effAudience = audience ?? template.audience
 
   const [outline, setOutline] = useState<WriterOutline | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -42,6 +53,22 @@ export function PptWriter() {
   const [exportBusy, setExportBusy] = useState(false)
   const [exportMsg, setExportMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    void loadBlocks()
+    void loadProfiles().then(() => setProfileLoaded(true))
+  }, [loadBlocks, loadProfiles])
+
+  /** 把调研对象名下的数据块带入材料（按标题去重） */
+  const pullProfileBlocks = () => {
+    const items = blocks.filter((b) => b.profileId === profileId)
+    if (items.length === 0) return
+    setMaterials((ms) => {
+      const have = new Set(ms.map((m) => m.name))
+      const fresh = items.filter((b) => !have.has(b.title)).map((b) => ({ name: b.title, text: b.content }))
+      return [...ms, ...fresh]
+    })
+  }
 
   const totalChars = materials.reduce((n, m) => n + m.text.length, 0)
 
@@ -80,7 +107,9 @@ export function PptWriter() {
       const text = await chatCompletion(
         llmConfigFrom(loadCoachConfig()),
         OUTLINE_SYSTEM_PROMPT,
-        buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
+        buildOutlineUserPrompt({ topic: topic.trim(), audience: effAudience, pageTarget }, materials) +
+        '\n\n模板视角：' +
+        template.guide,
         { maxTokens: 4000 },
       )
       setOutline(parseOutline(text))
@@ -179,6 +208,30 @@ export function PptWriter() {
                   }}
                 />
               </div>
+              {profileLoaded && profiles.length > 0 && (
+                <div className="set-row" style={{ width: '100%' }}>
+                  <select
+                    className="lane-select"
+                    value={profileId}
+                    aria-label="选择调研对象"
+                    onChange={(e) => setProfileId(e.target.value)}
+                  >
+                    <option value="">选择调研对象（带入其材料）…</option>
+                    {profiles.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={!profileId}
+                    title="把该对象名下的数据块作为材料带入"
+                    onClick={pullProfileBlocks}
+                  >
+                    ⬇ 带入该对象的材料
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {extractErr && (
@@ -211,6 +264,16 @@ export function PptWriter() {
         <h2>二、主题与受众</h2>
         <div className="set-body">
           <div className="set-row">
+            <label>模板</label>
+            <div className="radio" role="radiogroup" aria-label="撰写模板">
+              {WRITER_TEMPLATES.map((t) => (
+                <button key={t.id} type="button" className={templateId === t.id ? 'on' : ''} onClick={() => setTemplateId(t.id)}>
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="set-row">
             <label>报告主题</label>
             <input
               className="input"
@@ -224,8 +287,8 @@ export function PptWriter() {
           <div className="set-row">
             <label>受众</label>
             <div className="radio">
-              <button type="button" className={audience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>内部（同事 / 领导）</button>
-              <button type="button" className={audience === 'external' ? 'on' : ''} onClick={() => setAudience('external')}>外部（客户 / 合作方）</button>
+              <button type="button" className={effAudience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>内部（同事 / 领导）</button>
+              <button type="button" className={effAudience === 'external' ? 'on' : ''} onClick={() => setAudience('external')}>外部（客户 / 合作方）</button>
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               内部可直写问题与风险；外部结论先行、措辞正式
@@ -265,7 +328,7 @@ export function PptWriter() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => setOutline(defaultTemplate(topic.trim() || '业务分析', audience))}
+                onClick={() => setOutline(template.skeleton(topic.trim() || '业务分析', effAudience))}
               >
                 用内置模板手填（不需要 AI）
               </button>

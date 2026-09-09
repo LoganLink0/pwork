@@ -14,6 +14,7 @@ function normalizeBlock(raw: DataBlock): DataBlock {
     title: raw.title ?? '未命名数据块',
     content: raw.content ?? '',
     extId: raw.extId ?? undefined,
+    profileId: raw.profileId ?? undefined,
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? BLOCK_SCHEMA_VERSION,
@@ -28,6 +29,8 @@ export interface SaveBlockInput {
   content: string
   /** 云端推送源 id（增量去重用） */
   extId?: string
+  /** 归属的调研对象 */
+  profileId?: string
 }
 
 /** 新建或更新（按 id）；标题取首行非空，最多 40 字 */
@@ -39,6 +42,7 @@ export async function saveBlock(input: SaveBlockInput): Promise<DataBlock> {
     title: input.title.trim().slice(0, 40) || '未命名数据块',
     content: input.content.trim(),
     extId: input.extId ?? existing?.extId,
+    profileId: input.profileId ?? existing?.profileId,
     updatedAt: now,
     deletedAt: existing?.deletedAt ?? null,
     schemaVersion: BLOCK_SCHEMA_VERSION,
@@ -60,4 +64,17 @@ export async function softDeleteBlock(id: string): Promise<void> {
   const raw = await db.blocks.get(id)
   if (!raw || raw.deletedAt) return
   await db.blocks.put({ ...normalizeBlock(raw), deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+}
+
+/** 调整数据块归属的调研对象（undefined = 移出到未归类） */
+export async function assignBlockProfile(id: string, profileId: string | undefined): Promise<void> {
+  const raw = await db.blocks.get(id)
+  if (!raw) return
+  await db.blocks.put({ ...normalizeBlock(raw), profileId, updatedAt: new Date().toISOString() })
+}
+
+/** 某对象下的全部数据块（按更新时间倒序） */
+export async function listBlocksByProfile(profileId: string): Promise<DataBlock[]> {
+  const all = await db.blocks.where('profileId').equals(profileId).toArray()
+  return all.map(normalizeBlock).filter((b) => b.deletedAt === null).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }

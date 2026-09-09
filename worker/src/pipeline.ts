@@ -11,6 +11,7 @@ import { parseFeed, parseRss2Json } from './rss'
 export interface Env {
   DB: D1Database
   TOKEN: string
+  LLM_TOKEN?: string
   AI_BASE_URL: string
   AI_MODEL_CHEAP: string
   AI_MODEL_STRONG: string

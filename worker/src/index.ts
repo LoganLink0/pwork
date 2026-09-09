@@ -10,6 +10,7 @@
  *   GET  /api/ingest?since=                拉取推送数据（鉴权——业务数据默认敏感）
  *   POST /api/fetch                        手动触发一轮抓取
  *   GET  /rss/daily.xml                    当日 Top N 对外输出
+ *   POST /api/llm/chat/completions         LLM 代理（Bearer LLM_TOKEN；本地工具经此调 AI，真 Key 只存服务端 secret）
  */
 
 import { aiConfigFrom, runPipeline, type Env } from './pipeline'
@@ -221,10 +222,35 @@ export default {
       return new Response(xml, { headers: { 'content-type': 'application/xml; charset=utf-8', ...CORS } })
     }
 
+    // ── LLM 代理：本地工具（内容工厂工作台等）经此调用 AI——真实 Key 只存服务端 secret，浏览器侧不落 Key。
+    // 鉴权用独立的 LLM_TOKEN（与采集写入的 TOKEN 分开）：口令泄露只损失调用量，换口令即止血，不暴露 AI Key 本体。 ──
+    if (path === '/api/llm/chat/completions' && request.method === 'POST') {
+      const auth = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+      if (!env.LLM_TOKEN || auth !== env.LLM_TOKEN) return json({ error: 'unauthorized（需 Bearer LLM_TOKEN）' }, 401)
+      if (!env.AI_API_KEY) return json({ error: 'AI_API_KEY 未配置（npx wrangler secret put AI_API_KEY）' }, 503)
+      let body: { model?: string; messages?: unknown[]; temperature?: number }
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'invalid json' }, 400)
+      }
+      if (!Array.isArray(body.messages) || body.messages.length === 0) return json({ error: 'messages required' }, 400)
+      const upstream = await fetch(env.AI_BASE_URL.replace(/\/+$/, '') + '/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.AI_API_KEY },
+        body: JSON.stringify({
+          model: body.model || env.AI_MODEL_CHEAP || 'deepseek-chat',
+          messages: body.messages,
+          temperature: body.temperature ?? 0.7,
+        }),
+      })
+      return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
+    }
+
     if (path === '/') {
       return json({
         name: 'pwork-collect',
-        endpoints: ['/api/items?since=&minScore=&ot=', '/api/digest?n=', '/api/sources', '/api/fetch (POST, auth)', '/api/ingest (POST 推送 / GET 拉取, auth)', '/rss/daily.xml'],
+        endpoints: ['/api/items?since=&minScore=&ot=', '/api/digest?n=', '/api/sources', '/api/fetch (POST, auth)', '/api/ingest (POST 推送 / GET 拉取, auth)', '/api/llm/chat/completions (POST, LLM_TOKEN auth)', '/rss/daily.xml'],
       })
     }
 

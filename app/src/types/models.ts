@@ -53,8 +53,25 @@ export interface DataBlock {
   id: string
   title: string
   content: string
+  /** 归属的调研对象（输入第三通道的对象档案；空 = 未归类） */
+  profileId?: string
   /** 云端推送数据的源 id（/api/ingest），用于增量拉取去重；手动创建无此字段 */
   extId?: string
+  updatedAt: string
+  deletedAt: string | null
+  schemaVersion: number
+}
+/**
+ * 调研对象（输入第三通道的对象档案）：一家公司、一个客户……材料（数据块）挂在它下面，
+ * 分析产出（报告撰写）从它取材料。07 场景包"对象档案"的最小实装。
+ */
+export interface Profile {
+  id: string
+  name: string
+  /** 自由标签：客户 / 目标公司 / 供应商……不做枚举限制 */
+  kind: string
+  note?: string
+  createdAt: string
   updatedAt: string
   deletedAt: string | null
   schemaVersion: number
