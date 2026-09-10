@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Goal, Item, Note, Source, TaskItem } from '../types/models'
-import type { DataBlock, Profile, ReportSnapshot } from '../types/models'
+import type { CaseFile, DataBlock, Profile, ReportSnapshot } from '../types/models'
 import type { ActionItem, InsightRecord, ReviewRecord } from '../modules/review/types/models'
 
 /** 存储降级状态：探针失败后为 true，UI 据此显示"数据不会保留"横幅（FUPAN 降级方案延续） */
@@ -42,6 +42,7 @@ export class PworkDB extends Dexie {
   snapshots!: Table<ReportSnapshot, string>
   blocks!: Table<DataBlock, string>
   profiles!: Table<Profile, string>
+  caseFiles!: Table<CaseFile, string>
 
   constructor() {
     super('pwork-workbench')
@@ -81,6 +82,10 @@ export class PworkDB extends Dexie {
     })
     this.version(9).stores({
       blocks: 'id, updatedAt, extId, profileId',
+    })
+    // v10（案例模块）：案例文件——简历版本/JD/公司资料，保持文件形态
+    this.version(10).stores({
+      caseFiles: 'id, caseId, kind, createdAt',
     })
   }
 }

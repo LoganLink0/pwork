@@ -76,7 +76,28 @@ export interface Profile {
   kind: string
   /** 案例状态（简历辅导服务线）：进行中 → 已交付 → 已收款 */
   status?: ProfileStatus
+  /** 客户姓名（简历辅导案例）；售前案例可留空 */
+  clientName?: string
+  /** 目标岗位 */
+  targetRole?: string
   note?: string
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  schemaVersion: number
+}
+
+/**
+ * 案例文件（案例模块）：简历 / JD / 公司资料等，保持文件形态不拆碎。
+ * 客户简历每次上传 = 一个新版本（版本留存，可回看对比）。
+ */
+export interface CaseFile {
+  id: string
+  caseId: string
+  name: string
+  kind: 'resume' | 'jd' | 'company' | 'other'
+  /** 提取出的全文（docx/pdf 自动提取，txt/md 原样） */
+  text: string
   createdAt: string
   updatedAt: string
   deletedAt: string | null

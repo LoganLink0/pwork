@@ -28,6 +28,8 @@ export interface SaveProfileInput {
   kind?: string
   note?: string
   status?: Profile['status']
+  clientName?: string
+  targetRole?: string
 }
 
 export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
@@ -38,6 +40,8 @@ export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
     name: input.name.trim().slice(0, 60) || '未命名对象',
     kind: (input.kind ?? existing?.kind ?? '').trim().slice(0, 20),
     status: input.status ?? existing?.status ?? '进行中',
+    clientName: input.clientName ?? existing?.clientName,
+    targetRole: input.targetRole ?? existing?.targetRole,
     note: input.note?.trim() || existing?.note,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
