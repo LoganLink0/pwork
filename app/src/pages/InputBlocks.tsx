@@ -18,6 +18,8 @@ import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
+import { parseDecodeBlock, parseDiagnosisBlock, renderDecodeReportHtml, renderDiagnosisReportHtml } from '../engine/deliverables'
+import { todayLocal } from '../engine/datetime'
 import {
   buildDecodePrompt,
   buildDiagnosePrompt,
@@ -47,6 +49,8 @@ export function InputBlocks() {
   const [newProfileName, setNewProfileName] = useState('')
   const [newProfileKind, setNewProfileKind] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [reportPreview, setReportPreview] = useState<{ html: string } | null>(null)
+  const reportFrame = useRef<HTMLIFrameElement>(null)
 
   // 分析
   const [view, setView] = useState<ArticleView>(ARTICLE_VIEWS[0]!)
@@ -206,6 +210,18 @@ ${decodeToText(d)}`,
     }
   }
 
+  const exportBlockReport = (b: { title: string; content: string; profileId?: string }) => {
+    const clientName = profiles.find((p) => p.id === b.profileId)?.name ?? '调研对象'
+    const meta = { clientName, date: todayLocal() }
+    if (b.title.includes('岗位解码表')) {
+      const d = parseDecodeBlock(b.content)
+      setReportPreview({ html: renderDecodeReportHtml({ ...meta, ...d }) })
+    } else if (b.title.includes('匹配度诊断')) {
+      const d = parseDiagnosisBlock(b.content)
+      setReportPreview({ html: renderDiagnosisReportHtml({ ...meta, ...d }) })
+    }
+  }
+
   const doExport = (kind: 'md' | 'docx') => {
     if (!draft) return
     if (kind === 'md') {
@@ -302,6 +318,16 @@ ${decodeToText(d)}`,
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', whiteSpace: 'pre-wrap' }}>{b.content}</div>
               </div>
+              {(b.title.includes('岗位解码表') || b.title.includes('匹配度诊断')) && (
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="生成可交付的报告（打印或另存 PDF）"
+                  onClick={() => exportBlockReport(b)}
+                >
+                  导出报告
+                </button>
+              )}
               <button type="button" className="mini-btn" onClick={() => setEditing({ id: b.id, title: b.title, content: b.content, profileId: b.profileId, usage: b.usage })}>
                 编辑
               </button>
@@ -419,6 +445,30 @@ ${decodeToText(d)}`,
           )}
         </div>
       </div>
+
+      {reportPreview && (
+        <div className="set-card">
+          <h2>报告预览（交付版）</h2>
+          <div className="set-body">
+            <div className="set-row">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => reportFrame.current?.contentWindow?.print()}
+              >
+                🖨 打印 / 另存 PDF
+              </button>
+              <button type="button" className="mini-btn" onClick={() => setReportPreview(null)}>关闭预览</button>
+            </div>
+            <iframe
+              ref={reportFrame}
+              title="交付报告预览"
+              srcDoc={reportPreview.html}
+              style={{ width: '100%', height: 560, border: '1px solid var(--line)', borderRadius: 'var(--r-md)', background: '#fff' }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="set-card">
         <h2>从材料生成分析</h2>
