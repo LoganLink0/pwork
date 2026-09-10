@@ -67,11 +67,15 @@ export interface DataBlock {
  * 调研对象（输入第三通道的对象档案）：一家公司、一个客户……材料（数据块）挂在它下面，
  * 分析产出（报告撰写）从它取材料。07 场景包"对象档案"的最小实装。
  */
+export type ProfileStatus = '进行中' | '已交付' | '已收款'
+
 export interface Profile {
   id: string
   name: string
   /** 自由标签：客户 / 目标公司 / 供应商……不做枚举限制 */
   kind: string
+  /** 案例状态（简历辅导服务线）：进行中 → 已交付 → 已收款 */
+  status?: ProfileStatus
   note?: string
   createdAt: string
   updatedAt: string

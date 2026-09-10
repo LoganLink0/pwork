@@ -13,6 +13,7 @@ function normalizeProfile(raw: Profile): Profile {
     ...raw,
     name: raw.name ?? '未命名对象',
     kind: raw.kind ?? '',
+    status: raw.status ?? '进行中',
     note: raw.note ?? undefined,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -26,6 +27,7 @@ export interface SaveProfileInput {
   name: string
   kind?: string
   note?: string
+  status?: Profile['status']
 }
 
 export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
@@ -35,6 +37,7 @@ export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
     id: existing?.id ?? newId('prof'),
     name: input.name.trim().slice(0, 60) || '未命名对象',
     kind: (input.kind ?? existing?.kind ?? '').trim().slice(0, 20),
+    status: input.status ?? existing?.status ?? '进行中',
     note: input.note?.trim() || existing?.note,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,

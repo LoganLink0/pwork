@@ -18,6 +18,19 @@ import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
+import {
+  buildDecodePrompt,
+  buildDiagnosePrompt,
+  buildRewritePrompt,
+  caseBlockTitle,
+  decodeToText,
+  diagnosisToText,
+  parseDecode,
+  parseDiagnosis,
+  DECODE_SYSTEM_PROMPT,
+  DIAGNOSE_SYSTEM_PROMPT,
+  REWRITE_SYSTEM_PROMPT,
+} from '../engine/resumeTools'
 
 const coachReady = () => Boolean(loadCoachConfig().apiKey)
 
@@ -41,6 +54,17 @@ export function InputBlocks() {
   const [draft, setDraft] = useState<ArticleDraft | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
+  // 岗位解码
+  const [jdText, setJdText] = useState('')
+  const [decodeBusy, setDecodeBusy] = useState(false)
+  const [decodeErr, setDecodeErr] = useState('')
+  // 匹配度诊断
+  const [diagBusy, setDiagBusy] = useState(false)
+  const [diagErr, setDiagErr] = useState('')
+  // 条目改写
+  const [rwRaw, setRwRaw] = useState('')
+  const [rwOut, setRwOut] = useState('')
+  const [rwBusy, setRwBusy] = useState(false)
 
   useEffect(() => {
     void loadBlocks()
@@ -98,6 +122,87 @@ export function InputBlocks() {
       setAiError(e instanceof Error ? e.message : String(e))
     } finally {
       setAiBusy(false)
+    }
+  }
+
+  const decodeJD = async () => {
+    if (!jdText.trim() || decodeBusy) return
+    setDecodeBusy(true)
+    setDecodeErr('')
+    try {
+      const text = await chatCompletion(
+        llmConfigFrom(loadCoachConfig()),
+        DECODE_SYSTEM_PROMPT,
+        buildDecodePrompt(jdText.trim()),
+        { maxTokens: 2000, timeoutMs: 90000 },
+      )
+      const d = parseDecode(text)
+      await saveBlock({
+        title: caseBlockTitle('decode'),
+        content: `JD 原文：
+${jdText.trim().slice(0, 800)}
+
+${decodeToText(d)}`,
+        profileId: analysisScope?.id,
+        usage: 'internal',
+      })
+      setJdText('')
+    } catch (e) {
+      setDecodeErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDecodeBusy(false)
+    }
+  }
+
+  const diagnose = async () => {
+    const decodeBlock = [...blocks]
+      .filter((b) => b.title.includes('岗位解码表') && (!analysisScope || b.profileId === analysisScope.id))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
+    if (!decodeBlock || diagBusy) return
+    setDiagBusy(true)
+    setDiagErr('')
+    try {
+      const text = await chatCompletion(
+        llmConfigFrom(loadCoachConfig()),
+        DIAGNOSE_SYSTEM_PROMPT,
+        buildDiagnosePrompt(
+          decodeBlock.content,
+          blocks.filter((b) => b.profileId === analysisScope?.id && b.id !== decodeBlock.id).map((b) => ({ title: b.title, body: b.content })),
+        ),
+        { maxTokens: 4000, timeoutMs: 90000 },
+      )
+      const d = parseDiagnosis(text)
+      await saveBlock({
+        title: caseBlockTitle('diagnosis'),
+        content: diagnosisToText(d),
+        profileId: analysisScope?.id,
+        usage: audience === 'client' ? 'client' : 'internal',
+      })
+    } catch (e) {
+      setDiagErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDiagBusy(false)
+    }
+  }
+
+  const rewriteEntry = async () => {
+    if (!rwRaw.trim() || rwBusy) return
+    setRwBusy(true)
+    try {
+      const decodeBlock = [...blocks]
+        .filter((b) => b.title.includes('岗位解码表') && (!analysisScope || b.profileId === analysisScope.id))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
+      const text = await chatCompletion(
+        llmConfigFrom(loadCoachConfig()),
+        REWRITE_SYSTEM_PROMPT,
+        buildRewritePrompt(rwRaw.trim(), decodeBlock?.content ?? null),
+        { maxTokens: 1000, timeoutMs: 90000 },
+      )
+      setRwOut(text.trim())
+    } catch (e) {
+      setRwOut(`改写失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setRwBusy(false)
     }
   }
 
@@ -384,6 +489,77 @@ export function InputBlocks() {
             <ArticleEditor draft={draft} onChange={setDraft} />
           </div>
         </div>
+      )}
+      {analysisScope && (
+        <>
+          <div className="set-card">
+            <h2>岗位解码（JD → P0/P1/P2）</h2>
+            <div className="desc">把招聘 JD 拆成"必须证明 / 潜力项 / 加分项"和隐性能力词，存为该对象的材料——后续匹配诊断和改写都以它为准。</div>
+            <div className="set-body">
+              <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                <textarea
+                  className="input"
+                  style={{ flex: 1 }}
+                  rows={4}
+                  placeholder="粘贴目标岗位的 JD 全文……"
+                  value={jdText}
+                  aria-label="JD 全文"
+                  onChange={(e) => setJdText(e.target.value)}
+                />
+              </div>
+              <div className="set-row">
+                <button type="button" className="btn-primary" disabled={!jdText.trim() || decodeBusy} onClick={() => void decodeJD()} data-testid="decode-btn">
+                  {decodeBusy ? '⟳ 解码中…' : '🤖 AI 解码岗位'}
+                </button>
+                {decodeErr && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{decodeErr}</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="set-card">
+            <h2>匹配度诊断（逐条对照打分）</h2>
+            <div className="desc">把该对象最新的岗位解码表与材料逐条对照：每条要求找证据、打分（0-5）、指出缺口。</div>
+            <div className="set-body">
+              <div className="set-row">
+                <button type="button" className="btn-primary" disabled={diagBusy} onClick={() => void diagnose()} data-testid="diagnose-btn">
+                  {diagBusy ? '⟳ 诊断中…' : '🤖 AI 匹配度诊断'}
+                </button>
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  需要先有岗位解码表和该对象下的客户素材（如自检包）
+                </span>
+                {diagErr && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{diagErr}</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="set-card">
+            <h2>条目改写（STAR / 量化）</h2>
+            <div className="desc">把一段原始经历改写成"问题-行动-结果"结构的简历条目；没数字的地方用（数字待补）占位，不编造。</div>
+            <div className="set-body">
+              <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                <textarea
+                  className="input"
+                  style={{ flex: 1 }}
+                  rows={3}
+                  placeholder="粘贴原始经历描述，如：负责组织公司年会"
+                  value={rwRaw}
+                  aria-label="原始经历描述"
+                  onChange={(e) => setRwRaw(e.target.value)}
+                />
+              </div>
+              <div className="set-row">
+                <button type="button" className="btn-ghost" disabled={!rwRaw.trim() || rwBusy} onClick={() => void rewriteEntry()}>
+                  {rwBusy ? '⟳ 改写中…' : '✍ AI 改写条目'}
+                </button>
+              </div>
+              {rwOut && (
+                <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                  <textarea className="input" rows={3} value={rwOut} readOnly aria-label="改写结果" />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </section>
   )
