@@ -19,7 +19,7 @@ export const CASE_KIND_LABEL: Record<CaseFileKind, string> = {
   other: '其他材料',
 }
 
-function normalizeCaseFile(raw: CaseFile): CaseFile {
+export function normalizeCaseFile(raw: CaseFile): CaseFile {
   return {
     ...raw,
     kind: raw.kind ?? 'other',

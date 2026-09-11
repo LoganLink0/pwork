@@ -8,7 +8,7 @@ import type { Goal } from '../types/models'
 
 export const GOAL_SCHEMA_VERSION = 1
 
-function normalizeGoal(raw: Goal): Goal {
+export function normalizeGoal(raw: Goal): Goal {
   return {
     ...raw,
     status: raw.status ?? 'active',

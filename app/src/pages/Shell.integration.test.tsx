@@ -60,6 +60,17 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByLabelText('速记标题')).toHaveValue('面板搜索目标条目')
   })
 
+  it('命令面板搜「案例」能到案例库（顶层直达模块不缺入口）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard('{Control>}k{/Control}')
+    const dialog = await screen.findByRole('dialog', { name: '命令面板' })
+    await user.type(within(dialog).getByLabelText('搜索'), '案例')
+    const item = await within(dialog).findByText('案例')
+    await user.click(item)
+    await waitFor(() => expect(screen.getByRole('heading', { name: '案例库' })).toBeInTheDocument())
+  })
+
   it('速记浮层：N 唤起，Esc 存草稿，重开可恢复', async () => {
     const user = userEvent.setup()
     render(<App />)

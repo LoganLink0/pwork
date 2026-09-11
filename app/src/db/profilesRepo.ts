@@ -8,7 +8,7 @@ import type { Profile } from '../types/models'
 
 export const PROFILE_SCHEMA_VERSION = 1
 
-function normalizeProfile(raw: Profile): Profile {
+export function normalizeProfile(raw: Profile): Profile {
   return {
     ...raw,
     name: raw.name ?? '未命名对象',

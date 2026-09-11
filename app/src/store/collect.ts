@@ -190,10 +190,10 @@ async function refreshItem(itemId: string, items: Item[]): Promise<Item[]> {
   return items.map((i) => (i.id === itemId ? fresh : i))
 }
 
-/** 全量备份（统一包裹 v2：notes + 采集 + 回路 + 任务库，02 §4） */
+/** 全量备份（统一包裹 v2：notes + 采集 + 回路 + 任务库 + 目标/快照/数据块/案例，02 §4） */
 export async function buildBackupBundle() {
   const bundle = await exportNotesBundle()
-  const [sources, items, config, reviews, actions, insights, tasks] = await Promise.all([
+  const [sources, items, config, reviews, actions, insights, tasks, goals, snapshots, blocks, profiles, caseFiles] = await Promise.all([
     listAllSources(),
     curatedItems(),
     Promise.resolve(useCollect.getState().config),
@@ -201,6 +201,11 @@ export async function buildBackupBundle() {
     db.actions.toArray(),
     db.insights.toArray(),
     db.tasks.toArray(),
+    db.goals.toArray(),
+    db.snapshots.toArray(),
+    db.blocks.toArray(),
+    db.profiles.toArray(),
+    db.caseFiles.toArray(),
   ])
   return {
     version: 2,
@@ -214,6 +219,11 @@ export async function buildBackupBundle() {
       actions,
       insights,
       tasks,
+      goals,
+      snapshots,
+      blocks,
+      profiles,
+      caseFiles,
     },
   }
 }
