@@ -80,6 +80,8 @@ export interface Profile {
   clientName?: string
   /** 目标岗位 */
   targetRole?: string
+  /** 已完成的交付物（交付包核对清单，存交付物 id） */
+  deliverables?: string[]
   note?: string
   createdAt: string
   updatedAt: string
@@ -95,7 +97,8 @@ export interface CaseFile {
   id: string
   caseId: string
   name: string
-  kind: 'resume' | 'jd' | 'company' | 'doc' | 'other'
+  /** resume/jd/company=客户材料；doc=过程文档（解码表/诊断表/追问清单）；checklist=自检包；resumeDraft=简历稿（多版本） */
+  kind: 'resume' | 'jd' | 'company' | 'doc' | 'checklist' | 'resumeDraft' | 'other'
   /** 提取出的全文（docx/pdf 自动提取，txt/md 原样） */
   text: string
   createdAt: string

@@ -30,6 +30,7 @@ export interface SaveProfileInput {
   status?: Profile['status']
   clientName?: string
   targetRole?: string
+  deliverables?: string[]
 }
 
 export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
@@ -42,6 +43,7 @@ export async function saveProfile(input: SaveProfileInput): Promise<Profile> {
     status: input.status ?? existing?.status ?? '进行中',
     clientName: input.clientName ?? existing?.clientName,
     targetRole: input.targetRole ?? existing?.targetRole,
+    deliverables: input.deliverables ?? existing?.deliverables,
     note: input.note?.trim() || existing?.note,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
@@ -58,6 +60,18 @@ export async function listProfiles(): Promise<Profile[]> {
     .map(normalizeProfile)
     .filter((p) => p.deletedAt === null)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+/** 勾选/取消一件交付物（事务化读改写——连点不互相覆盖，复盘 1.1） */
+export async function toggleProfileDeliverable(id: string, deliverableId: string): Promise<void> {
+  await db.transaction('rw', db.profiles, async () => {
+    const raw = await db.profiles.get(id)
+    if (!raw || raw.deletedAt) return
+    const p = normalizeProfile(raw)
+    const cur = p.deliverables ?? []
+    const next = cur.includes(deliverableId) ? cur.filter((x) => x !== deliverableId) : [...cur, deliverableId]
+    await db.profiles.put({ ...p, deliverables: next, updatedAt: new Date().toISOString() })
+  })
 }
 
 /** 软删除对象；已挂的数据块保留（profileId 置空回到"未归类"）；案例文件随案例一并软删除（同一回收粒度） */

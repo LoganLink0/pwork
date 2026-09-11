@@ -9,13 +9,15 @@ import type { CaseFile } from '../types/models'
 
 export const CASE_FILE_SCHEMA_VERSION = 1
 
-export type CaseFileKind = 'resume' | 'jd' | 'company' | 'doc' | 'other'
+export type CaseFileKind = CaseFile['kind']
 
 export const CASE_KIND_LABEL: Record<CaseFileKind, string> = {
   resume: '客户简历',
   jd: '岗位 JD',
   company: '公司资料',
   doc: '过程文档',
+  checklist: '自检包',
+  resumeDraft: '简历稿',
   other: '其他材料',
 }
 

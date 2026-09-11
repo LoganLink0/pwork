@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { listProfiles, saveProfile, softDeleteProfile } from './profilesRepo'
+import { listProfiles, saveProfile, softDeleteProfile, toggleProfileDeliverable } from './profilesRepo'
 import { listBlocks, saveBlock } from './blocksRepo'
 import { addCaseFile, listCaseFiles } from './caseFilesRepo'
 import { db } from './schema'
@@ -23,6 +23,25 @@ describe('profilesRepo', () => {
     expect(updated?.status).toBe('已交付')
     expect(updated?.clientName).toBe('张三')
     expect(updated?.targetRole).toBe('信贷岗')
+  })
+
+  it('更新保留未传字段；交付物清单可整体替换', async () => {
+    const p1 = await saveProfile({ name: '王五 · 运营岗', kind: '简历辅导', deliverables: ['resume-final'] })
+    // 未传 deliverables → 保留
+    await saveProfile({ id: p1.id, name: p1.name, status: '已交付' })
+    expect((await listProfiles()).find((p) => p.id === p1.id)?.deliverables).toEqual(['resume-final'])
+    // 传新清单 → 整体替换
+    await saveProfile({ id: p1.id, name: p1.name, deliverables: ['resume-final', 'diagnosis'] })
+    expect((await listProfiles()).find((p) => p.id === p1.id)?.deliverables).toEqual(['resume-final', 'diagnosis'])
+  })
+
+  it('交付物勾选事务化：同一批次连点 3 件全部落库（复盘 1.1 竞态回归）', async () => {
+    const p = await saveProfile({ name: '连点案例', kind: '简历辅导' })
+    await Promise.all([toggleProfileDeliverable(p.id, 'resume-final'), toggleProfileDeliverable(p.id, 'diagnosis'), toggleProfileDeliverable(p.id, 'star')])
+    expect((await listProfiles()).find((x) => x.id === p.id)?.deliverables?.sort()).toEqual(['diagnosis', 'resume-final', 'star'])
+    // 再勾一次同名件 → 取消
+    await toggleProfileDeliverable(p.id, 'resume-final')
+    expect((await listProfiles()).find((x) => x.id === p.id)?.deliverables?.sort()).toEqual(['diagnosis', 'star'])
   })
 
   it('软删除案例：数据块回到未归类、案例文件一并软删除（备份可找回）', async () => {
