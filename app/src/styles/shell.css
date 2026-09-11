@@ -1071,3 +1071,66 @@ button.nav-item {
   .tiles { grid-template-columns: repeat(2, 1fr); }
   .module-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ------------------------------ 案例工作台 · 分步工作区 ------------------------------ */
+.case-layout-wrap {
+  max-width: 1400px;
+}
+.case-layout {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+.case-rail {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.case-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+}
+.case-rail-item:hover { background: var(--surface-2); }
+.case-rail-item.active { background: var(--surface-2); font-weight: 600; }
+.case-dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  background: var(--card);
+}
+.case-dot.done {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.case-rail-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.case-workarea { min-width: 0; }
+.case-workarea .set-card { margin-bottom: var(--sp-4); }
+
+@media (max-width: 900px) {
+  .case-layout { grid-template-columns: 1fr; gap: var(--sp-3); }
+  .case-rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .case-rail-item { flex: none; }
+  .case-rail-sep { display: none; }
+}
