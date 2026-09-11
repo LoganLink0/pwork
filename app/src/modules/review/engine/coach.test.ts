@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { LlmCoach, parseStringArray, RuleBasedCoach, getCoach, loadCoachConfig } from './coach'
+import { LlmCoach, llmConfigFrom, llmConfigured, parseStringArray, RuleBasedCoach, getCoach, loadCoachConfig } from './coach'
 import type { CoachContext } from './coach'
 
 const ctx: CoachContext = {
@@ -85,5 +85,32 @@ describe('LLM 教练（BYOK）', () => {
     expect(getCoach().id).toBe('rule')
     localStorage.setItem('fupan-coach', JSON.stringify(cfg))
     expect(getCoach(loadCoachConfig()).id).toBe('llm')
+  })
+})
+
+describe('本地网关模式（Key 在网关进程，浏览器侧无 Key）', () => {
+  it('llmConfigured：网关模式算已配置，直连无 Key 算未配置', () => {
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true }))
+    expect(loadCoachConfig().mode).toBe('llm')
+    expect(llmConfigured()).toBe(true)
+
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', apiKey: '' }))
+    expect(llmConfigured()).toBe(false)
+
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', apiKey: 'sk-real' }))
+    expect(llmConfigured()).toBe(true)
+  })
+
+  it('llmConfigFrom：网关模式用 sentinel Key + 网关 /v1 地址，直连用原样配置', () => {
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true, gatewayUrl: 'http://127.0.0.1:8788', model: 'deepseek-chat' }))
+    const g = llmConfigFrom(loadCoachConfig())
+    expect(g.apiKey).toBe('pwork-gateway')
+    expect(g.baseURL).toBe('http://127.0.0.1:8788/v1')
+    expect(g.model).toBe('deepseek-chat')
+
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', apiKey: 'sk-real', baseURL: 'https://api.deepseek.com', model: 'deepseek-chat' }))
+    const d = llmConfigFrom(loadCoachConfig())
+    expect(d.apiKey).toBe('sk-real')
+    expect(d.baseURL).toBe('https://api.deepseek.com')
   })
 })

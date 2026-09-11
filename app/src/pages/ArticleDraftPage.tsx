@@ -12,11 +12,11 @@ import {
 } from '../engine/articleWriter'
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { exportArticleDocx, ARTICLE_VIEWS, type ArticleView } from '../engine/articleWriter'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 
-const coachReady = () => Boolean(loadCoachConfig().apiKey)
+const coachReady = llmConfigured
 
 /** 文章草稿（输出 O4 实装）：速记与洞察按周期聚合 → AI 整理骨架（人逐节修改）→ 导出 Markdown */
 export function ArticleDraftPage() {

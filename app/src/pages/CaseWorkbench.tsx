@@ -34,14 +34,14 @@ import {
 } from '../engine/resumeWorkflow'
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { todayLocal } from '../engine/datetime'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 import { ARTICLE_VIEWS, ARTICLE_SYSTEM_PROMPT, buildArticleUserPrompt, getArticleView, parseArticle, articleToMarkdown, exportArticleDocx, type ArticleDraft, type ArticleView } from '../engine/articleWriter'
 import type { CaseFile, Profile } from '../types/models'
 import { extractMaterial } from '../engine/pptWriter'
 
-const coachReady = () => Boolean(loadCoachConfig().apiKey)
+const coachReady = llmConfigured
 
 const KIND_ORDER: CaseFileKind[] = ['resume', 'jd', 'checklist', 'company', 'other']
 

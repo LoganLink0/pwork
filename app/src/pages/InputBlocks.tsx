@@ -16,12 +16,12 @@ import {
 } from '../engine/articleWriter'
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 import { parseDecodeBlock, parseDiagnosisBlock, renderDecodeReportHtml, renderDiagnosisReportHtml } from '../engine/deliverables'
 import { todayLocal } from '../engine/datetime'
 
-const coachReady = () => Boolean(loadCoachConfig().apiKey)
+const coachReady = llmConfigured
 
 /**
  * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。

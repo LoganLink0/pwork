@@ -13,9 +13,9 @@ import {
 } from '../engine/pptWriter'
 import { downloadFile } from '../db/repo'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 
-const coachReady = () => Boolean(loadCoachConfig().apiKey)
+const coachReady = llmConfigured
 
 /** PPT 撰写（输出）：从零起草一份 PPT——主题 + 材料 → AI 大纲（逐页审核修改）→ 可编辑 .pptx。
  *  调研对象材料的分析在 输入 → 外部数据 的对象工作台里做（分工：那里管材料与分析，这里管从零成稿）。 */

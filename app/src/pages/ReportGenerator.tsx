@@ -8,10 +8,10 @@ import { exportReportPptx } from '../engine/pptFile'
 import { buildReportSlides } from '../engine/pptExport'
 import type { ReportSnapshot } from '../types/models'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { todayLocal } from '../engine/datetime'
 
-const coachReady = () => Boolean(loadCoachConfig().apiKey)
+const coachReady = llmConfigured
 
 /** 报告生成器（输出 O1）：素材自动汇总（含输入模块的外部数据块）→ Markdown/HTML 成稿 → 下载/朗读/AI 润色 */
 export function ReportGenerator() {

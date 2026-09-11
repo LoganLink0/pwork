@@ -64,6 +64,11 @@ export function loadCoachConfig(): CoachConfig {
   }
 }
 
+/** AI 是否已配置：mode 归一化后为 'llm' 即成立——直连模式看 Key，本地网关模式 Key 在网关进程里（浏览器侧没有） */
+export function llmConfigured(): boolean {
+  return loadCoachConfig().mode === 'llm'
+}
+
 export function saveCoachConfig(cfg: CoachConfig): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(cfg))

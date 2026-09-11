@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { searchAll, KIND_LABEL, type SearchHit, type SearchKind } from '../engine/searchAll'
 import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom } from '../modules/review/engine/coach'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 
 /**
@@ -20,7 +20,7 @@ export function Process() {
   const [sources, setSources] = useState<SearchHit[]>([])
   const [askState, setAskState] = useState<'idle' | 'asking' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
-  const coachReady = Boolean(loadCoachConfig().apiKey)
+  const coachReady = llmConfigured()
   const timer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
