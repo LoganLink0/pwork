@@ -60,7 +60,7 @@ export async function listProfiles(): Promise<Profile[]> {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-/** 软删除对象；已挂的数据块保留（profileId 置空回到"未归类"） */
+/** 软删除对象；已挂的数据块保留（profileId 置空回到"未归类"）；案例文件随案例一并软删除（同一回收粒度） */
 export async function softDeleteProfile(id: string): Promise<void> {
   const raw = await db.profiles.get(id)
   if (!raw || raw.deletedAt) return
@@ -69,5 +69,9 @@ export async function softDeleteProfile(id: string): Promise<void> {
   const blocks = await db.blocks.where('profileId').equals(id).toArray()
   for (const b of blocks) {
     await db.blocks.put({ ...b, profileId: undefined, updatedAt: now })
+  }
+  const files = await db.caseFiles.where('caseId').equals(id).toArray()
+  for (const f of files) {
+    if (!f.deletedAt) await db.caseFiles.put({ ...f, deletedAt: now, updatedAt: now })
   }
 }

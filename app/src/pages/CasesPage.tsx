@@ -8,7 +8,7 @@ const STATUS_LIST: ProfileStatus[] = ['进行中', '已交付', '已收款']
 
 /** 案例库（案例模块）：客户 × 目标岗位为一个案例。单机自用版——协作模式留待二期。 */
 export function CasesPage() {
-  const { profiles, load: loadProfiles, save: saveProfile } = useProfiles()
+  const { profiles, load: loadProfiles, save: saveProfile, remove: removeProfile } = useProfiles()
   const blocks = useBlocks((s) => s.blocks)
   const loadBlocks = useBlocks((s) => s.load)
   const [name, setName] = useState('')
@@ -60,6 +60,16 @@ export function CasesPage() {
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
+      <button
+        type="button"
+        className="mini-btn"
+        data-testid={`case-delete-${p.id}`}
+        onClick={() => {
+          if (window.confirm(`删除案例「${p.name}」？\n外部数据里挂在它下面的数据块会回到"未归类"；案例文件随案例一起删除（软删除，备份中可找回）。`)) void removeProfile(p.id)
+        }}
+      >
+        删除
+      </button>
     </div>
   )
 

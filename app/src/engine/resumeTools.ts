@@ -123,10 +123,3 @@ export function buildRewritePrompt(raw: string, decodeText: string | null): stri
     .filter(Boolean)
     .join('\n')
 }
-
-/** 解码表/诊断表的文本 → 存为数据块时的默认标题 */
-export function caseBlockTitle(kind: 'decode' | 'diagnosis'): string {
-  const d = new Date()
-  const stamp = `${d.getMonth() + 1}月${d.getDate()}日`
-  return kind === 'decode' ? `岗位解码表 · ${stamp}` : `匹配度诊断 · ${stamp}`
-}

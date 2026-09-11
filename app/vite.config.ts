@@ -36,5 +36,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // 整树渲染 <App /> 的集成测试在全量并发时单条可超 5s（单跑 <1s），默认超时会误报
+    testTimeout: 15000,
   },
 })

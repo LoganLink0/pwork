@@ -59,8 +59,10 @@ export function CaseWorkbench() {
   const [decodeBusy, setDecodeBusy] = useState(false)
   const [decodeErr, setDecodeErr] = useState('')
   const [jdPaste, setJdPaste] = useState('')
+  const [manualDecode, setManualDecode] = useState('')
   const [diagBusy, setDiagBusy] = useState(false)
   const [diagErr, setDiagErr] = useState('')
+  const [manualDiag, setManualDiag] = useState('')
   const [rwRaw, setRwRaw] = useState('')
   const [rwOut, setRwOut] = useState('')
   const [rwBusy, setRwBusy] = useState(false)
@@ -205,6 +207,7 @@ export function CaseWorkbench() {
   }
 
   const nonDocFiles = files.filter((f) => f.kind !== 'doc')
+  const jdFiles = files.filter((f) => f.kind === 'jd')
   const decodeDoc = files.find((f) => f.kind === 'doc' && f.name.includes('岗位解码表'))
   const diagDoc = files.find((f) => f.kind === 'doc' && f.name.includes('匹配度诊断'))
 
@@ -309,8 +312,27 @@ export function CaseWorkbench() {
       {/* 二、岗位解码 */}
       <div className="set-card">
         <h2>二、岗位解码（JD → P0/P1/P2 + 隐性能力词）</h2>
-        <div className="desc">解码结果存为本案例的过程文档，后续匹配诊断和条目改写都以它为准。</div>
+        <div className="desc">解码结果存为本案例的过程文档，后续匹配诊断和条目改写都以它为准。没有 AI 也能用：把自己整理好的解码表手动填进去。</div>
         <div className="set-body">
+          {jdFiles.length > 0 && (
+            <div className="set-row">
+              <label>用案例内的 JD 文件</label>
+              <select
+                className="lane-select"
+                value=""
+                aria-label="选择案例内的 JD 文件填入"
+                onChange={(e) => {
+                  const f = jdFiles.find((x) => x.id === e.target.value)
+                  if (f) setJdPaste(f.text)
+                }}
+              >
+                <option value="">选一份填入下方…</option>
+                {jdFiles.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="set-row" style={{ alignItems: 'flex-start' }}>
             <textarea
               className="input"
@@ -323,10 +345,40 @@ export function CaseWorkbench() {
             />
           </div>
           <div className="set-row">
-            <button type="button" className="btn-primary" disabled={!jdPaste.trim() || decodeBusy} onClick={() => void runDecode(jdPaste)}>
+            <button type="button" className="btn-primary" disabled={!jdPaste.trim() || decodeBusy || !coachReady()} onClick={() => void runDecode(jdPaste)}>
               {decodeBusy ? '⟳ 解码中…' : '🤖 AI 解码此 JD'}
             </button>
+            {!coachReady() && (
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置；或在下方手动填写。
+              </span>
+            )}
             {decodeErr && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{decodeErr}</span>}
+          </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <details style={{ flex: 1 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>不用 AI：手动填写解码表</summary>
+              <textarea
+                className="input"
+                style={{ width: '100%', marginTop: 'var(--sp-2)' }}
+                rows={6}
+                placeholder={'照手册的解码表格式写，例如：\nP0 必须证明：\n- 3 年以上 B 端销售经验\nP1 潜力项：\n- 金融行业客户资源\nP2 加分项：\n- 有团队管理经验\n隐性能力词：抗压、跨部门协调'}
+                value={manualDecode}
+                aria-label="手动填写岗位解码表"
+                onChange={(e) => setManualDecode(e.target.value)}
+              />
+              <div className="set-row" style={{ marginTop: 'var(--sp-2)' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={!manualDecode.trim()}
+                  data-testid="manual-decode-save"
+                  onClick={() => void saveDoc(`岗位解码表 · ${todayLocal()}`, manualDecode.trim()).then(() => setManualDecode(''))}
+                >
+                  保存为过程文档
+                </button>
+              </div>
+            </details>
           </div>
           {decodeDoc && (
             <div className="set-row" style={{ alignItems: 'flex-start' }}>
@@ -342,13 +394,46 @@ export function CaseWorkbench() {
       {/* 三、匹配度诊断 */}
       <div className="set-card">
         <h2>三、匹配度诊断（逐条对照打分）</h2>
-        <div className="desc">把案例内全部材料与解码表逐条对照：每条要求找证据、打 0-5 分、指出缺口。素材缺什么会如实标注，不编造。</div>
+        <div className="desc">把案例内全部材料与解码表逐条对照：每条要求找证据、打 0-5 分、指出缺口。素材缺什么会如实标注，不编造。没有 AI 也能用：自己对照打分后手动填进去。</div>
         <div className="set-body">
           <div className="set-row">
-            <button type="button" className="btn-primary" disabled={diagBusy || nonDocFiles.length === 0} onClick={() => void runDiagnose()}>
+            <button type="button" className="btn-primary" disabled={diagBusy || nonDocFiles.length === 0 || !coachReady()} onClick={() => void runDiagnose()}>
               {diagBusy ? '⟳ 诊断中…' : '🤖 AI 匹配度诊断'}
             </button>
+            {nonDocFiles.length === 0 && (
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>先在第一段添加客户材料（简历 / 自检包）。</span>
+            )}
+            {!coachReady() && nonDocFiles.length > 0 && (
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置；或在下方手动填写。
+              </span>
+            )}
             {diagErr && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{diagErr}</span>}
+          </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <details style={{ flex: 1 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>不用 AI：手动填写诊断表</summary>
+              <textarea
+                className="input"
+                style={{ width: '100%', marginTop: 'var(--sp-2)' }}
+                rows={6}
+                placeholder={'一条要求一行，例如：\n3 年以上 B 端销售经验 | 4 分 | 证据：某某项目 2021-2024 | 缺口：无\n金融行业客户资源 | 1 分 | 证据：无 | 缺口：需补充行业接触经历'}
+                value={manualDiag}
+                aria-label="手动填写匹配度诊断表"
+                onChange={(e) => setManualDiag(e.target.value)}
+              />
+              <div className="set-row" style={{ marginTop: 'var(--sp-2)' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={!manualDiag.trim()}
+                  data-testid="manual-diag-save"
+                  onClick={() => void saveDoc(`匹配度诊断 · ${todayLocal()}`, manualDiag.trim()).then(() => setManualDiag(''))}
+                >
+                  保存为过程文档
+                </button>
+              </div>
+            </details>
           </div>
           {diagDoc && (
             <div className="set-row" style={{ alignItems: 'flex-start' }}>
@@ -378,9 +463,14 @@ export function CaseWorkbench() {
             />
           </div>
           <div className="set-row">
-            <button type="button" className="btn-ghost" disabled={!rwRaw.trim() || rwBusy} onClick={() => void runRewrite()}>
+            <button type="button" className="btn-ghost" disabled={!rwRaw.trim() || rwBusy || !coachReady()} onClick={() => void runRewrite()}>
               {rwBusy ? '⟳ 改写中…' : '✍ AI 改写条目'}
             </button>
+            {!coachReady() && (
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置；不用 AI 时照手册"问题-行动-结果"三段自己写。
+              </span>
+            )}
           </div>
           {rwOut && (
             <div className="set-row" style={{ alignItems: 'flex-start' }}>
