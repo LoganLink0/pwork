@@ -15,6 +15,8 @@ import { PLACEHOLDER } from './content/placeholder'
 
 // 代码分割：壳 + 首页保持轻量，其余页面按路由懒加载（AD2：模块为懒加载子路由）
 const Notes = lazy(() => import('./pages/Notes').then((m) => ({ default: m.Notes })))
+const CasesPage = lazy(() => import('./pages/CasesPage').then((m) => ({ default: m.CasesPage })))
+const CaseWorkbench = lazy(() => import('./pages/CaseWorkbench').then((m) => ({ default: m.CaseWorkbench })))
 const NotesEmptyPane = lazy(() => import('./pages/Notes').then((m) => ({ default: m.NotesEmptyPane })))
 const NoteEditor = lazy(() => import('./pages/NoteEditor').then((m) => ({ default: m.NoteEditor })))
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
@@ -113,6 +115,8 @@ export default function App() {
                   <Route path="/input/sources" element={<Sources />} />
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/input/blocks" element={<InputBlocks />} />
+                  <Route path="/cases" element={<CasesPage />} />
+                  <Route path="/cases/:id" element={<CaseWorkbench />} />
                   <Route path="/process" element={<Process />} />
                   <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
                   <Route path="/output" element={<Output />} />

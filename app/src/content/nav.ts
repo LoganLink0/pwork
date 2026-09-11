@@ -12,7 +12,7 @@ export interface NavChild {
 }
 
 export interface NavModule {
-  key: 'input' | 'process' | 'output' | 'review'
+  key: 'input' | 'process' | 'output' | 'review' | 'cases'
   icon: string
   label: string
   status: 'active' | 'planned' | 'built'
@@ -45,6 +45,7 @@ export const MODULE_NAV: NavModule[] = [
   },
   { key: 'process', icon: '⚗', label: '处理', status: 'active', mark: 'mark-process', to: '/process' },
   { key: 'output', icon: '📤', label: '输出', status: 'active', mark: 'mark-output', to: '/output' },
+  { key: 'cases', icon: '📋', label: '案例', status: 'active', mark: 'mark-workspace', to: '/cases' },
   {
     key: 'review',
     icon: '◐',
@@ -71,6 +72,8 @@ export const PAGE_META: Record<string, [string, string, string]> = {
   '/input/sources': ['信源', '输入 · 信息采集', 'mark-input'],
   '/input/items': ['条目库', '输入 · 信息采集', 'mark-input'],
   '/input/blocks': ['外部数据', '输入 · 外部数据', 'mark-input'],
+  '/cases': ['案例库', '案例 · 库', 'mark-workspace'],
+  '/cases/:id': ['案例工作台', '案例 · 工作台', 'mark-workspace'],
   '/process': ['处理', '模块 · 工具箱与检索', 'mark-process'],
   '/process/t': ['工具', '模块 · 处理工具箱', 'mark-process'],
   '/output': ['输出', '模块 · 交付与成稿', 'mark-output'],
