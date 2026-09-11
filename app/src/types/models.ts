@@ -95,7 +95,7 @@ export interface CaseFile {
   id: string
   caseId: string
   name: string
-  kind: 'resume' | 'jd' | 'company' | 'other'
+  kind: 'resume' | 'jd' | 'company' | 'doc' | 'other'
   /** 提取出的全文（docx/pdf 自动提取，txt/md 原样） */
   text: string
   createdAt: string
