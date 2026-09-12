@@ -72,7 +72,8 @@ export function CaseLayout() {
       await refresh()
     },
     callAI: (system, user, maxTokens) =>
-      chatCompletion(llmConfigFrom(loadLlmSettings()), system, user, { maxTokens, timeoutMs: 90000 }),
+      // 思考型模型（如 glm-4.5-flash）长提示词常见 90s+，150s 覆盖诊断这类最大提示词（PWORK 同款坑的第二轮）
+      chatCompletion(llmConfigFrom(loadLlmSettings()), system, user, { maxTokens, timeoutMs: 150000 }),
   }
 
   const steps = sopProgress(files, ctx.checked)
