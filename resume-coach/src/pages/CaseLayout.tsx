@@ -72,8 +72,8 @@ export function CaseLayout() {
       await refresh()
     },
     callAI: (system, user, maxTokens) =>
-      // 思考型模型（如 glm-4.5-flash）长提示词常见 90s+，150s 覆盖诊断这类最大提示词（PWORK 同款坑的第二轮）
-      chatCompletion(llmConfigFrom(loadLlmSettings()), system, user, { maxTokens, timeoutMs: 150000 }),
+      // 思考型模型（glm-4.5-flash）长提示词延迟波动大：诊断这类最大提示词实测可超 150s（E2E 与真实案例各复现一次），240s 覆盖
+      chatCompletion(llmConfigFrom(loadLlmSettings()), system, user, { maxTokens, timeoutMs: 240000 }),
   }
 
   const steps = sopProgress(files, ctx.checked)
