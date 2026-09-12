@@ -72,12 +72,12 @@ function PaletteDialog() {
         run: () => { close(); navigate('/review/new') },
       })
     }
-    if (match('新建案例')) {
+    if (match('简历辅导') || match('案例')) {
       actions.push({
         key: 'act-case',
         group: '快速动作',
-        icon: '＋',
-        label: '新建案例',
+        icon: '→',
+        label: '打开简历辅导应用',
         run: () => { close(); navigate('/cases') },
       })
     }

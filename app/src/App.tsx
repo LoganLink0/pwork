@@ -16,9 +16,6 @@ import { PLACEHOLDER } from './content/placeholder'
 // 代码分割：壳 + 首页保持轻量，其余页面按路由懒加载（AD2：模块为懒加载子路由）
 const Notes = lazy(() => import('./pages/Notes').then((m) => ({ default: m.Notes })))
 const CasesPage = lazy(() => import('./pages/CasesPage').then((m) => ({ default: m.CasesPage })))
-const CaseLayout = lazy(() => import('./pages/cases/CaseLayout').then((m) => ({ default: m.CaseLayout })))
-const CaseIndexRedirect = lazy(() => import('./pages/cases/CaseLayout').then((m) => ({ default: m.CaseIndexRedirect })))
-const CaseStepRoute = lazy(() => import('./pages/cases/CaseLayout').then((m) => ({ default: m.CaseStepRoute })))
 const NotesEmptyPane = lazy(() => import('./pages/Notes').then((m) => ({ default: m.NotesEmptyPane })))
 const NoteEditor = lazy(() => import('./pages/NoteEditor').then((m) => ({ default: m.NoteEditor })))
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
@@ -118,10 +115,6 @@ export default function App() {
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/input/blocks" element={<InputBlocks />} />
                   <Route path="/cases" element={<CasesPage />} />
-                  <Route path="/cases/:id" element={<CaseLayout />}>
-                    <Route index element={<CaseIndexRedirect />} />
-                    <Route path=":step" element={<CaseStepRoute />} />
-                  </Route>
                   <Route path="/process" element={<Process />} />
                   <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
                   <Route path="/output" element={<Output />} />

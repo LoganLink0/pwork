@@ -25,15 +25,16 @@ const coachReady = llmConfigured
 
 /**
  * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。
- * 数据块按「对象」归组（对象即案例库里的案例，在那里新建/删除）；对象下可发起分析（选视角 + 用途），产出交付文档（Markdown / Word）。
- * 简历辅导的岗位解码 / 匹配诊断 / 条目改写在案例工作台（/cases/:id）——本页只管数据块。
+ * 数据块按「调研对象」归组（对象在此新建/删除，用于分组和发起分析）；简历辅导已独立为 resume-coach 应用（侧边栏「案例」入口）。
  */
 export function InputBlocks() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
-  const { profiles, load: loadProfiles } = useProfiles()
+  const { profiles, load: loadProfiles, save: saveProfile, remove: removeProfile } = useProfiles()
   const [editing, setEditing] = useState<{ id?: string; title: string; content: string; profileId?: string; usage?: 'internal' | 'client' } | null>(null)
   const [importMsg, setImportMsg] = useState('')
   const [filter, setFilter] = useState<'all' | 'none' | string>('all')
+  const [newProfileName, setNewProfileName] = useState('')
+  const [newProfileKind, setNewProfileKind] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const [reportPreview, setReportPreview] = useState<{ html: string } | null>(null)
   const reportFrame = useRef<HTMLIFrameElement>(null)
@@ -76,6 +77,14 @@ export function InputBlocks() {
     createdAt: b.updatedAt,
     sourceLabel: '外部材料',
   }))
+
+  const addProfile = async () => {
+    if (!newProfileName.trim()) return
+    const p = await saveProfile({ name: newProfileName, kind: newProfileKind })
+    setNewProfileName('')
+    setNewProfileKind('')
+    setFilter(p.id)
+  }
 
   const generateAnalysis = async () => {
     if (aiBusy || analysisMaterials.length === 0) return
@@ -125,6 +134,58 @@ export function InputBlocks() {
       </div>
 
       <div className="set-card">
+        <h2>调研对象</h2>
+        <div className="desc">一家公司、一个客户……数据块挂在对象下面，分析按对象发起。标签随意填（客户 / 目标公司 / 供应商）。</div>
+        <div className="set-body">
+          <div className="set-row">
+            <input
+              className="input"
+              style={{ maxWidth: 260 }}
+              placeholder="对象名称（如：XX 公司售前调研）"
+              value={newProfileName}
+              aria-label="新调研对象名称"
+              onChange={(e) => setNewProfileName(e.target.value)}
+            />
+            <input
+              className="input"
+              style={{ maxWidth: 140 }}
+              placeholder="标签（可选）"
+              value={newProfileKind}
+              aria-label="新调研对象标签"
+              onChange={(e) => setNewProfileKind(e.target.value)}
+            />
+            <button type="button" className="btn-ghost" disabled={!newProfileName.trim()} onClick={() => void addProfile()}>
+              ＋ 新建对象
+            </button>
+            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+              简历辅导类客户请用独立应用：<Link to="/cases">案例入口</Link>
+            </span>
+          </div>
+          {profiles.map((p) => {
+            const count = blocks.filter((b) => b.profileId === p.id).length
+            return (
+              <div className="set-row" key={p.id}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>{p.name}</span>
+                  {p.kind && <span className="val" style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{p.kind}</span>}
+                  <span className="val" style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{count} 份材料</span>
+                </div>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  onClick={() => {
+                    if (window.confirm(`删除对象「${p.name}」？它名下的数据块会回到"未归类"，不会丢失。`)) void removeProfile(p.id)
+                  }}
+                >
+                  删除
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="set-card">
         <h2>材料（数据块）</h2>
         <div className="desc">一行一条，"键: 值"形态渲染成指标行，其余为文字。用途标"给客户"后，可在交付文档整理时优先参考。</div>
         <div className="set-body">
@@ -140,16 +201,6 @@ export function InputBlocks() {
                 {p.name} {blocks.filter((b) => b.profileId === p.id).length}
               </button>
             ))}
-          </div>
-          <div className="set-row" style={{ flexWrap: 'wrap' }}>
-            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-              对象（一家公司、一个客户）就是案例——在 <Link to="/cases">案例库</Link> 新建或删除。
-            </span>
-            {analysisScope && (
-              <Link to={`/cases/${analysisScope.id}`} className="mini-btn" data-testid="open-case-workbench">
-                打开「{analysisScope.name}」的案例工作台 →
-              </Link>
-            )}
           </div>
           {editing === null && visible.length === 0 && (
             <div className="notice">没有符合条件的材料——在下方添加或导入文件。</div>

@@ -72,8 +72,7 @@ export const PAGE_META: Record<string, [string, string, string]> = {
   '/input/sources': ['信源', '输入 · 信息采集', 'mark-input'],
   '/input/items': ['条目库', '输入 · 信息采集', 'mark-input'],
   '/input/blocks': ['外部数据', '输入 · 外部数据', 'mark-input'],
-  '/cases': ['案例库', '案例 · 库', 'mark-workspace'],
-  '/cases/:id': ['案例工作台', '案例 · 工作台', 'mark-workspace'],
+  '/cases': ['简历辅导（独立应用）', '案例 · 跳转入口', 'mark-workspace'],
   '/process': ['处理', '模块 · 工具箱与检索', 'mark-process'],
   '/process/t': ['工具', '模块 · 处理工具箱', 'mark-process'],
   '/output': ['输出', '模块 · 交付与成稿', 'mark-output'],
@@ -106,26 +105,9 @@ export const BOTTOM_NAV = [
   { to: '/settings', icon: '⋯', label: '更多' },
 ]
 
-/** 案例工作台分步路由的步骤名（/cases/:id/:step 面包屑用） */
-export const CASE_STEP_LABEL: Record<string, string> = {
-  materials: '文件与材料',
-  decode: '岗位解码',
-  interview: '访谈追问',
-  diagnose: '匹配诊断',
-  rewrite: '条目改写',
-  draft: '简历稿',
-  analysis: '分析草稿',
-  delivery: '交付核对',
-}
-
-/** 面包屑：精确匹配优先，其次案例分步路由，否则按前缀最长匹配（覆盖 /input/notes/:id 等详情路由） */
+/** 面包屑：精确匹配优先，否则按前缀最长匹配（覆盖 /input/notes/:id 等详情路由） */
 export function crumbFor(pathname: string): [string, string, string] {
   if (PAGE_META[pathname]) return PAGE_META[pathname]
-  if (pathname.startsWith('/cases/')) {
-    const step = pathname.split('/')[3]
-    if (step && CASE_STEP_LABEL[step]) return [CASE_STEP_LABEL[step], '案例 · 工作台', 'mark-workspace']
-    return ['案例工作台', '案例 · 工作台', 'mark-workspace']
-  }
   const hit = Object.keys(PAGE_META)
     .filter((p) => p !== '/' && pathname.startsWith(p))
     .sort((a, b) => b.length - a.length)[0]
