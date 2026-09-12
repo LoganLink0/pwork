@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 /**
  * 简历辅导跳转入口（PWORK 只做入口，不承载简历辅导功能）。
- * 简历辅导已独立为 resume-coach 项目（本仓库 resume-coach/ 目录，端口 5274）。
+ * 简历辅导已独立为 resume-coach 项目（独立目录，端口 5274）。
  */
 export function CasesPage() {
   const [up, setUp] = useState<boolean | null>(null)
@@ -40,7 +40,7 @@ export function CasesPage() {
             {up === false && (
               <>
                 <span className="val" style={{ color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>应用未在运行。</span>
-                <span className="val" style={{ fontSize: 'var(--fs-sm)' }}>启动方式：终端进入本仓库 <code>resume-coach</code> 目录，首次先 <code>npm install</code>，然后 <code>npm run dev</code>，浏览器打开 <code>http://127.0.0.1:5274</code>。</span>
+                <span className="val" style={{ fontSize: 'var(--fs-sm)' }}>启动方式：终端进入 resume-coach 项目目录，首次先 <code>npm install</code>，然后 <code>npm run dev</code>，浏览器打开 <code>http://127.0.0.1:5274</code>。项目目录位置与迁移说明见其「交接文档.md」。</span>
               </>
             )}
             {up === null && <span className="val" style={{ fontSize: 'var(--fs-sm)' }}>正在检测应用是否在运行……</span>}

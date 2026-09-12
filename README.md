@@ -6,7 +6,7 @@
 ## 快速开始（30 秒）
 
 1. **使用**：双击 [PWORK-Launcher.exe](./PWORK-Launcher.exe)（或 `app` 目录下 `npm run dev`）→ 浏览器自动打开；首次进入按引导操作，首页可一键导入 13 个按主题精选、实测可用的推荐信源（AI/云计算/架构/数据治理/PM/政策）
-2. **简历辅导（独立应用）**：`resume-coach` 目录下 `npm install`（首次）+ `npm run dev` → `http://127.0.0.1:5274`；也可从 PWORK 侧边栏「案例」入口打开（内含启动指引）
+2. **简历辅导（独立应用）**：进入 resume-coach 项目目录（随仓库提供于 `resume-coach/`，亦可迁出为独立目录），`npm install`（首次）+ `npm run dev` → `http://127.0.0.1:5274`；也可从 PWORK 侧边栏「案例」入口打开（内含启动指引）。交接与迁移说明见 [resume-coach/交接文档.md](./resume-coach/交接文档.md)
 3. **可选上云**（7×24 自动抓取 + AI 筛选，免费档 ¥0/月）：双击 `worker\部署向导.cmd`，按中文提示走完（含 Cloudflare 注册引导），再把输出的地址和 Token 填回工作台
 4. 前置软件仅 Node.js ≥ 20；所有命令都在**本机终端**于对应目录内执行（详见 [app/README](./app/README.md)、[resume-coach/README](./resume-coach/README.md) 与 [worker/README](./worker/README.md)）
 5. **可选更安全的 AI Key**：app 目录运行 `npm run gateway` 启动本地网关（Key 只存本机 app/.env.local，浏览器接触不到），PWORK 与 resume-coach 的 AI 设置都可选「本地网关」
