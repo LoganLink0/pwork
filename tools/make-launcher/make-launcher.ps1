@@ -151,7 +151,22 @@ $sed = @(
 
 # ---------- 打包（直接调 iexpress；PowerShell 无 Git Bash 的路径转换问题） ----------
 $target = Join-Path $projectDir "$name-Launcher.exe"
-if (Test-Path $target) { Remove-Item $target -Force }
+# 目标可能被运行中的旧实例锁定：重试，仍失败则改写 .new.exe 由用户手动替换
+$attempt = 0
+while ($true) {
+  try {
+    if (Test-Path $target) { Remove-Item $target -Force -ErrorAction Stop }
+    break
+  } catch {
+    $attempt++
+    if ($attempt -ge 4) {
+      $target = Join-Path $projectDir "$name-Launcher.new.exe"
+      Write-Host "目标被占用，改写到 $target（替换旧 exe 后请重命名为正式名）"
+      break
+    }
+    Start-Sleep -Seconds 2
+  }
+}
 $sedPath = Join-Path $tools 'launcher.sed'
 & "$env:SystemRoot\System32\iexpress.exe" /N /Q /M $sedPath | Out-Null
 Start-Sleep -Seconds 2
