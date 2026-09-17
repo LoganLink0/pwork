@@ -1,0 +1,24 @@
+{
+  "projectDir": "E:\\AIPROJECT-GLM\\RESUME",
+  "name": "RESUME",
+  "title": "Resume Coach Launcher",
+  "openUrl": "http://127.0.0.1:5274",
+  "appDirFallback": "",
+  "logPrefix": "launcher",
+  "services": [
+    {
+      "port": 5274,
+      "name": "web",
+      "start": "npx vite --port 5274 --strictPort",
+      "healthPath": "/",
+      "log": "launcher-web.log"
+    },
+    {
+      "port": 5275,
+      "name": "sidecar",
+      "start": "npm run server -- --sidecar-port=5275",
+      "healthPath": "/api/health",
+      "log": "launcher-sidecar.log"
+    }
+  ]
+}
