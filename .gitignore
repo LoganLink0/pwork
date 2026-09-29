@@ -14,3 +14,6 @@ app/.env.local
 app/.env
 .env.local
 .env
+
+# Mimosa 扫描工作目录
+.mimosa/

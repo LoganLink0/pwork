@@ -14,6 +14,8 @@
  */
 
 import { aiConfigFrom, runPipeline, type Env } from './pipeline'
+import { INGEST_MAX_PER_MINUTE, INGEST_MAX_PER_REQUEST, minuteKey, normalizeIngest } from './ingest'
+import { assertPublicHttpUrl, guardedFetch } from './urlGuard'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -91,6 +93,9 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
 
+    // ── 健康检查：开放、无数据（部署向导与启动器探测用） ──
+    if (path === '/api/health') return json({ ok: true, time: new Date().toISOString() })
+
     // ── 写操作：必须鉴权 ──
     if (path === '/api/fetch' && request.method === 'POST') {
       if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
@@ -133,31 +138,32 @@ export default {
           'CREATE TABLE IF NOT EXISTS ingest_blocks (id TEXT PRIMARY KEY, source TEXT NOT NULL DEFAULT \'api\', title TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)',
         ).run()
         await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_ingest_created ON ingest_blocks(created_at)').run()
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS ingest_rate (minute TEXT PRIMARY KEY, n INTEGER NOT NULL)').run()
         ingestEnsured = true
       }
       if (request.method === 'POST') {
-        const body = (await request.json().catch(() => null)) as { blocks?: unknown; title?: unknown; content?: unknown; source?: unknown } | null
-        const raw: Record<string, unknown>[] = Array.isArray(body?.blocks)
-          ? (body!.blocks as Record<string, unknown>[])
-          : body && typeof body === 'object' && body.title !== undefined
-            ? [body]
-            : []
+        // 分钟级限流（D1 计数，AIHOT 做法）：Token 泄漏时把写入敞口压到有界
+        const minute = minuteKey()
+        const row = await env.DB.prepare(
+          'INSERT INTO ingest_rate (minute, n) VALUES (?, 1) ON CONFLICT(minute) DO UPDATE SET n = n + 1 RETURNING n',
+        )
+          .bind(minute)
+          .first<{ n: number }>()
+        const minuteCount = row?.n ?? 1
+        if (minuteCount > INGEST_MAX_PER_MINUTE) {
+          return json({ error: `rate limited：每分钟最多 ${INGEST_MAX_PER_MINUTE} 次推送，请稍后重试` }, 429)
+        }
+        const body = (await request.json().catch(() => null)) as unknown
+        const { blocks, skipped, truncated } = normalizeIngest(body)
         const ids: string[] = []
-        let skipped = 0
-        for (const b of raw) {
-          const title = typeof b.title === 'string' ? b.title.trim().slice(0, 40) : ''
-          const content = typeof b.content === 'string' ? b.content.trim().slice(0, 20000) : ''
-          if (!title || !content) {
-            skipped++
-            continue
-          }
+        for (const b of blocks) {
           const id = `ing_${crypto.randomUUID().slice(0, 13)}`
           await env.DB.prepare('INSERT INTO ingest_blocks (id, source, title, content, created_at) VALUES (?, ?, ?, ?, ?)')
-            .bind(id, String(b.source ?? 'api').slice(0, 40), title, content, new Date().toISOString())
+            .bind(id, b.source, b.title, b.content, new Date().toISOString())
             .run()
           ids.push(id)
         }
-        return json({ accepted: ids.length, ids, skipped })
+        return json({ accepted: ids.length, ids, skipped, truncated, minuteCount })
       }
       const since = url.searchParams.get('since') ?? ''
       const { results } = await env.DB.prepare(
@@ -235,7 +241,9 @@ export default {
         return json({ error: 'invalid json' }, 400)
       }
       if (!Array.isArray(body.messages) || body.messages.length === 0) return json({ error: 'messages required' }, 400)
-      const upstream = await fetch(env.AI_BASE_URL.replace(/\/+$/, '') + '/chat/completions', {
+      const upstreamUrl = env.AI_BASE_URL.replace(/\/+$/, '') + '/chat/completions'
+      assertPublicHttpUrl(upstreamUrl) // AI_BASE_URL 误配置指向内网时拒绝外联
+      const upstream = await guardedFetch(upstreamUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.AI_API_KEY },
         body: JSON.stringify({
@@ -243,14 +251,17 @@ export default {
           messages: body.messages,
           temperature: body.temperature ?? 0.7,
         }),
-      })
+      }, 60_000)
       return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
     }
 
     if (path === '/') {
       return json({
         name: 'pwork-collect',
-        endpoints: ['/api/items?since=&minScore=&ot=', '/api/digest?n=', '/api/sources', '/api/fetch (POST, auth)', '/api/ingest (POST 推送 / GET 拉取, auth)', '/api/llm/chat/completions (POST, LLM_TOKEN auth)', '/rss/daily.xml'],
+        docs: {
+          openReads: ['GET /api/items', 'GET /api/digest', 'GET /api/sources', 'GET /rss/daily.xml', 'GET /api/health'],
+          authedWrites: ['POST /api/fetch 手动触发抓取', 'POST /api/sources 推送信源', 'POST /api/ingest 外部数据推送（限流）', 'GET /api/ingest 拉取推送数据', 'POST /api/llm/chat/completions LLM 代理（LLM_TOKEN）'],
+        },
       })
     }
 

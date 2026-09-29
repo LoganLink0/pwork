@@ -5,6 +5,9 @@ import { aiScore, chat, parseJsonLoose } from '../src/ai'
 import type { AiConfig } from '../src/ai'
 import { runSource } from '../src/pipeline'
 import type { WorkerSource } from '../src/rules'
+import { INGEST_MAX_PER_MINUTE, INGEST_MAX_PER_REQUEST, minuteKey, normalizeIngest } from '../src/ingest'
+import { assertPublicHttpUrl } from '../src/urlGuard'
+import worker from '../src/index'
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel>
 <item><title><![CDATA[AI 应用开源工具发布 v2]]></title><link>https://e.com/1?utm_source=rss</link><description>&lt;b&gt;可直接借鉴的实践案例&lt;/b&gt;</description><pubDate>Mon, 31 Aug 2026 08:00:00 GMT</pubDate></item>
@@ -67,6 +70,16 @@ describe('AI 两级筛选与降级（04 §5）', () => {
 
   it('parseJsonLoose 剥围栏', () => {
     expect(parseJsonLoose('```json\n{"pass":true}\n```')).toEqual({ pass: true })
+  })
+
+  it('parseJsonLoose 三层防线：尾随杂文 / 前置杂文 / 字符串内裸控制字符（AIHOT 移植）', () => {
+    // 旧实现 slice(start) 到结尾：JSON 后跟任何解释文字必炸
+    expect(parseJsonLoose('{"total": 88}\n以上是评分，希望有帮助。')).toEqual({ total: 88 })
+    expect(parseJsonLoose('好的，结果如下：\n{"pass": true}')).toEqual({ pass: true })
+    // 裸 \x0b 在字符串字面量内：JSON.parse 必炸，修复后可解析
+    const raw = '{"reason": "第一段\x0b第二段"}'
+    expect(() => JSON.parse(raw)).toThrow()
+    expect(parseJsonLoose(raw)).toEqual({ reason: '第一段\x0b第二段' })
   })
 
   it('AI 评分正常路径（mock fetch 200）', async () => {
@@ -162,5 +175,75 @@ describe('runSource（D1 mock）：入库/去重/失败计数', () => {
     const r3 = await runSource({ DB: env } as never, ai, SRC, new Map(), 'd')
     expect(r3.autoStopped).toBe(true)
     expect((env as unknown as { _sources: Map<string, Record<string, unknown>> })._sources.get('src_t')?.active).toBe(0)
+  })
+})
+
+describe('ingest 限额与规范化（Token 泄漏止损）', () => {
+  it('超单请求上限截断并计数；字段截断与空跳过；单对象形态', () => {
+    const many = Array.from({ length: INGEST_MAX_PER_REQUEST + 30 }, (_, i) => ({ title: `t${i}`, content: 'c' }))
+    const r = normalizeIngest({ blocks: many })
+    expect(r.blocks).toHaveLength(INGEST_MAX_PER_REQUEST)
+    expect(r.truncated).toBe(30)
+
+    const r2 = normalizeIngest({ blocks: [{ title: ' x ', content: '  '.trim() || 'y' }, { title: 'ok', content: '正文' }, { title: '', content: 'z' }] })
+    expect(r2.blocks).toEqual([
+      { source: 'api', title: 'x', content: 'y' },
+      { source: 'api', title: 'ok', content: '正文' },
+    ])
+    expect(r2.skipped).toBe(1) // 仅空标题那条被跳过；' x '/'  ' 两条展示 trim 归一
+
+    // 单对象（非数组）形态照常受理
+    expect(normalizeIngest({ title: '单块', content: '内容', source: 'n8n' })).toEqual({
+      blocks: [{ source: 'n8n', title: '单块', content: '内容' }],
+      skipped: 0,
+      truncated: 0,
+    })
+
+    // 字段截断：超长 title/content/source
+    const r3 = normalizeIngest({ title: '长'.repeat(60), content: '文'.repeat(30000), source: 's'.repeat(80) })
+    expect(r3.blocks[0]!.title).toHaveLength(40)
+    expect(r3.blocks[0]!.content).toHaveLength(20000)
+    expect(r3.blocks[0]!.source).toHaveLength(40)
+  })
+
+  it('minuteKey 格式为 UTC 分钟（代码生成，无用户输入）', () => {
+    expect(minuteKey(new Date('2026-09-29T08:07:22.123Z'))).toBe('2026-09-29T08:07')
+  })
+
+  it('/api/health 开放可达（部署验收用）', async () => {
+    const res = await worker.fetch(new Request('https://w/api/health'), { TOKEN: 't' } as never)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true })
+  })
+})
+
+describe('外联 URL 守卫（SSRF 止损）', () => {
+  it('公网 http/https 放行', () => {
+    expect(() => assertPublicHttpUrl('https://api.deepseek.com/v1')).not.toThrow()
+    expect(() => assertPublicHttpUrl('http://example.com/rss')).not.toThrow()
+    expect(() => assertPublicHttpUrl('https://[2606:4700::6810:85e5]/')).not.toThrow()
+  })
+
+  it('协议与主机：非 http(s)、环回、内网、链路本地、保留段全拒', () => {
+    expect(() => assertPublicHttpUrl('file:///etc/passwd')).toThrow('http/https')
+    expect(() => assertPublicHttpUrl('https://localhost/v1')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://127.0.0.1/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://10.1.2.3/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://172.16.0.1/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://192.168.1.1/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://169.254.169.254/latest/meta-data')).toThrow('内网') // 云 metadata
+    expect(() => assertPublicHttpUrl('http://100.64.0.1/')).toThrow('内网') // CGNAT
+    expect(() => assertPublicHttpUrl('http://0.0.0.0/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://224.0.0.1/')).toThrow('内网') // 组播段
+    expect(() => assertPublicHttpUrl('http://[::1]/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://[fe80::1]/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('http://[fc00::1]/')).toThrow('内网')
+    expect(() => assertPublicHttpUrl('https://db.internal/api')).toThrow('内网')
+  })
+
+  it('公网 IPv4 段不误伤', () => {
+    expect(() => assertPublicHttpUrl('http://8.8.8.8/')).not.toThrow()
+    expect(() => assertPublicHttpUrl('http://172.32.0.1/')).not.toThrow() // 172.32 不在私有段
+    expect(() => assertPublicHttpUrl('http://192.169.0.1/')).not.toThrow()
   })
 })

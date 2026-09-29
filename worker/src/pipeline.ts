@@ -7,6 +7,7 @@ import type { AiConfig } from './ai'
 import { aiPrefilter, aiScore } from './ai'
 import { fingerprintOf, prefilterByRules, scoreByRules, type WorkerSource } from './rules'
 import { parseFeed, parseRss2Json } from './rss'
+import { guardedFetch } from './urlGuard'
 
 export interface Env {
   DB: D1Database
@@ -55,13 +56,8 @@ export async function spendTokens(env: Env, n: number): Promise<boolean> {
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
-  try {
-    return await fetch(url, { signal: ctrl.signal, cf: { cacheTtl: 0 } })
-  } finally {
-    clearTimeout(timer)
-  }
+  // 出站统一走 guardedFetch（URL 守卫：拒绝内网/环回/保留地址）
+  return guardedFetch(url, undefined, timeoutMs)
 }
 
 /** 抓一个源：直连 →（失败）rss2json 服务端转接。云端无 CORS 限制，直连为主 */
