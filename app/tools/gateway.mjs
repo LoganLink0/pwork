@@ -16,7 +16,7 @@
  *   - 响应、控制台日志永不回显 Key；/health 只返回布尔状态
  */
 import http from 'node:http'
-import { existsSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 function loadEnv() {
@@ -36,6 +36,7 @@ const env = loadEnv()
 const PORT = Number(env.PWORK_GATEWAY_PORT || 8788)
 const CHAT_URL = env.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
 const CHAT_KEY = env.PWORK_LLM_API_KEY || ''
+const USAGE_LOG = resolve(process.cwd(), 'gateway-usage.log')
 
 const json = (res, status, obj) => {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
@@ -86,8 +87,10 @@ const server = http.createServer(async (req, res) => {
           headers: { 'content-type': 'application/json', authorization: `Bearer ${CHAT_KEY}` },
           body,
         })
+        const text = await upstream.text()
+        logUsage(body, text)
         res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(await upstream.text())
+        res.end(text)
       } catch (e) {
         json(res, 502, { error: `上游请求失败：${e instanceof Error ? e.message : String(e)}` })
       }
@@ -95,8 +98,61 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  // 用量查询（本机来源限定，同 health）：BYOK 的成本可见性——先看见，再谈限
+  if (path === '/usage' && req.method === 'GET') {
+    json(res, 200, usageSummary())
+    return
+  }
+
   json(res, 404, { error: 'not found' })
 })
+
+/** 记账：请求体里的 model + 响应里的 usage 落一行 JSONL；滚动上限 2MB（保留最近约 5000 条） */
+function logUsage(reqBody, respText) {
+  try {
+    const model = JSON.parse(reqBody)?.model ?? 'unknown'
+    const usage = JSON.parse(respText)?.usage
+    if (!usage) return
+    const line =
+      JSON.stringify({
+        t: new Date().toISOString(),
+        model,
+        tokens: usage.total_tokens ?? 0,
+        prompt: usage.prompt_tokens ?? 0,
+        completion: usage.completion_tokens ?? 0,
+      }) + '\n'
+    appendFileSync(USAGE_LOG, line)
+    if (statSync(USAGE_LOG).size > 2_000_000) {
+      const lines = readFileSync(USAGE_LOG, 'utf-8').split('\n').filter(Boolean)
+      writeFileSync(USAGE_LOG, lines.slice(-5000).map((l) => l + '\n').join(''))
+    }
+  } catch {
+    /* 记账失败不影响代理 */
+  }
+}
+
+/** 汇总：总次数/总 tokens、按模型分布、覆盖时间窗 */
+function usageSummary() {
+  try {
+    if (!existsSync(USAGE_LOG)) return { calls: 0, tokens: 0, byModel: {}, since: null, until: null }
+    const rows = readFileSync(USAGE_LOG, 'utf-8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .filter((r) => Date.now() - new Date(r.t).getTime() < 30 * 86400_000) // 近 30 天
+    const byModel = {}
+    for (const r of rows) byModel[r.model] = (byModel[r.model] ?? 0) + (r.tokens ?? 0)
+    return {
+      calls: rows.length,
+      tokens: rows.reduce((s, r) => s + (r.tokens ?? 0), 0),
+      byModel,
+      since: rows[0]?.t ?? null,
+      until: rows.at(-1)?.t ?? null,
+    }
+  } catch {
+    return { calls: 0, tokens: 0, byModel: {}, since: null, until: null, error: '用量文件读取失败' }
+  }
+}
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[PWORK 网关] http://127.0.0.1:${PORT}/v1 ｜ 上游：${normalizeUpstream(CHAT_URL)} ｜ Key：${CHAT_KEY ? '已配置' : '未配置（/health 可用，对话返回 503）'}`)

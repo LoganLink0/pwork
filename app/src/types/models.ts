@@ -108,6 +108,19 @@ export interface CaseFile {
 }
 
 /**
+ * AI 结果缓存（2026-09-29，AIHOT 回执"重试不重复付费"思想的轻量版）：
+ * 按 purpose + 输入指纹 + 提示词 + 模型 哈希复用产出——材料没变的重复点击零成本秒回。
+ * id 即缓存键；output 是纯文本（AI 原文），不含密钥等敏感内容。
+ */
+export interface AiCacheEntry {
+  id: string
+  purpose: string
+  output: string
+  model: string
+  createdAt: string
+}
+
+/**
  * 目标 Goal —— 工作台目标模块拥有（02 §3 字段所有权表）；复盘向导只读引用（C-2 最小形态，
  * 2026-08-31 决议：最小实体先行，完整管理页随处理模块评估）
  */

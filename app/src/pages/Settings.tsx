@@ -82,6 +82,8 @@ export function Settings() {
   const [aiTesting, setAiTesting] = useState(false)
   const [aiTestMsg, setAiTestMsg] = useState('')
   const [aiTestOk, setAiTestOk] = useState(false)
+  const [usageBusy, setUsageBusy] = useState(false)
+  const [usageMsg, setUsageMsg] = useState('')
   const saveAi = (next: CoachConfig) => {
     setAi(next)
     saveCoachConfig(next)
@@ -473,6 +475,37 @@ export function Settings() {
                       <span className="val" style={{ fontSize: 'var(--fs-xs)', color: aiTestOk ? 'var(--ok)' : 'var(--danger)' }}>{aiTestMsg}</span>
                     </div>
                   )}
+                  <div className="set-row">
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      disabled={usageBusy}
+                      onClick={async () => {
+                        setUsageBusy(true)
+                        setUsageMsg('')
+                        try {
+                          const base = (ai.gatewayUrl || 'http://127.0.0.1:8788').replace(/\/+$/, '')
+                          const r = await fetch(`${base}/usage`)
+                          const j = (await r.json()) as { calls?: number; tokens?: number; byModel?: Record<string, number>; since?: string | null }
+                          const models = Object.entries(j.byModel ?? {})
+                            .map(([m, t]) => `${m}：${t.toLocaleString()} tokens`)
+                            .join('；')
+                          setUsageMsg(
+                            j.calls
+                              ? `近 30 天经网关 ${j.calls} 次调用，共 ${(j.tokens ?? 0).toLocaleString()} tokens。${models}`
+                              : '还没有经网关调用的记录（直连模式的用量不在此统计）',
+                          )
+                        } catch {
+                          setUsageMsg('无法读取用量——网关需为记账版并正在运行（npm run gateway）')
+                        } finally {
+                          setUsageBusy(false)
+                        }
+                      }}
+                    >
+                      {usageBusy ? '统计中…' : '查看网关用量'}
+                    </button>
+                    {usageMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{usageMsg}</span>}
+                  </div>
                   <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
                     启动：app 目录运行 <b>npm run gateway</b>（仅绑定 127.0.0.1）。Key 配置：复制 <b>app/tools/.env.example</b> 为 <b>app/.env.local</b>，填写 PWORK_LLM_API_KEY 后重启网关。
                   </div>

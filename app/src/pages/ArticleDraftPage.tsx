@@ -11,8 +11,8 @@ import {
   type ArticleMaterial,
 } from '../engine/articleWriter'
 import { downloadFile } from '../db/repo'
-import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
+import { chatCompletionCached } from '../engine/aiCached'
+import { llmConfigured } from '../modules/review/engine/coach'
 import { exportArticleDocx, ARTICLE_VIEWS, type ArticleView } from '../engine/articleWriter'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 
@@ -47,12 +47,15 @@ export function ArticleDraftPage() {
     setAiBusy(true)
     setAiError('')
     try {
-      const text = await chatCompletion(
-        llmConfigFrom(loadCoachConfig()),
-        ARTICLE_SYSTEM_PROMPT,
-        buildArticleUserPrompt({ days, materials, view }),
-        { maxTokens: 8000, timeoutMs: 90000 },
-      )
+      // 材料指纹进缓存键：周期/材料/视角没变的重复生成直接复用，不重复计费
+      const inputKey = [days, view.id, ...materials.map((m) => `${m.id}:${m.body.length}`)].join('|')
+      const { text } = await chatCompletionCached({
+        purpose: 'article-draft',
+        inputKey,
+        system: ARTICLE_SYSTEM_PROMPT,
+        user: buildArticleUserPrompt({ days, materials, view }),
+        maxTokens: 8000,
+      })
       setDraft(parseArticle(text))
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e))

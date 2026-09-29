@@ -53,7 +53,10 @@ export async function chatCompletion(
     if (typeof text !== 'string' || text.trim() === '') throw new Error('响应为空')
     return text
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw new Error('请求超时')
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      // 超时≠失败：请求可能已在服务端完成并计费——提示稍候重试，避免立即重发造成双倍消耗
+      throw new Error('请求超时——该次调用可能仍在处理并计费，稍候再重试可避免重复消耗；频繁超时建议换更快的模型')
+    }
     // 本地网关模式：浏览器侧是 sentinel Key，网络层失败基本就是网关进程没启动
     if (err instanceof TypeError && cfg.apiKey === 'pwork-gateway') {
       throw new Error('本地网关没连上——在 app 目录运行 npm run gateway 启动后重试（或到 设置 → AI · BYOK 改为直连并填 Key）')

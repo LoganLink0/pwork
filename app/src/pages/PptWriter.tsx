@@ -12,8 +12,8 @@ import {
   type WriterSlide,
 } from '../engine/pptWriter'
 import { downloadFile } from '../db/repo'
-import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
+import { chatCompletionCached } from '../engine/aiCached'
+import { llmConfigured } from '../modules/review/engine/coach'
 
 const coachReady = llmConfigured
 
@@ -71,12 +71,15 @@ export function PptWriter() {
     setAiBusy(true)
     setAiError('')
     try {
-      const text = await chatCompletion(
-        llmConfigFrom(loadCoachConfig()),
-        OUTLINE_SYSTEM_PROMPT,
-        buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
-        { maxTokens: 8000, timeoutMs: 90000 },
-      )
+      // 材料指纹进缓存键：主题/受众/页数/材料没变的重复生成直接复用，不重复计费
+      const inputKey = [topic.trim(), audience, pageTarget, ...materials.map((m) => `${m.name}:${m.text.length}:${m.text.slice(0, 64)}`)].join('|')
+      const { text } = await chatCompletionCached({
+        purpose: 'ppt-outline',
+        inputKey,
+        system: OUTLINE_SYSTEM_PROMPT,
+        user: buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
+        maxTokens: 8000,
+      })
       setOutline(parseOutline(text))
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e))

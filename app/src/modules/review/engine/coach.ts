@@ -7,6 +7,7 @@
 import { REFRAME } from '../content/copy'
 import type { DebiasKind } from './debias'
 import { chatCompletion, type LlmConfig } from './llm'
+import { parseAiJson } from '../../../engine/aiJson'
 
 export interface CoachContext {
   scenario: string
@@ -137,7 +138,8 @@ export function parseStringArray(text: string, max = 3): string[] {
   try {
     const m = text.match(/\[[\s\S]*\]/)
     if (m) {
-      const arr = JSON.parse(m[0]) as unknown
+      // parseAiJson：多一层字符串内控制字符修复（模型中文输出偶发裸 \x0b，JSON.parse 必炸）
+      const arr = parseAiJson<unknown>(m[0])
       if (Array.isArray(arr)) {
         const out = arr.filter((x): x is string => typeof x === 'string' && x.trim().length > 3)
         if (out.length > 0) return out.slice(0, max)
