@@ -1,6 +1,6 @@
 /**
  * 基础排版与全局元素（「冷静的工作台」v3，自 FUPAN 延续）。
- * 规范：单一字族；h1/h2 用字号阶梯；只动 transform/opacity；focus 可见。
+ * 规范：单一字族；h1/h2 用字号阶梯；只动 transform/opacity；focus 可见；reduced-motion 尊重系统设置。
  */
 *,
 *::before,
@@ -10,6 +10,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 body {
@@ -21,6 +23,8 @@ body {
   line-height: 1.7;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
@@ -36,6 +40,7 @@ h4 {
 h1 {
   font-size: var(--fs-h1);
   letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 h2 {
@@ -80,7 +85,25 @@ textarea {
 :focus-visible {
   outline: 2px solid var(--accent-deep);
   outline-offset: 2px;
-  border-radius: 4px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+  border: 3px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* 数字场景一律等宽 */
@@ -100,16 +123,18 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease),
+    opacity var(--dur-1) var(--ease);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-deep) 35%, transparent);
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-  opacity: 0.9;
+  transform: translateY(0) scale(0.98);
+  opacity: 0.92;
 }
 
 .btn-primary:disabled {
@@ -127,7 +152,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: transform 0.15s ease-out;
+  transition: transform var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
 }
 
 .btn-ghost:hover:not(:disabled) {
@@ -136,9 +162,29 @@ textarea {
   transform: translateY(-1px);
 }
 
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
 .btn-ghost:disabled {
   color: var(--ink-faint);
   cursor: not-allowed;
+}
+
+/* ---------- 路由入场（每次切换页面，内容轻微上浮淡入） ---------- */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.content-inner > * {
+  animation: page-in var(--dur-3) var(--ease) both;
 }
 
 /* ---------- 无障碍跳转 ---------- */
@@ -167,4 +213,16 @@ textarea {
   padding: var(--sp-2) var(--sp-5);
   font-size: var(--fs-sm);
   text-align: center;
+}
+
+/* ---------- 动效总闸：系统偏好减少动效时全部关闭 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

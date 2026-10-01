@@ -42,8 +42,8 @@
   --m-review: var(--accent); /* 回路 = 琥珀（闭环枢纽与品牌同源） */
 
   /* ------- 字体：全局唯一字族 ------- */
-  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC',
-    'Segoe UI', sans-serif;
+  --font-body: -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC',
+    'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif;
   --font-display: var(--font-body);
   --font-hand: var(--font-body);
 
@@ -67,13 +67,18 @@
   --sp-7: 48px;
 
   /* ------- 圆角与阴影（单阴影体系） ------- */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
   --shadow-1: 0 1px 2px rgba(33, 30, 26, 0.06);
   --shadow-2: 0 2px 4px rgba(33, 30, 26, 0.06), 0 8px 20px rgba(33, 30, 26, 0.08);
   --shadow-pop: 0 12px 32px rgba(33, 30, 26, 0.14);
-  --shadow-card-hover: var(--shadow-2);
+
+  /* ------- 动效（时长三档 + 统一缓动，只动 transform/opacity） ------- */
+  --dur-1: 120ms; /* 微反馈：按压、hover 着色 */
+  --dur-2: 200ms; /* 常规：卡片抬起、面板展开 */
+  --dur-3: 320ms; /* 入场：路由切换、弹层 */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 
   /* ------- 布局 ------- */
   --content-w: 1200px;
@@ -86,14 +91,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #191816;
-    --surface: #222019;
-    --surface-2: #2a2721;
-    --line: #38352e;
-    --line-strong: #4c473d;
+    --bg: #161310;
+    --surface: #242019;
+    --surface-2: #2d2820;
+    --line: #3b362d;
+    --line-strong: #524b3f;
     --ink: #ecebe7;
-    --ink-soft: #b3afa5;
-    --ink-faint: #827d73;
+    --ink-soft: #b6b2a8;
+    --ink-faint: #908a7d;
     --accent: #e8833a;
     --accent-deep: #c96a2e;
     --accent-text: #eda868;

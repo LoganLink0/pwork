@@ -71,6 +71,7 @@
 }
 .digest-item .d-title a {
   color: var(--ink);
+  transition: color var(--dur-1) var(--ease);
 }
 .digest-item .d-title a:hover {
   color: var(--accent-text);
@@ -153,10 +154,15 @@
   color: var(--ink-soft);
   background: none;
   white-space: nowrap;
+  transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
 }
 .mini-btn:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent-text);
+}
+.mini-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 .mini-btn:disabled {
   color: var(--ink-faint);
@@ -235,6 +241,7 @@
   padding: var(--sp-3) var(--sp-4);
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  transition: background-color var(--dur-1) var(--ease);
 }
 .src-table tr:last-child td {
   border-bottom: none;
@@ -316,7 +323,7 @@
   height: 14px;
   border-radius: 50%;
   background: var(--ink-faint);
-  transition: transform 0.15s ease-out, background 0.15s ease-out;
+  transition: transform var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .switch.on {
   border-color: var(--accent);
@@ -397,9 +404,12 @@
   padding: 4px 8px;
   font-size: var(--fs-sm);
   cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
 }
 .date-nav button:hover:not(:disabled) {
   color: var(--accent-text);
+  background: var(--surface-2);
 }
 .date-nav button:disabled {
   color: var(--ink-faint);
@@ -461,7 +471,7 @@
   padding: var(--sp-3) var(--sp-4);
   margin-bottom: var(--sp-5);
   box-shadow: var(--shadow-1);
-  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
 }
 .quick-add:focus-within {
   border-color: var(--accent);
@@ -525,7 +535,7 @@
   line-height: 1;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 .checkbox:hover {
   border-color: var(--ok);

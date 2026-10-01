@@ -19,7 +19,7 @@ function InputCardLinks({ noteCount, sourceCount, digestCount, blockCount }: { n
         速记<span className="cnt">{noteCount} 条</span>
       </Link>
       <Link className="m-link" to="/input/digest">
-        信息日报<span className="cnt">{digestCount > 0 ? `${digestCount} 条` : sourceCount > 0 ? '去抓取' : 'W2 已上线'}</span>
+        信息日报<span className="cnt">{digestCount > 0 ? `${digestCount} 条` : sourceCount > 0 ? '去抓取' : '可用'}</span>
       </Link>
       <Link className="m-link" to="/input/sources">
         信源<span className="cnt">{sourceCount} 个</span>
@@ -31,17 +31,17 @@ function InputCardLinks({ noteCount, sourceCount, digestCount, blockCount }: { n
   )
 }
 
-function ReviewCardLinks() {
+function ReviewCardLinks({ count }: { count: number }) {
   return (
     <div className="m-links">
       <Link className="m-link" to="/review">
-        复盘档案<span className="cnt">W3 迁入</span>
+        复盘档案<span className="cnt">{count > 0 ? `${count} 份` : '空'}</span>
       </Link>
       <Link className="m-link" to="/review/new">
-        新建复盘<span className="cnt">W3 迁入</span>
+        新建复盘<span className="cnt">开始 →</span>
       </Link>
       <Link className="m-link" to="/review/assets">
-        认知资产<span className="cnt">W3 迁入</span>
+        认知资产<span className="cnt">查看 →</span>
       </Link>
     </div>
   )
@@ -95,10 +95,10 @@ export function Home() {
           <div className="date">
             {now.getMonth() + 1}月{now.getDate()}日 · 周{weekdayLocal(now)}
           </div>
-          <h1>
-            {greetWord(now)}。
+          <h1>{greetWord(now)}。</h1>
+          <p className="lede">
             {today > 0 ? `今天已记 ${today} 条速记。` : '今天还没记速记——想到什么，随手记下来。'}
-          </h1>
+          </p>
         </div>
         <button type="button" className="btn-primary" onClick={openQuick}>
           ⚡ 记一条
@@ -132,7 +132,7 @@ export function Home() {
           <Link to="/settings" style={{ marginLeft: 'var(--sp-2)', fontWeight: 600 }}>去导出 →</Link>
           <button
             type="button"
-            className="mini-btn"
+            className="text-btn"
             style={{ marginLeft: 'var(--sp-2)' }}
             onClick={() => {
               snoozeBackupReminder()
@@ -154,9 +154,13 @@ export function Home() {
           <span className="t-link">去扫读 →</span>
         </Link>
       ) : (
-        <Link to="/input/digest" className="tile mark-input" onClick={(e) => { if (activeSources > 0) { e.preventDefault(); void runFetchAll() } }}>
+        <Link
+          to="/input/digest"
+          className={`tile ${activeSources > 0 ? '' : 'quiet '}mark-input`}
+          onClick={(e) => { if (activeSources > 0) { e.preventDefault(); void runFetchAll() } }}
+        >
           <div className="t-label">信息日报</div>
-          <div className="t-num">{activeSources > 0 ? '待抓取' : 'W2 已上线'}</div>
+          <div className="t-num weak">{activeSources > 0 ? '待抓取' : '还没有信源'}</div>
           <div className="t-sub">{activeSources > 0 ? `${activeSources} 个活跃源 · 点击立即抓取` : '先去信源管理添加 5–10 个源'}</div>
           <span className="t-link">{activeSources > 0 ? '立即抓取 →' : '去添加信源 →'}</span>
         </Link>
@@ -169,9 +173,9 @@ export function Home() {
             <span className="t-link">去处理 →</span>
           </Link>
         ) : (
-          <Link to="/review/new" className="tile mark-workspace">
+          <Link to="/review/new" className="tile quiet mark-workspace">
             <div className="t-label">到期待办</div>
-            <div className="t-num">还没有任务</div>
+            <div className="t-num weak">还没有任务</div>
             <div className="t-sub">复盘产出的行动项会自动出现在任务库</div>
             <span className="t-link">去做一次复盘 →</span>
           </Link>
@@ -192,9 +196,9 @@ export function Home() {
             </span>
           </Link>
         ) : (
-          <Link to="/review" className="tile mark-review">
+          <Link to="/review" className="tile quiet mark-review">
             <div className="t-label">复盘节奏</div>
-            <div className="t-num">已建成</div>
+            <div className="t-num weak">已建成</div>
             <div className="t-sub">复盘工作台已迁入 · 做一次复盘，行动项自动进待办</div>
             <span className="t-link">了解回路模块 →</span>
           </Link>
@@ -246,7 +250,7 @@ export function Home() {
             <span className="m-tag">{MODULE_STATUS_LABEL[review.status]}</span>
           </div>
           <div className="m-sub">CLAP 复盘 · 因果循环 · 认知资产</div>
-          <ReviewCardLinks />
+          <ReviewCardLinks count={reviewInfo?.count ?? 0} />
         </div>
       </div>
 
