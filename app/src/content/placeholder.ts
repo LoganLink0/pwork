@@ -15,7 +15,7 @@ export interface PlaceholderContent {
 export const PLACEHOLDER: Record<string, PlaceholderContent> = {
   draft: {
     icon: '✍',
-    title: '文章草稿（O4 待办）',
+    title: '文章草稿',
     lead: '将要解决：速记与洞察聚合 → 博客文章骨架 + AI 润色。',
     will: [
       ['为什么现在没有', '文章形态等真实写作场景出现后定义（处理模块的工具刚起步）。'],
@@ -26,7 +26,7 @@ export const PLACEHOLDER: Record<string, PlaceholderContent> = {
   },
   video: {
     icon: '🎬',
-    title: '数据视频（O5 远期）',
+    title: '数据视频（远期规划）',
     lead: '将要解决：数据变化 → 短视频。',
     will: [
       ['为什么现在没有', '依赖 AI 生成能力与真实需求，立占位不实现。'],

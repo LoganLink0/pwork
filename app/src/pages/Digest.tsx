@@ -75,11 +75,16 @@ export function Digest() {
 
       {fetchState.summary && (
         <div className="run-banner" data-testid="run-summary">
-          上次抓取：新 <b className="tnum">{fetchState.summary.totalNew}</b> 条 · 筛除 <b className="tnum">{fetchState.summary.totalDiscarded}</b> 条 ·{' '}
+          上次抓取（{(fetchState.summary.elapsedMs / 1000).toFixed(1)} 秒）：新 <b className="tnum">{fetchState.summary.totalNew}</b> 条 · 筛除 <b className="tnum">{fetchState.summary.totalDiscarded}</b> 条 ·{' '}
           {fetchState.summary.results.filter((r) => r.ok).length}/{fetchState.summary.results.length} 源成功
           {fetchState.summary.results.filter((r) => !r.ok).length > 0 && (
             <>；失败：{fetchState.summary.results.filter((r) => !r.ok).map((r) => r.sourceName).join('、')}</>
           )}
+        </div>
+      )}
+      {fetchState.error && (
+        <div className="run-banner warn" data-testid="run-error" role="alert">
+          抓取中断：{fetchState.error}。按钮已恢复，可重试；<Link to="/settings">错误日志</Link>里有详情。
         </div>
       )}
 

@@ -3,6 +3,7 @@
  * 维护策略：读时校验 TTL（7 天）；写入顺带清过期与超量（上限 200 条，最旧先出）——免专门定时任务。
  */
 import { db } from './schema'
+import { recordError } from '../engine/errorLog'
 
 const TTL_MS = 7 * 24 * 3600_000
 const MAX_ROWS = 200
@@ -34,7 +35,7 @@ export async function putCachedAi(id: string, purpose: string, output: string, m
   await maintainAiCache()
 }
 
-/** 过期清理 + 超量淘汰（最旧先出）；失败不阻塞主流程 */
+/** 过期清理 + 超量淘汰（最旧先出）；失败不阻塞主流程，但必须留痕（2026-10 错误纪律） */
 async function maintainAiCache(): Promise<void> {
   try {
     const cutoff = new Date(Date.now() - TTL_MS).toISOString()
@@ -44,7 +45,11 @@ async function maintainAiCache(): Promise<void> {
       const oldest = await db.aiCache.orderBy('createdAt').limit(count - MAX_ROWS).toArray()
       await db.aiCache.bulkDelete(oldest.map((r) => r.id))
     }
-  } catch {
-    /* 维护失败下次再试 */
+  } catch (err) {
+    void recordError({
+      where: 'AI 缓存例行清理 maintainAiCache',
+      kind: 'app',
+      message: err instanceof Error ? err.message : String(err),
+    })
   }
 }

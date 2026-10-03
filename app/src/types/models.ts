@@ -121,6 +121,25 @@ export interface AiCacheEntry {
 }
 
 /**
+ * 错误日志条目（2026-10-03 用户要求：出错立即暴露 + 记录"哪里发生了什么"）。
+ * Raw 暂存层：上限 300 条最旧先删，不进备份导出；where 用人话定位（页面/模块.函数）。
+ */
+export interface ErrorLogEntry {
+  id: string
+  /** ISO 时间戳 */
+  at: string
+  /** 哪里：'collect.runFetchAll' / '页面渲染' / '全局脚本错误' 等 */
+  where: string
+  kind: 'render' | 'promise' | 'window' | 'app'
+  /** 什么：错误消息（截断 500） */
+  message: string
+  /** 堆栈（截断 2000），能拿到就存 */
+  stack?: string
+  /** 附加上下文（JSON 字符串，截断 800） */
+  detail?: string
+}
+
+/**
  * 目标 Goal —— 工作台目标模块拥有（02 §3 字段所有权表）；复盘向导只读引用（C-2 最小形态，
  * 2026-08-31 决议：最小实体先行，完整管理页随处理模块评估）
  */

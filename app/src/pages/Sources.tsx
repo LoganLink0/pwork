@@ -63,7 +63,7 @@ export function Sources() {
     <section>
       <div className="page-head">
         <h1>信源</h1>
-        <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · C1 手动抓取，无定时</span>
+        <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 手动抓取，不自动定时</span>
         <div className="right">
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>⬇ 导出 JSON</button>
           <button
@@ -156,7 +156,7 @@ export function Sources() {
       {sources.length === 0 ? (
         <div className="empty">
           <div className="e-ico" aria-hidden>⛓</div>
-          <p>还没有信源。C1 的验收是 5–10 个源跑两周，能回答"哪些源值得继续订"。</p>
+          <p>还没有信源。建议先添加 5–10 个用两周，再决定哪些值得长期订阅。</p>
           <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
             <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加第一个信源</button>
             <button type="button" className="btn-ghost" onClick={() => { void importSample().then((r) => setMsg(`已导入示例 ${r.imported} 个（原生 RSS，已实测可经转接抓取）`)) }}>

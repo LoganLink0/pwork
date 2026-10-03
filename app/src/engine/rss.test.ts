@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { parseFeed } from './rss'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { parseFeed, fetchFeed } from './rss'
 
 const RSS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
@@ -65,5 +65,30 @@ describe('parseFeed', () => {
     const noLink = `<rss version="2.0"><channel><item><title>只有标题</title></item></channel></rss>`
     expect(parseFeed(noLink).ok).toBe(false)
     expect(parseFeed(noLink).error).toContain('标题或链接')
+  })
+})
+
+/** 抓取链的超时防护（2026-10 事故回归：读体中止曾炸穿 runCollect，按钮永久「抓取中」） */
+describe('fetchFeed 读取响应体失败', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('响应头已到但 text() 中止 → ok:false 带原因，不抛异常', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        // 模拟：fetch 已拿到响应头（200），读体时超时信号触发
+        const aborted = new DOMException('The user aborted a request.', 'AbortError')
+        return {
+          ok: true,
+          status: 200,
+          text: () => Promise.reject(aborted),
+        } as unknown as Response
+      }),
+    )
+    const r = await fetchFeed('https://example.com/feed.xml')
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('读取响应超时')
   })
 })

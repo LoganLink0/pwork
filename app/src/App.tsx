@@ -11,6 +11,8 @@ import { useNotes } from './store/notes'
 import { useCollect } from './store/collect'
 import { useTasks } from './store/tasks'
 import { useGoals } from './store/goals'
+import { track } from './engine/errorLog'
+import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { PLACEHOLDER } from './content/placeholder'
 
 // 代码分割：壳 + 首页保持轻量，其余页面按路由懒加载（AD2：模块为懒加载子路由）
@@ -85,10 +87,10 @@ export default function App() {
   const loadTasks = useTasks((s) => s.load)
 
   useEffect(() => {
-    void load()
-    void loadCollect()
-    void loadTasks()
-    void useGoals.getState().load()
+    track(load(), '应用启动加载速记库')
+    track(loadCollect(), '应用启动加载采集库')
+    track(loadTasks(), '应用启动加载任务库')
+    track(useGoals.getState().load(), '应用启动加载目标库')
   }, [load, loadCollect, loadTasks])
 
   return (
@@ -98,9 +100,11 @@ export default function App() {
       <div className="app">
         <Sidebar />
         <div className="main">
+          <ErrorBar />
           <Topbar />
           <div className="content">
             <div className="content-inner">
+              <ErrorBoundary>
               <Suspense fallback={<PageFallback />}>
                 <Routes>
                   <Route path="/" element={<Home />} />
@@ -146,6 +150,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              </ErrorBoundary>
             </div>
           </div>
         </div>

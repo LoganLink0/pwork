@@ -15,6 +15,7 @@ import {
   type SourceInput,
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../engine/collect'
+import { recordError, track } from '../engine/errorLog'
 import {
   DEFAULT_COLLECT_CONFIG,
   loadCollectConfig,
@@ -32,6 +33,8 @@ export interface FetchProgress {
   running: boolean
   summary: RunSummary | null
   lastRunAt: string | null
+  /** 抓取中途失败的原因（成功为 null）——按钮永不卡在「抓取中」的保证 */
+  error: string | null
 }
 
 interface CollectState {
@@ -76,12 +79,12 @@ export const useCollect = create<CollectState>((set, get) => ({
   digestDate: todayLocal(),
   digestDateOptions: [],
   config: loadCollectConfig(),
-  fetch: { running: false, summary: null, lastRunAt: null },
+  fetch: { running: false, summary: null, lastRunAt: null, error: null },
   loaded: false,
 
   load: async () => {
-    // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）
-    void maintenance()
+    // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默
+    track(maintenance(), '采集例行清理 maintenance')
     const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
     set({ sources, items, items7d, loaded: true })
     set(await reloadDigest(get()))
@@ -102,11 +105,24 @@ export const useCollect = create<CollectState>((set, get) => ({
   runFetchAll: async () => {
     const { sources, config } = get()
     const active = sources.filter((s) => s.active)
-    set({ fetch: { running: true, summary: null, lastRunAt: get().fetch.lastRunAt } })
-    const summary = await runCollect(active, config)
-    const [allSources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
-    set({ sources: allSources, items, items7d, fetch: { running: false, summary, lastRunAt: new Date().toISOString() } })
-    set(await reloadDigest(get()))
+    set({ fetch: { running: true, summary: null, lastRunAt: get().fetch.lastRunAt, error: null } })
+    try {
+      const summary = await runCollect(active, config)
+      const [allSources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
+      set({ sources: allSources, items, items7d, fetch: { running: false, summary, lastRunAt: new Date().toISOString(), error: null } })
+      set(await reloadDigest(get()))
+    } catch (err) {
+      // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
+      const message = err instanceof Error ? err.message : String(err)
+      void recordError({
+        where: '采集.立即抓取 runFetchAll',
+        kind: 'app',
+        message,
+        stack: err instanceof Error ? err.stack : undefined,
+        detail: { activeSources: active.length },
+      })
+      set({ fetch: { running: false, summary: null, lastRunAt: new Date().toISOString(), error: message } })
+    }
   },
 
   addSource: async (input) => {

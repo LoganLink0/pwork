@@ -38,6 +38,8 @@ export interface RunSummary {
   totalNew: number
   totalDiscarded: number
   digestIds: string[]
+  /** 本轮总耗时（毫秒）——用户问"这次抓了多久"，界面直接回答 */
+  elapsedMs: number
 }
 
 /** 单源处理：抓取 → 逐条去重 → 预筛 → 规则评分 → 入库 */
@@ -170,6 +172,7 @@ async function runLimited<T, R>(tasks: T[], limit: number, fn: (t: T) => Promise
  * 返回运行摘要；Top N 分发在 store 层据结果执行（markKept）。
  */
 export async function runCollect(sources: Source[], config: CollectConfig): Promise<RunSummary> {
+  const startedAt = Date.now()
   const today = todayLocal()
   const existing = await itemsOfLocalDay(today)
   // novelty 依据：同主题域今日已有条数（sourceId → domain 映射后累计）
@@ -191,6 +194,7 @@ export async function runCollect(sources: Source[], config: CollectConfig): Prom
     totalNew: results.reduce((n, r) => n + r.newCount, 0),
     totalDiscarded: results.reduce((n, r) => n + r.discardedCount, 0),
     digestIds: digest.map((i) => i.id),
+    elapsedMs: Date.now() - startedAt,
   }
 }
 

@@ -115,7 +115,14 @@ async function tryFetch(url: string, timeoutMs: number): Promise<ParseResult> {
     return { ok: false, items: [], error: msg }
   }
   if (!resp.ok) return { ok: false, items: [], error: `HTTP ${resp.status}` }
-  const text = await resp.text()
+  // 读取响应体同样受 AbortSignal.timeout 控制：响应头到了但体没读完，中止错误会从 text() 抛出。
+  // 不捕获会炸穿 runCollect → runFetchAll，按钮永久停在「抓取中」（2026-10 真实事故）。
+  let text: string
+  try {
+    text = await resp.text()
+  } catch {
+    return { ok: false, items: [], error: '读取响应超时（>10s）' }
+  }
   // rss2json 返回 JSON：{ status:'ok', items:[{title,link,pubDate,description}] }
   if (url.includes('rss2json')) return parseRss2Json(text)
   return parseFeed(text)

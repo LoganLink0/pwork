@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle } from '../db/backup'
 import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncIngestBlocks, type CloudConfig } from '../db/cloudSync'
@@ -10,6 +10,8 @@ import { useUi } from '../store/ui'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { fmtLocal, monthLocal } from '../engine/datetime'
+import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
+import type { ErrorLogEntry } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
 
 const THEMES: { key: ThemePref; label: string }[] = [
@@ -17,6 +19,13 @@ const THEMES: { key: ThemePref; label: string }[] = [
   { key: 'light', label: '明亮' },
   { key: 'dark', label: '暗色' },
 ]
+
+const ERR_KIND_LABEL: Record<ErrorKind, string> = {
+  render: '页面崩溃',
+  promise: '异步错误',
+  window: '脚本错误',
+  app: '内部错误',
+}
 
 /** 设置页（PRD §4.8）：W1 交付外观与数据导出；AI·BYOK 与导入随 W2/W3 点亮 */
 export function Settings() {
@@ -36,6 +45,22 @@ export function Settings() {
   const [cloudMsg, setCloudMsg] = useState<string | null>(null)
   const [cloudBusy, setCloudBusy] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(() => lastSyncAt())
+
+  // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）
+  const [errors, setErrors] = useState<ErrorLogEntry[]>([])
+  const [errBusy, setErrBusy] = useState(false)
+  const refreshErrors = async () => {
+    setErrBusy(true)
+    try {
+      setErrors(await listErrors(50))
+    } finally {
+      setErrBusy(false)
+    }
+  }
+  useEffect(() => {
+    void refreshErrors()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次，手动点刷新更新
+  }, [])
 
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
@@ -278,7 +303,7 @@ export function Settings() {
           </div>
           <div className="set-row">
             <label>评分权重</label>
-            <span className="val">source .30 · novelty .25 · relevance .25 · utility .20　<span style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>（C1 规则近似；权重随星级反馈人工调参，不训练模型）</span></span>
+            <span className="val">source .30 · novelty .25 · relevance .25 · utility .20　<span style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>（本地按规则近似；权重随你的星级反馈人工调整，不训练模型）</span></span>
           </div>
           <div className="set-row">
             <label>每日 Top N</label>
@@ -289,7 +314,66 @@ export function Settings() {
       </div>
 
       <div className="set-card">
-        <h2>云端同步（C2）</h2>
+        <h2>错误日志</h2>
+        <div className="desc">程序出错时立即记录在这里：哪里出了什么问题、技术细节，供排查迭代。上限 300 条，最旧的先删。</div>
+        <div className="set-body">
+          {errors.length === 0 ? (
+            <div className="val" style={{ color: 'var(--ink-faint)' }}>
+              {errBusy ? '读取中…' : '没有记录到错误。'}
+            </div>
+          ) : (
+            <div className="errlog-list" data-testid="errlog-list">
+              {errors.map((e) => (
+                <details key={e.id} className="errlog-item">
+                  <summary>
+                    <span className="errlog-time tnum">{fmtLocal(e.at)}</span>
+                    <span className="errlog-kind">{ERR_KIND_LABEL[e.kind]}</span>
+                    <span className="errlog-where">{e.where}</span>
+                    <span className="errlog-msg">{e.message}</span>
+                  </summary>
+                  <pre className="errlog-detail">{e.stack ?? e.detail ?? '（没有更多细节）'}</pre>
+                </details>
+              ))}
+            </div>
+          )}
+          <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
+            <button type="button" className="btn-ghost" disabled={errBusy} onClick={() => void refreshErrors()}>
+              {errBusy ? '读取中…' : '↻ 刷新'}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={errors.length === 0}
+              onClick={() => {
+                const stamp = monthLocal(new Date()).replace('-', '') + String(new Date().getDate()).padStart(2, '0')
+                downloadFile(`pwork-错误日志-${stamp}.md`, formatErrorLog(errors), 'text/markdown')
+              }}
+            >
+              ⬇ 导出
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={errors.length === 0}
+              onClick={async () => {
+                if (!window.confirm(`确定清空 ${errors.length} 条错误日志？导出过的内容不受影响。`)) return
+                await clearErrors()
+                await refreshErrors()
+              }}
+            >
+              清空
+            </button>
+            {errors.length > 0 && (
+              <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                显示最近 50 条
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>云端同步</h2>
         <div className="desc">Cloudflare Worker 定时抓取 → 本地拉取合并；云端数据随时可丢可重建，本地才是你的真实数据</div>
         <div className="set-body">
           <div className="set-row">
@@ -547,11 +631,11 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">W1 · 壳 + 速记 + 设计系统（对应 PRD v1.0）</span>
+            <span className="val">v1.0 · 四模块全量可用（输入 / 处理 / 输出 / 回路）</span>
           </div>
           <div className="set-row">
-            <label>里程碑</label>
-            <span className="val">W2 采集 C1 → W3 迁入+任务库 → W4 上云+联动 → W5 自动化</span>
+            <label>进度</label>
+            <span className="val">速记、信息日报、任务/目标、报告导出、文章草稿、复盘、案例工作台均已上线；数据视频为远期规划</span>
           </div>
           <div className="set-row">
             <label>快捷键</label>

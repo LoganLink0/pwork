@@ -933,6 +933,201 @@ a.mcard .m-link:hover {
   color: var(--ink-soft);
 }
 
+/* ============ 错误暴露层（2026-10：出错立即显示 + 可查） ============ */
+.error-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-4);
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-sm);
+  animation: bar-in var(--dur-2) var(--ease) both;
+}
+
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.error-bar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  flex: none;
+  animation: err-pulse 1.2s var(--ease) infinite alternate;
+}
+
+@keyframes err-pulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.error-bar-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error-bar-link {
+  margin-left: auto;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.error-bar-close {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  flex: none;
+}
+
+.error-bar-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* 渲染崩溃页：不白屏——错误信息直接可见 */
+.crash-screen {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+}
+
+.crash-box {
+  max-width: 720px;
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--sp-6);
+}
+
+.crash-box h1 {
+  font-size: var(--fs-xl);
+  margin-bottom: var(--sp-2);
+}
+
+.crash-msg {
+  font-size: var(--fs-md);
+  color: var(--danger);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.crash-sub {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.crash-stack {
+  max-height: 240px;
+  overflow: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: var(--sp-3);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.crash-actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+/* 设置页错误日志列表 */
+.errlog-list {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.errlog-item {
+  border-bottom: 1px solid var(--line);
+}
+
+.errlog-item:last-child {
+  border-bottom: none;
+}
+
+.errlog-item summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.errlog-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.errlog-item summary::before {
+  content: '▸';
+  color: var(--ink-faint);
+  flex: none;
+}
+
+.errlog-item[open] summary::before {
+  content: '▾';
+}
+
+.errlog-time {
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.errlog-kind {
+  color: var(--danger);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.errlog-where {
+  color: var(--ink-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.errlog-msg {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.errlog-detail {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  background: var(--surface-2);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow: auto;
+}
+
 /* ============ 空状态 ============ */
 .empty {
   text-align: center;

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { AiCacheEntry, Goal, Item, Note, Source, TaskItem } from '../types/models'
+import type { AiCacheEntry, ErrorLogEntry, Goal, Item, Note, Source, TaskItem } from '../types/models'
 import type { CaseFile, DataBlock, Profile, ReportSnapshot } from '../types/models'
 import type { ActionItem, InsightRecord, ReviewRecord } from '../modules/review/types/models'
 
@@ -44,6 +44,7 @@ export class PworkDB extends Dexie {
   profiles!: Table<Profile, string>
   caseFiles!: Table<CaseFile, string>
   aiCache!: Table<AiCacheEntry, string>
+  errorLog!: Table<ErrorLogEntry, string>
 
   constructor() {
     super('pwork-workbench')
@@ -91,6 +92,10 @@ export class PworkDB extends Dexie {
     // v11（AI 缓存）：AI 产出按输入指纹复用——材料未变的重复点击不重复计费
     this.version(11).stores({
       aiCache: 'id, createdAt',
+    })
+    // v12（错误日志）：全局错误持久化——"哪里发生了什么"可查（上限 300 条最旧先删）
+    this.version(12).stores({
+      errorLog: 'id, at',
     })
   }
 }

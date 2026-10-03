@@ -10,6 +10,10 @@ import App from './App.tsx'
 import { applyTheme, loadTheme } from './engine/appearance.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
 import { useUi } from './store/ui.ts'
+import { installErrorCapture, track } from './engine/errorLog.ts'
+
+// 错误捕获最先安装：之后任何未捕获错误都会记录 + 顶出错误条
+installErrorCapture()
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
@@ -22,17 +26,20 @@ registerSW({
   },
 })
 
-// IndexedDB 探针：不可用则降级内存模式，并挂横幅
-void initStorage().then(() => {
-  if (usingMemoryFallback) {
-    const banner = document.createElement('div')
-    banner.className = 'storage-banner'
-    banner.setAttribute('role', 'alert')
-    banner.textContent =
-      '当前浏览器的本地存储不可用（隐私模式或已禁用）——本次会话的数据将不会被保存。建议换普通模式使用。'
-    document.body.appendChild(banner)
-  }
-})
+// IndexedDB 探针：不可用则降级内存模式，并挂横幅；失败入错误日志
+track(
+  initStorage().then(() => {
+    if (usingMemoryFallback) {
+      const banner = document.createElement('div')
+      banner.className = 'storage-banner'
+      banner.setAttribute('role', 'alert')
+      banner.textContent =
+        '当前浏览器的本地存储不可用（隐私模式或已禁用）——本次会话的数据将不会被保存。建议换普通模式使用。'
+      document.body.appendChild(banner)
+    }
+  }),
+  '启动存储探针 initStorage',
+)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
