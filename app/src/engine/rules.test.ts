@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hitInterests, prefilter, scoreByRules } from './rules'
+import { hitInterests, prefilter, scoreByRules, normalizeWeights, DEFAULT_WEIGHTS } from './rules'
 import type { CollectConfig, Source } from '../types/models'
 import { TIER_WEIGHT } from '../content/collect'
 
@@ -83,6 +83,33 @@ describe('scoreByRules（04 §4.1 公式的规则近似）', () => {
     const { score } = scoreByRules({ source: src(0.7), title: '标题足够长的普通条目', summary: '', domainCountToday: 0, config: CONFIG })
     const expectTotal = Math.round(100 * (0.3 * 0.7 + 0.25 * 1 + 0.25 * score.relevance + 0.2 * score.utility))
     expect(score.total).toBe(expectTotal)
+  })
+
+  it('缺 weights（存量配置）→ 按默认权重算，结果与旧版一致', () => {
+    const withDefaults = scoreByRules({ source: src(1), title: 'AI 应用新开源工具发布', summary: '', domainCountToday: 0, config: { ...CONFIG, weights: DEFAULT_WEIGHTS } })
+    const legacy = scoreByRules({ source: src(1), title: 'AI 应用新开源工具发布', summary: '', domainCountToday: 0, config: CONFIG })
+    expect(legacy.score.total).toBe(withDefaults.score.total)
+  })
+
+  it('权重可调：utility 拉满后工具词条目总分上升', () => {
+    const input = { source: src(1), title: '开源工具与教程案例', summary: '', domainCountToday: 0, config: CONFIG }
+    const before = scoreByRules(input).score.total
+    const after = scoreByRules({ ...input, config: { ...CONFIG, weights: { source: 0, novelty: 0, relevance: 0, utility: 1 } } }).score.total
+    expect(after).toBeGreaterThan(before)
+  })
+})
+
+describe('normalizeWeights', () => {
+  it('按比例缩放到总和 1（用户填百分比直觉值）', () => {
+    const w = normalizeWeights({ source: 40, novelty: 20, relevance: 20, utility: 20 })
+    expect(w.source).toBeCloseTo(0.4)
+    expect(w.novelty + w.relevance + w.utility).toBeCloseTo(0.6)
+  })
+
+  it('负数与非数视为 0；全零回退默认', () => {
+    expect(normalizeWeights({ source: -1, novelty: 'x' as unknown as number, relevance: 1, utility: 1 }).source).toBe(0)
+    expect(normalizeWeights({ source: 0, novelty: 0, relevance: 0, utility: 0 })).toEqual(DEFAULT_WEIGHTS)
+    expect(normalizeWeights(undefined)).toEqual(DEFAULT_WEIGHTS)
   })
 })
 

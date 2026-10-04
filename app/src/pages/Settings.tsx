@@ -11,7 +11,10 @@ import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } fro
 import { chatCompletion } from '../modules/review/engine/llm'
 import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
-import type { ErrorLogEntry } from '../types/models'
+import { starStats, type StarStats } from '../engine/starStats'
+import { DEFAULT_WEIGHTS } from '../engine/rules'
+import { db } from '../db/schema'
+import type { ErrorLogEntry, ScoreWeights } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
 
 const THEMES: { key: ThemePref; label: string }[] = [
@@ -26,6 +29,13 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   window: '脚本错误',
   app: '内部错误',
 }
+
+const WEIGHT_FIELDS: { key: keyof ScoreWeights; label: string }[] = [
+  { key: 'source', label: '信源' },
+  { key: 'novelty', label: '新鲜度' },
+  { key: 'relevance', label: '相关度' },
+  { key: 'utility', label: '实用度' },
+]
 
 /** 设置页（PRD §4.8）：W1 交付外观与数据导出；AI·BYOK 与导入随 W2/W3 点亮 */
 export function Settings() {
@@ -61,6 +71,29 @@ export function Settings() {
     void refreshErrors()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次，手动点刷新更新
   }, [])
+
+  // 星级反馈统计（方案 A：调权重/兴趣词的依据）
+  const [stats, setStats] = useState<StarStats | null>(null)
+  const [statsBusy, setStatsBusy] = useState(false)
+  const refreshStats = async () => {
+    setStatsBusy(true)
+    try {
+      const all = await db.items.toArray()
+      setStats(starStats(all.filter((i) => !i.deletedAt), config.interests, sources))
+    } finally {
+      setStatsBusy(false)
+    }
+  }
+  useEffect(() => {
+    void refreshStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次，手动点刷新更新
+  }, [])
+
+  /** 权重以百分比直觉值编辑（40/25/20/15）；引擎按比例折算，不要求恰好 100 */
+  const setWeight = (key: keyof ScoreWeights, pct: number) => {
+    const next = { ...(config.weights ?? DEFAULT_WEIGHTS), [key]: Math.max(0, Math.min(100, pct)) / 100 }
+    setConfig({ weights: next })
+  }
 
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
@@ -303,12 +336,107 @@ export function Settings() {
           </div>
           <div className="set-row">
             <label>评分权重</label>
-            <span className="val">source .30 · novelty .25 · relevance .25 · utility .20　<span style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>（本地按规则近似；权重随你的星级反馈人工调整，不训练模型）</span></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="weight-grid">
+                {WEIGHT_FIELDS.map((f) => (
+                  <label key={f.key} className="weight-cell">
+                    {f.label}
+                    <input
+                      className="input tnum"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Math.round((config.weights ?? DEFAULT_WEIGHTS)[f.key] * 100)}
+                      onChange={(e) => setWeight(f.key, Number(e.target.value))}
+                      aria-label={`${f.label}权重百分比`}
+                    />
+                    ％
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginTop: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <button type="button" className="text-btn" onClick={() => setConfig({ weights: { ...DEFAULT_WEIGHTS } })}>
+                  恢复默认（30/25/25/20）
+                </button>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  评分时四项按比例折算，当前合计 {Math.round(WEIGHT_FIELDS.reduce((n, f) => n + (config.weights ?? DEFAULT_WEIGHTS)[f.key], 0) * 100)}%
+                </span>
+              </div>
+            </div>
           </div>
           <div className="set-row">
             <label>每日 Top N</label>
             <input className="input" style={{ maxWidth: 120 }} readOnly value={`${config.topN}（只读）`} />
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>推送量是产品设计，不是用户设置（04 §8）</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>星级反馈</h2>
+        <div className="desc">你给条目打的星级是调权重、调兴趣词的依据——这里汇总 4–5 星条目的共同点（按当前兴趣词表重算）</div>
+        <div className="set-body">
+          {!stats || statsBusy ? (
+            <div className="val" style={{ color: 'var(--ink-faint)' }}>读取中…</div>
+          ) : stats.rated === 0 ? (
+            <div className="val" style={{ color: 'var(--ink-faint)' }}>
+              还没有打过星级。在「信息日报」里给条目打星，这里就会告诉你高分条目集中在哪些兴趣词、信源和主题域。
+            </div>
+          ) : (
+            <>
+              <div className="set-row">
+                <label>总体</label>
+                <span className="val tnum">打过星 {stats.rated} 条 · 平均 {stats.avgStars} 星 · 高分（4–5 星）{stats.high} 条</span>
+              </div>
+              {stats.high > 0 && (
+                <>
+                  <div className="stat-group">高分条目的兴趣词</div>
+                  <div className="stat-bars">
+                    {stats.interestHits.length === 0 ? (
+                      <div className="stat-empty">高分条目没有命中任何兴趣词——考虑把它们的关键词加进上面的兴趣域</div>
+                    ) : (
+                      stats.interestHits.map((e) => (
+                        <div key={e.label} className="stat-bar">
+                          <span className="stat-label">{e.label}</span>
+                          <span className="stat-track"><span className="stat-fill" style={{ width: `${(e.count / stats.interestHits[0]!.count) * 100}%` }} /></span>
+                          <span className="stat-count tnum">{e.count}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="stat-group">高分条目来自的信源</div>
+                  <div className="stat-bars">
+                    {stats.sources.map((e) => (
+                      <div key={e.label} className="stat-bar">
+                        <span className="stat-label">{e.label}</span>
+                        <span className="stat-track"><span className="stat-fill alt" style={{ width: `${(e.count / stats.sources[0]!.count) * 100}%` }} /></span>
+                        <span className="stat-count tnum">{e.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="stat-group">高分条目的主题域</div>
+                  <div className="stat-bars">
+                    {stats.domains.map((e) => (
+                      <div key={e.label} className="stat-bar">
+                        <span className="stat-label">{e.label}</span>
+                        <span className="stat-track"><span className="stat-fill alt" style={{ width: `${(e.count / stats.domains[0]!.count) * 100}%` }} /></span>
+                        <span className="stat-count tnum">{e.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
+                    怎么用：某兴趣词高频出现 → 上调「相关度」权重或补充兴趣域；高分集中在少数信源 → 去信源管理页上调这些信源的分级。调整从下一次抓取开始生效。
+                  </div>
+                </>
+              )}
+            </>
+          )}
+          <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
+            <button type="button" className="btn-ghost" disabled={statsBusy} onClick={() => void refreshStats()}>
+              {statsBusy ? '读取中…' : '↻ 刷新统计'}
+            </button>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>打星后回这里点刷新</span>
           </div>
         </div>
       </div>

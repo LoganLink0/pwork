@@ -3,12 +3,14 @@
  */
 
 import type { CollectConfig } from '../types/models'
+import { DEFAULT_WEIGHTS } from '../engine/rules'
 
 export const DEFAULT_COLLECT_CONFIG: CollectConfig = {
   interests: ['AI 应用', '独立开发', '前端工程化'],
   dislikes: ['融资', '八卦', '软文'],
   context: '我在做个人复盘工具与信息采集系统，关注能直接借鉴的产品与增长打法',
   topN: 10,
+  weights: { ...DEFAULT_WEIGHTS },
 }
 
 const CONFIG_KEY = 'pwork-collect-config'
@@ -23,6 +25,8 @@ export function loadCollectConfig(): CollectConfig {
       dislikes: Array.isArray(parsed.dislikes) ? parsed.dislikes : [...DEFAULT_COLLECT_CONFIG.dislikes],
       context: typeof parsed.context === 'string' ? parsed.context : DEFAULT_COLLECT_CONFIG.context,
       topN: parsed.topN ?? DEFAULT_COLLECT_CONFIG.topN,
+      // 存量配置没有 weights（2026-10-04 前的 localStorage 与旧备份）——回默认（铁律 2）
+      weights: parsed.weights ? { ...DEFAULT_WEIGHTS, ...parsed.weights } : { ...DEFAULT_WEIGHTS },
     }
   } catch {
     return { ...DEFAULT_COLLECT_CONFIG }

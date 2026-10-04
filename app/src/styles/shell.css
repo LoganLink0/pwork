@@ -917,6 +917,98 @@ a.mcard .m-link:hover {
   color: var(--accent-text);
 }
 
+/* 设置页统计条（星级反馈） */
+.stat-group {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  margin: var(--sp-3) 0 var(--sp-1);
+}
+
+/* 权重编辑：四项一格一行不换行，避免标签被挤成竖排 */
+.weight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, max-content));
+  gap: var(--sp-2) var(--sp-3);
+  align-items: center;
+}
+
+.weight-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.weight-cell .input {
+  width: 60px;
+  flex: none;
+}
+
+.stat-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 空态占位：与有条形的行同构，虚线提示而非假数据 */
+.stat-empty {
+  display: flex;
+  align-items: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 4px var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+
+.stat-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+.stat-bar .stat-label {
+  width: 120px;
+  flex: none;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-bar .stat-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.stat-bar .stat-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  min-width: 2px;
+}
+
+.stat-bar .stat-fill.alt {
+  background: var(--cat-insight);
+}
+
+.stat-bar .stat-count {
+  flex: none;
+  width: 28px;
+  text-align: right;
+  color: var(--ink-faint);
+}
+
 /* 文字按钮：横幅/行内的次要操作，不与主操作抢视觉 */
 .text-btn {
   background: none;
