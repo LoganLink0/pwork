@@ -112,7 +112,7 @@ export function Sidebar() {
         设置
       </NavLink>
       <div className="foot">
-        本地优先 · 数据都保存在这台电脑上
+        本地优先 · 数据都在本机
         <br />
         <NavLink to="/design">设计系统样例</NavLink>
       </div>

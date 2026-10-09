@@ -143,6 +143,7 @@ button.nav-item {
   padding: var(--sp-3);
   border-top: 1px solid var(--line);
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 .main {
@@ -943,9 +944,12 @@ a.mcard .m-link:hover {
   white-space: nowrap;
 }
 
+/* 关键：重置 .input 基类的 min-width:180px——否则框被撑满一行，字段名视觉上被框吞掉 */
 .weight-cell .input {
   width: 60px;
+  min-width: 0;
   flex: none;
+  text-align: center;
 }
 
 .stat-bars {
