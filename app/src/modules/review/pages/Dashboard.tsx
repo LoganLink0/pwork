@@ -103,12 +103,11 @@ export function Dashboard() {
       {/* 双栏：档案 / 待办 */}
       <div className="home-grid">
         <section className="panel">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0 }}>最近档案</h2>
+          <div className="panel-head">
+            <h2>最近档案</h2>
             {reviews !== null && reviews.length > 0 && (
               <input
                 className="input"
-                style={{ width: 'min(220px, 60%)', marginBottom: 0 }}
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder={DASHBOARD_STATS.searchPlaceholder}

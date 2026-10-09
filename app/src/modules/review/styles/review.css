@@ -396,6 +396,24 @@
   margin-bottom: var(--sp-4);
 }
 
+/* 卡片头：标题与行内工具（搜索框等）同一行；h2 下距与 .panel > h2 同一规则 */
+.review-root .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.review-root .panel-head h2 {
+  margin: 0 0 var(--sp-4);
+}
+
+.review-root .panel-head .input {
+  width: min(220px, 60%);
+  margin-bottom: 0;
+}
+
 /* ---------- 表单与向导 ---------- */
 
 .review-root .input {
