@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { DATA_POINTS, FAQ, GLOSSARY, MODULES, QUICK_START, SHORTCUTS } from '../content/help'
+import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, QUICK_START, SHORTCUTS } from '../content/help'
 
 /**
  * 帮助页（/help）：回答"这个四模块系统本身怎么用"。
@@ -28,6 +28,27 @@ export function Help() {
                 {s.action} →
               </Link>
             </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>配置指南</h2>
+        <div className="desc">装完即用；唯一建议开的是自动备份——AI、云端同步、转接服务都是可选，先看"我需要吗"再动手</div>
+        <div className="set-body">
+          {CONFIG_GUIDE.map((c) => (
+            <details key={c.title} className="errlog-item" style={{ border: 'none' }}>
+              <summary style={{ padding: 'var(--sp-2) 0', gap: 'var(--sp-2)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{c.title}</span>
+              </summary>
+              <div className="notice" style={{ borderLeftColor: 'var(--line-strong)', marginBottom: 'var(--sp-2)' }}>{c.who}</div>
+              <ol style={{ margin: '0 0 var(--sp-2) 0', paddingLeft: 'var(--sp-5)', color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)', lineHeight: 1.9 }}>
+                {c.steps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+              <Link to={c.link.to} className="btn-ghost" style={{ marginBottom: 'var(--sp-2)' }}>{c.link.label} →</Link>
+            </details>
           ))}
         </div>
       </div>

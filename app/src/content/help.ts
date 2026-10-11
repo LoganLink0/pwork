@@ -151,3 +151,58 @@ export const FAQ: FaqEntry[] = [
     link: { label: '看路线图', to: '/process' },
   },
 ]
+
+/* ---------- 配置指南（2026-10-11 分发加固）：先回答"我需要配吗"，再讲怎么配 ---------- */
+
+export interface ConfigGuideEntry {
+  title: string
+  /** 谁需要动这个配置 */
+  who: string
+  steps: string[]
+  link: { label: string; to: string }
+}
+
+export const CONFIG_GUIDE: ConfigGuideEntry[] = [
+  {
+    title: '自动备份（建议所有人开启）',
+    who: '所有人。这是本地优先应用唯一的安全网——数据只存在这台电脑上，备份到期自动存一份完整 JSON。',
+    steps: [
+      '设置 → 数据 → 自动备份，选「开」，周期建议「每周」。',
+      '桌面版备份存到 C:\\Users\\你的用户名\\AppData\\Roaming\\com.pwork.workbench\\backups\\ 文件夹；浏览器版存到下载文件夹。',
+      '想手动备份随时点同一页的「全量导出」。',
+    ],
+    link: { label: '去设置', to: '/settings' },
+  },
+  {
+    title: 'AI 功能（可选：不配也完全能用）',
+    who: '想用复盘 AI 教练、全库问答、AI 写大纲的人。不配 AI，评分走本地规则、导出走内置模板，所有功能照常。',
+    steps: [
+      '桌面版：在 C:\\Users\\你的用户名\\AppData\\Roaming\\com.pwork.workbench\\ 新建文本文件 gateway.env，写入一行 PWORK_LLM_API_KEY=你的Key，重启应用（Key 从大模型服务商官网获取，如 DeepSeek / 智谱开放平台）。',
+      '浏览器版：在应用目录复制 tools/.env.example 为 .env.local，填同样的内容，再运行 npm run gateway。',
+      '设置 → AI · BYOK 选「本地网关」，点「测试网关」看到"在线，Key 已配置"即成功。',
+      'Key 只存在你自己电脑的这个文件里：不上传、不进备份、界面永不显示。',
+    ],
+    link: { label: '去 AI 设置', to: '/settings' },
+  },
+  {
+    title: '云端同步（可选：想 24 小时自动抓信源的人才需要）',
+    who: '默认不需要。不配置云端，应用是纯本地工具，所有功能可用。它的唯一作用：让云端服务器按计划替你抓信源，你打开应用时拉回合并——适合不想每次手动点「立即抓取」的人。需要自己的 Cloudflare 账号（免费）。',
+    steps: [
+      '先把抓取服务部署到你的 Cloudflare：需要从开源仓库获取 worker 目录，按其中的 README 部署（一次性，约 15 分钟）。',
+      '部署完拿到两个 ID：账户 ID（Cloudflare 控制台首页右侧）、数据库 ID（部署输出里）。',
+      '建一个 API Token：控制台右上角头像 → 我的个人资料 → API 令牌 → 创建令牌，权限只给「账户 → D1 → 编辑」。',
+      '设置 → 云端同步，模式选「D1 直连」，填账户 ID、数据库 ID、Token，点「测试连接」。',
+      '「端点」和「D1 直连」是同一个东西的两条通道：端点走 workers.dev 域名（部分网络打不开），D1 直连走 Cloudflare 官方接口（更稳，推荐）。',
+    ],
+    link: { label: '去云端同步', to: '/settings' },
+  },
+  {
+    title: '转接服务（可选：抓取经常超时的人才需要）',
+    who: '信息日报有部分信源浏览器直连不了，要走一个公共转接服务；它偶尔慢或超时（表现为那几个源频繁失败）。多数人不用管。',
+    steps: [
+      '如果你自建了转接服务（或换了别的转接地址）：设置 → 采集偏好 → 转接服务，填入你的地址。',
+      '留空 = 用默认公共服务。改完下一次抓取生效。',
+    ],
+    link: { label: '去采集偏好', to: '/settings' },
+  },
+]
