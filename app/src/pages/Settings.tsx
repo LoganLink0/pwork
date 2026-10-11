@@ -238,9 +238,11 @@ export function Settings() {
         <h2>数据</h2>
         <div className="desc">备份先行（铁律 6）：任何删除、迁移、清理前，先全量导出</div>
         <div className="set-body">
-          <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
-            <b>换电脑 / 换浏览器时</b>：① 在原来环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。
-          </div>
+          {(noteCount > 0 || sources.length > 0 || items.length > 0 || trashCount > 0) && (
+            <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
+              <b>换电脑 / 换浏览器 / 换到桌面版时</b>：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。
+            </div>
+          )}
           <div className="set-row">
             <label>全量备份</label>
             <button type="button" className="btn-primary" onClick={() => void doExport()}>
