@@ -14,6 +14,8 @@ import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engi
 import { starStats, type StarStats } from '../engine/starStats'
 import { DEFAULT_WEIGHTS } from '../engine/rules'
 import { loadAutoBackup, saveAutoBackup } from '../engine/autoBackup'
+import { isDesktopApp } from '../engine/platform'
+import { starAdvice, type StarAdvice } from '../engine/starAdvice'
 import { db } from '../db/schema'
 import type { ErrorLogEntry, ScoreWeights } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
@@ -290,8 +292,8 @@ export function Settings() {
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {autoBk.enabled
-                ? `到期后打开应用自动导出到浏览器下载文件夹${autoBk.lastAt ? `（上次自动导出：${fmtLocal(autoBk.lastAt)}）` : '（还没导出过，下次打开应用时执行）'}`
-                : '本地优先应用，建议开启——数据只存在这台电脑的这个浏览器里'}
+                ? `到期后打开应用自动备份${isDesktopApp() ? '到应用数据目录的 backups 文件夹' : '到浏览器下载文件夹'}${autoBk.lastAt ? `（上次自动备份：${fmtLocal(autoBk.lastAt)}）` : '（还没备份过，下次打开应用时执行）'}`
+                : '本地优先应用，建议开启——数据只存在这台电脑上'}
             </span>
           </div>
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
@@ -471,6 +473,28 @@ export function Settings() {
                       </div>
                     ))}
                   </div>
+                  {(() => {
+                    const adviceList: StarAdvice[] = starAdvice(stats, config)
+                    if (adviceList.length === 0) return null
+                    return (
+                      <>
+                        <div className="stat-group">调整建议（依据上面的统计）</div>
+                        {adviceList.map((a) => (
+                          <div key={a.id} className="notice" style={{ marginBottom: 'var(--sp-2)', display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline', flexWrap: 'wrap' }}>
+                            <span style={{ flex: 1, minWidth: '240px' }}>{a.text}</span>
+                            {a.apply && (
+                              <button type="button" className="mini-btn" onClick={() => setConfig({ weights: { ...DEFAULT_WEIGHTS, ...(config.weights ?? {}), ...a.apply!.weights } })}>
+                                采纳（改权重）
+                              </button>
+                            )}
+                            {a.goTo && (
+                              <Link to={a.goTo} className="mini-btn" style={{ textDecoration: 'none' }}>去看看</Link>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()}
                   <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
                     怎么用：某兴趣词高频出现 → 上调「相关度」权重或补充兴趣域；高分集中在少数信源 → 去信源管理页上调这些信源的分级。调整从下一次抓取开始生效。
                   </div>

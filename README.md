@@ -79,6 +79,20 @@
 | 生产·浏览器 | `cd app && npm run build && npm run serve` | 给技术型朋友用（零依赖静态服务） |
 | 生产·桌面应用 | `cd app && npm run tauri build` → `src-tauri/target/release/bundle/nsis/` 安装包 | 分发给任何人（数据跟应用走，不依赖浏览器） |
 
+## 桌面版说明（2026-10-11 起）
+
+- **单实例**：重复启动会聚焦已有窗口（防两进程写一个库）。
+- **AI 网关内嵌**：应用启动即在 127.0.0.1:8788 起网关（开发时若 Node 版网关已占端口则让位）。Key 放置：把 `PWORK_LLM_API_KEY=…`（可选 `PWORK_LLM_BASE_URL=…`）写进 `%APPDATA%/com.pwork.workbench/gateway.env` 后重启应用；用量日志同目录 `gateway-usage.log`。
+- **自动备份写磁盘**：到期备份写入 `%APPDATA%/com.pwork.workbench/backups/`（写失败自动回落浏览器下载）。
+- 安装器界面为简体中文。
+
+## 发布与更新（给分发规模化的准备）
+
+1. 改版本号：`app/src-tauri/tauri.conf.json` 的 `version`（建议与 app/package.json 同步）。
+2. 打包：`cd app && npm run tauri build` → 拿走 `bundle/nsis/PWORK_x.y.z_x64-setup.exe`。
+3. **更新器（未启用）**：签名密钥已生成在 `app/.tauri/pwork-updater.key(.pub)`（不入库，**私钥丢失则永远无法推送更新**）。启用步骤：装 `tauri-plugin-updater` → conf 里配 `plugins.updater.endpoints` 指向你的更新源（如 GitHub Releases 的 latest.json）→ 构建时带 `TAURI_SIGNING_PRIVATE_KEY` 环境变量。当前无托管源，故意不接插件——内置一个永远连不上的更新检查比没有更糟。
+4. **代码签名（未购买）**：无证书时 Windows 会提示"未知发布者"，属预期；正式分发可购证书后配 `bundle.windows.certificateThumbprint`。
+
 ## 环境要求
 
 Node ≥ 20（开发机实测 24）、Git、现代浏览器；无后端依赖（采集上云阶段另需 Cloudflare 免费账号）。

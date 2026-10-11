@@ -21,3 +21,10 @@ app/.env
 # Tauri 桌面壳：Rust 构建产物与生成目录
 app/src-tauri/target/
 app/src-tauri/gen/
+
+# Tauri updater 签名密钥（私钥绝不入库）
+app/.tauri/
+
+# 根目录误装残留（tauri build 曾在错误 cwd 跑 npm）
+/package.json
+/package-lock.json

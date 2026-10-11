@@ -35,6 +35,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "nsis": {
+        "languages": ["SimpChinese"],
+        "displayLanguageSelector": false
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }

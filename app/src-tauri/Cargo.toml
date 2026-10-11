@@ -1,8 +1,8 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "PWORK 个人工作台——本地优先的四模块个人操作系统"
+authors = ["PWORK"]
 license = ""
 repository = ""
 edition = "2024"
@@ -23,3 +23,9 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.12.3", features = [] }
 tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-fs = "2"
+# 内嵌网关（gateway.mjs 的 Rust 版）：tiny_http 同步小服务器 + ureq 同步上游代理
+tiny_http = "0.12"
+ureq = { version = "2", features = ["json"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

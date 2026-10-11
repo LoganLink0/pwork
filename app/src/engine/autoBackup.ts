@@ -6,6 +6,7 @@
  */
 import { buildBackupBundle } from '../store/collect'
 import { downloadFile } from '../db/repo'
+import { isDesktopApp } from './platform'
 
 export interface AutoBackupConfig {
   enabled: boolean
@@ -58,8 +59,27 @@ export interface AutoBackupResult {
 }
 
 /**
+ * 桌面版：写进应用数据目录的 backups/ 文件夹（用户可备份/拷贝的固定位置）；
+ * 浏览器版：走下载文件夹。写盘失败（权限等）时回落浏览器下载，不丢备份。
+ */
+async function deliverBackup(fileName: string, content: string): Promise<'disk' | 'download'> {
+  if (isDesktopApp()) {
+    try {
+      const { mkdir, writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      await mkdir('backups', { baseDir: BaseDirectory.AppData, recursive: true })
+      await writeTextFile(`backups/${fileName}`, content, { baseDir: BaseDirectory.AppData })
+      return 'disk'
+    } catch {
+      // 落到浏览器下载兜底
+    }
+  }
+  downloadFile(fileName, content, 'application/json')
+  return 'download'
+}
+
+/**
  * 打开应用时调用：到期则自动导出并记录时间。
- * build/download 可注入（测试用）；生产默认走真实备份与浏览器下载。
+ * build/download 可注入（测试用）；生产默认走真实备份与桌面写盘/浏览器下载。
  */
 export async function runAutoBackupIfDue(
   opts?: {
@@ -73,13 +93,16 @@ export async function runAutoBackupIfDue(
   if (!autoBackupDue(cfg, now)) return { downloaded: false, reason: cfg.enabled ? 'not-due' : 'disabled' }
 
   const build = opts?.build ?? (async () => buildBackupBundle())
-  const download =
-    opts?.download ??
-    ((filename: string, content: string) => downloadFile(filename, content, 'application/json'))
+  const deliver =
+    opts?.download
+      ? (filename: string, content: string) => {
+          opts!.download!(filename, content)
+        }
+      : deliverBackup
 
   const bundle = await build()
   const fileName = backupFileName(now)
-  download(fileName, JSON.stringify(bundle, null, 2))
+  deliver(fileName, JSON.stringify(bundle, null, 2))
   localStorage.setItem('pwork-last-backup', now.toISOString())
   saveAutoBackup({ ...cfg, lastAt: now.toISOString() })
   return { downloaded: true, fileName }
