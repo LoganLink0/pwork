@@ -28,7 +28,6 @@ function mk(over: Partial<Item> & { stars: number; title: string; sourceId?: str
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
-    deletedAt: null,
   }
 }
 

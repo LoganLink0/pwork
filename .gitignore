@@ -17,3 +17,7 @@ app/.env
 
 # Mimosa 扫描工作目录
 .mimosa/
+
+# Tauri 桌面壳：Rust 构建产物与生成目录
+app/src-tauri/target/
+app/src-tauri/gen/

@@ -27,6 +27,7 @@ export function loadCollectConfig(): CollectConfig {
       topN: parsed.topN ?? DEFAULT_COLLECT_CONFIG.topN,
       // 存量配置没有 weights（2026-10-04 前的 localStorage 与旧备份）——回默认（铁律 2）
       weights: parsed.weights ? { ...DEFAULT_WEIGHTS, ...parsed.weights } : { ...DEFAULT_WEIGHTS },
+      relayBase: typeof parsed.relayBase === 'string' ? parsed.relayBase : '',
     }
   } catch {
     return { ...DEFAULT_COLLECT_CONFIG }

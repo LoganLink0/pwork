@@ -315,4 +315,6 @@ export interface CollectConfig {
   topN: number
   /** 评分权重；可选字段——2026-10-04 前的存量配置与旧备份没有它，读取侧走默认（铁律 2） */
   weights?: ScoreWeights
+  /** RSS 转接服务地址（浏览器直连被 CORS 拦的信源走它）；空/缺省 = 公共 rss2json */
+  relayBase?: string
 }

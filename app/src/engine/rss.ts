@@ -82,12 +82,13 @@ export function parseFeed(xml: string): ParseResult {
 /**
  * 抓取单个信源，按序尝试候选通路（实测结论 2026-08-31）：
  * ① 直连——仅当源自带 CORS 头（access-control-allow-origin: *）时浏览器可用；
- * ② rsshub.app 源自动换 rssforever 公共镜像（该实例可达但 CORS 锁自身域名，浏览器直抓仍会被拦，
+ * ② rsshub.app 源自动换 rssforever 公共镜像（该实例可达但 CORS 锁自身域名，浏览器直抓仍被拦，
  *    主要为 Tauri 化后无 CORS 场景预留）；
- * ③ rss2json 公共转接——服务端抓取 + 开放 CORS，是浏览器内 C1 的主力通路。
+ * ③ RSS 转接服务——服务端抓取 + 开放 CORS，是浏览器内 C1 的主力通路。
+ *    默认走公共 rss2json（无 SLA、慢/限流时可在设置里换自建地址）。
  * data: URL 用于本地测试/离线演示，fetch 原生支持。
  */
-export async function fetchFeed(url: string, timeoutMs = 10_000): Promise<ParseResult> {
+export async function fetchFeed(url: string, timeoutMs = 10_000, relayBase = ''): Promise<ParseResult> {
   const candidates: string[] = [url]
   if (url.includes('rsshub.app')) {
     candidates.push(url.replace('//rsshub.app', '//rsshub.rssforever.com'))
@@ -98,15 +99,17 @@ export async function fetchFeed(url: string, timeoutMs = 10_000): Promise<ParseR
     if (direct.ok) return direct
     lastError = direct.error
   }
+  const relay = (relayBase.trim() || 'https://api.rss2json.com').replace(/\/+$/, '')
   const viaJson = await tryFetch(
-    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`,
+    `${relay}/v1/api.json?rss_url=${encodeURIComponent(url)}`,
     timeoutMs,
+    true,
   )
   if (viaJson.ok) return viaJson
   return { ok: false, items: [], error: lastError ?? viaJson.error ?? '抓取失败' }
 }
 
-async function tryFetch(url: string, timeoutMs: number): Promise<ParseResult> {
+async function tryFetch(url: string, timeoutMs: number, isRelay = false): Promise<ParseResult> {
   let resp: Response
   try {
     resp = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
@@ -123,8 +126,8 @@ async function tryFetch(url: string, timeoutMs: number): Promise<ParseResult> {
   } catch {
     return { ok: false, items: [], error: '读取响应超时（>10s）' }
   }
-  // rss2json 返回 JSON：{ status:'ok', items:[{title,link,pubDate,description}] }
-  if (url.includes('rss2json')) return parseRss2Json(text)
+  // 转接服务返回 JSON：{ status:'ok', items:[{title,link,pubDate,description}] }
+  if (isRelay) return parseRss2Json(text)
   return parseFeed(text)
 }
 

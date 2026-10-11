@@ -12,6 +12,7 @@ import { useCollect } from './store/collect'
 import { useTasks } from './store/tasks'
 import { useGoals } from './store/goals'
 import { track } from './engine/errorLog'
+import { runAutoBackupIfDue } from './engine/autoBackup'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { PLACEHOLDER } from './content/placeholder'
 
@@ -91,6 +92,7 @@ export default function App() {
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
+    track(runAutoBackupIfDue(), '自动备份')
   }, [load, loadCollect, loadTasks])
 
   return (

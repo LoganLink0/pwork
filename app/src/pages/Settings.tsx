@@ -13,6 +13,7 @@ import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
 import { starStats, type StarStats } from '../engine/starStats'
 import { DEFAULT_WEIGHTS } from '../engine/rules'
+import { loadAutoBackup, saveAutoBackup } from '../engine/autoBackup'
 import { db } from '../db/schema'
 import type { ErrorLogEntry, ScoreWeights } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
@@ -47,6 +48,12 @@ export function Settings() {
   const [lastBackup, setLastBackup] = useState<string | null>(
     () => localStorage.getItem('pwork-last-backup'),
   )
+  const [autoBk, setAutoBk] = useState(() => loadAutoBackup())
+  const setAutoBackup = (patch: Partial<typeof autoBk>) => {
+    const next = { ...autoBk, ...patch }
+    setAutoBk(next)
+    saveAutoBackup(next)
+  }
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
   const [contextDraft, setContextDraft] = useState<string | null>(null)
@@ -231,6 +238,9 @@ export function Settings() {
         <h2>数据</h2>
         <div className="desc">备份先行（铁律 6）：任何删除、迁移、清理前，先全量导出</div>
         <div className="set-body">
+          <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
+            <b>换电脑 / 换浏览器时</b>：① 在原来环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。
+          </div>
           <div className="set-row">
             <label>全量备份</label>
             <button type="button" className="btn-primary" onClick={() => void doExport()}>
@@ -257,6 +267,29 @@ export function Settings() {
             <label>库内数据</label>
             <span className="val tnum">
               速记 {noteCount} 条 · 信源 {sources.length} 个 · 条目 {items.length} 条（近30天）· 回收站 {trashCount} · 导出包裹 version 1
+            </span>
+          </div>
+          <div className="set-row">
+            <label>自动备份</label>
+            <div className="radio" role="radiogroup" aria-label="自动备份开关">
+              <button type="button" className={autoBk.enabled ? 'on' : ''} onClick={() => setAutoBackup({ enabled: true })} aria-pressed={autoBk.enabled}>
+                开
+              </button>
+              <button type="button" className={!autoBk.enabled ? 'on' : ''} onClick={() => setAutoBackup({ enabled: false })} aria-pressed={!autoBk.enabled}>
+                关
+              </button>
+            </div>
+            <div className="radio" role="radiogroup" aria-label="自动备份周期">
+              {[7, 14, 30].map((d) => (
+                <button key={d} type="button" className={autoBk.everyDays === d ? 'on' : ''} onClick={() => setAutoBackup({ everyDays: d })} aria-pressed={autoBk.everyDays === d}>
+                  {d === 30 ? '每月' : d === 14 ? '每两周' : '每周'}
+                </button>
+              ))}
+            </div>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              {autoBk.enabled
+                ? `到期后打开应用自动导出到浏览器下载文件夹${autoBk.lastAt ? `（上次自动导出：${fmtLocal(autoBk.lastAt)}）` : '（还没导出过，下次打开应用时执行）'}`
+                : '本地优先应用，建议开启——数据只存在这台电脑的这个浏览器里'}
             </span>
           </div>
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
@@ -364,6 +397,17 @@ export function Settings() {
                 </span>
               </div>
             </div>
+          </div>
+          <div className="set-row">
+            <label>转接服务</label>
+            <input
+              className="input"
+              style={{ flex: 1 }}
+              placeholder="默认公共 rss2json（不稳定时可填自建地址，留空即用默认）"
+              value={config.relayBase ?? ''}
+              onChange={(e) => setConfig({ relayBase: e.target.value })}
+              aria-label="RSS 转接服务地址"
+            />
           </div>
           <div className="set-row">
             <label>每日 Top N</label>

@@ -126,9 +126,9 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
         <button
           type="button"
           className="stars"
-          title="星级是你的评分，会用来调整评分标准"
-          onClick={() => onStars((a.stars % 5) + 1)}
-          aria-label={`星级：${a.stars} 星，点击加一星`}
+          title="星级是你的评分，会用来调整评分标准；点满 5 星后再点一下清零"
+          onClick={() => onStars(a.stars >= 5 ? 0 : (a.stars % 5) + 1)}
+          aria-label={`星级：${a.stars} 星，点击${a.stars >= 5 ? '清零' : '加一星'}`}
         >
           {[1, 2, 3, 4, 5].map((n) => (
             <span key={n} className={n <= a.stars ? 'on' : ''}>★</span>

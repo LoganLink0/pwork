@@ -54,7 +54,7 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
     error: null,
     autoStopped: false,
   }
-  const feed = await fetchFeed(source.url)
+  const feed = await fetchFeed(source.url, 10_000, config.relayBase)
   if (!feed.ok) {
     const autoStopped = await markSourceFail(source.id, feed.error ?? '未知错误')
     return { ...base, error: feed.error, autoStopped }

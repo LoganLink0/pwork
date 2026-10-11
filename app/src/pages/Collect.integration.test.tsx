@@ -64,6 +64,13 @@ describe('信息采集 C1（W2）', () => {
     await user.click(stars)
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.stars).toBe(1))
 
+    // 点满 5 星后再点一下 → 清零（评级可撤销）；每步等渲染跟上再点
+    for (const n of [1, 2, 3, 4]) {
+      await user.click(await screen.findByRole('button', { name: new RegExp(`星级：${n} 星，点击加一星`) }))
+    }
+    await user.click(await screen.findByRole('button', { name: /星级：5 星，点击清零/ }))
+    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.stars).toBe(0))
+
     // 详情展开：评分理由 + 四维
     await user.click(screen.getByRole('button', { name: '详情' }))
     expect(await screen.findByText(/评分理由/)).toBeInTheDocument()

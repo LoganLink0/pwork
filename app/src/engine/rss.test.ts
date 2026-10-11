@@ -92,3 +92,47 @@ describe('fetchFeed 读取响应体失败', () => {
     expect(r.error).toContain('读取响应超时')
   })
 })
+
+/** 转接服务地址可自定义（2026-10：公共 rss2json 慢/限流时换自建） */
+describe('fetchFeed 自定义转接地址', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('relayBase 生效：直连失败后走自建地址，且按 JSON 转接响应解析', async () => {
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        calls.push(url)
+        if (url.startsWith('https://example.com')) {
+          return { ok: false, status: 403, text: async () => '' } as unknown as Response
+        }
+        // 自建转接（地址不含 "rss2json" 字样）返回 JSON
+        const body = JSON.stringify({
+          status: 'ok',
+          items: [{ title: '转接条目', link: 'https://r.com/1', pubDate: '2026-10-04T00:00:00Z', description: 'x' }],
+        })
+        return { ok: true, status: 200, text: async () => body } as unknown as Response
+      }),
+    )
+    const r = await fetchFeed('https://example.com/feed.xml', 10_000, 'https://my-relay.example.org')
+    expect(r.ok).toBe(true)
+    expect(r.items[0]!.title).toBe('转接条目')
+    expect(calls.some((c) => c.startsWith('https://my-relay.example.org/v1/api.json'))).toBe(true)
+  })
+
+  it('不传 relayBase → 走默认公共 rss2json', async () => {
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        calls.push(String(input))
+        return { ok: false, status: 500, text: async () => '' } as unknown as Response
+      }),
+    )
+    await fetchFeed('https://example.com/feed.xml')
+    expect(calls.some((c) => c.startsWith('https://api.rss2json.com/v1/api.json'))).toBe(true)
+  })
+})
