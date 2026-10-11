@@ -216,12 +216,16 @@ pub fn start(data_dir: PathBuf) {
             let mut resp_headers = cors_headers(&origin);
             let ct = Header::from_bytes("Content-Type", "application/json; charset=utf-8").unwrap();
 
-            let body = if path.ends_with("/chat/completions") {
+            // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
+            // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
+            let body: Result<String, String> = if path.ends_with("/chat/completions") {
                 let mut b = String::new();
-                let _ = req.as_reader().read_to_string(&mut b);
-                Some(b)
+                match req.as_reader().read_to_string(&mut b) {
+                    Ok(_) => Ok(b),
+                    Err(e) => Err(format!("请求体读取失败（必须是 UTF-8）：{e}")),
+                }
             } else {
-                None
+                Ok(String::new())
             };
 
             let (status, payload): (u16, Value) = if path == "/health" {
@@ -231,27 +235,41 @@ pub fn start(data_dir: PathBuf) {
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
             } else if path.ends_with("/chat/completions") && method == Method::Post {
-                if cfg.chat_key.is_empty() {
-                    (503, json!({ "error": "网关未配置 PWORK_LLM_API_KEY——把 Key 放到应用数据目录的 gateway.env（PWORK_LLM_API_KEY=…）后重启应用" }))
-                } else if let Some(body) = body.as_deref() {
-                    match ureq::post(&normalize_upstream(&cfg.chat_url))
-                        .set("content-type", "application/json")
-                        .set("authorization", &format!("Bearer {}", cfg.chat_key))
-                        .send_string(body)
-                    {
-                        Ok(up) => {
-                            let text = up.into_string().unwrap_or_default();
-                            log_usage(&cfg, body, &text, &usage_lock);
-                            // 上游 JSON 原样作为 200 响应体返回（与 Node 版行为一致）；非 JSON 视为网关错误
-                            match serde_json::from_str::<Value>(&text) {
-                                Ok(v) => (200, v),
-                                Err(_) => (502, json!({ "error": "上游返回非 JSON" })),
+                match body.as_deref() {
+                    Err(msg) => (400, json!({ "error": msg })),
+                    Ok("") => (400, json!({ "error": "请求体为空" })),
+                    Ok(_body) if cfg.chat_key.is_empty() => {
+                        (503, json!({ "error": "网关未配置 PWORK_LLM_API_KEY——把 Key 放到应用数据目录的 gateway.env（PWORK_LLM_API_KEY=…）后重启应用" }))
+                    }
+                    Ok(body) => {
+                        match ureq::post(&normalize_upstream(&cfg.chat_url))
+                            .set("content-type", "application/json")
+                            .set("authorization", &format!("Bearer {}", cfg.chat_key))
+                            .send_string(body)
+                        {
+                            Ok(up) => {
+                                let status = up.status();
+                                let text = up.into_string().unwrap_or_default();
+                                log_usage(&cfg, body, &text, &usage_lock);
+                                // 上游 JSON 原样透传（status + body，与 Node 版行为一致）
+                                match serde_json::from_str::<Value>(&text) {
+                                    Ok(v) => (status, v),
+                                    Err(_) => (502, json!({ "error": "上游返回非 JSON" })),
+                                }
+                            }
+                            Err(err) => {
+                                // ureq 对非 2xx 也走 Err：响应体里有上游的具体错误，必须透传而不是只留状态码
+                                let msg = format!("{err}");
+                                if let Some(up) = err.into_response() {
+                                    let status = up.status();
+                                    let text = up.into_string().unwrap_or_default();
+                                    (status, json!({ "error": format!("上游返回 {status}：{text}") }))
+                                } else {
+                                    (502, json!({ "error": format!("上游请求失败：{msg}") }))
+                                }
                             }
                         }
-                        Err(e) => (502, json!({ "error": format!("上游请求失败：{e}") })),
                     }
-                } else {
-                    (404, json!({ "error": "not found" }))
                 }
             } else if path == "/usage" && method == Method::Get {
                 (200, usage_summary(&cfg))
