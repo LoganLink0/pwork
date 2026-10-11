@@ -55,15 +55,18 @@ export async function spendTokens(env: Env, n: number): Promise<boolean> {
   return used + n <= budget
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(url: string, timeoutMs: number, headers?: Record<string, string>): Promise<Response> {
   // 出站统一走 guardedFetch（URL 守卫：拒绝内网/环回/保留地址）
-  return guardedFetch(url, undefined, timeoutMs)
+  return guardedFetch(url, headers ? { headers } : undefined, timeoutMs)
 }
+
+// 部分源（如 Solidot）会 403 拒绝非浏览器 UA——出站统一带浏览器 UA
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 
 /** 抓一个源：直连 →（失败）rss2json 服务端转接。云端无 CORS 限制，直连为主 */
 export async function fetchSourceFeed(url: string): Promise<{ ok: boolean; error: string | null; items: { title: string; url: string; summary: string; publishedAt: string | null }[] }> {
   try {
-    const resp = await fetchWithTimeout(url, TIMEOUT_MS)
+    const resp = await fetchWithTimeout(url, TIMEOUT_MS, { 'user-agent': BROWSER_UA })
     if (resp.ok) {
       const r = parseFeed(await resp.text())
       if (r.ok) return r
@@ -220,6 +223,12 @@ export async function runSource(env: Env, ai: AiConfig, source: WorkerSource, do
     domainCount.set(source.domain, domainSeen + 1)
   }
   base.ok = true
+  // 抓取成功但整轮零新增：把"feed 内容未更新"记进 last_error，源列表可见，不再静默
+  if (base.newCount === 0 && base.duplicateCount > 0 && base.discardedCount === 0) {
+    await env.DB.prepare('UPDATE sources SET last_error = ? WHERE id = ?')
+      .bind(`feed ${base.duplicateCount} 条全部重复（源内容未更新）`, source.id)
+      .run()
+  }
   void todayUtc
   return base
 }
