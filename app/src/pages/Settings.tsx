@@ -743,7 +743,7 @@ export function Settings() {
                           setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但 .env.local 还没配置 PWORK_LLM_API_KEY')
                         } catch {
                           setAiTestOk(false)
-                          setAiTestMsg('无法连接网关——先在 app 目录运行 npm run gateway')
+                          setAiTestMsg(isDesktopApp() ? '无法连接网关——重启应用后再试' : '无法连接网关——先在 app 目录运行 npm run gateway')
                         } finally {
                           setAiTesting(false)
                         }
@@ -789,7 +789,11 @@ export function Settings() {
                     {usageMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{usageMsg}</span>}
                   </div>
                   <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
-                    启动：app 目录运行 <b>npm run gateway</b>（仅绑定 127.0.0.1）。Key 配置：复制 <b>app/tools/.env.example</b> 为 <b>app/.env.local</b>，填写 PWORK_LLM_API_KEY 后重启网关。
+                    {isDesktopApp() ? (
+                      <>网关随应用自动启动。Key 配置：在 <b>%APPDATA%/com.pwork.workbench/</b> 新建 <b>gateway.env</b>，写入一行 <b>PWORK_LLM_API_KEY=你的Key</b>（可选 <b>PWORK_LLM_BASE_URL=服务商地址</b>），重启应用生效。</>
+                    ) : (
+                      <>启动：app 目录运行 <b>npm run gateway</b>（仅绑定 127.0.0.1）。Key 配置：复制 <b>app/tools/.env.example</b> 为 <b>app/.env.local</b>，填写 PWORK_LLM_API_KEY 后重启网关。</>
+                    )}
                   </div>
                 </>
               ) : (
