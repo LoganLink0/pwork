@@ -17,7 +17,7 @@ Node ≥ 20（实测 24）· Rust 工具链 + VS2022（仅桌面版构建需要�
 | `npm run gateway` | 开发版 AI 网关（127.0.0.1:8788；Key 读 app/.env.local，复制 tools/.env.example） |
 | `npm run build` | 生产构建（tsc -b + vite build + PWA 预缓存 → dist/） |
 | `npm run serve` | 零依赖静态服务 dist/（默认 5273，`--port N` 换） |
-| `npx tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，首次 Rust 编译 8 分钟级；package.json 无 tauri 脚本，npm run tauri 会报 Missing script） |
+| `npx tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，约 210MiB——内嵌 WebView2 离线安装器，首次构建联网下载约 200MB 后有缓存；package.json 无 tauri 脚本，npm run tauri 会报 Missing script） |
 | `npm run audit:classes` | className 定义完整性检查（TSX 类名在 CSS 零定义即红，复盘 1.14） |
 
 worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/README.md。

@@ -36,6 +36,9 @@
       "icons/icon.ico"
     ],
     "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      },
       "nsis": {
         "languages": ["SimpChinese"],
         "displayLanguageSelector": false

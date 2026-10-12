@@ -25,7 +25,7 @@
 
 - **sprintf-js 中危依赖**：mammoth 的 CLI 参数解析链引入，本项目只用 mammoth.browser（不含该路径）且格式串不受外部输入控制；漏洞区间为全版本、无修复版可钉，降级会破坏 Word 提取。依据：开发复盘 3.17。
 - **Mimosa 提交门禁的 library_source/callgraph 提示**：静态分析器能力边界（50000 文件上限），非未处理发现；深扫结论 0 代码发现，封印标识见扫描历史。
-- **安装包 3.80MiB 体积**：Tauri WebView2 复用的正常水位。
+- **安装包体积（2026-10-12 起为 210MiB）**：内嵌 WebView2 x64 离线安装器的代价（`webviewInstallMode: offlineInstaller`），换取目标机无网/无 WebView2 可装。旧条目"3.80MiB 体积：Tauri WebView2 复用的正常水位"已被此决策取代；若日后要发"小包"，把 webviewInstallMode 改回 `downloadBootstrapper` 即可（需目标机联网）。
 - **评分规则链的朴素性**（utility 词表 12 词、relevance 线性命中）：设计定位是"AI 不可用时的兜底 + 可解释"，方案 A/B 已把调参入口给到用户；先看真实使用再决定要不要加复杂度。
 
 ## 已完成摘录（详细队列见 TODO.md）
