@@ -858,6 +858,15 @@ a.mcard .m-link:hover {
   font-size: var(--fs-sm);
 }
 
+/* 统一换行标准（2026-10-12 用户反馈）：行末说明文字占满标签右侧余宽、
+   在该列内换行，换行后的每一行都与第一行同列起步；
+   不加此规则时长文会整块掉到下一行行首，起点与短文不一致。
+   行末还跟按钮的（如快速上手的「去看看 →」），val 需内联 flex:1 + minWidth:0 */
+.set-row > .val:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .input {
   flex: 1;
   min-width: 180px;

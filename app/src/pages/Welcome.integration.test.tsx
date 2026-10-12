@@ -13,7 +13,7 @@ describe('首访引导', () => {
   it('未完成引导时打开首页 → 自动进入 /welcome', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: '欢迎使用 PWORK' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '① 三步上手' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '① 快速上手' })).toBeInTheDocument()
     expect(screen.getByText(/Cloudflare 注册三句话/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '导入 5 个示例信源' })).toBeInTheDocument()
   })
@@ -27,5 +27,24 @@ describe('首访引导', () => {
 
     // 模拟重新挂载：hash 已不在 /welcome，且标记已写
     expect(localStorage.getItem('pwork-welcomed')).toBe('1')
+  })
+
+  it('采集偏好：添加兴趣域/屏蔽词、点掉预置词 → 即时写入采集配置', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: '欢迎使用 PWORK' })
+
+    // 移除一个预置兴趣域
+    await user.click(screen.getByRole('button', { name: 'AI 应用 ×' }))
+    // 添加自己的兴趣域与屏蔽词
+    await user.type(screen.getByRole('textbox', { name: '添加兴趣域' }), '量化投资{enter}')
+    await user.type(screen.getByRole('textbox', { name: '添加屏蔽词' }), '标题党{enter}')
+
+    const cfg = JSON.parse(localStorage.getItem('pwork-collect-config') ?? '{}') as {
+      interests: string[]
+      dislikes: string[]
+    }
+    expect(cfg.interests).toEqual(['独立开发', '前端工程化', '量化投资'])
+    expect(cfg.dislikes).toEqual(['融资', '八卦', '软文', '标题党'])
   })
 })

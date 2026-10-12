@@ -107,7 +107,7 @@ describe('工作台壳（W1）', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
-    expect(await screen.findByRole('heading', { name: '三步上手' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '四模块模型' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '排错' })).toBeInTheDocument()
     expect(screen.getByText(/rsshub.app 公共实例在大陆网络不可达/)).toBeInTheDocument()
@@ -115,7 +115,7 @@ describe('工作台壳（W1）', () => {
     // ? 快捷键（非输入态）跳转帮助页
     await user.click(sidebar().getByRole('link', { name: '今日' }))
     await user.keyboard('?')
-    expect(await screen.findByRole('heading', { name: '三步上手' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
   })
 
   it('设计系统样例页渲染（W1 验收项）', async () => {

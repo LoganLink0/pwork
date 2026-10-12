@@ -15,13 +15,13 @@ export function Help() {
       </div>
 
       <div className="set-card">
-        <h2>三步上手</h2>
+        <h2>快速上手</h2>
         <div className="desc">每一阶段产品都完整可用——按下面的顺序，十分钟走通一次闭环</div>
         <div className="set-body">
           {QUICK_START.map((s) => (
             <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
               <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
-              <span className="val" style={{ flex: 1 }}>
+              <span className="val" style={{ flex: 1, minWidth: 0 }}>
                 <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}>{s.desc}</span>
               </span>
               <Link to={s.to} className="btn-ghost" style={{ flex: 'none' }}>
@@ -58,7 +58,7 @@ export function Help() {
         <div className="desc">输入 → 处理 → 输出 → 回路：复盘是回路不是终点，产出的内容又变成下一轮的输入</div>
         <div className="set-body">
           {MODULES.map((m) => (
-            <div className="set-row" key={m.name}>
+            <div className="set-row" key={m.name} style={{ alignItems: 'flex-start' }}>
               <label>
                 <span
                   style={{

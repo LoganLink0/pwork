@@ -413,11 +413,6 @@ export function Settings() {
               aria-label="RSS 转接服务地址"
             />
           </div>
-          <div className="set-row">
-            <label>每日 Top N</label>
-            <input className="input" style={{ maxWidth: 120 }} readOnly value={`${config.topN}（只读）`} />
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>推送量是产品设计，不是用户设置（04 §8）</span>
-          </div>
         </div>
       </div>
 

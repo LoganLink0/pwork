@@ -4,16 +4,21 @@ import { QUICK_START } from '../content/help'
 import { SAMPLE_SOURCES } from '../content/collect'
 import { importSources } from '../db/collect'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
+import { useCollect } from '../store/collect'
 
 /**
  * 首访引导页（/welcome）：首次打开自动进入一次；帮助页可重进。
  * 回答新用户的三个问题：这是什么怎么用 / 信源怎么来 / 要上云怎么弄（含 Cloudflare 注册与一键脚本）。
+ * 2026-10-12 起采集偏好（兴趣域/屏蔽词）也可在这里直接设好，不必再去设置页。
  */
 export function Welcome() {
   const navigate = useNavigate()
   const [cloud, setCloud] = useState(() => loadCloudConfig())
   const [msg, setMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
+  const { config, setConfig } = useCollect()
+  const [interestDraft, setInterestDraft] = useState('')
+  const [dislikeDraft, setDislikeDraft] = useState('')
 
   const finish = () => {
     localStorage.setItem('pwork-welcomed', '1')
@@ -23,6 +28,17 @@ export function Welcome() {
   const importSamples = async () => {
     const r = await importSources(SAMPLE_SOURCES)
     setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点⟳立即抓取试试` : '示例信源已存在（按地址去重）')
+  }
+
+  const addInterest = () => {
+    const v = interestDraft.trim().replace(/^#/, '')
+    if (v && !config.interests.includes(v)) setConfig({ interests: [...config.interests, v] })
+    setInterestDraft('')
+  }
+  const addDislike = () => {
+    const v = dislikeDraft.trim().replace(/^#/, '')
+    if (v && !config.dislikes.includes(v)) setConfig({ dislikes: [...config.dislikes, v] })
+    setDislikeDraft('')
   }
 
   const testCloud = async () => {
@@ -58,13 +74,13 @@ export function Welcome() {
       </div>
 
       <div className="set-card">
-        <h2>① 三步上手</h2>
+        <h2>① 快速上手</h2>
         <div className="desc">每一步几十秒；处理与输出模块按路线图后续开放，不着急</div>
         <div className="set-body">
           {QUICK_START.map((s) => (
             <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
               <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
-              <span className="val" style={{ flex: 1 }}>
+              <span className="val" style={{ flex: 1, minWidth: 0 }}>
                 <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}>{s.desc}</span>
               </span>
               <Link to={s.to} className="btn-ghost" style={{ flex: 'none' }}>{s.action} →</Link>
@@ -92,7 +108,65 @@ export function Welcome() {
       </div>
 
       <div className="set-card">
-        <h2>③ 可选：上云引导（定时抓取 + AI 筛选）</h2>
+        <h2>③ 采集偏好</h2>
+        <div className="desc">告诉系统你关注什么、讨厌什么——评分排序靠它；预置的是通用默认值，改成你自己的才有效</div>
+        <div className="set-body">
+          <div className="set-row">
+            <label>兴趣域</label>
+            <div className="chips" style={{ flex: 1 }}>
+              {config.interests.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="chip on"
+                  title="点击移除"
+                  onClick={() => setConfig({ interests: config.interests.filter((x) => x !== t) })}
+                >
+                  {t} ×
+                </button>
+              ))}
+              <input
+                className="input"
+                style={{ maxWidth: 140 }}
+                placeholder="添加后回车"
+                value={interestDraft}
+                onChange={(e) => setInterestDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addInterest()}
+                aria-label="添加兴趣域"
+              />
+            </div>
+          </div>
+          <div className="set-row">
+            <label>屏蔽词</label>
+            <div className="chips" style={{ flex: 1 }}>
+              {config.dislikes.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="chip on"
+                  title="点击移除"
+                  onClick={() => setConfig({ dislikes: config.dislikes.filter((x) => x !== t) })}
+                >
+                  {t} ×
+                </button>
+              ))}
+              <input
+                className="input"
+                style={{ maxWidth: 140 }}
+                placeholder="命中即筛除"
+                value={dislikeDraft}
+                onChange={(e) => setDislikeDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addDislike()}
+                aria-label="添加屏蔽词"
+              />
+            </div>
+          </div>
+          <div className="notice">改动立即保存，从下一次抓取开始参与评分；以后随时在 设置 → 采集偏好 再调整（评分权重等更多选项也在那里）。</div>
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>④ 可选：上云引导（定时抓取 + AI 筛选）</h2>
         <div className="desc">不弄也完全能用——本地抓取照常工作；想 7×24 自动抓取再往下走（免费档 ¥0/月）</div>
         <div className="set-body">
           <div className="notice">
