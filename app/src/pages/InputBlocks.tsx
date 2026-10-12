@@ -136,6 +136,10 @@ export function InputBlocks() {
         <span className="sub">输入 · 第三通道——从别的系统带来的数据按对象归组，分析也从这里发起</span>
       </div>
 
+      <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
+        <b>这页怎么用（三步）</b>：① 在下方建「调研对象」——一家公司、一个客户都行；② 把材料贴成数据块（粘贴文本 / 导入 CSV / JSON），编辑时选挂到哪个对象；③ 拉到页面底部「调研分析」区，选对象和视角出分析稿，导出 Markdown / Word。做简历辅导请走独立的「<Link to="/cases">案例</Link>」模块。
+      </div>
+
       <div className="set-card">
         <h2>调研对象</h2>
         <div className="desc">一家公司、一个客户……数据块挂在对象下面，分析按对象发起。标签随意填（客户 / 目标公司 / 供应商）。</div>
@@ -160,9 +164,6 @@ export function InputBlocks() {
             <button type="button" className="btn-ghost" disabled={!newProfileName.trim()} onClick={() => void addProfile()}>
               ＋ 新建对象
             </button>
-            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-              简历辅导类客户请用独立应用：<Link to="/cases">案例入口</Link>
-            </span>
           </div>
           {profiles.map((p) => {
             const count = blocks.filter((b) => b.profileId === p.id).length

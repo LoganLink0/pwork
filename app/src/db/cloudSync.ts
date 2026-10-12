@@ -53,6 +53,12 @@ export function lastSyncAt(): string | null {
   return localStorage.getItem(LASTSYNC_KEY)
 }
 
+/** 云端配置是否已填到可同步（端点模式看端点；D1 直连看三项齐）——打开应用自动同步的门槛 */
+export function cloudConfigured(): boolean {
+  const c = loadCloudConfig()
+  return c.mode === 'd1' ? Boolean(c.accountId && c.databaseId && c.token) : Boolean(c.endpoint)
+}
+
 interface SyncResult {
   ok: boolean
   newCount: number

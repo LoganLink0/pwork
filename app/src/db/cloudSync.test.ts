@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadCloudConfig, saveCloudConfig, syncFromCloud } from './cloudSync'
+import { cloudConfigured, loadCloudConfig, saveCloudConfig, syncFromCloud } from './cloudSync'
 import { db } from './schema'
 
 beforeEach(async () => {
@@ -80,5 +80,23 @@ describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
     const r = await syncFromCloud()
     expect(r.ok).toBe(false)
     expect(r.error).toContain('D1 直连需要')
+  })
+})
+
+describe('cloudConfigured（打开应用自动同步的门槛，2026-10-12）', () => {
+  it('全空 → false（未配置不自动拉，普通用户零打扰）', () => {
+    expect(cloudConfigured()).toBe(false)
+  })
+
+  it('端点模式：只看端点是否非空', () => {
+    saveCloudConfig({ mode: 'endpoint', endpoint: 'https://w.example', token: '', accountId: '', databaseId: '' })
+    expect(cloudConfigured()).toBe(true)
+  })
+
+  it('D1 模式：三项缺一 → false；填齐 → true', () => {
+    saveCloudConfig({ mode: 'd1', endpoint: '', token: 'tk', accountId: 'acc', databaseId: '' })
+    expect(cloudConfigured()).toBe(false)
+    saveCloudConfig({ mode: 'd1', endpoint: '', token: 'tk', accountId: 'acc', databaseId: 'db' })
+    expect(cloudConfigured()).toBe(true)
   })
 })

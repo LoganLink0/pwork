@@ -11,8 +11,9 @@ import { useNotes } from './store/notes'
 import { useCollect } from './store/collect'
 import { useTasks } from './store/tasks'
 import { useGoals } from './store/goals'
-import { track } from './engine/errorLog'
+import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
+import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { PLACEHOLDER } from './content/placeholder'
 
@@ -82,6 +83,9 @@ function FirstRunRedirect() {
   return null
 }
 
+/** 自动同步只跑一次（StrictMode 开发期双挂载 / HMR 重挂载都不重复拉云端） */
+let autoSyncRan = false
+
 export default function App() {
   const load = useNotes((s) => s.load)
   const loadCollect = useCollect((s) => s.load)
@@ -93,6 +97,23 @@ export default function App() {
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
     track(runAutoBackupIfDue(), '自动备份')
+    // 打开应用自动同步云端（2026-10-12 用户拍板，04 设计"无定时，打开时同步"的补课）：
+    // 已配置才拉；失败只入错误日志不弹条（云端偶发不可达不该每次打开都红条），成功拉到新条目则刷新采集库
+    if (!autoSyncRan) {
+      autoSyncRan = true
+      if (cloudConfigured()) {
+        void syncFromCloud().then(async (r) => {
+          if (!r.ok) {
+            void recordError(
+              { where: '云端同步.打开应用自动同步', kind: 'app', message: r.error ?? '未知失败' },
+              { silent: true },
+            )
+            return
+          }
+          if (r.newCount > 0) await useCollect.getState().load()
+        })
+      }
+    }
   }, [load, loadCollect, loadTasks])
 
   return (

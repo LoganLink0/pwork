@@ -67,7 +67,7 @@ export interface ModuleIntro {
 export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱（文字/音频/图片/视频）+ 跨模块检索 + AI 问答（BYOK）', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '五个工具：周报导出为 HTML/PPT、朗读音频、数据卡片、文章草稿（速记洞察 → 文章），以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入', to: '/output' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '五个工具：周报导出为 HTML/PPT、朗读音频、数据卡片、文章草稿（速记洞察 → 文章），以及 PPT 撰写（材料 → 可编辑 PPT）——外部数据块自动并入；调研分析（公司研究）在 输入 → 外部数据 一页发起', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察又变成下一轮的输入', to: '/review' },
   { name: '案例', mark: 'var(--accent)', status: '独立应用', desc: '简历辅导已独立为 resume-coach 应用（本仓库 resume-coach 目录，端口 5274）：八步流程走完一个案例，从自检包到交付。PWORK 这里只做跳转入口', to: '/cases' },
 ]
