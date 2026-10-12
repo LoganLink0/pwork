@@ -14,6 +14,8 @@
 - [x] 发布前收口：备份恢复演练固化为测试 / 桌面版 AI 真调用 E2E（顺手修网关两缺陷）/ 定版 1.0.0 + 发布说明
 - [x] 分发产物零个人配置审计与出清（默认 Context 换通用文案，7f9616f）
 - [x] 帮助页「配置指南」四条：先答"我需要配吗"再给步骤（5f8d7cb）
+- [x] 文档体系补全：TODO 队列 / docs/backlog 遗留分层 / 交接文档（7d9c7b6）
+- [x] 八件套规范落地：AGENTS 加项目速览（用户规则区不动）+ DESIGN/project-overview/architecture/user-guide/development/component-api 新建 + README 索引（8f2f54b）
 
 ## 待用户拍板
 
