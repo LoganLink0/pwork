@@ -17,7 +17,7 @@ Node ≥ 20（实测 24）· Rust 工具链 + VS2022（仅桌面版构建需要�
 | `npm run gateway` | 开发版 AI 网关（127.0.0.1:8788；Key 读 app/.env.local，复制 tools/.env.example） |
 | `npm run build` | 生产构建（tsc -b + vite build + PWA 预缓存 → dist/） |
 | `npm run serve` | 零依赖静态服务 dist/（默认 5273，`--port N` 换） |
-| `npm run tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，首次 Rust 编译 8 分钟级） |
+| `npx tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，首次 Rust 编译 8 分钟级；package.json 无 tauri 脚本，npm run tauri 会报 Missing script） |
 | `npm run audit:classes` | className 定义完整性检查（TSX 类名在 CSS 零定义即红，复盘 1.14） |
 
 worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/README.md。
@@ -27,7 +27,7 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 1. `npx vitest run` → 320 全绿
 2. `npx tsc -b` → 0 错
 3. `npm run lint` → 27/0（基线不变）
-4. 涉及桌面版：`npm run tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
+4. 涉及桌面版：`npx tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
 5. 涉及抓取链：真实抓一轮看横幅（耗时/源成败/无卡死）
 6. 涉及 worker：worker 测试 19 绿
 7. 提交纪律：一个 commit 一件事；`git add -A` 前先 `git status` 过目（防误装残留/无关文件混入，复盘 3.17）
