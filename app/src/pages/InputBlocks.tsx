@@ -73,7 +73,7 @@ export function InputBlocks() {
       </div>
 
       <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
-        <b>这页是外部数据的"仓库"</b>：调研对象和数据块（材料）的日常维护都在这里——新建、归类、导入、清理。要出一份调研分析稿（选对象 → 贴材料 → 出稿导出），去 <Link to="/output/research">输出 → 调研分析</Link>。做简历辅导请走 <Link to="/process">处理 → 工具箱 → 专题</Link>。
+        <b>这页是外部数据的"仓库"</b>：调研对象和数据块（材料）的日常维护都在这里——新建、归类、导入、清理。要做一次调研（输入目标 → 拿框架与提示词 → 出稿），去 <Link to="/output/research">输出 → 调研分析</Link>。做简历辅导请走 <Link to="/process">处理 → 工具箱 → 专题</Link>。
       </div>
 
       <div className="set-card">

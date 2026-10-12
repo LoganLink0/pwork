@@ -67,7 +67,7 @@ export interface ModuleIntro {
 export const MODULES: ModuleIntro[] = [
   { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '三条通道：速记（我想到的）+ 信源/条目库（网上来的）+ 外部数据（从别的系统带来的）', to: '/input/notes' },
   { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱按形态分类（文字/音频/图片/视频 + 专题）· AI 全库问答；全库检索在 Ctrl K 命令面板', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '按产出形态分组：文（周报 / 调研分析 / PPT 撰写 / 文章草稿）、图（数据卡片）、音（朗读音频）、视频（远期）——外部数据块自动并入周报', to: '/output' },
+  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '按产出形态分组：文（周报 / 调研分析 / PPT 撰写 / 文章草稿）、图（数据卡片）、音（朗读音频）、视频（远期）——调研分析输入目标即得框架与提示词', to: '/output' },
   { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察又变成下一轮的输入', to: '/review' },
 ]
 
