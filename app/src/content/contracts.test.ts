@@ -81,10 +81,13 @@ describe('壳层契约：处理工具注册表', () => {
       if (t.engine === 'external') {
         expect(t.externalUrl, `外部工具 ${t.id} 缺 externalUrl`).toMatch(/^https?:\/\//)
       }
+      if (t.engine === 'app') {
+        expect(t.route, `应用入口工具 ${t.id} 缺应用内路由`).toMatch(/^\//)
+      }
       if (t.status === 'byok-pending') {
         expect(t.requires, `byok 工具 ${t.id} 缺点亮条件说明`).toBeTruthy()
       }
-      expect(toolRoute(t.id)).toBe(`/process/t/${t.id}`)
+      expect(toolRoute(t.id)).toBe(t.route ?? `/process/t/${t.id}`)
     }
   })
 

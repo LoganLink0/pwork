@@ -518,8 +518,17 @@ button.nav-item {
   font-size: var(--fs-sm);
   color: var(--ink);
   padding: 4px 6px;
+  min-width: 0;
   border-radius: var(--r-sm);
   text-decoration: none;
+}
+
+/* 工具名单行不换行（2026-10-13 用户要求）：放不下省略号收尾，悬浮有 title 兜底 */
+.mcard .m-link > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .mcard .m-link:hover {

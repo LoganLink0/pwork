@@ -3,8 +3,8 @@ import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, getTool, toolRoute } from
 
 /** 工具注册表完整性：新工具必须先注册（名称/分类/引擎/状态齐全且无冲突） */
 describe('processTools 注册表', () => {
-  it('四分类齐全且按用户定义的顺序（文字→音频→图片→视频）', () => {
-    expect(CATEGORY_ORDER).toEqual(['text', 'audio', 'image', 'video'])
+  it('分类齐全且按用户定义的顺序（文字→音频→图片→视频→专题）', () => {
+    expect(CATEGORY_ORDER).toEqual(['text', 'audio', 'image', 'video', 'topic'])
     for (const cat of CATEGORY_ORDER) {
       expect(CATEGORY_META[cat].name).toBeTruthy()
       expect(PROCESS_TOOLS.some((t) => t.category === cat)).toBe(true)
@@ -15,16 +15,18 @@ describe('processTools 注册表', () => {
     const ids = PROCESS_TOOLS.map((t) => t.id)
     expect(new Set(ids).size).toBe(ids.length)
     for (const id of ids) {
-      expect(toolRoute(id)).toBe(`/process/t/${id}`)
+      expect(toolRoute(id)).toBe(getTool(id)?.route ?? `/process/t/${id}`)
       expect(getTool(id)?.id).toBe(id)
     }
     expect(getTool('nonexistent')).toBeUndefined()
   })
 
-  it('ready 工具必须是本地引擎；byok 占位必须说明点亮条件', () => {
+  it('ready 工具必须是本地引擎或应用内入口；byok 占位必须说明点亮条件', () => {
     for (const t of PROCESS_TOOLS) {
       if (t.status === 'ready' && t.engine === 'external') {
         expect(t.externalUrl).toMatch(/^https:\/\//)
+      } else if (t.status === 'ready' && t.engine === 'app') {
+        expect(t.route).toMatch(/^\//)
       } else if (t.status === 'ready') {
         expect(t.engine.startsWith('local-')).toBe(true)
       } else {

@@ -21,7 +21,7 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByText('复盘工作台已迁入 · 做一次复盘，行动项自动进待办')).toBeInTheDocument()
     // 四模块卡（用卡片副行唯一文案断言）
     expect(screen.getByText('捕获想法，进入后续处理')).toBeInTheDocument()
-    expect(screen.getByText('工具箱（文字/音频/图片/视频）· 检索 · AI 问答')).toBeInTheDocument()
+    expect(screen.getByText('工具箱 · AI 问答')).toBeInTheDocument()
     expect(screen.getByText('周期成稿 · 听觉 · 分享')).toBeInTheDocument()
     expect(screen.getByText('CLAP 复盘 · 因果循环 · 认知资产')).toBeInTheDocument()
   })
@@ -60,14 +60,13 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByLabelText('速记标题')).toHaveValue('面板搜索目标条目')
   })
 
-  it('命令面板搜「案例」能到简历辅导入口页（顶层直达模块不缺入口）', async () => {
+  it('命令面板搜「简历辅导」能到入口页（2026-10-13 起并入处理工具箱·专题，入口不缺）', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.keyboard('{Control>}k{/Control}')
     const dialog = await screen.findByRole('dialog', { name: '命令面板' })
-    await user.type(within(dialog).getByLabelText('搜索'), '案例')
-    const item = await within(dialog).findByText('案例')
-    await user.click(item)
+    await user.type(within(dialog).getByLabelText('搜索'), '简历辅导')
+    await user.click(await within(dialog).findByText('打开简历辅导应用'))
     await waitFor(() => expect(screen.getByRole('heading', { name: '简历辅导（独立应用）' })).toBeInTheDocument())
   })
 

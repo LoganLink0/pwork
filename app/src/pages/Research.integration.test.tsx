@@ -40,7 +40,9 @@ describe('调研分析页', () => {
     await user.click(screen.getByRole('button', { name: '保存材料' }))
     expect(await screen.findByText('官网介绍')).toBeInTheDocument()
 
-    // ③ 手动骨架出稿（AI 未配置也应可用）
+    // ③ 出稿：成品结构预览可见（生成前知道会得到什么）+ 手动骨架出稿（不依赖 AI）
+    expect(screen.getByTestId('outline-preview').textContent).toContain('这篇会包含：')
+    expect(screen.getByTestId('outline-preview').textContent).toContain('一、')
     await user.click(screen.getByRole('button', { name: '用手动骨架（不需要 AI）' }))
     expect(await screen.findByRole('heading', { name: '分析草稿（可编辑）' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '⬇ Markdown' })).toBeInTheDocument()

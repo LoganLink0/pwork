@@ -223,10 +223,10 @@ export function Home() {
             <span className="m-name">{process.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[process.status]}</span>
           </div>
-          <div className="m-sub">工具箱（文字/音频/图片/视频）· 检索 · AI 问答</div>
+          <div className="m-sub">工具箱 · AI 问答</div>
           <div className="m-links">
-            <div className="m-link">工具箱<span className="cnt">文字/音频/图片/视频</span></div>
-            <div className="m-link">检索与问答<span className="cnt">→</span></div>
+            <div className="m-link">工具箱<span className="cnt">文字/音频/图片/视频/专题</span></div>
+            <div className="m-link">AI 问答<span className="cnt">→</span></div>
           </div>
         </Link>
 

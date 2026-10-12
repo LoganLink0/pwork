@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useBlocks } from '../store/blocks'
 import { useProfiles } from '../store/profiles'
 import { fileToBlockContent } from '../engine/fileImport'
+import { extractMaterial } from '../engine/pptWriter'
 import {
   ARTICLE_VIEWS,
   ARTICLE_SYSTEM_PROMPT,
@@ -20,9 +21,9 @@ import { llmConfigured } from '../modules/review/engine/coach'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 
 /**
- * 调研分析（输出模块，2026-10-12 中方案）：任务式三步——选对象 → 贴材料 → 出稿。
- * 数据与 输入 → 外部数据 同库同构：那边负责管理（对象/数据块的日常维护），这里只管把一份调研做完。
- * 用户不必先理解"数据块"概念——在这里粘贴的每段材料自动挂到当前对象名下。
+ * 调研分析（输出模块）：调研工作区——平时往对象下攒材料（粘贴 / Word / PDF / CSV），
+ * 攒够了一键出稿（Markdown / Word）。数据与 输入 → 外部数据 同库同构：那边负责批量管理，这里顺着"做一次调研"的心流走。
+ * 文档类文件自动提取文字（Word/PDF 与 PPT 撰写同一套提取器）；成品结构在生成前可见（视角对应的骨架章节）。
  */
 export function ResearchPage() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
@@ -81,10 +82,25 @@ export function ResearchPage() {
   const onFile = async (file: File) => {
     if (!profileId) return
     try {
-      const text = await file.text()
-      const r = fileToBlockContent(file.name, text)
-      await saveBlock({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId, usage: 'client' })
-      setMsg(r.note)
+      const lower = file.name.toLowerCase()
+      let content = ''
+      let note = ''
+      if (/\.(csv|json|tsv)$/.test(lower)) {
+        // 结构化表格：走"键: 值"解析，出稿时渲染成指标行
+        const r = fileToBlockContent(file.name, await file.text())
+        content = r.content
+        note = r.note
+      } else {
+        // 文档（Word / PDF / Markdown / 文本）：提取纯文字
+        content = (await extractMaterial(file)).trim()
+        if (!content) {
+          setMsg('这份文件没提取到文字（扫描版 PDF 或空文档？）——试试复制内容后粘贴')
+          return
+        }
+        note = '文档文字已提取'
+      }
+      await saveBlock({ title: file.name.replace(/\.[^.]+$/, ''), content, profileId, usage: 'client' })
+      setMsg(note)
     } catch (e) {
       setMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
     }
@@ -122,7 +138,7 @@ export function ResearchPage() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>调研分析</h1>
-        <span className="sub">三步出一份调研：选对象 → 贴材料 → 出稿（Markdown / Word）</span>
+        <span className="sub">调研工作区：平时往对象下攒材料（粘贴 / Word / PDF / CSV），攒够了一键出稿</span>
       </div>
 
       <div className="set-card">
@@ -176,7 +192,7 @@ export function ResearchPage() {
 
       <div className="set-card">
         <h2>② 材料</h2>
-        <div className="desc">{profile ? `挂在「${profile.name}」名下的材料，出稿只用这些` : '先在上方选中一个对象'}</div>
+        <div className="desc">{profile ? `挂在「${profile.name}」名下——调研期间随时回来补，不用一次凑齐` : '先在上方选中一个对象'}</div>
         <div className="set-body">
           {profile && (
             <>
@@ -235,12 +251,12 @@ export function ResearchPage() {
                     ＋ 粘贴一段材料
                   </button>
                   <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} data-testid="import-material">
-                    ⬆ 导入文件（CSV/JSON/文本）
+                    ⬆ 导入文件（Word / PDF / CSV / 文本）
                   </button>
                   <input
                     ref={fileRef}
                     type="file"
-                    accept=".csv,.json,.txt,.tsv,.md"
+                    accept=".docx,.pdf,.csv,.json,.txt,.tsv,.md"
                     style={{ display: 'none' }}
                     aria-label="选择要导入的材料文件"
                     onChange={(e) => {
@@ -266,7 +282,7 @@ export function ResearchPage() {
 
       <div className="set-card">
         <h2>③ 出稿</h2>
-        <div className="desc">AI 按所选视角整理材料成分析稿，逐节修改后导出；没有 AI 用手动骨架照样能写</div>
+        <div className="desc">AI 按下面的结构整理成稿，逐节修改后导出；没有 AI 用手动骨架照样能写</div>
         <div className="set-body">
           <div className="set-row">
             <label>视角</label>
@@ -277,6 +293,12 @@ export function ResearchPage() {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>成品结构</label>
+            <span className="val" style={{ color: 'var(--ink-soft)' }} data-testid="outline-preview">
+              这篇会包含：{view.skeleton().sections.map((s) => s.heading).join(' · ')}
+            </span>
           </div>
           <div className="set-row">
             <label>用途</label>

@@ -7,7 +7,7 @@ import { searchAll } from '../engine/searchAll'
 
 interface Tool { to: string; icon: string; name: string; desc: string; status: string }
 
-/** 按产出形态分组（2026-10-12 用户拍板：文 / 图 / 音 / 视频，与处理页工具箱同一结构） */
+/** 按产出形态分组（2026-10-13 用户拍板：文 / 音 / 图 / 视，与处理页工具箱同一结构；名字短名不换行） */
 const TOOL_GROUPS: { id: string; icon: string; name: string; desc: string; tools: Tool[] }[] = [
   {
     id: 'doc',
@@ -15,32 +15,32 @@ const TOOL_GROUPS: { id: string; icon: string; name: string; desc: string; tools
     name: '文 · 文档与演示',
     desc: '把库里的积累变成能发出去、交出去的成稿',
     tools: [
-      { to: '/output/report', icon: '📊', name: '周报导出为 HTML/PPT', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'MD / HTML / PPT' },
-      { to: '/output/research', icon: '🔎', name: '调研分析（公司研究）', desc: '选对象 → 贴材料 → 出分析文档', status: 'MD / Word' },
+      { to: '/output/report', icon: '📊', name: '周报导出', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'HTML · PPT · MD' },
+      { to: '/output/research', icon: '🔎', name: '调研分析', desc: '选对象 → 贴材料 → 出分析文档', status: 'MD · Word' },
       { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '.pptx' },
       { to: '/output/article', icon: '✍', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架', status: 'Markdown' },
     ],
-  },
-  {
-    id: 'image',
-    icon: '🖼',
-    name: '图 · 分享',
-    desc: '关键数字变成一张可发出去的图',
-    tools: [{ to: '/output/card', icon: '🖼', name: '周报导出为数据卡片', desc: '关键数字生成分享卡片图', status: '图片' }],
   },
   {
     id: 'audio',
     icon: '🎧',
     name: '音 · 聆听',
     desc: '通勤场景——用听的回顾一个周期',
-    tools: [{ to: '/output/read', icon: '🎧', name: '周报导出为朗读音频', desc: '周报转语音', status: '音频' }],
+    tools: [{ to: '/output/read', icon: '🎧', name: '朗读音频', desc: '周报转语音', status: '音频' }],
+  },
+  {
+    id: 'image',
+    icon: '🖼',
+    name: '图 · 分享',
+    desc: '关键数字变成一张可发出去的图',
+    tools: [{ to: '/output/card', icon: '🖼', name: '数据卡片', desc: '关键数字生成分享卡片图', status: '图片' }],
   },
   {
     id: 'video',
     icon: '🎬',
     name: '视频',
     desc: '数据变化 → 短视频',
-    tools: [{ to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: '远期规划' }],
+    tools: [{ to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: '远期' }],
   },
 ]
 
