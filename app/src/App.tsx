@@ -31,6 +31,7 @@ const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items
 const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
 const PptWriter = lazy(() => import('./pages/PptWriter').then((m) => ({ default: m.PptWriter })))
 const ArticleDraftPage = lazy(() => import('./pages/ArticleDraftPage').then((m) => ({ default: m.ArticleDraftPage })))
+const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })))
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
@@ -151,6 +152,7 @@ export default function App() {
                   <Route path="/output/ppt" element={<Navigate to="/output/report" replace />} />
                   <Route path="/output/write" element={<PptWriter />} />
                   <Route path="/output/article" element={<ArticleDraftPage />} />
+                  <Route path="/output/research" element={<ResearchPage />} />
                   <Route path="/output/draft" element={<Navigate to="/output/article" replace />} />
                   <Route path="/output/video" element={<Ph kind="video" />} />
                   <Route

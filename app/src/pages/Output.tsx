@@ -5,14 +5,43 @@ import { useGoals } from '../store/goals'
 import { useNotes } from '../store/notes'
 import { searchAll } from '../engine/searchAll'
 
-const TOOLS: { to: string; icon: string; name: string; desc: string; status: string }[] = [
-  { to: '/output/report', icon: '📄', name: '周报导出为 HTML/PPT', desc: '本周/本月素材 + 外部数据块自动成稿：Markdown / HTML / PPT（含幻灯片结构预览）', status: '' },
-  { to: '/output/read', icon: '🎧', name: '周报导出为朗读音频', desc: '通勤场景——用听的回顾一个周期', status: '' },
-  { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '从零撰写：粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '' },
-  { to: '/output/card', icon: '🖼', name: '周报导出为数据卡片', desc: '关键数字生成分享卡片图', status: '' },
-  { to: '/output/article', icon: '✍', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架 → 导出 Markdown', status: '' },
-  { to: '/input/blocks', icon: '🔎', name: '调研分析（公司研究）', desc: '建调研对象、贴材料、出分析文档——三步都在 输入 → 外部数据 一页完成，导出 Markdown / Word', status: '' },
-  { to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: '远期规划' },
+interface Tool { to: string; icon: string; name: string; desc: string; status: string }
+
+/** 按产出形态分组（2026-10-12 用户拍板：文 / 图 / 音 / 视频，与处理页工具箱同一结构） */
+const TOOL_GROUPS: { id: string; icon: string; name: string; desc: string; tools: Tool[] }[] = [
+  {
+    id: 'doc',
+    icon: '📄',
+    name: '文 · 文档与演示',
+    desc: '把库里的积累变成能发出去、交出去的成稿',
+    tools: [
+      { to: '/output/report', icon: '📊', name: '周报导出为 HTML/PPT', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'MD / HTML / PPT' },
+      { to: '/output/research', icon: '🔎', name: '调研分析（公司研究）', desc: '选对象 → 贴材料 → 出分析文档', status: 'MD / Word' },
+      { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '.pptx' },
+      { to: '/output/article', icon: '✍', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架', status: 'Markdown' },
+    ],
+  },
+  {
+    id: 'image',
+    icon: '🖼',
+    name: '图 · 分享',
+    desc: '关键数字变成一张可发出去的图',
+    tools: [{ to: '/output/card', icon: '🖼', name: '周报导出为数据卡片', desc: '关键数字生成分享卡片图', status: '图片' }],
+  },
+  {
+    id: 'audio',
+    icon: '🎧',
+    name: '音 · 聆听',
+    desc: '通勤场景——用听的回顾一个周期',
+    tools: [{ to: '/output/read', icon: '🎧', name: '周报导出为朗读音频', desc: '周报转语音', status: '音频' }],
+  },
+  {
+    id: 'video',
+    icon: '🎬',
+    name: '视频',
+    desc: '数据变化 → 短视频',
+    tools: [{ to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: '远期规划' }],
+  },
 ]
 
 const EXTERNAL: { name: string; url: string; desc: string }[] = [
@@ -46,18 +75,27 @@ export function Output() {
 
       <div className="set-card">
         <h2>输出工具箱</h2>
-        <div className="desc">场景分类：周期成稿 → 听觉 → 分享 → 长文（远期）；本地渲染优先，外部工具精选跳转</div>
+        <div className="desc">按产出形态分类：文（文档与演示）→ 图 → 音 → 视频；本地渲染优先，外部工具精选跳转</div>
         <div className="set-body">
-          <div className="module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-            {TOOLS.map((t) => (
-              <Link key={t.to} to={t.to} className="mcard" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+            {TOOL_GROUPS.map((g) => (
+              <div key={g.id} className="mcard">
                 <div className="m-head">
-                  <span className="m-ico" aria-hidden>{t.icon}</span>
-                  <span className="m-name" style={{ fontSize: 'var(--fs-md)' }}>{t.name}</span>
+                  <span className="m-ico" aria-hidden>{g.icon}</span>
+                  <span className="m-name">{g.name}</span>
                 </div>
-                <div className="m-sub">{t.desc}</div>
-                {t.status && <span className="chip">{t.status}</span>}
-              </Link>
+                <div className="m-sub">{g.desc}</div>
+                <div className="m-links">
+                  {g.tools.map((t) => (
+                    <Link key={t.to} to={t.to} className="m-link" title={t.desc} style={t.status === '远期规划' ? { opacity: 0.55 } : undefined}>
+                      <span>
+                        {t.icon} {t.name}
+                      </span>
+                      <span className="cnt">{t.status}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

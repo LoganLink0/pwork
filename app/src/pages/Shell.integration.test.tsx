@@ -33,9 +33,9 @@ describe('工作台壳（W1）', () => {
     expect(await screen.findByRole('heading', { name: '速记' })).toBeInTheDocument()
 
     await user.click(sidebar().getByRole('link', { name: /处理/ }))
-    // W5：处理从占位页转为真页（跨模块检索 + AI 问答起步）
+    // W5：处理从占位页转为真页（工具箱 + AI 问答；跨模块检索已并入 Ctrl K 命令面板）
     expect(await screen.findByRole('heading', { name: '处理' })).toBeInTheDocument()
-    expect(screen.getByLabelText('跨模块检索')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'AI 全库问答' })).toBeInTheDocument()
   })
 
   it('命令面板：Ctrl+K 打开，搜索速记可跳转', async () => {

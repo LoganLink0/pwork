@@ -3,29 +3,12 @@ import { Link } from 'react-router-dom'
 import { useBlocks } from '../store/blocks'
 import { useProfiles } from '../store/profiles'
 import { fileToBlockContent } from '../engine/fileImport'
-import {
-  ARTICLE_VIEWS,
-  ARTICLE_SYSTEM_PROMPT,
-  articleToMarkdown,
-  buildArticleUserPrompt,
-  exportArticleDocx,
-  parseArticle,
-  type ArticleDraft,
-  type ArticleMaterial,
-  type ArticleView,
-} from '../engine/articleWriter'
-import { downloadFile } from '../db/repo'
-import { chatCompletionCached } from '../engine/aiCached'
-import { llmConfigured } from '../modules/review/engine/coach'
-import { ArticleEditor } from '../components/writer/ArticleEditor'
 import { parseDecodeBlock, parseDiagnosisBlock, renderDecodeReportHtml, renderDiagnosisReportHtml } from '../engine/deliverables'
 import { todayLocal } from '../engine/datetime'
 
-const coachReady = llmConfigured
-
 /**
  * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。
- * 数据块按「调研对象」归组（对象在此新建/删除，用于分组和发起分析）；简历辅导已独立为 resume-coach 应用（侧边栏「案例」入口）。
+ * 本页只做数据管理（对象/数据块的日常维护、导入、交付预览）；出分析稿去 输出 → 调研分析（2026-10-12 拆分）。
  */
 export function InputBlocks() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
@@ -39,13 +22,6 @@ export function InputBlocks() {
   const [reportPreview, setReportPreview] = useState<{ html: string } | null>(null)
   const reportFrame = useRef<HTMLIFrameElement>(null)
 
-  // 分析
-  const [view, setView] = useState<ArticleView>(ARTICLE_VIEWS[0]!)
-  const [audience, setAudience] = useState<'internal' | 'client'>('client')
-  const [draft, setDraft] = useState<ArticleDraft | null>(null)
-  const [aiBusy, setAiBusy] = useState(false)
-  const [aiError, setAiError] = useState('')
-
   useEffect(() => {
     void loadBlocks()
     void loadProfiles()
@@ -56,7 +32,7 @@ export function InputBlocks() {
       const text = await file.text()
       const r = fileToBlockContent(file.name, text)
       const profileId = filter !== 'all' && filter !== 'none' ? filter : undefined
-      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId, usage: audience === 'client' ? 'client' : 'internal' })
+      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId, usage: 'client' })
       setImportMsg(`${r.note}——确认内容后点"保存"`)
     } catch (e) {
       setImportMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
@@ -68,15 +44,6 @@ export function InputBlocks() {
     if (filter === 'none') return !b.profileId
     return b.profileId === filter
   })
-  const analysisScope = filter === 'all' || filter === 'none' ? null : (profiles.find((p) => p.id === filter) ?? null)
-  const analysisMaterials: ArticleMaterial[] = (analysisScope ? blocks.filter((b) => b.profileId === analysisScope.id) : blocks).map((b) => ({
-    id: b.id,
-    kind: 'note' as const,
-    title: b.title,
-    body: b.content,
-    createdAt: b.updatedAt,
-    sourceLabel: '外部材料',
-  }))
 
   const addProfile = async () => {
     if (!newProfileName.trim()) return
@@ -84,28 +51,6 @@ export function InputBlocks() {
     setNewProfileName('')
     setNewProfileKind('')
     setFilter(p.id)
-  }
-
-  const generateAnalysis = async () => {
-    if (aiBusy || analysisMaterials.length === 0) return
-    setAiBusy(true)
-    setAiError('')
-    try {
-      // 材料指纹进缓存键：材料/视角/对象没变的重复生成直接复用，不重复计费
-      const inputKey = [view.id, audience, analysisScope?.id ?? 'all', ...analysisMaterials.map((m) => `${m.id}:${m.body.length}`)].join('|')
-      const { text } = await chatCompletionCached({
-        purpose: 'article-analysis',
-        inputKey,
-        system: ARTICLE_SYSTEM_PROMPT,
-        user: buildArticleUserPrompt({ materials: analysisMaterials, view, scopeLabel: analysisScope?.name }),
-        maxTokens: 8000,
-      })
-      setDraft(parseArticle(text))
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setAiBusy(false)
-    }
   }
 
   const exportBlockReport = (b: { title: string; content: string; profileId?: string }) => {
@@ -120,15 +65,6 @@ export function InputBlocks() {
     }
   }
 
-  const doExport = (kind: 'md' | 'docx') => {
-    if (!draft) return
-    if (kind === 'md') {
-      downloadFile(`${draft.title}.md`, articleToMarkdown(draft), 'text/markdown')
-    } else {
-      void exportArticleDocx(draft)
-    }
-  }
-
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
@@ -137,7 +73,7 @@ export function InputBlocks() {
       </div>
 
       <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
-        <b>这页怎么用（三步）</b>：① 在下方建「调研对象」——一家公司、一个客户都行；② 把材料贴成数据块（粘贴文本 / 导入 CSV / JSON），编辑时选挂到哪个对象；③ 拉到页面底部「调研分析」区，选对象和视角出分析稿，导出 Markdown / Word。做简历辅导请走独立的「<Link to="/cases">案例</Link>」模块。
+        <b>这页是外部数据的"仓库"</b>：调研对象和数据块（材料）的日常维护都在这里——新建、归类、导入、清理。要出一份调研分析稿（选对象 → 贴材料 → 出稿导出），去 <Link to="/output/research">输出 → 调研分析</Link>。做简历辅导请走独立的「<Link to="/cases">案例</Link>」模块。
       </div>
 
       <div className="set-card">
@@ -316,7 +252,7 @@ export function InputBlocks() {
                     title: '',
                     content: '',
                     profileId: filter !== 'all' && filter !== 'none' ? filter : undefined,
-                    usage: audience === 'client' ? 'client' : 'internal',
+                    usage: 'client',
                   })
                 }
                 data-testid="add-block"
@@ -368,77 +304,6 @@ export function InputBlocks() {
               srcDoc={reportPreview.html}
               style={{ width: '100%', height: 560, border: '1px solid var(--line)', borderRadius: 'var(--r-md)', background: '#fff' }}
             />
-          </div>
-        </div>
-      )}
-
-      <div className="set-card">
-        <h2>从材料生成分析</h2>
-        <div className="desc">
-          范围：{analysisScope ? `对象「${analysisScope.name}」` : '当前筛选下的全部材料'} · 用途：{audience === 'client' ? '给客户（措辞正式，可直接交付）' : '自己用（可直写问题与判断）'}
-        </div>
-        <div className="set-body">
-          <div className="set-row">
-            <label>视角</label>
-            <div className="radio">
-              {ARTICLE_VIEWS.map((v) => (
-                <button key={v.id} type="button" className={view.id === v.id ? 'on' : ''} onClick={() => setView(v)}>
-                  {v.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="set-row">
-            <label>用途</label>
-            <div className="radio">
-              <button type="button" className={audience === 'client' ? 'on' : ''} onClick={() => setAudience('client')}>给客户</button>
-              <button type="button" className={audience === 'internal' ? 'on' : ''} onClick={() => setAudience('internal')}>自己用</button>
-            </div>
-          </div>
-          {draft === null ? (
-            <div className="set-row" style={{ flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!analysisMaterials.length || aiBusy || !coachReady()}
-                onClick={() => void generateAnalysis()}
-                data-testid="article-generate"
-              >
-                {aiBusy ? '⟳ AI 整理中…' : '🤖 AI 整理成分析草稿'}
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setDraft(view.skeleton())}>
-                用手动骨架（不需要 AI）
-              </button>
-              {!coachReady() && (
-                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置。
-                </span>
-              )}
-              {!analysisMaterials.length && (
-                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>当前范围没有材料。</span>
-              )}
-              {aiError && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{aiError}</span>}
-            </div>
-          ) : (
-            <div className="set-row">
-              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>草稿已生成，在下方"分析草稿（可编辑）"逐节修改。</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {draft && (
-        <div className="set-card">
-          <h2>分析草稿（可编辑）</h2>
-          <div className="set-body">
-            <div className="set-row">
-              <label>导出</label>
-              <button type="button" className="btn-ghost" onClick={() => doExport('md')}>⬇ Markdown</button>
-              <button type="button" className="btn-ghost" onClick={() => doExport('docx')}>⬇ Word（.docx）</button>
-              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>PDF 可在 Word 中另存</span>
-              <button type="button" className="mini-btn" onClick={() => setDraft(null)}>丢弃草稿</button>
-            </div>
-            <ArticleEditor draft={draft} onChange={setDraft} />
           </div>
         </div>
       )}

@@ -1,19 +1,16 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { searchAll, KIND_LABEL, type SearchHit, type SearchKind } from '../engine/searchAll'
+import { searchAll, KIND_LABEL, type SearchHit } from '../engine/searchAll'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 
 /**
- * 处理模块主页：工具箱 + 跨模块检索 + AI 全库问答。
+ * 处理模块主页：工具箱 + AI 全库问答。
+ * 跨模块检索已并入 Ctrl K 命令面板（2026-10-12 用户拍板：同一能力不占两处入口）。
  * 工具注册表见 content/processTools.ts——加新工具先注册再实现组件。
  */
 export function Process() {
-  const [query, setQuery] = useState('')
-  const [hits, setHits] = useState<SearchHit[]>([])
-  const [searched, setSearched] = useState(false)
-
   const [question, setQuestion] = useState('')
   const [externalCtx, setExternalCtx] = useState('')
   const [answer, setAnswer] = useState('')
@@ -21,34 +18,6 @@ export function Process() {
   const [askState, setAskState] = useState<'idle' | 'asking' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const coachReady = llmConfigured()
-  const timer = useRef<number | undefined>(undefined)
-
-  useEffect(() => {
-    window.clearTimeout(timer.current)
-    const q = query.trim()
-    if (!q) {
-      setHits([])
-      setSearched(false)
-      return
-    }
-    timer.current = window.setTimeout(() => {
-      void searchAll(q).then((r) => {
-        setHits(r)
-        setSearched(true)
-      })
-    }, 150)
-    return () => window.clearTimeout(timer.current)
-  }, [query])
-
-  const groups = useMemo(() => {
-    const byKind = new Map<SearchKind, SearchHit[]>()
-    for (const h of hits) {
-      const list = byKind.get(h.kind) ?? []
-      list.push(h)
-      byKind.set(h.kind, list)
-    }
-    return [...byKind.entries()]
-  }, [hits])
 
   const ask = async () => {
     const q = question.trim()
@@ -88,7 +57,7 @@ export function Process() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>处理</h1>
-        <span className="sub">工具箱（文字/音频/图片/视频）· 跨模块检索 · AI 问答</span>
+        <span className="sub">工具箱（文字/音频/图片/视频）· AI 全库问答；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>
       </div>
 
       <div className="set-card">
@@ -128,36 +97,6 @@ export function Process() {
               )
             })}
           </div>
-        </div>
-      </div>
-
-      <div className="set-card">
-        <h2>跨模块检索</h2>
-        <div className="desc">速记 / 任务 / 条目 / 复盘档案 / 洞察卡——一处查遍全库</div>
-        <div className="set-body">
-          <input
-            className="input"
-            style={{ width: '100%' }}
-            placeholder="输入关键词，跨模块搜索…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="跨模块检索"
-            data-testid="process-search"
-          />
-          {searched && hits.length === 0 && (
-            <div style={{ paddingTop: 'var(--sp-3)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>没有匹配「{query}」的内容。</div>
-          )}
-          {groups.map(([kind, list]) => (
-            <div key={kind} style={{ paddingTop: 'var(--sp-3)' }}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 4 }}>{KIND_LABEL[kind as SearchKind]}</div>
-              {list.map((h) => (
-                <Link key={h.kind + h.id} to={h.to} className="p-item" style={{ textDecoration: 'none' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</span>
-                  <span className="p-sub">{h.sub}</span>
-                </Link>
-              ))}
-            </div>
-          ))}
         </div>
       </div>
 
