@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildReportSlides } from './pptExport'
+import { estimateLines } from './pptRender'
 import type { ReportSnapshot } from '../types/models'
 import type { ReportData } from './reportData'
 
@@ -87,5 +88,19 @@ describe('buildReportSlides', () => {
   it('月报标题正确', () => {
     const s = buildReportSlides(mkData({ mode: 'monthly' }))
     expect(s[0]!.title).toBe('PWORK 月报')
+  })
+})
+
+describe('estimateLines（PPT 行高自适应）', () => {
+  it('短句一行', () => {
+    expect(estimateLines('✅ 完成任务甲', 15, 8.8)).toBe(1)
+  })
+  it('超长中文句按列宽折行（约 42 字/行 → 100 字 3 行）', () => {
+    expect(estimateLines('字'.repeat(100), 15, 8.8)).toBe(3)
+  })
+  it('ASCII 按约 0.55 个汉字宽折算', () => {
+    // 8.8 英寸列、15pt：每行约 42 个汉字位 ≈ 76 个 ASCII
+    expect(estimateLines('a'.repeat(60), 15, 8.8)).toBe(1)
+    expect(estimateLines('a'.repeat(90), 15, 8.8)).toBe(2)
   })
 })

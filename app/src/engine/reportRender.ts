@@ -104,14 +104,19 @@ export function reportToHtml(d: ReportData): string {
   h1 { font-size:28px; margin:0 0 4px; }
   .sub { color:#66625a; font-size:14px; margin-bottom:28px; }
   .stats { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:28px; }
-  .stat { background:#fff; border:1px solid #e6e4df; border-radius:10px; padding:14px 22px; min-width:120px; }
-  .num { font-size:24px; font-weight:700; }
+  .stat { flex:1 1 0; min-width:0; background:#fff; border:1px solid #e6e4df; border-radius:10px; padding:14px 22px; }
+  .num { font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
   .lbl { font-size:12px; color:#97928a; }
+  /* 正文统一列：h2 的琥珀条在最左，h2/h3/段落/列表的文字全部同列起步（2026-10-12 对齐修复） */
   h2 { font-size:18px; border-left:3px solid #e8833a; padding-left:10px; margin:30px 0 10px; }
+  .card h2:first-child { margin-top:0; }
+  h3 { font-size:15px; margin:18px 0 6px; padding-left:13px; }
+  .card p { margin-left:13px; }
+  .card ul { list-style:none; padding-left:13px; margin:6px 0 10px; }
   li { margin:6px 0; line-height:1.7; }
   a { color:#a34e12; }
   .card { background:#fff; border:1px solid #e6e4df; border-radius:12px; padding:20px 24px; }
-  .notice { border-left:3px solid #e8833a; background:#faf9f7; padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; margin-top:10px; }
+  .notice { border-left:3px solid #e8833a; background:#faf9f7; padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; margin:10px 0 0 13px; }
   .foot { margin-top:36px; color:#97928a; font-size:12px; text-align:center; }
 </style>
 </head>

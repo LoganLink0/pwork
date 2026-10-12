@@ -47,6 +47,13 @@ export const QUICK_START: QuickStep[] = [
     action: '去报告',
     to: '/output/report',
   },
+  {
+    step: '6',
+    title: '接进 Obsidian（可选）',
+    desc: '用 Obsidian 记笔记的人专属：日报一键下载成 vault 格式的 md，周报一键发送进 Obsidian 新建笔记。不用 Obsidian 就跳过这步。',
+    action: '去信息日报',
+    to: '/input/digest',
+  },
 ]
 
 export interface ModuleIntro {
@@ -204,5 +211,15 @@ export const CONFIG_GUIDE: ConfigGuideEntry[] = [
       '留空 = 用默认公共服务。改完下一次抓取生效。',
     ],
     link: { label: '去采集偏好', to: '/settings' },
+  },
+  {
+    title: 'Obsidian 联动（可选：只在用 Obsidian 记笔记时有用）',
+    who: '用 Obsidian 的人。不用 Obsidian 可以完全忽略——PWORK 自己就是完整的存储，这里只是把成稿顺手送进你的笔记库。',
+    steps: [
+      '信息日报：日报页右上「⬇ 导出 Obsidian 日报」，得到一个 md 文件（带日期命名和元数据），拖进 vault 的「信息日报」文件夹即可。',
+      '周报/月报：报告页底部「📓 写入 Obsidian」，会通过 Obsidian 协议直接新建笔记（需要这台电脑装了 Obsidian；想进指定库就在旁边填 vault 名）。',
+      '方向是单向的：PWORK → Obsidian。条目的星级和批注仍以 PWORK 为准。',
+    ],
+    link: { label: '去信息日报试试', to: '/input/digest' },
   },
 ]

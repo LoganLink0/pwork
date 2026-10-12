@@ -9,9 +9,21 @@ import { PPT_COLORS as C } from './pptExport'
 // PPTX 的 typeface 属性禁含双引号（pptxgenjs 不转义，会炸 XML）——用 Windows 全量预装的微软雅黑
 const FONT = 'Microsoft YaHei'
 
+// 统一左缘标准（2026-10-12 对齐修复）：内容页所有元素（标题/正文/表格/图表/页脚）从同一列起步；
+// 封面与章节页的琥珀条也锚定该列，文字在其右侧 0.3"
+const X = 0.6
+const COL_W = 8.8
+
+/** 按视觉宽度估算行数：CJK 记 1、其余约 0.55 个汉字宽，行宽即内容列宽 */
+export function estimateLines(text: string, fontSize: number, colWidthIn: number): number {
+  let units = 0
+  for (const ch of text) units += /[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(ch) ? 1 : 0.55
+  return Math.max(1, Math.ceil((units * fontSize) / 72 / colWidthIn))
+}
+
 function addFooter(slide: PptxGenJS.Slide, footer: string, dark: boolean): void {
   slide.addText(footer, {
-    x: 0.5, y: 5.15, w: 9, h: 0.3, fontSize: 10,
+    x: X, y: 5.15, w: 9, h: 0.3, fontSize: 10,
     color: dark ? C.MUTED_INV : C.MUTED, fontFace: FONT,
   })
 }
@@ -23,15 +35,15 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
   addFooter(slide, spec.footer, dark)
 
   if (spec.kind === 'title') {
-    // 封面/结尾：左侧琥珀竖条 + 大字标题（视觉焦点=大字）
-    slide.addShape(pptx.ShapeType.rect, { x: 0.65, y: 2.2, w: 0.09, h: 1.1, fill: { color: C.ACCENT } })
+    // 封面/结尾：琥珀竖条锚定内容列 + 大字标题（视觉焦点=大字）
+    slide.addShape(pptx.ShapeType.rect, { x: X, y: 2.2, w: 0.09, h: 1.1, fill: { color: C.ACCENT } })
     slide.addText(spec.title, {
-      x: 0.95, y: 2.1, w: 8.5, h: 0.95, fontSize: 40, bold: true,
+      x: X + 0.3, y: 2.1, w: 8.4, h: 0.95, fontSize: 40, bold: true,
       color: dark ? C.TEXT_INV : C.TEXT, fontFace: FONT,
     })
     if (spec.bullets.length) {
       slide.addText(spec.bullets.join('\n'), {
-        x: 0.98, y: 3.1, w: 8, h: 0.8, fontSize: 15,
+        x: X + 0.3, y: 3.1, w: 8.4, h: 0.8, fontSize: 15,
         color: dark ? C.MUTED_INV : C.MUTED, fontFace: FONT,
       })
     }
@@ -40,14 +52,14 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
 
   // 内容页页标题
   slide.addText(spec.title, {
-    x: 0.6, y: 0.45, w: 9, h: 0.6, fontSize: 26, bold: true,
+    x: X, y: 0.45, w: 9, h: 0.6, fontSize: 26, bold: true,
     color: C.TEXT, fontFace: FONT,
   })
 
   if (spec.kind === 'stats') {
     // 焦点=超大数字卡片（2×2，发丝线描边，无阴影）
     spec.stats.forEach(([v, l], i) => {
-      const x = 0.6 + (i % 2) * 4.65
+      const x = X + (i % 2) * 4.65
       const y = 1.45 + Math.floor(i / 2) * 1.8
       slide.addShape(pptx.ShapeType.rect, {
         x, y, w: 4.25, h: 1.55, fill: { color: C.CARD }, line: { color: C.LINE, width: 0.75 },
@@ -60,10 +72,10 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
   }
 
   if (spec.kind === 'section') {
-    // 章节分隔：左侧琥珀竖条 + 章节大字（视觉焦点=章节转场）
-    slide.addShape(pptx.ShapeType.rect, { x: 0.65, y: 2.3, w: 0.09, h: 0.9, fill: { color: C.ACCENT } })
+    // 章节分隔：琥珀竖条锚定内容列 + 章节大字（视觉焦点=章节转场）
+    slide.addShape(pptx.ShapeType.rect, { x: X, y: 2.3, w: 0.09, h: 0.9, fill: { color: C.ACCENT } })
     slide.addText(spec.title, {
-      x: 0.95, y: 2.2, w: 8.5, h: 1.1, fontSize: 32, bold: true,
+      x: X + 0.3, y: 2.2, w: 8.4, h: 1.1, fontSize: 32, bold: true,
       color: dark ? C.TEXT_INV : C.TEXT, fontFace: FONT,
     })
     return
@@ -81,21 +93,21 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
       })),
     )
     slide.addTable([th, ...body], {
-      x: 0.6, y: 1.35, w: 8.9,
+      x: X, y: 1.35, w: COL_W,
       border: { type: 'solid', color: C.LINE, pt: 0.75 },
-      colW: spec.table.headers.length ? Array(spec.table.headers.length).fill(8.9 / spec.table.headers.length) : undefined,
+      colW: spec.table.headers.length ? Array(spec.table.headers.length).fill(COL_W / spec.table.headers.length) : undefined,
     })
     return
   }
 
   if (spec.kind === 'chart' && spec.chart) {
-    // 焦点=原生柱状图（数值标签直出）
+    // 焦点=原生柱状图（数值标签直出），与内容列同缘
     slide.addChart(pptx.ChartType.bar, spec.chart.values.map((v, i) => ({
       name: spec.chart!.labels[i] ?? String(i),
       labels: [spec.chart!.labels[i] ?? String(i)],
       values: [v],
     })), {
-      x: 0.9, y: 1.35, w: 8.3, h: 3.55,
+      x: X, y: 1.35, w: COL_W, h: 3.55,
       barDir: 'col', barGapWidthPct: 80,
       chartColors: [C.PRIMARY],
       showValue: true, dataLabelColor: C.TEXT, dataLabelFontSize: 11, dataLabelPosition: 'outEnd',
@@ -105,17 +117,29 @@ export function renderSlide(slide: PptxGenJS.Slide, pptx: PptxGenJS, spec: Slide
     return
   }
 
-  // bullets：行式分组（首词加粗 + 发丝分隔线），容器留白
+  // bullets：行式分组（发丝分隔线），行高按内容行数自适应（2026-10-12 修复长句换行与线重叠）
   const rows = spec.bullets
-  rows.forEach((b, i) => {
-    const y = 1.35 + i * 0.62
-    slide.addText(b, { x: 0.75, y, w: 8.7, h: 0.5, fontSize: 15, color: C.TEXT, fontFace: FONT })
-    if (i < rows.length - 1) {
-      slide.addShape(pptx.ShapeType.line, { x: 0.75, y: y + 0.52, w: 8.7, h: 0, line: { color: C.LINE, width: 0.75 } })
+  const LINE_H = 0.32
+  let y = 1.35
+  let skipped = 0
+  for (let i = 0; i < rows.length; i++) {
+    const lines = estimateLines(rows[i], 15, COL_W)
+    const rowH = lines * LINE_H + 0.2
+    if (y + rowH > 4.95) {
+      skipped = rows.length - i
+      break
     }
-  })
+    slide.addText(rows[i], { x: X, y, w: COL_W, h: lines * LINE_H, fontSize: 15, color: C.TEXT, fontFace: FONT, valign: 'top' })
+    y += rowH
+    if (i < rows.length - 1) {
+      slide.addShape(pptx.ShapeType.line, { x: X, y: y - 0.1, w: COL_W, h: 0, line: { color: C.LINE, width: 0.75 } })
+    }
+  }
+  if (skipped > 0) {
+    slide.addText(`（其余 ${skipped} 条略）`, { x: X, y: Math.min(y, 4.95), w: COL_W, h: 0.35, fontSize: 13, color: C.MUTED, fontFace: FONT })
+  }
   if (rows.length === 0) {
-    slide.addText('（本期无记录）', { x: 0.75, y: 1.5, w: 8, h: 0.5, fontSize: 14, color: C.MUTED, fontFace: FONT })
+    slide.addText('（本期无记录）', { x: X, y: 1.5, w: 8, h: 0.5, fontSize: 14, color: C.MUTED, fontFace: FONT })
   }
 }
 
