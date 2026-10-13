@@ -48,4 +48,4 @@
 
 ## 回归清单（每次收尾必过）
 
-`cd app && npx vitest run`（全绿，当前基线 **339**；含 5 万条压测 perf.bench 单文件可排除——并发验证时偶发超时属环境噪声）→ `npx tsc -b`（0 错）→ `npx oxlint src`（基线 27 警告 0 错——2026-10-12 核对：改动前实测即 27，此前文档记 26 是旧数）→ 涉及桌面版时 `npx tauri build` + 冒烟（窗口标题 + `curl 127.0.0.1:8788/health`）→ 涉及 worker 时 `cd worker && npx vitest run`（19 绿）
+`cd app && npx vitest run`（全绿，当前基线 **340**；含 5 万条压测 perf.bench 单文件可排除——并发验证时偶发超时属环境噪声）→ `npx tsc -b`（0 错）→ `npx oxlint src`（基线 27 警告 0 错——2026-10-12 核对：改动前实测即 27，此前文档记 26 是旧数）→ 涉及桌面版时 `npx tauri build` + 冒烟（窗口标题 + `curl 127.0.0.1:8788/health`）→ 涉及 worker 时 `cd worker && npx vitest run`（19 绿）

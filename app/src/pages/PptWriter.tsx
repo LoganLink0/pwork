@@ -18,7 +18,7 @@ import { llmConfigured } from '../modules/review/engine/coach'
 const coachReady = llmConfigured
 
 /** PPT 撰写（输出）：从零起草一份 PPT——主题 + 材料 → AI 大纲（逐页审核修改）→ 可编辑 .pptx。
- *  调研对象材料的分析在 输入 → 外部数据 的对象工作台里做（分工：那里管材料与分析，这里管从零成稿）。 */
+ *  带调研的成稿走 输出 → 调研分析（框架与提示词驱动）；这里管从零自由成稿。 */
 export function PptWriter() {
   const [materials, setMaterials] = useState<WriterMaterial[]>([])
   const [pasteName, setPasteName] = useState('')

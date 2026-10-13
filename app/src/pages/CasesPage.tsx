@@ -25,7 +25,7 @@ export function CasesPage() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>简历辅导（独立应用）</h1>
-        <span className="sub">案例模块已独立为 resume-coach 项目——PWORK 只做入口，不承载业务功能</span>
+        <span className="sub">简历辅导已独立为 resume-coach 应用——这里是入口页；也可从 处理 → 工具箱 → 专题 进入</span>
       </div>
 
       <div className="set-card">

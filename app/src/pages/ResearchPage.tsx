@@ -316,6 +316,9 @@ export function ResearchPage() {
   const removeTask = async () => {
     if (!profile) return
     if (!window.confirm(`删除调研任务「${profile.name}」？框架与发现一并移除（备份中仍可找回）。`)) return
+    // 先删发现再删任务：数据层的删除任务只把块"摘成未归类"（服务案例场景），
+    // 调研发现若走那条路会泄进周报外部数据——必须显式删（2026-10-13 自查发现）
+    for (const b of taskBlocks) await removeBlock(b.id)
     await removeProfile(profile.id)
     setProfileId(null)
     setFw(null)

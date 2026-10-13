@@ -106,4 +106,27 @@ describe('调研分析页（任务式）', () => {
     // 搜索与作答都真实发生（搜索 ×2：节名 + 第一个问题）
     expect(calls.filter((c) => c.endsWith('/search')).length).toBeGreaterThanOrEqual(2)
   })
+
+  it('删除任务 → 发现一并软删（不得泄进周报外部数据，2026-10-13 自查修复）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: '① 调研目标' })
+    await user.type(screen.getByLabelText('调研目标'), '临期调研')
+    await user.click(screen.getByTestId('start-research'))
+    expect(await screen.findByText('一、公司画像')).toBeInTheDocument()
+
+    const ta = screen.getByLabelText('一、公司画像 的发现')
+    await user.type(ta, '发现内容一段')
+    await user.tab()
+
+    // 删除任务（window.confirm 自动接受）
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: '删除任务' }))
+    await waitFor(() => {
+      expect(screen.queryByLabelText('一、公司画像 的发现')).not.toBeInTheDocument()
+    })
+    // 关键断言：发现块被软删（deletedAt 有值），而不是被摘成"未归类"
+    const all = await db.blocks.toArray()
+    expect(all.find((b) => b.title === '一、公司画像')?.deletedAt).toBeTruthy()
+  })
 })

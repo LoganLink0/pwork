@@ -85,7 +85,7 @@ function PaletteDialog() {
     const pageEntries: { to: string; icon: string; label: string; sub: string }[] = [
       ...WORKSPACE_NAV.filter((w) => w.to !== '/').map((w) => ({ to: w.to, icon: w.icon, label: w.label, sub: '页面' })),
       { to: '/', icon: '◈', label: '今日', sub: '页面' },
-      // 顶层直达模块（处理/输出/案例无 children）也要能被搜到
+      // 顶层直达模块（处理/输出无 children）也要能被搜到
       ...MODULE_NAV.filter((m) => m.to).map((m) => ({ to: m.to!, icon: m.icon, label: m.label, sub: '页面' })),
       ...MODULE_NAV.flatMap((m) =>
         (m.children ?? []).map((c) => ({ to: c.to, icon: c.icon, label: c.label, sub: m.label })),

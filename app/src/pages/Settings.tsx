@@ -832,7 +832,7 @@ export function Settings() {
           </div>
           <div className="set-row">
             <label>进度</label>
-            <span className="val">速记、信息日报、任务/目标、报告导出、文章草稿、复盘、案例工作台均已上线；数据视频为远期规划</span>
+            <span className="val">速记、信息日报、任务/目标、报告导出、文章草稿、调研分析、复盘均已上线；数据视频为远期规划</span>
           </div>
           <div className="set-row">
             <label>快捷键</label>
