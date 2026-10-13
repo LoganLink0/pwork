@@ -154,12 +154,6 @@ export function buildFullPrompt(fw: ResearchFramework): string {
 }
 
 /** 外部 AI 站点（复制提示词后一键跳转粘贴；只做新标签打开，不带任何数据） */
-export const AI_CHAT_SITES: { name: string; url: string }[] = [
-  { name: '豆包', url: 'https://www.doubao.com/chat/' },
-  { name: 'DeepSeek', url: 'https://chat.deepseek.com/' },
-  { name: 'Kimi', url: 'https://kimi.moonshot.cn/chat' },
-]
-
 /* ---------------------- AI 定制框架（可选增强，走网关/BYOK） ---------------------- */
 
 export const FRAMEWORK_SYSTEM_PROMPT =

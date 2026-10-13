@@ -4,9 +4,11 @@ import { searchAll, KIND_LABEL, type SearchHit } from '../engine/searchAll'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
+import { byRecentUse, loadQuickSites, makeSite, normalizeSiteUrl, saveQuickSites, type QuickSite } from '../engine/quickLaunch'
+import { toast } from '../engine/toast'
 
 /**
- * 处理模块主页：工具箱 + AI 全库问答。
+ * 处理模块主页：工具箱 + 快速启动 + AI 全库问答。
  * 跨模块检索已并入 Ctrl K 命令面板（2026-10-12 用户拍板：同一能力不占两处入口）。
  * 工具注册表见 content/processTools.ts——加新工具先注册再实现组件。
  */
@@ -18,6 +20,42 @@ export function Process() {
   const [askState, setAskState] = useState<'idle' | 'asking' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const coachReady = llmConfigured()
+
+  // 快速启动（2026-10-13 用户拍板：常用 AI/网页的统一入口，与调研页跳转共用清单）
+  const [sites, setSites] = useState<QuickSite[]>(() => loadQuickSites())
+  const [editing, setEditing] = useState<(QuickSite & { isNew?: boolean }) | null>(null)
+
+  const persist = (next: QuickSite[]) => {
+    setSites(next)
+    saveQuickSites(next)
+  }
+
+  const openSite = (site: QuickSite) => {
+    window.open(site.url, '_blank', 'noreferrer noopener')
+    persist(sites.map((s) => (s.id === site.id ? { ...s, lastUsedAt: Date.now() } : s)))
+  }
+
+  const saveEditing = () => {
+    if (!editing) return
+    const url = normalizeSiteUrl(editing.url)
+    if (!url) {
+      toast('error', '网址不像一个网址——检查拼写（例：chat.deepseek.com）')
+      return
+    }
+    const name = editing.name.trim()
+    if (!name) {
+      toast('error', '先给这个站点起个名字')
+      return
+    }
+    if (editing.isNew) {
+      persist([...sites, makeSite(name, url)])
+      toast('ok', `已添加「${name}」`)
+    } else {
+      persist(sites.map((s) => (s.id === editing.id ? { ...s, name, url } : s)))
+      toast('ok', `已更新「${name}」`)
+    }
+    setEditing(null)
+  }
 
   const ask = async () => {
     const q = question.trim()
@@ -57,7 +95,7 @@ export function Process() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>处理</h1>
-        <span className="sub">工具箱（文字/音频/图片/视频）· AI 全库问答；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>
+        <span className="sub">工具箱（文字/音频/图片/视频）· 快速启动 · AI 全库问答；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>
       </div>
 
       <div className="set-card">
@@ -96,6 +134,79 @@ export function Process() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </div>
+
+      <div className="set-card">
+        <h2>快速启动</h2>
+        <div className="desc">常用 AI 和网页的入口——点击在浏览器新标签打开；最近用过的排前面，清单只存本机（换机需重配）</div>
+        <div className="set-body">
+          <div className="chips" style={{ marginBottom: editing ? 'var(--sp-3)' : 0 }}>
+            {byRecentUse(sites).map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className="chip on"
+                title={s.url}
+                onClick={() => openSite(s)}
+                onContextMenu={(e) => {
+                  // 右键 = 编辑（不打扰默认态；也避免每项挂常驻小按钮的视觉噪音）
+                  e.preventDefault()
+                  setEditing({ ...s })
+                }}
+              >
+                {s.name} ↗
+              </button>
+            ))}
+            <button type="button" className="chip" onClick={() => setEditing({ ...makeSite('', ''), isNew: true })}>
+              ＋ 添加
+            </button>
+          </div>
+          {editing && (
+            <div className="set-row" style={{ flexWrap: 'wrap' }}>
+              <input
+                className="input"
+                style={{ maxWidth: 180 }}
+                placeholder="名称（如：豆包）"
+                value={editing.name}
+                aria-label="站点名称"
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+              />
+              <input
+                className="input"
+                style={{ flex: 1, minWidth: 220 }}
+                placeholder="网址（如：www.doubao.com，协议可省略）"
+                value={editing.url}
+                aria-label="站点网址"
+                onChange={(e) => setEditing({ ...editing, url: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+              />
+              <button type="button" className="btn-primary" onClick={saveEditing}>
+                {editing.isNew ? '添加' : '保存'}
+              </button>
+              {!editing.isNew && (
+                <button
+                  type="button"
+                  className="mini-btn"
+                  onClick={() => {
+                    if (window.confirm(`删除「${editing.name}」的快捷入口？`)) {
+                      persist(sites.filter((s) => s.id !== editing.id))
+                      setEditing(null)
+                    }
+                  }}
+                >
+                  删除
+                </button>
+              )}
+              <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>取消</button>
+            </div>
+          )}
+          <div className="set-row" style={{ marginTop: 'var(--sp-2)' }}>
+            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+              增删改：点「＋ 添加」，或在任意入口上<b>右键</b>编辑；排序按最近使用自动置前
+            </span>
           </div>
         </div>
       </div>

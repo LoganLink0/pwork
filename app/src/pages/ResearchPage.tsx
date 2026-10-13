@@ -16,7 +16,6 @@ import {
   type ArticleView,
 } from '../engine/articleWriter'
 import {
-  AI_CHAT_SITES,
   FRAMEWORK_SYSTEM_PROMPT,
   RESEARCH_TYPES,
   buildFramework,
@@ -30,6 +29,7 @@ import {
   type ResearchFramework,
   type ResearchType,
 } from '../engine/research'
+import { byRecentUse, loadQuickSites, markQuickSiteUsed } from '../engine/quickLaunch'
 import { parseAiJson } from '../engine/aiJson'
 import { chatCompletionCached } from '../engine/aiCached'
 import { chatCompletion } from '../modules/review/engine/llm'
@@ -407,8 +407,17 @@ export function ResearchPage() {
                   <button type="button" className="btn-primary" onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
                     📋 复制完整提示词（{fw.sections.length} 节合一）
                   </button>
-                  {AI_CHAT_SITES.map((s) => (
-                    <a key={s.url} className="btn-ghost" style={{ textDecoration: 'none' }} href={s.url} target="_blank" rel="noreferrer noopener">
+                  {/* 跳转清单与处理页「快速启动」共用（取前 4 个，按最近使用排序）；点击记一次使用 */}
+                  {byRecentUse(loadQuickSites()).slice(0, 4).map((s) => (
+                    <a
+                      key={s.id}
+                      className="btn-ghost"
+                      style={{ textDecoration: 'none' }}
+                      href={s.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={() => markQuickSiteUsed(s.id)}
+                    >
                       去{s.name} ↗
                     </a>
                   ))}

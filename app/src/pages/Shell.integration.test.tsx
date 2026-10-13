@@ -33,9 +33,13 @@ describe('工作台壳（W1）', () => {
     expect(await screen.findByRole('heading', { name: '速记' })).toBeInTheDocument()
 
     await user.click(sidebar().getByRole('link', { name: /处理/ }))
-    // W5：处理从占位页转为真页（工具箱 + AI 问答；跨模块检索已并入 Ctrl K 命令面板）
+    // W5：处理从占位页转为真页（工具箱 + 快速启动 + AI 问答；跨模块检索已并入 Ctrl K 命令面板）
     expect(await screen.findByRole('heading', { name: '处理' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'AI 全库问答' })).toBeInTheDocument()
+    // 快速启动：内置默认站点可点开（2026-10-13）
+    expect(screen.getByRole('heading', { name: '快速启动' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /豆包 ↗/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /＋ 添加/ })).toBeInTheDocument()
   })
 
   it('命令面板：Ctrl+K 打开，搜索速记可跳转', async () => {
