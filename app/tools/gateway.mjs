@@ -36,6 +36,12 @@ const env = loadEnv()
 const PORT = Number(env.PWORK_GATEWAY_PORT || 8788)
 const CHAT_URL = env.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
 const CHAT_KEY = env.PWORK_LLM_API_KEY || ''
+// 联网搜索（2026-10-13 调研"替我调研"升级）：智谱 tools 端点，模型 web-search-pro（¥0.03/次，
+// Coding Plan 可能有免费权益）。Key 链：PWORK_SEARCH_API_KEY 显式优先；否则仅当 LLM 上游
+// 本来就是智谱时复用 LLM Key（同账号）——上游是别家时不能拿别家的 Key 打智谱。
+const SEARCH_URL = env.PWORK_SEARCH_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/tools'
+const SEARCH_MODEL = env.PWORK_SEARCH_MODEL || 'web-search-pro'
+const SEARCH_KEY = env.PWORK_SEARCH_API_KEY || (CHAT_URL.includes('bigmodel') ? CHAT_KEY : '')
 const USAGE_LOG = resolve(process.cwd(), 'gateway-usage.log')
 
 const json = (res, status, obj) => {
@@ -69,7 +75,52 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname
 
   if (path === '/health') {
-    json(res, 200, { ok: true, chatConfigured: Boolean(CHAT_KEY), upstream: CHAT_URL.replace(/\/chat\/completions$/, '') })
+    json(res, 200, {
+      ok: true,
+      chatConfigured: Boolean(CHAT_KEY),
+      searchConfigured: Boolean(SEARCH_KEY),
+      upstream: CHAT_URL.replace(/\/chat\/completions$/, ''),
+    })
+    return
+  }
+
+  // 联网搜索代理：{ query, count } → 智谱 tools API → 归一化 { ok, results:[{title,link,content}] }
+  if (path === '/search' && req.method === 'POST') {
+    if (!SEARCH_KEY) {
+      json(res, 503, { ok: false, error: '网关未配置搜索 Key——在 gateway.env/.env.local 写 PWORK_SEARCH_API_KEY（智谱 Key；LLM 上游为智谱时自动复用）' })
+      return
+    }
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', async () => {
+      try {
+        const { query, count } = JSON.parse(body || '{}')
+        if (!query || typeof query !== 'string') {
+          json(res, 400, { ok: false, error: '缺少 query' })
+          return
+        }
+        const upstream = await fetch(SEARCH_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${SEARCH_KEY}` },
+          body: JSON.stringify({ model: SEARCH_MODEL, messages: [{ role: 'user', content: query }], stream: false }),
+        })
+        const text = await upstream.text()
+        if (!upstream.ok) {
+          const msg = JSON.parse(text)?.error?.message ?? text.slice(0, 200)
+          json(res, 502, { ok: false, error: `搜索上游 ${upstream.status}：${msg}` })
+          return
+        }
+        const data = JSON.parse(text)
+        const hits = (data.choices?.[0]?.message?.tool_calls ?? [])
+          .flatMap((tc) => tc.search_result ?? [])
+          .filter((r) => r && r.link)
+          .map((r) => ({ title: String(r.title ?? ''), link: String(r.link ?? ''), content: String(r.content ?? '') }))
+        logUsage(JSON.stringify({ model: SEARCH_MODEL }), text)
+        json(res, 200, { ok: true, results: hits.slice(0, count || 6) })
+      } catch (e) {
+        json(res, 502, { ok: false, error: `搜索失败：${e instanceof Error ? e.message : String(e)}` })
+      }
+    })
     return
   }
 
@@ -155,5 +206,5 @@ function usageSummary() {
 }
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[PWORK 网关] http://127.0.0.1:${PORT}/v1 ｜ 上游：${normalizeUpstream(CHAT_URL)} ｜ Key：${CHAT_KEY ? '已配置' : '未配置（/health 可用，对话返回 503）'}`)
+  console.log(`[PWORK 网关] http://127.0.0.1:${PORT}/v1 ｜ 上游：${normalizeUpstream(CHAT_URL)} ｜ Key：${CHAT_KEY ? '已配置' : '未配置（/health 可用，对话返回 503）'} ｜ 搜索：${SEARCH_KEY ? `${SEARCH_MODEL} 已配置` : '未配置（/search 返回 503）'}`)
 })

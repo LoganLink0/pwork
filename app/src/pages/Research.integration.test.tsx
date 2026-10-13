@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { db } from '../db/schema'
 
@@ -57,5 +57,52 @@ describe('调研分析页（任务式）', () => {
     // 手动骨架出稿（不依赖 AI）
     await user.click(screen.getByRole('button', { name: '用手动骨架（不需要 AI）' }))
     expect(await screen.findByRole('heading', { name: '分析草稿（可编辑）' })).toBeInTheDocument()
+  })
+
+  it('联网调研（网关配了搜索）：搜本节问题 → 带来源的答案落进发现', async () => {
+    // 网关模式 + 已配置搜索
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true, gatewayUrl: 'http://127.0.0.1:8788' }))
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: URL | string, init?: RequestInit) => {
+      const u = String(url)
+      calls.push(u)
+      if (u.endsWith('/health')) {
+        return new Response(JSON.stringify({ ok: true, chatConfigured: true, searchConfigured: true }), { status: 200 })
+      }
+      if (u.endsWith('/search')) {
+        expect(String(init?.body)).toContain('宁德时代')
+        return new Response(JSON.stringify({
+          ok: true,
+          results: [
+            { title: '公司年报摘要', link: 'https://example.com/annual', content: '2025 年营收 4000 亿元' },
+            { title: '新闻', link: 'https://example.com/news', content: '发布新产品线' },
+          ],
+        }), { status: 200 })
+      }
+      if (u.includes('/chat/completions')) {
+        return new Response(JSON.stringify({ choices: [{ message: { content: '营收约 4000 亿元 [1]。' } }], usage: { total_tokens: 12 } }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }))
+
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: '① 调研目标' })
+    await user.type(screen.getByLabelText('调研目标'), '宁德时代')
+    await user.click(screen.getByTestId('start-research'))
+    // AI 框架生成的 stub 返回非 JSON → 自动落回内置模板
+    expect(await screen.findByText('一、公司画像')).toBeInTheDocument()
+
+    const webBtns = await screen.findAllByRole('button', { name: '🌐 联网调研' })
+    await user.click(webBtns[0]!)
+    const ta = (await screen.findByLabelText('一、公司画像 的发现')) as HTMLTextAreaElement
+    await waitFor(() => {
+      const banner = screen.queryByTestId('research-msg')?.textContent ?? ''
+      expect(ta.value, `页面消息：${banner}`).toContain('联网调研')
+    }, { timeout: 6000 })
+    expect(ta.value).toContain('https://example.com/annual')
+    expect(ta.value).toContain('来源：')
+    // 搜索与作答都真实发生（搜索 ×2：节名 + 第一个问题）
+    expect(calls.filter((c) => c.endsWith('/search')).length).toBeGreaterThanOrEqual(2)
   })
 })

@@ -32,8 +32,12 @@ import { parseAiJson } from '../engine/aiJson'
 import { chatCompletionCached } from '../engine/aiCached'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
+import { gatewaySearchConfigured, gatewayWebSearch } from '../engine/webSearch'
 import { downloadFile } from '../db/repo'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
+
+const WEB_ANSWER_SYSTEM =
+  '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'
 
 /**
  * 调研分析（输出模块，2026-10-13 第一性原理重构）：
@@ -50,6 +54,8 @@ export function ResearchPage() {
   const [fw, setFw] = useState<ResearchFramework | null>(null)
   const [fwBusy, setFwBusy] = useState(false)
   const [askBusy, setAskBusy] = useState<string | null>(null)
+  const [webBusy, setWebBusy] = useState<string | null>(null)
+  const [searchReady, setSearchReady] = useState(false)
   const [msg, setMsg] = useState('')
   /** 发现草稿：节标题 → 文本（onBlur 落库） */
   const [findingDrafts, setFindingDrafts] = useState<Record<string, string>>({})
@@ -89,6 +95,12 @@ export function ResearchPage() {
     setMsg('')
   }, [profileId])
 
+  // 网关是否配了搜索（决定显示「联网调研」还是「直接问 AI」）；coachReady 为假时按钮本就不显示
+  useEffect(() => {
+    if (!coachReady) return
+    void gatewaySearchConfigured(loadCoachConfig().gatewayUrl || 'http://127.0.0.1:8788').then(setSearchReady)
+  }, [coachReady])
+
   const copyPrompt = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -127,11 +139,12 @@ export function ResearchPage() {
     setFwBusy(false)
   }
 
-  /** 开始新任务：建任务 + 立即生成框架 */
+  /** 开始（或继续）任务：同名任务复用不重建；建完立即生成框架 */
   const startTask = async () => {
     const t = target.trim()
     if (!t) return
-    const p = await saveProfile({ name: t, kind: typeName(type) })
+    const existing = profiles.find((p) => p.name === t)
+    const p = existing ?? (await saveProfile({ name: t, kind: typeName(type) }))
     setProfileId(p.id)
     await generateFramework(p.id)
   }
@@ -159,6 +172,63 @@ export function ResearchPage() {
       setMsg(`问 AI 失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setAskBusy(null)
+    }
+  }
+
+  /** 联网调研（2026-10-13"替我调研"）：搜该节问题 → 带来源喂给模型 → 答案与来源链接落进发现 */
+  const researchOnline = async (heading: string) => {
+    if (!fw || webBusy) return
+    const section = fw.sections.find((s) => s.heading === heading)!
+    const plain = heading.replace(/^[一二三四五六七八九十]+、/, '')
+    setWebBusy(heading)
+    setMsg('')
+    try {
+      const gw = loadCoachConfig().gatewayUrl || 'http://127.0.0.1:8788'
+      const queries = [
+        `${fw.target} ${plain}`,
+        section.questions[0] ? `${fw.target} ${section.questions[0].replace(/[？?。]/g, '')}` : '',
+      ]
+        .filter(Boolean)
+        .slice(0, 2)
+      const lists = await Promise.all(queries.map((q) => gatewayWebSearch(gw, q, 4)))
+      const seen = new Set<string>()
+      const hits = lists.flat().filter((h) => (seen.has(h.link) ? false : (seen.add(h.link), true))).slice(0, 8)
+      if (hits.length === 0) {
+        setMsg('联网检索没有返回结果——换个关键词或用「复制提示词」手动查')
+        return
+      }
+      const ctx = hits.map((h, i) => `[${i + 1}] ${h.title}（${h.link}）\n${h.content}`).join('\n\n')
+      const inputKey = ['research-web', fw.target, heading, queries.join('|'), hits.map((h) => h.link).join(',')].join('|')
+      const { text } = await chatCompletionCached({
+        purpose: 'research-web',
+        inputKey,
+        system: WEB_ANSWER_SYSTEM,
+        user: [
+          `调研目标：${fw.target}`,
+          `当前维度：${plain}`,
+          '要回答的问题：',
+          ...section.questions.map((q, i) => `${i + 1}. ${q}`),
+          '',
+          '检索结果：',
+          ctx,
+          '',
+          '请综合检索结果回答上述问题。',
+        ].join('\n'),
+        maxTokens: 3000,
+      })
+      const prev = findingDrafts[heading] ?? findingsOf(heading)?.content ?? ''
+      const stamp = new Date().toLocaleDateString()
+      const merged = `${prev ? prev + '\n\n' : ''}—— 联网调研（${stamp}）：\n${text.trim()}\n来源：\n${hits
+        .map((h, i) => `[${i + 1}] ${h.title} — ${h.link}`)
+        .join('\n')}`
+      setFindingDrafts((d) => ({ ...d, [heading]: merged }))
+      await saveBlock({ id: findingsOf(heading)?.id, title: heading, content: merged, profileId: profileId!, usage: 'internal' })
+      await loadBlocks()
+      setMsg(`联网调研完成：检索 ${queries.length} 次，引用 ${hits.length} 个来源`)
+    } catch (e) {
+      setMsg(`联网调研失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setWebBusy(null)
     }
   }
 
@@ -286,13 +356,16 @@ export function ResearchPage() {
           <h2>② 调研框架与发现</h2>
           <div className="desc">
             {fw
-              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个维度——每节复制提示词去问，把发现贴回对应节`
+              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个维度——${coachReady && searchReady ? '点「联网调研」自动搜+答，或' : ''}复制提示词去问，把发现贴回对应节`
               : '还没有框架——回到 ① 点「开始调研」生成'}
-            {fw && '；贴回的外部结果可交叉验证 AI 回答'}
           </div>
           <div className="set-body">
             {fw === null ? (
-              <div className="notice">先在上方输入目标开始调研；已开始的任务点上方标签继续。</div>
+              fwBusy ? (
+                <div className="notice">⟳ 框架生成中（AI 定制最长约 90 秒，超时自动用内置模板）——不用等在原地。</div>
+              ) : (
+                <div className="notice">先在上方输入目标开始调研；已开始的任务点上方标签继续。</div>
+              )
             ) : (
               <>
                 <div className="set-row" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -321,11 +394,21 @@ export function ResearchPage() {
                         <button type="button" className="btn-ghost" onClick={() => void copyPrompt(buildSectionPrompt(fw, s))}>
                           📋 复制提示词
                         </button>
-                        {coachReady && (
+                        {coachReady && searchReady ? (
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            disabled={webBusy !== null}
+                            onClick={() => void researchOnline(s.heading)}
+                            title="搜索本节问题 → AI 带来源作答（消耗少量搜索额度）"
+                          >
+                            {webBusy === s.heading ? '⟳ 联网调研中…' : '🌐 联网调研'}
+                          </button>
+                        ) : coachReady ? (
                           <button type="button" className="btn-ghost" disabled={askBusy !== null} onClick={() => void askAi(s.heading)}>
                             {askBusy === s.heading ? '⟳ AI 回答中…' : '🤖 直接问 AI'}
                           </button>
-                        )}
+                        ) : null}
                       </div>
                       <textarea
                         className="input"

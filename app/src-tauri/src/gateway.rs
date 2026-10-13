@@ -21,6 +21,9 @@ pub struct GatewayConfig {
     pub port: u16,
     pub chat_url: String,
     pub chat_key: String,
+    pub search_url: String,
+    pub search_model: String,
+    pub search_key: String,
     pub usage_log: PathBuf,
 }
 
@@ -67,8 +70,22 @@ impl GatewayConfig {
         let chat_url = var_from(&vars, "PWORK_LLM_BASE_URL")
             .unwrap_or_else(|| "https://api.deepseek.com".to_string());
         let chat_key = var_from(&vars, "PWORK_LLM_API_KEY").unwrap_or_default();
+        // 联网搜索（与 Node 版一致）：智谱 tools 端点；Key 显式优先，否则仅当 LLM 上游是智谱时复用
+        let search_url = var_from(&vars, "PWORK_SEARCH_BASE_URL")
+            .unwrap_or_else(|| "https://open.bigmodel.cn/api/paas/v4/tools".to_string());
+        let search_model =
+            var_from(&vars, "PWORK_SEARCH_MODEL").unwrap_or_else(|| "web-search-pro".to_string());
+        let search_key = var_from(&vars, "PWORK_SEARCH_API_KEY")
+            .or_else(|| {
+                if chat_url.contains("bigmodel") && !chat_key.is_empty() {
+                    Some(chat_key.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
         let usage_log = data_dir.join("gateway-usage.log");
-        Self { port, chat_url, chat_key, usage_log }
+        Self { port, chat_url, chat_key, search_url, search_model, search_key, usage_log }
     }
 }
 
@@ -218,7 +235,8 @@ pub fn start(data_dir: PathBuf) {
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
-            let body: Result<String, String> = if path.ends_with("/chat/completions") {
+            let reads_body = path.ends_with("/chat/completions") || path == "/search";
+            let body: Result<String, String> = if reads_body {
                 let mut b = String::new();
                 match req.as_reader().read_to_string(&mut b) {
                     Ok(_) => Ok(b),
@@ -232,8 +250,92 @@ pub fn start(data_dir: PathBuf) {
                 (200, json!({
                     "ok": true,
                     "chatConfigured": !cfg.chat_key.is_empty(),
+                    "searchConfigured": !cfg.search_key.is_empty(),
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
+            } else if path == "/search" && method == Method::Post {
+                match body.as_deref() {
+                    Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                    Ok("") => (400, json!({ "ok": false, "error": "请求体为空" })),
+                    Ok(_) if cfg.search_key.is_empty() => (
+                        503,
+                        json!({ "ok": false, "error": "网关未配置搜索 Key——在 gateway.env 写 PWORK_SEARCH_API_KEY（智谱 Key；LLM 上游为智谱时自动复用）后重启应用" }),
+                    ),
+                    Ok(body) => {
+                        let req_v: Value = match serde_json::from_str(body) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                let _ = req.respond(Response::from_string("{\"ok\":false,\"error\":\"请求体不是 JSON\"}").with_status_code(400));
+                                continue;
+                            }
+                        };
+                        let query = req_v.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let count = req_v.get("count").and_then(|v| v.as_u64()).unwrap_or(6).min(10) as usize;
+                        if query.is_empty() {
+                            (400, json!({ "ok": false, "error": "缺少 query" }))
+                        } else {
+                            let up_body = json!({
+                                "model": cfg.search_model,
+                                "messages": [{ "role": "user", "content": query }],
+                                "stream": false
+                            })
+                            .to_string();
+                            match ureq::post(&cfg.search_url)
+                                .set("content-type", "application/json")
+                                .set("authorization", &format!("Bearer {}", cfg.search_key))
+                                .send_string(&up_body)
+                            {
+                                Ok(up) => {
+                                    let status = up.status();
+                                    let text = up.into_string().unwrap_or_default();
+                                    log_usage(&cfg, &up_body, &text, &usage_lock);
+                                    if status != 200 {
+                                        let msg = serde_json::from_str::<Value>(&text)
+                                            .ok()
+                                            .and_then(|v| {
+                                                v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string())
+                                            })
+                                            .unwrap_or_else(|| text.chars().take(200).collect());
+                                        (502, json!({ "ok": false, "error": format!("搜索上游 {status}：{msg}") }))
+                                    } else {
+                                        // 归一化：choices[0].message.tool_calls[].search_result[] → {title,link,content}
+                                        let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+                                        let mut hits: Vec<Value> = Vec::new();
+                                        if let Some(tcs) = v.pointer("/choices/0/message/tool_calls").and_then(|x| x.as_array()) {
+                                            for tc in tcs {
+                                                if let Some(srs) = tc.get("search_result").and_then(|x| x.as_array()) {
+                                                    for sr in srs {
+                                                        let link = sr.get("link").and_then(|l| l.as_str()).unwrap_or("");
+                                                        if link.is_empty() {
+                                                            continue;
+                                                        }
+                                                        hits.push(json!({
+                                                            "title": sr.get("title").and_then(|t| t.as_str()).unwrap_or(""),
+                                                            "link": link,
+                                                            "content": sr.get("content").and_then(|c| c.as_str()).unwrap_or(""),
+                                                        }));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        hits.truncate(count);
+                                        (200, json!({ "ok": true, "results": hits }))
+                                    }
+                                }
+                                Err(err) => {
+                                    let msg = format!("{err}");
+                                    if let Some(up) = err.into_response() {
+                                        let status = up.status();
+                                        let text = up.into_string().unwrap_or_default();
+                                        (502, json!({ "ok": false, "error": format!("搜索上游 {status}：{text}") }))
+                                    } else {
+                                        (502, json!({ "ok": false, "error": format!("搜索上游请求失败：{msg}") }))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } else if path.ends_with("/chat/completions") && method == Method::Post {
                 match body.as_deref() {
                     Err(msg) => (400, json!({ "error": msg })),
