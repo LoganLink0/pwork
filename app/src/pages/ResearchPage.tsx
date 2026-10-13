@@ -122,9 +122,14 @@ export function ResearchPage() {
 
   /** 生成（或重新生成）框架：AI 可用走定制；429 限流自动重试一次；失败/未配置落回内置模板 */
   const generateFramework = async (pid?: string, force = false) => {
-    const t = target.trim()
     const id = pid ?? profileId
-    if (!t || !id) return
+    if (!id) return
+    const task = profiles.find((p) => p.id === id) ?? null
+    // 目标取 ① 的输入，选中旧任务时兜底用任务名（旧任务补框架的入口，2026-10-13 修复"选中后无法生成"）
+    const t = target.trim() || task?.name || ''
+    if (!t) return
+    // 类型优先按任务建立时的标签映射（旧任务 kind 存的是类型名）
+    const useType: ResearchType = RESEARCH_TYPES.find((x) => x.name === task?.kind)?.id ?? type
     if (force && !window.confirm('重新生成会覆盖当前框架（已填的发现保留，但可能对不上新章节）——继续？')) return
     setFwBusy(true)
     let next: ResearchFramework | null = null
@@ -134,11 +139,11 @@ export function ResearchPage() {
           const text = await chatCompletion(
             llmConfigFrom(loadCoachConfig()),
             FRAMEWORK_SYSTEM_PROMPT,
-            buildFrameworkUserPrompt(type, t),
+            buildFrameworkUserPrompt(useType, t),
             // 框架是长生成（实测默认超时跑不完 3000 tokens 就断）——给足时间，超时仍会落回模板
             { maxTokens: 3000, timeoutMs: 90000 },
           )
-          next = normalizeAiFramework(parseAiJson(text), type, t)
+          next = normalizeAiFramework(parseAiJson(text), useType, t)
           break
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e)
@@ -153,7 +158,7 @@ export function ResearchPage() {
         }
       }
     }
-    if (!next) next = buildFramework(type, t)
+    if (!next) next = buildFramework(useType, t)
     setFw(next)
     saveFramework(id, next)
     setFwBusy(false)
@@ -386,6 +391,13 @@ export function ResearchPage() {
             {fw === null ? (
               fwBusy ? (
                 <div className="notice">⟳ 框架生成中（AI 定制最长约 90 秒，超时自动用内置模板）——不用等在原地。</div>
+              ) : profile ? (
+                <div className="notice" style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span>这个任务还没有框架（可能创建于框架功能之前）。</span>
+                  <button type="button" className="mini-btn" onClick={() => void generateFramework()} data-testid="gen-framework">
+                    生成框架
+                  </button>
+                </div>
               ) : (
                 <div className="notice">先在上方输入目标开始调研；已开始的任务点上方标签继续。</div>
               )

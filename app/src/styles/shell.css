@@ -1062,7 +1062,8 @@ a.mcard .m-link:hover {
 /* ============ 右上角轻通知（Toast，2026-10-13 用户要求） ============ */
 .toaster {
   position: fixed;
-  top: var(--sp-4);
+  /* 落在顶栏（搜索/速记栏）下方，不遮挡（2026-10-13 用户反馈第二版） */
+  top: calc(var(--topbar-h) + var(--sp-2));
   right: var(--sp-4);
   z-index: 1000;
   display: flex;

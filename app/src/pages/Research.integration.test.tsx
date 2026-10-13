@@ -107,6 +107,23 @@ describe('调研分析页（任务式）', () => {
     expect(calls.filter((c) => c.endsWith('/search')).length).toBeGreaterThanOrEqual(2)
   })
 
+  it('旧任务（无框架）选中后 → ② 区直接给「生成框架」入口（2026-10-13 修复"选中后无法生成"）', async () => {
+    // 造一个"旧版"任务：profile 存在、localStorage 无框架
+    const { saveProfile } = await import('../db/profilesRepo')
+    const p = await saveProfile({ name: '饿死', kind: '公司调研' })
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: '① 调研目标' })
+    await user.click(screen.getByRole('button', { name: '饿死' }))
+    expect(await screen.findByTestId('gen-framework')).toBeInTheDocument()
+
+    // 不回 ① 重打名字，直接在 ② 点生成（目标用任务名兜底、类型按任务标签映射）
+    await user.click(screen.getByTestId('gen-framework'))
+    expect(await screen.findByText('一、公司画像')).toBeInTheDocument()
+    const fwRaw = localStorage.getItem(`pwork-research-fw:${p.id}`)
+    expect(fwRaw && JSON.parse(fwRaw).target).toBe('饿死')
+  })
+
   it('删除任务 → 发现一并软删（不得泄进周报外部数据，2026-10-13 自查修复）', async () => {
     const user = userEvent.setup()
     render(<App />)
