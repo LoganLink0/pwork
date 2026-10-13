@@ -75,7 +75,7 @@ export function Output() {
 
       <div className="set-card">
         <h2>输出工具箱</h2>
-        <div className="desc">按产出形态分类：文（文档与演示）→ 图 → 音 → 视频；本地渲染优先，外部工具精选跳转</div>
+        <div className="desc">按产出形态分类：文（文档与演示）→ 音 → 图 → 视频；本地渲染优先，外部工具精选跳转</div>
         <div className="set-body">
           <div className="module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
             {TOOL_GROUPS.map((g) => (

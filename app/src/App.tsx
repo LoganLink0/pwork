@@ -15,6 +15,7 @@ import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
+import { Toaster } from './components/shell/Toast'
 import { PLACEHOLDER } from './content/placeholder'
 
 // 代码分割：壳 + 首页保持轻量，其余页面按路由懒加载（AD2：模块为懒加载子路由）
@@ -125,6 +126,7 @@ export default function App() {
         <Sidebar />
         <div className="main">
           <ErrorBar />
+          <Toaster />
           <Topbar />
           <div className="content">
             <div className="content-inner">

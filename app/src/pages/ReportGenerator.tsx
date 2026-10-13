@@ -130,7 +130,7 @@ export function ReportGenerator() {
 
           <div className="set-row">
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              外部数据块 {data ? data.blocks.length : 0} 个 · <Link to="/input/blocks">去 输入 → 外部数据 维护</Link>（保存后自动并入报告/朗读/PPT）
+              外部数据块 {data ? data.blocks.length : 0} 个 · <Link to="/input/blocks">维护外部数据</Link>（保存后自动并入报告/朗读/PPT）
             </span>
           </div>
 

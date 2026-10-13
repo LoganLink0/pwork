@@ -24,10 +24,11 @@ describe('调研分析页（任务式）', () => {
     await user.type(screen.getByLabelText('调研目标'), '宁德时代')
     await user.click(screen.getByTestId('start-research'))
 
-    // 模板框架渲染：五个维度 + 每节有复制提示词按钮
+    // 模板框架渲染：五个维度 + 整份提示词一次复制（不分节拆）
     expect(await screen.findByText('一、公司画像')).toBeInTheDocument()
     expect(screen.getByText('五、痛点与切入判断')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /复制提示词/ }).length).toBe(5)
+    expect(screen.getAllByRole('button', { name: /复制完整提示词/ }).length).toBe(1)
+    expect(screen.getByRole('link', { name: '去豆包 ↗' })).toBeInTheDocument()
     expect(screen.queryByText(/数据块/)).not.toBeInTheDocument()
   })
 

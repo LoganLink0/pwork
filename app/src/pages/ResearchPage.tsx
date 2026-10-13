@@ -16,10 +16,12 @@ import {
   type ArticleView,
 } from '../engine/articleWriter'
 import {
+  AI_CHAT_SITES,
   FRAMEWORK_SYSTEM_PROMPT,
   RESEARCH_TYPES,
   buildFramework,
   buildFrameworkUserPrompt,
+  buildFullPrompt,
   buildSectionPrompt,
   loadFramework,
   normalizeAiFramework,
@@ -35,6 +37,7 @@ import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review
 import { gatewaySearchConfigured, gatewayWebSearch } from '../engine/webSearch'
 import { downloadFile } from '../db/repo'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
+import { toast } from '../engine/toast'
 
 const WEB_ANSWER_SYSTEM =
   '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'
@@ -56,7 +59,6 @@ export function ResearchPage() {
   const [askBusy, setAskBusy] = useState<string | null>(null)
   const [webBusy, setWebBusy] = useState<string | null>(null)
   const [searchReady, setSearchReady] = useState(false)
-  const [msg, setMsg] = useState('')
   /** 发现草稿：节标题 → 文本（onBlur 落库） */
   const [findingDrafts, setFindingDrafts] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
@@ -69,6 +71,12 @@ export function ResearchPage() {
   const [aiError, setAiError] = useState('')
 
   const coachReady = llmConfigured()
+
+  /** 操作反馈统一走右上角 toast（2026-10-13 用户要求）：按文案推断级别，调用点不用逐个挑 */
+  const setMsg = (text: string) => {
+    if (!text) return // 历史调用点的"清空"语义：toast 模式下无事可做
+    toast(/失败|错误|没提取到|没有返回|未授权/.test(text) ? 'error' : /完成|已复制|已加入|已用内置/.test(text) ? 'ok' : 'info', text)
+  }
   const profile = profiles.find((p) => p.id === profileId) ?? null
   const taskBlocks = blocks.filter((b) => b.profileId === profileId)
   const findingsOf = (heading: string) => taskBlocks.find((b) => b.title === heading)
@@ -101,36 +109,48 @@ export function ResearchPage() {
     void gatewaySearchConfigured(loadCoachConfig().gatewayUrl || 'http://127.0.0.1:8788').then(setSearchReady)
   }, [coachReady])
 
-  const copyPrompt = async (text: string) => {
+  /** 复制整份调研提示词（2026-10-13 用户拍板：一次复制拿全，不分节拆） */
+  const copyFullPrompt = async () => {
+    if (!fw) return
     try {
-      await navigator.clipboard.writeText(text)
-      setMsg('提示词已复制——粘贴到任何 AI 或搜索引擎即可')
+      await navigator.clipboard.writeText(buildFullPrompt(fw))
+      setMsg('完整提示词已复制——打开任一 AI 站点粘贴即问，回来把答案贴进各节发现')
     } catch {
-      setMsg('复制失败：浏览器未授权剪贴板，手动选中下方预览复制')
+      setMsg('复制失败：浏览器未授权剪贴板（设置里允许后重试）')
     }
   }
 
-  /** 生成（或重新生成）框架：AI 可用走定制，失败/未配置落回内置模板 */
+  /** 生成（或重新生成）框架：AI 可用走定制；429 限流自动重试一次；失败/未配置落回内置模板 */
   const generateFramework = async (pid?: string, force = false) => {
     const t = target.trim()
     const id = pid ?? profileId
     if (!t || !id) return
     if (force && !window.confirm('重新生成会覆盖当前框架（已填的发现保留，但可能对不上新章节）——继续？')) return
     setFwBusy(true)
-    setMsg('')
     let next: ResearchFramework | null = null
     if (coachReady) {
-      try {
-        const text = await chatCompletion(
-          llmConfigFrom(loadCoachConfig()),
-          FRAMEWORK_SYSTEM_PROMPT,
-          buildFrameworkUserPrompt(type, t),
-          // 框架是长生成（实测默认超时跑不完 3000 tokens 就断）——给足时间，超时仍会落回模板
-          { maxTokens: 3000, timeoutMs: 90000 },
-        )
-        next = normalizeAiFramework(parseAiJson(text), type, t)
-      } catch (e) {
-        setMsg(`AI 定制框架失败（${e instanceof Error ? e.message : String(e)}）——已用内置模板，可再试`)
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const text = await chatCompletion(
+            llmConfigFrom(loadCoachConfig()),
+            FRAMEWORK_SYSTEM_PROMPT,
+            buildFrameworkUserPrompt(type, t),
+            // 框架是长生成（实测默认超时跑不完 3000 tokens 就断）——给足时间，超时仍会落回模板
+            { maxTokens: 3000, timeoutMs: 90000 },
+          )
+          next = normalizeAiFramework(parseAiJson(text), type, t)
+          break
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
+          // 模型限流（1305/429）是瞬时的：歇 3 秒自动重试一次，别让用户手动再点
+          if (attempt === 1 && /HTTP 429/.test(message)) {
+            setMsg('模型当前访问量过大，3 秒后自动重试……')
+            await new Promise((r) => setTimeout(r, 3000))
+            continue
+          }
+          setMsg(`AI 定制框架失败（${message}）——已用内置模板，可再试`)
+          break
+        }
       }
     }
     if (!next) next = buildFramework(type, t)
@@ -356,7 +376,7 @@ export function ResearchPage() {
           <h2>② 调研框架与发现</h2>
           <div className="desc">
             {fw
-              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个维度——${coachReady && searchReady ? '点「联网调研」自动搜+答，或' : ''}复制提示词去问，把发现贴回对应节`
+              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个维度——${coachReady && searchReady ? '每节可「联网调研」自动搜+答，或' : ''}复制完整提示词一次问全，把发现贴回对应节`
               : '还没有框架——回到 ① 点「开始调研」生成'}
           </div>
           <div className="set-body">
@@ -368,6 +388,19 @@ export function ResearchPage() {
               )
             ) : (
               <>
+                <div className="set-row" style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
+                  <button type="button" className="btn-primary" onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
+                    📋 复制完整提示词（{fw.sections.length} 节合一）
+                  </button>
+                  {AI_CHAT_SITES.map((s) => (
+                    <a key={s.url} className="btn-ghost" style={{ textDecoration: 'none' }} href={s.url} target="_blank" rel="noreferrer noopener">
+                      去{s.name} ↗
+                    </a>
+                  ))}
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                    复制 → 打开一个 AI → 粘贴即问；回来把答案贴进各节发现
+                  </span>
+                </div>
                 <div className="set-row" style={{ marginBottom: 'var(--sp-3)' }}>
                   <button type="button" className="btn-ghost" disabled={fwBusy} onClick={() => void generateFramework(undefined, true)}>
                     ↻ 重新生成框架
@@ -391,9 +424,6 @@ export function ResearchPage() {
                         </ul>
                       )}
                       <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', marginBottom: 'var(--sp-2)' }}>
-                        <button type="button" className="btn-ghost" onClick={() => void copyPrompt(buildSectionPrompt(fw, s))}>
-                          📋 复制提示词
-                        </button>
                         {coachReady && searchReady ? (
                           <button
                             type="button"
@@ -520,9 +550,6 @@ export function ResearchPage() {
         </div>
       )}
 
-      {msg && (
-        <div className="run-banner" role="status" data-testid="research-msg">{msg}</div>
-      )}
     </section>
   )
 }

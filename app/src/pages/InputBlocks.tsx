@@ -1,149 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBlocks } from '../store/blocks'
-import { useProfiles } from '../store/profiles'
 import { fileToBlockContent } from '../engine/fileImport'
-import { parseDecodeBlock, parseDiagnosisBlock, renderDecodeReportHtml, renderDiagnosisReportHtml } from '../engine/deliverables'
-import { todayLocal } from '../engine/datetime'
 
 /**
- * 外部数据（输入第三通道）：速记 = 我想到的，信源 = 网上来的，外部数据 = 我从别的系统带来的。
- * 本页只做数据管理（对象/数据块的日常维护、导入、交付预览）；出分析稿去 输出 → 调研分析（2026-10-12 拆分）。
+ * 外部数据（2026-10-13 降级定位）：周报的数据源。手工添加 / CSV·JSON 导入 / 推送接口
+ * 落地的数据块全部自动并入「周报导出」。调研任务的发现在 输出 → 调研分析 里管理，
+ * 不在本页显示——侧边栏入口已撤，从周报导出页进出。
  */
 export function InputBlocks() {
-  const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
-  const { profiles, load: loadProfiles, save: saveProfile, remove: removeProfile } = useProfiles()
-  const [editing, setEditing] = useState<{ id?: string; title: string; content: string; profileId?: string; usage?: 'internal' | 'client' } | null>(null)
+  const { blocks, load, save, remove } = useBlocks()
+  const [editing, setEditing] = useState<{ id?: string; title: string; content: string; usage?: 'internal' | 'client' } | null>(null)
   const [importMsg, setImportMsg] = useState('')
-  const [filter, setFilter] = useState<'all' | 'none' | string>('all')
-  const [newProfileName, setNewProfileName] = useState('')
-  const [newProfileKind, setNewProfileKind] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
-  const [reportPreview, setReportPreview] = useState<{ html: string } | null>(null)
-  const reportFrame = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
-    void loadBlocks()
-    void loadProfiles()
-  }, [loadBlocks, loadProfiles])
+    void load()
+  }, [load])
 
   const onFile = async (file: File) => {
     try {
       const text = await file.text()
       const r = fileToBlockContent(file.name, text)
-      const profileId = filter !== 'all' && filter !== 'none' ? filter : undefined
-      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, profileId, usage: 'client' })
+      setEditing({ title: file.name.replace(/\.[^.]+$/, ''), content: r.content, usage: 'client' })
       setImportMsg(`${r.note}——确认内容后点"保存"`)
     } catch (e) {
       setImportMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
     }
   }
 
-  const visible = blocks.filter((b) => {
-    if (filter === 'all') return true
-    if (filter === 'none') return !b.profileId
-    return b.profileId === filter
-  })
-
-  const addProfile = async () => {
-    if (!newProfileName.trim()) return
-    const p = await saveProfile({ name: newProfileName, kind: newProfileKind })
-    setNewProfileName('')
-    setNewProfileKind('')
-    setFilter(p.id)
-  }
-
-  const exportBlockReport = (b: { title: string; content: string; profileId?: string }) => {
-    const clientName = profiles.find((p) => p.id === b.profileId)?.name ?? '对象'
-    const meta = { clientName, date: todayLocal() }
-    if (b.title.includes('岗位解码表')) {
-      const d = parseDecodeBlock(b.content)
-      setReportPreview({ html: renderDecodeReportHtml({ ...meta, ...d }) })
-    } else if (b.title.includes('匹配度诊断')) {
-      const d = parseDiagnosisBlock(b.content)
-      setReportPreview({ html: renderDiagnosisReportHtml({ ...meta, ...d }) })
-    }
-  }
+  const visible = blocks.filter((b) => !b.profileId)
 
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>外部数据</h1>
-        <span className="sub">输入 · 第三通道——从别的系统带来的数据按对象归组，分析也从这里发起</span>
+        <span className="sub">周报的数据源——这里的数据块自动并入「周报导出」</span>
       </div>
 
       <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
-        <b>这页是外部数据的"仓库"</b>：调研对象和数据块（材料）的日常维护都在这里——新建、归类、导入、清理。要做一次调研（输入目标 → 拿框架与提示词 → 出稿），去 <Link to="/output/research">输出 → 调研分析</Link>。做简历辅导请走 <Link to="/process">处理 → 工具箱 → 专题</Link>。
+        <b>这页管周报的"外部数据"</b>：手工添加、CSV/JSON 导入、推送接口落地的数据块都在这里维护，
+        <Link to="/output/report">周报导出</Link>会自动把它们并进报告。调研任务的发现在
+        <Link to="/output/research"> 输出 → 调研分析</Link> 里管理，不占这里的列表。
       </div>
 
       <div className="set-card">
-        <h2>调研对象</h2>
-        <div className="desc">一家公司、一个客户……数据块挂在对象下面，分析按对象发起。标签随意填（客户 / 目标公司 / 供应商）。</div>
+        <h2>数据块</h2>
+        <div className="desc">一行一条，"键: 值"形态渲染成周报里的指标行，其余为文字</div>
         <div className="set-body">
-          <div className="set-row">
-            <input
-              className="input"
-              style={{ maxWidth: 260 }}
-              placeholder="对象名称（如：XX 公司售前调研）"
-              value={newProfileName}
-              aria-label="新调研对象名称"
-              onChange={(e) => setNewProfileName(e.target.value)}
-            />
-            <input
-              className="input"
-              style={{ maxWidth: 140 }}
-              placeholder="标签（可选）"
-              value={newProfileKind}
-              aria-label="新调研对象标签"
-              onChange={(e) => setNewProfileKind(e.target.value)}
-            />
-            <button type="button" className="btn-ghost" disabled={!newProfileName.trim()} onClick={() => void addProfile()}>
-              ＋ 新建对象
-            </button>
-          </div>
-          {profiles.map((p) => {
-            const count = blocks.filter((b) => b.profileId === p.id).length
-            return (
-              <div className="set-row" key={p.id}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>{p.name}</span>
-                  {p.kind && <span className="val" style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{p.kind}</span>}
-                  <span className="val" style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{count} 份材料</span>
-                </div>
-                <button
-                  type="button"
-                  className="mini-btn"
-                  onClick={() => {
-                    if (window.confirm(`删除对象「${p.name}」？它名下的数据块会回到"未归类"，不会丢失。`)) void removeProfile(p.id)
-                  }}
-                >
-                  删除
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="set-card">
-        <h2>材料（数据块）</h2>
-        <div className="desc">一行一条，"键: 值"形态渲染成指标行，其余为文字。用途标"给客户"后，可在交付文档整理时优先参考。</div>
-        <div className="set-body">
-          <div className="set-row" style={{ flexWrap: 'wrap' }}>
-            <button type="button" className={`chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>
-              全部 {blocks.length}
-            </button>
-            <button type="button" className={`chip${filter === 'none' ? ' on' : ''}`} onClick={() => setFilter('none')}>
-              未归类 {blocks.filter((b) => !b.profileId).length}
-            </button>
-            {profiles.map((p) => (
-              <button key={p.id} type="button" className={`chip${filter === p.id ? ' on' : ''}`} onClick={() => setFilter(p.id)}>
-                {p.name} {blocks.filter((b) => b.profileId === p.id).length}
-              </button>
-            ))}
-          </div>
           {editing === null && visible.length === 0 && (
-            <div className="notice">没有符合条件的材料——在下方添加或导入文件。</div>
+            <div className="notice">还没有数据块——点下方「＋ 新数据块」手工添加，或导入文件。</div>
           )}
           {visible.map((b) => (
             <div className="set-row" key={b.id} style={{ alignItems: 'flex-start' }}>
@@ -156,24 +62,14 @@ export function InputBlocks() {
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', whiteSpace: 'pre-wrap' }}>{b.content}</div>
               </div>
-              {(b.title.includes('岗位解码表') || b.title.includes('匹配度诊断')) && (
-                <button
-                  type="button"
-                  className="mini-btn"
-                  title="生成可交付的报告（打印或另存 PDF）"
-                  onClick={() => exportBlockReport(b)}
-                >
-                  导出报告
-                </button>
-              )}
-              <button type="button" className="mini-btn" onClick={() => setEditing({ id: b.id, title: b.title, content: b.content, profileId: b.profileId, usage: b.usage })}>
+              <button type="button" className="mini-btn" onClick={() => setEditing({ id: b.id, title: b.title, content: b.content, usage: b.usage })}>
                 编辑
               </button>
               <button
                 type="button"
                 className="mini-btn"
                 onClick={() => {
-                  if (window.confirm(`删除数据块「${b.title}」？（软删除，备份中仍可找回）`)) void removeBlock(b.id)
+                  if (window.confirm(`删除数据块「${b.title}」？（软删除，备份中仍可找回）`)) void remove(b.id)
                 }}
               >
                 删除
@@ -184,28 +80,17 @@ export function InputBlocks() {
             <div className="set-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--sp-2)' }}>
               <input
                 className="input"
-                placeholder="材料名称（如：销售周数据）"
+                placeholder="数据块名称（如：销售周数据）"
                 value={editing.title}
-                aria-label="材料名称"
+                aria-label="数据块名称"
                 onChange={(e) => setEditing({ ...editing, title: e.target.value })}
               />
-              <select
-                className="lane-select"
-                value={editing.profileId ?? ''}
-                aria-label="材料归属对象"
-                onChange={(e) => setEditing({ ...editing, profileId: e.target.value || undefined })}
-              >
-                <option value="">未归类</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
               <textarea
                 className="input"
                 rows={5}
                 placeholder={'一行一条，支持"键: 值"形态，例如：\n新增线索: 23\n成交金额: 86万\n也可以写普通文字行'}
                 value={editing.content}
-                aria-label="材料内容"
+                aria-label="数据块内容"
                 onChange={(e) => setEditing({ ...editing, content: e.target.value })}
               />
               <div className="set-row">
@@ -221,10 +106,10 @@ export function InputBlocks() {
                   className="btn-ghost"
                   disabled={!editing.title.trim()}
                   onClick={() => {
-                    void saveBlock(editing).then(() => {
+                    void save(editing).then(() => {
                       setEditing(null)
                       setImportMsg('')
-                      void loadBlocks()
+                      void load()
                     })
                   }}
                 >
@@ -247,14 +132,7 @@ export function InputBlocks() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() =>
-                  setEditing({
-                    title: '',
-                    content: '',
-                    profileId: filter !== 'all' && filter !== 'none' ? filter : undefined,
-                    usage: 'client',
-                  })
-                }
+                onClick={() => setEditing({ title: '', content: '', usage: 'client' })}
                 data-testid="add-block"
               >
                 ＋ 新数据块
@@ -283,30 +161,6 @@ export function InputBlocks() {
           )}
         </div>
       </div>
-
-      {reportPreview && (
-        <div className="set-card">
-          <h2>报告预览（交付版）</h2>
-          <div className="set-body">
-            <div className="set-row">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => reportFrame.current?.contentWindow?.print()}
-              >
-                🖨 打印 / 另存 PDF
-              </button>
-              <button type="button" className="mini-btn" onClick={() => setReportPreview(null)}>关闭预览</button>
-            </div>
-            <iframe
-              ref={reportFrame}
-              title="交付报告预览"
-              srcDoc={reportPreview.html}
-              style={{ width: '100%', height: 560, border: '1px solid var(--line)', borderRadius: 'var(--r-md)', background: '#fff' }}
-            />
-          </div>
-        </div>
-      )}
     </section>
   )
 }

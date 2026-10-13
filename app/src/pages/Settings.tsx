@@ -138,7 +138,7 @@ export function Settings() {
     setCloudMsg(null)
     try {
       const r = await syncIngestBlocks()
-      setCloudMsg(r.ok ? `推送数据已拉取：新 ${r.pulled} 块（去 输入 → 外部数据 查看）` : `拉取失败：${r.error}`)
+      setCloudMsg(r.ok ? `推送数据已拉取：新 ${r.pulled} 块（在 输出 → 周报导出 → 外部数据块 查看）` : `拉取失败：${r.error}`)
     } finally {
       setCloudBusy(false)
     }

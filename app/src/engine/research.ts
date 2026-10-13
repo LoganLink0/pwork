@@ -131,6 +131,35 @@ export function buildSectionPrompt(fw: ResearchFramework, section: FrameworkSect
   return lines.join('\n')
 }
 
+/** 整份调研提示词（2026-10-13 用户拍板：一次复制拿全，不做 5 段分拆）：
+ *  合并全部维度与问题，要求 AI 按维度分节作答——粘贴到豆包/DeepSeek 等一次问完 */
+export function buildFullPrompt(fw: ResearchFramework): string {
+  const lines = [
+    `请你扮演资深调研分析师，帮我完成一次${typeName(fw.type)}。调研对象：「${fw.target}」。`,
+    '',
+    '按以下维度逐一调研并回答：',
+  ]
+  for (const s of fw.sections) {
+    lines.push('')
+    lines.push(s.heading)
+    lines.push(...s.questions.map((q, i) => `  ${i + 1}. ${q}`))
+  }
+  lines.push('')
+  lines.push('输出要求：')
+  lines.push('- 按上面的维度分节作答，每个维度内分点；')
+  lines.push('- 优先给可核实的具体事实（数字、时间、机构名），并在句末以 [n] 标注来源编号，最后统一列出来源清单；')
+  lines.push('- 检索不到或不确定的明确标注「未核实」，不要编造；')
+  lines.push('- 用简体中文。')
+  return lines.join('\n')
+}
+
+/** 外部 AI 站点（复制提示词后一键跳转粘贴；只做新标签打开，不带任何数据） */
+export const AI_CHAT_SITES: { name: string; url: string }[] = [
+  { name: '豆包', url: 'https://www.doubao.com/chat/' },
+  { name: 'DeepSeek', url: 'https://chat.deepseek.com/' },
+  { name: 'Kimi', url: 'https://kimi.moonshot.cn/chat' },
+]
+
 /* ---------------------- AI 定制框架（可选增强，走网关/BYOK） ---------------------- */
 
 export const FRAMEWORK_SYSTEM_PROMPT =
