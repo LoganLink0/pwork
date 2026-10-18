@@ -15,7 +15,7 @@ export interface NoteLinks {
 }
 
 /** 任务来源（溯源引用；任务库是行动项的 SSOT，02 铁律 4） */
-export type TaskOriginKind = 'review' | 'note' | 'item' | 'manual' | 'bid' | 'bid'
+export type TaskOriginKind = 'review' | 'note' | 'item' | 'manual' | 'bid' | 'todo-file'
 
 /**
  * 任务三分类车道（用户三问分诊法，客观事实取代主观重要/紧急）：

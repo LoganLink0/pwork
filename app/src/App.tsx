@@ -14,6 +14,7 @@ import { useGoals } from './store/goals'
 import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
+import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { Toaster } from './components/shell/Toast'
 import { PLACEHOLDER } from './content/placeholder'
@@ -115,6 +116,13 @@ export default function App() {
           if (r.newCount > 0) await useCollect.getState().load()
         })
       }
+      // 项目待办静默扫描（2026-10-14）：授权还在就自动拉新行；需要重新授权时不打扰，等用户点待办页按钮
+      void useTasks.getState().scanProjectTodos('open').then((r) => {
+        if (r.ok && r.added > 0) {
+          toast('ok', `项目待办：${r.projects} 个项目新进 ${r.added} 条`)
+          void useTasks.getState().load()
+        }
+      })
     }
   }, [load, loadCollect, loadTasks])
 

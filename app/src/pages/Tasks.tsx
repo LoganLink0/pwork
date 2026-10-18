@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTasks } from '../store/tasks'
 import { todayLocal } from '../engine/datetime'
 import { resolveLane } from '../engine/taskLane'
+import { toast } from '../engine/toast'
 import type { TaskItem, TaskLane, TaskOriginKind } from '../types/models'
 
 const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
@@ -11,6 +12,7 @@ const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
   item: '来源:信息',
   manual: '来源:手动',
   bid: '来源:投标',
+  'todo-file': '来源:项目',
 }
 
 /** 任务三分类（客观事实取代主观重要/紧急），命名沿用用户原话：一类/二类/三类 */
@@ -48,9 +50,36 @@ function OriginBadge({ task }: { task: TaskItem }) {
 }
 
 export function Tasks() {
-  const { tasks, stats, create, setStatus, postpone, remove, setLane, load } = useTasks()
+  const { tasks, stats, create, setStatus, postpone, remove, setLane, load, scanProjectTodos } = useTasks()
   const [draft, setDraft] = useState('')
+  const [scanBusy, setScanBusy] = useState(false)
   const today = todayLocal()
+
+  // 手动扫描（首次会弹目录选择器——选你的项目根目录，如 E:\AIPROJECT-GLM）
+  const runScan = async () => {
+    if (scanBusy) return
+    setScanBusy(true)
+    try {
+      const r = await scanProjectTodos('manual')
+      if (r.ok) {
+        if (r.added > 0) {
+          toast('ok', `扫描完成：从 ${r.projects} 个项目新进 ${r.added} 条待办${r.skipped ? `（跳过已存在的 ${r.skipped} 条）` : ''}`)
+        } else {
+          toast('info', `扫描完成：${r.projects} 个项目没有新的未完成项`)
+        }
+      } else if (r.reason === 'not-supported') {
+        toast('error', '当前浏览器不支持目录授权——请用 Chrome/Edge 打开 http://127.0.0.1:5273 操作（局域网 IP 页面无此能力）')
+      } else if (r.reason === 'no-root') {
+        toast('info', '已取消选择目录')
+      } else if (r.reason === 'invalid') {
+        toast('error', '已保存的项目目录失效（被删除或浏览器收回授权）——再点一次重新选择')
+      } else if (r.reason === 'denied') {
+        toast('error', '目录授权被拒绝——浏览器地址栏左侧可重新允许，或再点一次重选')
+      }
+    } finally {
+      setScanBusy(false)
+    }
+  }
 
   // 进入任务页即重载：归档/导入发生在其他模块，进场拿最新（跨模块无推送的兜底）
   useEffect(() => {
@@ -216,6 +245,11 @@ export function Tasks() {
       <div className="page-head">
         <h1>待办</h1>
         <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「放弃」留底</span>
+        <div className="right">
+          <button type="button" className="btn-ghost" disabled={scanBusy} onClick={() => void runScan()} data-testid="scan-todos">
+            {scanBusy ? '⟳ 扫描中…' : '⭳ 从项目扫描待办'}
+          </button>
+        </div>
       </div>
 
       <div className="quick-add" data-testid="quick-add">
