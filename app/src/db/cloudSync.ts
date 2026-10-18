@@ -201,7 +201,7 @@ async function pushViaEndpoint(config: CloudConfig): Promise<PushResult> {
 
 /* ------------------------------ ② D1 直连模式 ------------------------------ */
 
-async function d1Query(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
+async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
   const resp = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
     {
@@ -217,6 +217,11 @@ async function d1Query(config: CloudConfig, sql: string, params: (string | numbe
   const data = (await resp.json()) as { success?: boolean; errors?: { message?: string }[]; result?: { results?: Record<string, unknown>[] }[] }
   if (!data.success) throw new Error(data.errors?.[0]?.message ?? 'Cloudflare API 返回失败')
   return data.result?.[0]?.results ?? []
+}
+
+/** D1 直连查询（设备镜像也走它——同一账号同一库，见 db/deviceMirror.ts） */
+export async function d1Query(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
+  return d1QueryImpl(config, sql, params)
 }
 
 async function syncViaD1(config: CloudConfig, since: string): Promise<SyncResult> {

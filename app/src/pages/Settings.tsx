@@ -6,6 +6,7 @@ import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, la
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
+import { useGoals } from '../store/goals'
 import { useUi } from '../store/ui'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
@@ -17,6 +18,7 @@ import { loadAutoBackup, saveAutoBackup } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
 import { starAdvice, type StarAdvice } from '../engine/starAdvice'
 import { db } from '../db/schema'
+import { loadMirrorConfig, pullMirrorBundle, pushMirrorBundle, saveMirrorConfig, type MirrorConfig } from '../db/deviceMirror'
 import type { ErrorLogEntry, ScoreWeights } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
 
@@ -107,6 +109,46 @@ export function Settings() {
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
     saveCloudConfig(next)
+  }
+
+  // 设备镜像（档 1：单向异步同步，2026-10-14）
+  const [mirror, setMirrorState] = useState(() => loadMirrorConfig())
+  const [mirrorBusy, setMirrorBusy] = useState(false)
+  const setMirror = (next: MirrorConfig) => {
+    setMirrorState(next)
+    saveMirrorConfig(next)
+  }
+  const doMirrorPush = async () => {
+    setMirrorBusy(true)
+    setCloudMsg(null)
+    try {
+      const r = await pushMirrorBundle()
+      setMirror({ ...mirror, lastPushAt: new Date().toISOString() })
+      setCloudMsg(`✅ 镜像已推送：${r.sizeKb} KB / ${r.chunks} 块 → 其他设备打开应用即拉取合并`)
+    } catch (e) {
+      setCloudMsg(`❌ 镜像推送失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setMirrorBusy(false)
+    }
+  }
+  const doMirrorPull = async () => {
+    setMirrorBusy(true)
+    setCloudMsg(null)
+    try {
+      const r = await pullMirrorBundle()
+      setMirror({ ...mirror, lastPullAt: new Date().toISOString() })
+      if (r.remoteAt === null) {
+        setCloudMsg('云端还没有镜像——先在镜像源设备推送')
+      } else {
+        const detail = r.import ? Object.entries(r.import.counts).map(([k, v]) => `${k} ${v}`).join(' · ') : ''
+        await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
+        setCloudMsg(`✅ 已从镜像合并（镜像时间 ${fmtLocal(r.remoteAt)}）${detail ? `：${detail}` : ''}`)
+      }
+    } catch (e) {
+      setCloudMsg(`❌ 镜像拉取失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setMirrorBusy(false)
+    }
   }
 
   const doSync = async () => {
@@ -686,6 +728,43 @@ export function Settings() {
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
             cron 在云端服务器按计划抓取（不需要你的网络可达 workers.dev）；D1 直连模式绕过 workers.dev 域名阻断，走实测可达的 api.cloudflare.com。部署与配置详见 <code>worker/README.md</code>。
+          </div>
+
+          <h3 style={{ fontSize: 'var(--fs-md)', margin: 'var(--sp-4) 0 0' }}>设备镜像（手机 / 电脑数据同步 · 档 1）</h3>
+          <div className="desc">镜像源设备把全量数据推到你的 D1；其他设备打开应用自动拉取合并（按"新者为准"）。云端只是管道，两端本地各有全量</div>
+          <div className="set-row" style={{ marginTop: 'var(--sp-2)' }}>
+            <label>镜像开关</label>
+            <div className="radio" role="radiogroup" aria-label="设备镜像开关">
+              <button type="button" className={mirror.enabled ? 'on' : ''} onClick={() => setMirror({ ...mirror, enabled: true })} aria-pressed={mirror.enabled}>开</button>
+              <button type="button" className={!mirror.enabled ? 'on' : ''} onClick={() => setMirror({ ...mirror, enabled: false })} aria-pressed={!mirror.enabled}>关</button>
+            </div>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              {mirror.enabled ? `打开应用时自动拉取合并${mirror.source ? ' + 推送镜像' : ''}` : '关着就完全不动'}
+            </span>
+          </div>
+          <div className="set-row">
+            <label>本机角色</label>
+            <div className="radio" role="radiogroup" aria-label="镜像角色">
+              <button type="button" className={mirror.source ? 'on' : ''} onClick={() => setMirror({ ...mirror, source: true })} aria-pressed={mirror.source}>镜像源（推送）</button>
+              <button type="button" className={!mirror.source ? 'on' : ''} onClick={() => setMirror({ ...mirror, source: false })} aria-pressed={!mirror.source}>只接收</button>
+            </div>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>一般只有主力电脑做镜像源，手机/其他设备只接收</span>
+          </div>
+          <div className="set-row">
+            <label>手动操作</label>
+            <button type="button" className="btn-ghost" disabled={mirrorBusy} onClick={() => void doMirrorPush()}>
+              {mirrorBusy ? '⟳ 处理中…' : '⬆ 立即推送镜像'}
+            </button>
+            <button type="button" className="btn-ghost" disabled={mirrorBusy} onClick={() => void doMirrorPull()}>
+              ⬇ 立即拉取合并
+            </button>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              {mirror.lastPushAt ? `上次推送 ${fmtLocal(mirror.lastPushAt)}` : '还没推送过'}
+              {mirror.lastPullAt ? ` · 上次拉取 ${fmtLocal(mirror.lastPullAt)}` : ''}
+            </span>
+          </div>
+          <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
+            <b>外发明示</b>：开启后你的<b>全部数据</b>（速记/任务/调研发现等）会经你自己的 Cloudflare 账号中转——它只是管道，删掉云端表只断同步不丢数据；需要云端同步已按 D1 直连配置。接收端只合并不覆盖：相同记录按修改时间新者为准，本机已有的不会被旧数据冲掉。
           </div>
         </div>
       </div>

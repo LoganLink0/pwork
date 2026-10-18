@@ -14,6 +14,7 @@ import { useGoals } from './store/goals'
 import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
+import { loadMirrorConfig, pullMirrorBundle, pushMirrorBundle, saveMirrorConfig } from './db/deviceMirror'
 import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { Toaster } from './components/shell/Toast'
@@ -123,6 +124,39 @@ export default function App() {
           void useTasks.getState().load()
         }
       })
+      // 设备镜像（2026-10-14 档 1）：开启即拉取合并；镜像源再推送本轮全量。失败只留错误日志不打扰
+      const mirror = loadMirrorConfig()
+      if (mirror.enabled) {
+        void pullMirrorBundle()
+          .then(async (r) => {
+            if (!r.ok) {
+              void recordError({ where: '设备镜像.打开应用拉取', kind: 'app', message: r.error ?? '未知失败' }, { silent: true })
+              return
+            }
+            if (r.remoteAt) {
+              await Promise.all([
+                useNotes.getState().load(),
+                useCollect.getState().load(),
+                useTasks.getState().load(),
+                useGoals.getState().load(),
+              ])
+              const changed = r.import ? Object.values(r.import.counts).reduce((a, b) => a + b, 0) : 0
+              if (changed > 0) toast('ok', `设备镜像：合并 ${changed} 条新记录`)
+              saveMirrorConfig({ ...loadMirrorConfig(), lastPullAt: new Date().toISOString() })
+            }
+            if (loadMirrorConfig().source) {
+              const pushed = await pushMirrorBundle()
+              saveMirrorConfig({ ...loadMirrorConfig(), lastPushAt: new Date().toISOString() })
+              void pushed
+            }
+          })
+          .catch((e) => {
+            void recordError(
+              { where: '设备镜像.打开应用', kind: 'app', message: e instanceof Error ? e.message : String(e) },
+              { silent: true },
+            )
+          })
+      }
     }
   }, [load, loadCollect, loadTasks])
 
