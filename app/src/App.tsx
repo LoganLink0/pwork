@@ -14,7 +14,7 @@ import { useGoals } from './store/goals'
 import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
-import { loadMirrorConfig, pullMirrorBundle, pushMirrorBundle, saveMirrorConfig } from './db/deviceMirror'
+import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { Toaster } from './components/shell/Toast'
@@ -124,35 +124,27 @@ export default function App() {
           void useTasks.getState().load()
         }
       })
-      // 设备镜像（2026-10-14 档 1）：开启即拉取合并；镜像源再推送本轮全量。失败只留错误日志不打扰
-      const mirror = loadMirrorConfig()
-      if (mirror.enabled) {
-        void pullMirrorBundle()
-          .then(async (r) => {
-            if (!r.ok) {
-              void recordError({ where: '设备镜像.打开应用拉取', kind: 'app', message: r.error ?? '未知失败' }, { silent: true })
-              return
-            }
-            if (r.remoteAt) {
+      // 设备同步（2026-10-19 记录级增量，替换镜像档 1）：开启即"先拉后推"，只传增量；
+      // 拉到变化刷新各库并提示；失败静默入错误日志不打扰
+      const deviceSync = loadSyncConfig()
+      if (deviceSync.enabled) {
+        void syncNow()
+          .then(async ({ pull, push }) => {
+            const changed = pull.merged ?? 0
+            if (changed > 0 || pull.configApplied) {
               await Promise.all([
                 useNotes.getState().load(),
                 useCollect.getState().load(),
                 useTasks.getState().load(),
                 useGoals.getState().load(),
               ])
-              const changed = r.import ? Object.values(r.import.counts).reduce((a, b) => a + b, 0) : 0
-              if (changed > 0) toast('ok', `设备镜像：合并 ${changed} 条新记录`)
-              saveMirrorConfig({ ...loadMirrorConfig(), lastPullAt: new Date().toISOString() })
+              toast('ok', `设备同步：合并 ${changed} 条${pull.configApplied ? '（含采集配置）' : ''}`)
             }
-            if (loadMirrorConfig().source) {
-              const pushed = await pushMirrorBundle()
-              saveMirrorConfig({ ...loadMirrorConfig(), lastPushAt: new Date().toISOString() })
-              void pushed
-            }
+            saveSyncConfig({ ...loadSyncConfig(), lastSyncAt: new Date().toISOString(), lastPushed: push.pushed, lastPulled: pull.pulled })
           })
           .catch((e) => {
             void recordError(
-              { where: '设备镜像.打开应用', kind: 'app', message: e instanceof Error ? e.message : String(e) },
+              { where: '设备同步.打开应用', kind: 'app', message: e instanceof Error ? e.message : String(e) },
               { silent: true },
             )
           })

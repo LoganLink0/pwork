@@ -37,6 +37,8 @@ export function loadCollectConfig(): CollectConfig {
 
 export function saveCollectConfig(config: CollectConfig): void {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+  // 修改时间戳：记录级设备同步用它判断配置是否需要推送/是否被远端新配置覆盖（2026-10-19）
+  localStorage.setItem('pwork-collect-config-at', new Date().toISOString())
 }
 
 /** 主题域（相关度评分依据之一；对应 04 §3.1 Source.domain） */
