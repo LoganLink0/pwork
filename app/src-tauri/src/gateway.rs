@@ -73,19 +73,17 @@ impl GatewayConfig {
         let chat_key = var_from(&vars, "PWORK_LLM_API_KEY").unwrap_or_default();
         // 模型固定（与 Node 版一致）：设了就以网关为准替换请求体里的 model
         let chat_model = var_from(&vars, "PWORK_LLM_MODEL").unwrap_or_default();
-        // 联网搜索（与 Node 版一致）：智谱 tools 端点；Key 显式优先，否则仅当 LLM 上游是智谱时复用
-        let search_url = var_from(&vars, "PWORK_SEARCH_BASE_URL")
-            .unwrap_or_else(|| "https://open.bigmodel.cn/api/paas/v4/tools".to_string());
+        // 联网搜索（与 Node 版一致）：默认跟随 LLM 上游——DeepSeek 用自研 Search API，智谱用 tools 端点
+        let search_url_default = if chat_url.contains("bigmodel") {
+            "https://open.bigmodel.cn/api/paas/v4/tools".to_string()
+        } else {
+            "https://api.deepseek.com/v1/tools/search".to_string()
+        };
+        let search_url = var_from(&vars, "PWORK_SEARCH_BASE_URL").unwrap_or(search_url_default);
         let search_model =
             var_from(&vars, "PWORK_SEARCH_MODEL").unwrap_or_else(|| "web-search-pro".to_string());
         let search_key = var_from(&vars, "PWORK_SEARCH_API_KEY")
-            .or_else(|| {
-                if chat_url.contains("bigmodel") && !chat_key.is_empty() {
-                    Some(chat_key.clone())
-                } else {
-                    None
-                }
-            })
+            .or_else(|| if chat_key.is_empty() { None } else { Some(chat_key.clone()) })
             .unwrap_or_default();
         let usage_log = data_dir.join("gateway-usage.log");
         Self { port, chat_url, chat_key, chat_model, search_url, search_model, search_key, usage_log }
@@ -278,12 +276,17 @@ pub fn start(data_dir: PathBuf) {
                         if query.is_empty() {
                             (400, json!({ "ok": false, "error": "缺少 query" }))
                         } else {
-                            let up_body = json!({
-                                "model": cfg.search_model,
-                                "messages": [{ "role": "user", "content": query }],
-                                "stream": false
-                            })
-                            .to_string();
+                            // DeepSeek Search API：{query,count} → results[].{title,url,summary}；智谱：tools 格式
+                            let up_body = if cfg.search_url.contains("deepseek") {
+                                json!({ "query": query, "count": count.min(50) }).to_string()
+                            } else {
+                                json!({
+                                    "model": cfg.search_model,
+                                    "messages": [{ "role": "user", "content": query }],
+                                    "stream": false
+                                })
+                                .to_string()
+                            };
                             match ureq::post(&cfg.search_url)
                                 .set("content-type", "application/json")
                                 .set("authorization", &format!("Bearer {}", cfg.search_key))
@@ -302,10 +305,29 @@ pub fn start(data_dir: PathBuf) {
                                             .unwrap_or_else(|| text.chars().take(200).collect());
                                         (502, json!({ "ok": false, "error": format!("搜索上游 {status}：{msg}") }))
                                     } else {
-                                        // 归一化：choices[0].message.tool_calls[].search_result[] → {title,link,content}
+                                        // 归一化：DeepSeek results[].{title,url,summary}；智谱 choices[].tool_calls[].search_result[]
                                         let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
                                         let mut hits: Vec<Value> = Vec::new();
-                                        if let Some(tcs) = v.pointer("/choices/0/message/tool_calls").and_then(|x| x.as_array()) {
+                                        if cfg.search_url.contains("deepseek") {
+                                            if let Some(results) = v.get("results").and_then(|x| x.as_array()) {
+                                                for sr in results {
+                                                    let link = sr.get("url").and_then(|l| l.as_str()).unwrap_or("");
+                                                    if link.is_empty() {
+                                                        continue;
+                                                    }
+                                                    let summary = sr
+                                                        .get("summary")
+                                                        .and_then(|c| c.as_str())
+                                                        .or_else(|| sr.get("snippet").and_then(|c| c.as_str()))
+                                                        .unwrap_or("");
+                                                    hits.push(json!({
+                                                        "title": sr.get("title").and_then(|t| t.as_str()).unwrap_or(""),
+                                                        "link": link,
+                                                        "content": summary,
+                                                    }));
+                                                }
+                                            }
+                                        } else if let Some(tcs) = v.pointer("/choices/0/message/tool_calls").and_then(|x| x.as_array()) {
                                             for tc in tcs {
                                                 if let Some(srs) = tc.get("search_result").and_then(|x| x.as_array()) {
                                                     for sr in srs {

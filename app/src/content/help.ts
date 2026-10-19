@@ -184,7 +184,7 @@ export const CONFIG_GUIDE: ConfigGuideEntry[] = [
     who: '想用复盘 AI 教练、全库问答、AI 写大纲、调研联网搜索的人。不配 AI，评分走本地规则、导出走内置模板，所有功能照常。',
     steps: [
       '桌面版：在 C:\\Users\\你的用户名\\AppData\\Roaming\\com.pwork.workbench\\ 新建文本文件 gateway.env，写入一行 PWORK_LLM_API_KEY=你的Key，重启应用（Key 从大模型服务商官网获取，如 DeepSeek / 智谱开放平台）。',
-      '想用调研页的「联网调研」再加一行 PWORK_SEARCH_API_KEY=搜索Key（智谱 Key；LLM 上游就是智谱时可省略这行，自动复用。搜索按次计费约 3 分/次）。',
+      '联网搜索（调研页「联网调研」用）默认跟随 LLM 上游、复用同一把 Key，不用额外配置；DeepSeek 搜索约 ¥0.005/次（仅成功非空结果计费）。',
       '浏览器版：在应用目录复制 tools/.env.example 为 .env.local，填同样的内容，再运行 npm run gateway。',
       '设置 → AI · BYOK 选「本地网关」，点「测试网关」看到"在线，Key 已配置"即成功。',
       'Key 只存在你自己电脑的这个文件里：不上传、不进备份、界面永不显示。',

@@ -39,12 +39,15 @@ const CHAT_KEY = env.PWORK_LLM_API_KEY || ''
 // 模型固定（2026-10-19）：设了就以网关为准替换请求体里的 model——上游/模型是运维侧的事，
 // 浏览器里存的旧模型名（如换了厂商后的 glm-*）不该让用户手改。不设则原样透传。
 const CHAT_MODEL = env.PWORK_LLM_MODEL || ''
-// 联网搜索（2026-10-13 调研"替我调研"升级）：智谱 tools 端点，模型 web-search-pro（¥0.03/次，
-// Coding Plan 可能有免费权益）。Key 链：PWORK_SEARCH_API_KEY 显式优先；否则仅当 LLM 上游
-// 本来就是智谱时复用 LLM Key（同账号）——上游是别家时不能拿别家的 Key 打智谱。
-const SEARCH_URL = env.PWORK_SEARCH_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/tools'
+// 联网搜索（2026-10-19 起支持 DeepSeek 自研 Search API，默认跟随 LLM 上游——同一把 Key 的世界）：
+// 上游是 DeepSeek → POST /v1/tools/search {query,count}；是智谱 → tools 端点 web-search-pro。
+// 显式 PWORK_SEARCH_API_KEY/BASE_URL 优先；计费 DeepSeek ¥0.005/次（仅成功非空计费）/智谱 ¥0.03/次。
+const SEARCH_URL_DEFAULT = CHAT_URL.includes('bigmodel')
+  ? 'https://open.bigmodel.cn/api/paas/v4/tools'
+  : 'https://api.deepseek.com/v1/tools/search'
+const SEARCH_URL = env.PWORK_SEARCH_BASE_URL || SEARCH_URL_DEFAULT
 const SEARCH_MODEL = env.PWORK_SEARCH_MODEL || 'web-search-pro'
-const SEARCH_KEY = env.PWORK_SEARCH_API_KEY || (CHAT_URL.includes('bigmodel') ? CHAT_KEY : '')
+const SEARCH_KEY = env.PWORK_SEARCH_API_KEY || CHAT_KEY
 const USAGE_LOG = resolve(process.cwd(), 'gateway-usage.log')
 
 const json = (res, status, obj) => {
@@ -91,7 +94,7 @@ const server = http.createServer(async (req, res) => {
   // 联网搜索代理：{ query, count } → 智谱 tools API → 归一化 { ok, results:[{title,link,content}] }
   if (path === '/search' && req.method === 'POST') {
     if (!SEARCH_KEY) {
-      json(res, 503, { ok: false, error: '网关未配置搜索 Key——在 gateway.env/.env.local 写 PWORK_SEARCH_API_KEY（智谱 Key；LLM 上游为智谱时自动复用）' })
+      json(res, 503, { ok: false, error: '网关未配置搜索 Key——在 gateway.env/.env.local 写 PWORK_SEARCH_API_KEY（不写则复用 PWORK_LLM_API_KEY）' })
       return
     }
     let body = ''
@@ -103,10 +106,15 @@ const server = http.createServer(async (req, res) => {
           json(res, 400, { ok: false, error: '缺少 query' })
           return
         }
+        const isDeepSeek = SEARCH_URL.includes('deepseek')
+        // DeepSeek Search API：POST /v1/tools/search {query,count} → results[].{title,url,summary}
+        // 智谱 tools：{model,messages} → choices[].message.tool_calls[].search_result
         const upstream = await fetch(SEARCH_URL, {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${SEARCH_KEY}` },
-          body: JSON.stringify({ model: SEARCH_MODEL, messages: [{ role: 'user', content: query }], stream: false }),
+          body: isDeepSeek
+            ? JSON.stringify({ query: query.slice(0, 128), count: Math.min(Math.max(count || 6, 1), 50) })
+            : JSON.stringify({ model: SEARCH_MODEL, messages: [{ role: 'user', content: query }], stream: false }),
         })
         const text = await upstream.text()
         if (!upstream.ok) {
@@ -115,11 +123,13 @@ const server = http.createServer(async (req, res) => {
           return
         }
         const data = JSON.parse(text)
-        const hits = (data.choices?.[0]?.message?.tool_calls ?? [])
-          .flatMap((tc) => tc.search_result ?? [])
-          .filter((r) => r && r.link)
-          .map((r) => ({ title: String(r.title ?? ''), link: String(r.link ?? ''), content: String(r.content ?? '') }))
-        logUsage(JSON.stringify({ model: SEARCH_MODEL }), text)
+        const raw = isDeepSeek
+          ? (data.results ?? []).map((r) => ({ title: r.title ?? '', link: r.url ?? '', content: r.summary ?? r.snippet ?? '' }))
+          : (data.choices?.[0]?.message?.tool_calls ?? [])
+              .flatMap((tc) => tc.search_result ?? [])
+              .map((r) => ({ title: String(r.title ?? ''), link: String(r.link ?? ''), content: String(r.content ?? '') }))
+        const hits = raw.filter((r) => r.link)
+        logUsage(JSON.stringify({ model: isDeepSeek ? 'deepseek-search' : SEARCH_MODEL }), text)
         json(res, 200, { ok: true, results: hits.slice(0, count || 6) })
       } catch (e) {
         json(res, 502, { ok: false, error: `搜索失败：${e instanceof Error ? e.message : String(e)}` })
