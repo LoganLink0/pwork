@@ -1265,6 +1265,8 @@ a.mcard .m-link:hover {
   cursor: pointer;
   list-style: none;
   user-select: none;
+  /* 摘要各段均为 nowrap：窄屏放不下时按整段折行，而不是把 where 推出容器被裁 */
+  flex-wrap: wrap;
 }
 
 .errlog-item summary::-webkit-details-marker {
@@ -1303,6 +1305,8 @@ a.mcard .m-link:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 不加则 flex 最小内容宽 = 整句 nowrap，收缩不下去，省略号失效且把同行挤出容器 */
+  min-width: 0;
 }
 
 .errlog-detail {
@@ -1603,6 +1607,12 @@ a.mcard .m-link:hover {
   .run-banner .mini-btn {
     padding: 5px 12px;
   }
+  /* 复合行（label+控件+行末说明，说明 val 是第 3 个及以后的子元素）窄屏没有
+     "标签右列"可言：说明文字下沉为整行，不再挤在控件旁的窄缝里逐字换行；
+     两元素行（label+val，如帮助页名词表）维持标签右列内换行不变 */
+  .set-row > .val:last-child:nth-child(n+3) { flex-basis: 100%; }
+  /* 桌面用空 label 占位对齐按钮列（如欢迎页「我明白了」行）；窄屏占列只会把按钮挤到下一行 */
+  .set-row > label:empty { display: none; }
 }
 
 @media (min-width: 769px) and (max-width: 1279px) {
