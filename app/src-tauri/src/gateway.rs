@@ -21,6 +21,7 @@ pub struct GatewayConfig {
     pub port: u16,
     pub chat_url: String,
     pub chat_key: String,
+    pub chat_model: String,
     pub search_url: String,
     pub search_model: String,
     pub search_key: String,
@@ -70,6 +71,8 @@ impl GatewayConfig {
         let chat_url = var_from(&vars, "PWORK_LLM_BASE_URL")
             .unwrap_or_else(|| "https://api.deepseek.com".to_string());
         let chat_key = var_from(&vars, "PWORK_LLM_API_KEY").unwrap_or_default();
+        // 模型固定（与 Node 版一致）：设了就以网关为准替换请求体里的 model
+        let chat_model = var_from(&vars, "PWORK_LLM_MODEL").unwrap_or_default();
         // 联网搜索（与 Node 版一致）：智谱 tools 端点；Key 显式优先，否则仅当 LLM 上游是智谱时复用
         let search_url = var_from(&vars, "PWORK_SEARCH_BASE_URL")
             .unwrap_or_else(|| "https://open.bigmodel.cn/api/paas/v4/tools".to_string());
@@ -85,7 +88,7 @@ impl GatewayConfig {
             })
             .unwrap_or_default();
         let usage_log = data_dir.join("gateway-usage.log");
-        Self { port, chat_url, chat_key, search_url, search_model, search_key, usage_log }
+        Self { port, chat_url, chat_key, chat_model, search_url, search_model, search_key, usage_log }
     }
 }
 
@@ -251,6 +254,7 @@ pub fn start(data_dir: PathBuf) {
                     "ok": true,
                     "chatConfigured": !cfg.chat_key.is_empty(),
                     "searchConfigured": !cfg.search_key.is_empty(),
+                    "model": if cfg.chat_model.is_empty() { Value::Null } else { json!(cfg.chat_model) },
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
             } else if path == "/search" && method == Method::Post {
@@ -344,10 +348,24 @@ pub fn start(data_dir: PathBuf) {
                         (503, json!({ "error": "网关未配置 PWORK_LLM_API_KEY——把 Key 放到应用数据目录的 gateway.env（PWORK_LLM_API_KEY=…）后重启应用" }))
                     }
                     Ok(body) => {
+                        // 模型固定：设了 PWORK_LLM_MODEL 就替换请求体里的 model（与 Node 版一致）
+                        let out_body = if cfg.chat_model.is_empty() {
+                            body.to_string()
+                        } else {
+                            match serde_json::from_str::<Value>(body) {
+                                Ok(mut v) => {
+                                    if let Some(obj) = v.as_object_mut() {
+                                        obj.insert("model".to_string(), json!(cfg.chat_model));
+                                    }
+                                    v.to_string()
+                                }
+                                Err(_) => body.to_string(),
+                            }
+                        };
                         match ureq::post(&normalize_upstream(&cfg.chat_url))
                             .set("content-type", "application/json")
                             .set("authorization", &format!("Bearer {}", cfg.chat_key))
-                            .send_string(body)
+                            .send_string(&out_body)
                         {
                             Ok(up) => {
                                 let status = up.status();

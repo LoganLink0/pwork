@@ -36,6 +36,9 @@ const env = loadEnv()
 const PORT = Number(env.PWORK_GATEWAY_PORT || 8788)
 const CHAT_URL = env.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
 const CHAT_KEY = env.PWORK_LLM_API_KEY || ''
+// 模型固定（2026-10-19）：设了就以网关为准替换请求体里的 model——上游/模型是运维侧的事，
+// 浏览器里存的旧模型名（如换了厂商后的 glm-*）不该让用户手改。不设则原样透传。
+const CHAT_MODEL = env.PWORK_LLM_MODEL || ''
 // 联网搜索（2026-10-13 调研"替我调研"升级）：智谱 tools 端点，模型 web-search-pro（¥0.03/次，
 // Coding Plan 可能有免费权益）。Key 链：PWORK_SEARCH_API_KEY 显式优先；否则仅当 LLM 上游
 // 本来就是智谱时复用 LLM Key（同账号）——上游是别家时不能拿别家的 Key 打智谱。
@@ -79,6 +82,7 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       chatConfigured: Boolean(CHAT_KEY),
       searchConfigured: Boolean(SEARCH_KEY),
+      model: CHAT_MODEL || null,
       upstream: CHAT_URL.replace(/\/chat\/completions$/, ''),
     })
     return
@@ -133,13 +137,14 @@ const server = http.createServer(async (req, res) => {
     req.on('data', (c) => (body += c))
     req.on('end', async () => {
       try {
+        const outBody = CHAT_MODEL ? JSON.stringify({ ...JSON.parse(body), model: CHAT_MODEL }) : body
         const upstream = await fetch(normalizeUpstream(CHAT_URL), {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${CHAT_KEY}` },
-          body,
+          body: outBody,
         })
         const text = await upstream.text()
-        logUsage(body, text)
+        logUsage(outBody, text)
         res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end(text)
       } catch (e) {

@@ -178,6 +178,16 @@ export function Settings() {
   const [aiTestOk, setAiTestOk] = useState(false)
   const [usageBusy, setUsageBusy] = useState(false)
   const [usageMsg, setUsageMsg] = useState('')
+  /** 网关侧固定的模型（PWORK_LLM_MODEL）：设了则浏览器端的模型字段不生效，明示避免困惑 */
+  const [pinnedModel, setPinnedModel] = useState<string | null>(null)
+  useEffect(() => {
+    if (!ai.viaGateway) return
+    const base = (ai.gatewayUrl || 'http://127.0.0.1:8788').replace(/\/+$/, '')
+    void fetch(`${base}/health`)
+      .then((r) => r.json())
+      .then((j: { model?: string | null }) => setPinnedModel(j.model ?? null))
+      .catch(() => setPinnedModel(null))
+  }, [ai.viaGateway, ai.gatewayUrl])
   const saveAi = (next: CoachConfig) => {
     setAi(next)
     saveCoachConfig(next)
@@ -186,7 +196,7 @@ export function Settings() {
     setAiTesting(true)
     setAiTestMsg('')
     try {
-      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 10, timeoutMs: 15000 })
+      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 64, timeoutMs: 15000 })
       setAiTestMsg(`连通正常（回复：${reply.trim().slice(0, 20)}）`)
       setAiTestOk(true)
     } catch (e) {
@@ -865,7 +875,22 @@ export function Settings() {
               )}
               <div className="set-row">
                 <label>模型</label>
-                <input className="input" value={ai.model} onChange={(e) => saveAi({ ...ai, model: e.target.value })} aria-label="模型" />
+                {pinnedModel ? (
+                  <>
+                    <span className="val tnum">{pinnedModel}</span>
+                    <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                      网关已固定模型（gateway.env 的 PWORK_LLM_MODEL）——下方字段不生效，换模型改网关配置
+                    </span>
+                  </>
+                ) : null}
+                <input
+                  className="input"
+                  value={ai.model}
+                  placeholder={pinnedModel ? '（已被网关固定模型覆盖）' : '模型名'}
+                  disabled={Boolean(pinnedModel)}
+                  onChange={(e) => saveAi({ ...ai, model: e.target.value })}
+                  aria-label="模型"
+                />
               </div>
             </>
           )}
