@@ -154,9 +154,18 @@ async function main() {
   const token =
     DRY ? '__dry__' : (await ask('请输入自定义 Token（直接回车 = 自动生成随机值）: ')) || `ptk_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
   if (DRY) {
-    log('  [dry] 演示回写 Token')
+    log('  [dry] 演示设置 secret')
   } else {
-    patchToml('TOKEN', token)
+    // Token 走 secret，不写 wrangler.toml——toml 被 git 跟踪，写进去等于凭据进仓库（转公开即泄露）
+    const r = spawnSync('npx', ['wrangler', 'secret', 'put', 'TOKEN'], {
+      input: token + '\n', shell: true, cwd: ROOT, encoding: 'utf8',
+    })
+    if (r.status !== 0) {
+      die('设置 TOKEN secret 失败。请手动执行 npx wrangler secret put TOKEN 后重跑（已完成步骤会跳过）。')
+      await ask('按回车退出...')
+      return
+    }
+    log('  [OK] TOKEN 已设为 secret（未写入 wrangler.toml，凭据不进仓库）')
   }
 
   // [6/6] 部署
@@ -176,11 +185,11 @@ async function main() {
   log('')
   log('='.repeat(60))
   log('  部署完成！最后两步：')
-  log(`  1. 打开工作台 http://127.0.0.1:5273/#/welcome`)
-  log('     在「③ 可选：上云引导」里填入：')
-  log('       端点 = 部署输出里的 https://pwork-collect.xxx.workers.dev')
-  log(`       Token = ${DRY ? '__dry__' : '你刚才设置的 Token'}`)
-  log('     点「测试连接」→ 绿了就「保存并同步」')
+  log('  1. 打开工作台 http://127.0.0.1:5273/#/settings 的「云端同步」')
+  log('     · 推荐（大陆网络稳）：模式选「D1 直连」，填 账户 ID / 数据库 ID /')
+  log('       API Token（按页面内指引在 Cloudflare 控制台创建，约 2 分钟）')
+  log('     · 或：端点 = 上面的 workers.dev 地址 + 本 Token（workers.dev 大陆常被阻断）')
+  log('     配好后：「推送信源清单」把本地活跃源上云 →「立即同步」拉取')
   log('  2. 以后想改抓取频率/AI 配置：编辑 wrangler.toml 后重跑本向导或 npx wrangler deploy')
   log('='.repeat(60))
   await ask('\n按回车退出...')

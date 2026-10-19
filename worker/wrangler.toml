@@ -14,16 +14,12 @@ database_id = "b60c68f9-b121-4c4f-a1ee-004b9b8a0adf"
 
 # ── 配置（wrangler.toml 改 vars；密钥用 npx wrangler secret put）────────
 [vars]
-# 抓取 Token：写操作必须携带（Authorization: Bearer <TOKEN>）；读操作可选开放
-# 初始值请在部署前修改，或用 `npx wrangler secret put TOKEN` 覆盖为 secret
-TOKEN = "change-me-before-deploy"
-# LLM 代理口令（/api/llm/chat/completions）：内容工厂工作台等本地工具填这个当"Key"
-# 真 AI Key 在 secret（AI_API_KEY）永不出服务端；此口令泄露只损失调用量，换掉即止血
-LLM_TOKEN = "change-me-llm-token"
-# AI 两级筛选（AD4：BYOK；留空 API_KEY 则整链走规则评分，系统照常转）
+# 抓取 Token（写操作必须携带）与 LLM 代理口令均为 secret，不写在被 git 跟踪的 toml 里：
+#   npx wrangler secret put TOKEN / npx wrangler secret put LLM_TOKEN
+# AI 两级筛选（AD4：BYOK；不设 AI_API_KEY 则整链走规则评分，系统照常转）
 AI_BASE_URL = "https://api.deepseek.com/v1"
-AI_MODEL_CHEAP = "deepseek-chat"   # 4a 预筛（便宜模型）
-AI_MODEL_STRONG = "deepseek-chat"  # 4b 评分打标（强模型，可配不同）
+AI_MODEL_CHEAP = "deepseek-flash"   # 4a 预筛（便宜模型）
+AI_MODEL_STRONG = "deepseek-flash"  # 4b 评分打标（可配更强模型，如 deepseek-v4-pro）
 AI_DAILY_TOKEN_BUDGET = "300000"   # 每日 token 熔断（04 §10）
 # 兴趣域配置（评分锚点，04 §4.2——你的经验物化点，随使用修订）
 INTERESTS = "AI 应用,独立开发,前端工程化"
