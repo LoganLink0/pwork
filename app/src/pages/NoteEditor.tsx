@@ -254,7 +254,7 @@ export function NoteEditor() {
 
       {deleted && (
         <div className="notice" style={{ margin: '0 var(--sp-5) var(--sp-4)' }}>
-          这条速记在回收站中。软删除是全工作台铁律——数据仍在库里，可在列表页「回收站」恢复。
+          这条速记在回收站中——数据仍在库里，没有真删，可在列表页「回收站」恢复。
         </div>
       )}
     </div>

@@ -63,7 +63,7 @@ export function Digest() {
             onClick={() =>
               downloadFile(`信息日报-${digestDate}.md`, obsidianDaily(digest, digestDate), 'text/markdown')
             }
-            title="导出为 Obsidian vault 日报格式（04 §6.2）"
+            title="导出为 Obsidian 日报文件"
           >
             ⬇ 导出 Obsidian 日报
           </button>

@@ -63,7 +63,7 @@ export const MODULE_NAV: NavModule[] = [
 export const PAGE_META: Record<string, [string, string, string]> = {
   '/': ['今日', '工作台 · 首页', 'mark-workspace'],
   '/tasks': ['待办', '工作区 · 任务库', 'mark-workspace'],
-  '/goals': ['目标', '工作区 · 目标（C-2 最小形态）', 'mark-workspace'],
+  '/goals': ['目标', '工作区 · 目标', 'mark-workspace'],
   '/input/notes': ['速记', '输入 · 速记', 'mark-input'],
   '/input/notes/new': ['新速记', '输入 · 速记', 'mark-input'],
   '/input/digest': ['信息日报', '输入 · 信息采集', 'mark-input'],

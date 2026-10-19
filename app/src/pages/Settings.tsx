@@ -60,7 +60,6 @@ export function Settings() {
   }
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
-  const [contextDraft, setContextDraft] = useState<string | null>(null)
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [cloud, setCloud] = useState<CloudConfig>(() => loadCloudConfig())
   const [cloudMsg, setCloudMsg] = useState<string | null>(null)
@@ -244,7 +243,7 @@ export function Settings() {
     <section className="settings">
       <div className="page-head" style={{ marginBottom: 0 }}>
         <h1>设置</h1>
-        <span className="sub">壳级配置 · 凭据未来只存 localStorage，永不进备份</span>
+        <span className="sub">外观 · 数据备份 · 采集偏好 · 云端同步 · AI 配置——凭据只存本机，永不进备份</span>
         <div className="right">
           <Link to="/welcome" className="btn-ghost">↩ 首访引导</Link>
         </div>
@@ -252,7 +251,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>外观</h2>
-        <div className="desc">v3「冷静的工作台」· 明暗机制沿用既有实现</div>
+        <div className="desc">选择明亮或暗色；「跟随系统」随电脑设置自动切换</div>
         <div className="set-body">
           <div className="set-row">
             <label>主题</label>
@@ -275,7 +274,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>数据</h2>
-        <div className="desc">备份先行（铁律 6）：任何删除、迁移、清理前，先全量导出</div>
+        <div className="desc">备份先行：任何删除、迁移、清理前，先全量导出</div>
         <div className="set-body">
           {(noteCount > 0 || sources.length > 0 || items.length > 0 || trashCount > 0) && (
             <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -287,7 +286,7 @@ export function Settings() {
             <button type="button" className="btn-primary" onClick={() => void doExport()}>
               ⬇ 全量导出
             </button>
-              <label className="btn-ghost" style={{ cursor: 'pointer' }} title="支持 PWORK v2/v1 与 FUPAN 旧版导出">
+              <label className="btn-ghost" style={{ cursor: 'pointer' }} title="可导入本应用的备份文件，也兼容 FUPAN 旧版导出">
                 ⬆ 导入
                 <input
                   type="file"
@@ -307,7 +306,7 @@ export function Settings() {
           <div className="set-row">
             <label>库内数据</label>
             <span className="val tnum">
-              速记 {noteCount} 条 · 信源 {sources.length} 个 · 条目 {items.length} 条（近30天）· 回收站 {trashCount} · 导出包裹 version 1
+              速记 {noteCount} 条 · 信源 {sources.length} 个 · 条目 {items.length} 条（近30天）· 回收站 {trashCount} · 备份格式 v2
             </span>
           </div>
           <div className="set-row">
@@ -334,7 +333,7 @@ export function Settings() {
             </span>
           </div>
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            导出为统一包裹 <code>{'{ version, exportedAt, entities }'}</code>：notes + sources + 条目（仅 scored/kept，raw/discarded 不备份）+ 采集配置 + 复盘/行动/洞察 + 任务；导入按 id + updatedAt last-writer-wins 合并，兼容 FUPAN 旧版导出。
+            导出内容：速记、信源、条目、采集偏好、任务、目标、复盘（含行动项与洞察）、外部数据块、简历辅导数据。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。
           </div>
           {importMsg && (
             <div className="run-banner" style={{ marginTop: 'var(--sp-3)' }} data-testid="import-msg" role="status">
@@ -346,7 +345,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>采集偏好</h2>
-        <div className="desc">兴趣域是评分的锚点（04 §4.2）——你的经验物化点，随使用持续修订</div>
+        <div className="desc">写清你关注的领域——条目越相关得分越高；随使用随时调整</div>
         <div className="set-body">
           <div className="set-row">
             <label>兴趣域</label>
@@ -397,16 +396,6 @@ export function Settings() {
                 aria-label="添加屏蔽词"
               />
             </div>
-          </div>
-          <div className="set-row">
-            <label>兴趣域 Context</label>
-            <input
-              className="input"
-              value={contextDraft ?? config.context}
-              placeholder="我在做……关注……（云端评分锚点以部署配置为准（wrangler.toml INTERESTS 等）；此处目前仅作本地备忘）"
-              onChange={(e) => setContextDraft(e.target.value)}
-              onBlur={() => contextDraft !== null && setConfig({ context: contextDraft })}
-            />
           </div>
           <div className="set-row">
             <label>评分权重</label>
@@ -755,7 +744,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>AI · BYOK</h2>
-        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / 全库问答 / 采集筛选）；失败自动回落规则引擎</div>
+        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / 全库问答 / 采集筛选）；AI 不可用时自动改用规则评分</div>
         <div className="set-body">
           <div className="set-row">
             <label>模式</label>
@@ -895,7 +884,7 @@ export function Settings() {
             </>
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            <b>L2 外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机（L1）。网关模式下 Key 只存本机 .env.local，浏览器不接触。拔掉 AI，规则引擎兜底，产品完整可用。
+            <b>外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机 .env.local，浏览器不接触。拔掉 AI，规则评分兜底，产品完整可用。
           </div>
         </div>
       </div>
