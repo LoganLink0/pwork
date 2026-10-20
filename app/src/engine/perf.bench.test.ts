@@ -35,7 +35,7 @@ function mkItem(i: number): Item {
     tags: ['AI 应用'],
     otFlag: null,
     expiresAt: null,
-    annotation: { notes: '', stars: i % 25 === 0 ? 4 : 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: i % 25 === 0 ? 'want' : null, keepForever: false, linkedReviewId: null },
     createdAt: day,
     updatedAt: day,
     schemaVersion: 1,

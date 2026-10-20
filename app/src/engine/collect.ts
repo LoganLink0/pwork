@@ -114,7 +114,7 @@ function buildScoredItem(
     tags,
     otFlag: null,
     expiresAt: null, // scored/kept 为 Curated，无 TTL（04 §3.4）
-    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
@@ -146,7 +146,7 @@ function buildDiscardedItem(
     tags: [],
     otFlag: null,
     expiresAt: new Date(Date.now() + ITEM_TTL_MS).toISOString(), // 14 天后物理清理
-    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,

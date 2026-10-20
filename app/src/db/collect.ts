@@ -183,6 +183,14 @@ export async function listRecentItems(days = 30): Promise<Item[]> {
 }
 
 /** 读取防御（铁律 2）：旧数据可能缺 annotation/score 细分 */
+/** 旧 5 星 → 三档投票的一次性映射（读取时惰性迁移，写回后 stars 字段自然消亡） */
+export function mapStarsToVote(stars: number | undefined | null): 'want' | 'meh' | 'no' | null {
+  if (!stars || stars <= 0) return null
+  if (stars >= 4) return 'want'
+  if (stars >= 2) return 'meh'
+  return 'no'
+}
+
 export function normalizeItem(raw: Item): Item {
   return {
     ...raw,
@@ -193,7 +201,7 @@ export function normalizeItem(raw: Item): Item {
     deletedAt: raw.deletedAt ?? undefined,
     annotation: {
       notes: raw.annotation?.notes ?? '',
-      stars: raw.annotation?.stars ?? 0,
+      vote: raw.annotation?.vote ?? mapStarsToVote((raw.annotation as { stars?: number } | undefined)?.stars),
       keepForever: raw.annotation?.keepForever ?? false,
       linkedReviewId: raw.annotation?.linkedReviewId ?? null,
     },
@@ -242,8 +250,8 @@ export async function updateAnnotation(
     ...item,
     annotation: { ...item.annotation, ...patch },
     otFlag: patch.otFlag !== undefined ? patch.otFlag : item.otFlag,
-    // 进 Top N 的条目在标注时升 kept（Curated，随备份）
-    stage: item.stage === 'scored' && ((patch.notes ?? '') !== '' || (patch.stars ?? 0) > 0 || patch.keepForever) ? 'kept' : item.stage,
+    // 「想要」投票 = 明确的价值信号 → 升 kept（Curated，随备份）；一般/不要留在 scored 参与统计
+    stage: item.stage === 'scored' && ((patch.notes ?? '') !== '' || patch.vote === 'want' || patch.keepForever) ? 'kept' : item.stage,
     updatedAt: new Date().toISOString(),
   })
 }
@@ -273,7 +281,8 @@ export async function cleanupExpired(now = new Date()): Promise<number> {
     if (i.stage !== 'raw' && i.stage !== 'discarded') return false
     if (!i.expiresAt || i.expiresAt >= nowIso) return false
     const a = i.annotation
-    if (a && (a.keepForever || a.stars > 0 || a.notes)) return false
+    // 投票是校准燃料（信源信用/AI 画像都靠它）：有投票的条目不过期清理
+    if (a && (a.keepForever || a.vote !== null || a.notes)) return false
     return true
   })
   if (doomed.length) await db.items.bulkDelete(doomed.map((i) => i.id))

@@ -161,7 +161,7 @@ export function Welcome() {
               />
             </div>
           </div>
-          <div className="notice">改动立即保存，从下一次抓取开始参与评分；以后随时在 设置 → 采集偏好 再调整（评分权重等更多选项也在那里）。</div>
+          <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「想要」投票会自动调整信源分级，攒够后 AI 还会归纳你的兴趣词表。</div>
         </div>
       </div>
 

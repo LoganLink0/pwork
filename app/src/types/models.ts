@@ -257,8 +257,9 @@ export interface ScoreBreakdown {
 /** 用户标注 —— 内嵌于 Item，不单独建实体（04 §3.3）；永久保留层 */
 export interface ItemAnnotation {
   notes: string
-  /** 0–5 星，反馈回流评分权重 */
-  stars: number
+  /** 三档投票（2026-10-20 第一性重设计，替代 5 星制）：想要更多 / 一般 / 不要；null=未投。
+   *  旧 5 星数据读取时自动映射（4–5→want，2–3→meh，1→no）。投票驱动信源信用与 AI 兴趣画像。 */
+  vote: 'want' | 'meh' | 'no' | null
   keepForever: boolean
   /** W3 起可挂复盘档案 */
   linkedReviewId: string | null

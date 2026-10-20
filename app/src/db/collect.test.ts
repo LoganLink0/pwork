@@ -13,6 +13,8 @@ import {
   markKept,
   markSourceFail,
   markSourceOk,
+  mapStarsToVote,
+  normalizeItem,
   putItem,
   updateAnnotation,
   updateSource,
@@ -45,7 +47,7 @@ function mkItem(over: Partial<Item> = {}): Item {
     tags: [],
     otFlag: null,
     expiresAt: null,
-    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
@@ -132,32 +134,52 @@ describe('条目：去重 / Digest / 标注 / kept', () => {
     expect(items.find((i) => i.id === b.id)!.stage).toBe('kept')
   })
 
-  it('updateAnnotation：星级/批注使 scored 升 kept；otFlag 可写', async () => {
+  it('updateAnnotation：「想要」投票/批注使 scored 升 kept；otFlag 可写', async () => {
     const a = mkItem()
     await putItem(a)
-    await updateAnnotation(a.id, { stars: 4, otFlag: 'opportunity' })
+    await updateAnnotation(a.id, { vote: 'want', otFlag: 'opportunity' })
     const got = (await digestFor(todayLocal(), 10)).find((i) => i.id === a.id)!
     expect(got.stage).toBe('kept')
-    expect(got.annotation.stars).toBe(4)
+    expect(got.annotation.vote).toBe('want')
     expect(got.otFlag).toBe('opportunity')
   })
 })
 
 describe('TTL 清理（铁律 3：只清过 TTL 且无标注的 raw/discarded）', () => {
-  it('过期 discarded 清理；有星级/keepForever/scored 的豁免', async () => {
+  it('过期 discarded 清理；有投票/keepForever/scored 的豁免', async () => {
     const past = new Date(Date.now() - 15 * 86_400_000).toISOString()
     const doomed = mkItem({ stage: 'discarded', expiresAt: past })
-    const starred = mkItem({ stage: 'discarded', expiresAt: past, annotation: { notes: '', stars: 3, keepForever: false, linkedReviewId: null } })
-    const forever = mkItem({ stage: 'discarded', expiresAt: past, annotation: { notes: '', stars: 0, keepForever: true, linkedReviewId: null } })
+    const voted = mkItem({ stage: 'discarded', expiresAt: past, annotation: { notes: '', vote: 'meh', keepForever: false, linkedReviewId: null } })
+    const forever = mkItem({ stage: 'discarded', expiresAt: past, annotation: { notes: '', vote: null, keepForever: true, linkedReviewId: null } })
     const notExpired = mkItem({ stage: 'discarded', expiresAt: new Date(Date.now() + 86_400_000).toISOString() })
     const scored = mkItem({ stage: 'scored', expiresAt: past })
-    for (const i of [doomed, starred, forever, notExpired, scored]) await putItem(i)
+    for (const i of [doomed, voted, forever, notExpired, scored]) await putItem(i)
 
     const n = await cleanupExpired()
     expect(n).toBe(1)
     expect(await findItemByFingerprint(doomed.fingerprint)).toBeUndefined()
-    for (const i of [starred, forever, notExpired, scored]) {
+    for (const i of [voted, forever, notExpired, scored]) {
       expect(await findItemByFingerprint(i.fingerprint)).toBeTruthy()
     }
+  })
+})
+
+describe('旧 5 星数据迁移（2026-10-20：三档投票替代 5 星，读取时惰性映射）', () => {
+  it('mapStarsToVote：4–5→want，2–3→meh，1→no，0/无→未投', () => {
+    expect(mapStarsToVote(5)).toBe('want')
+    expect(mapStarsToVote(4)).toBe('want')
+    expect(mapStarsToVote(3)).toBe('meh')
+    expect(mapStarsToVote(2)).toBe('meh')
+    expect(mapStarsToVote(1)).toBe('no')
+    expect(mapStarsToVote(0)).toBeNull()
+    expect(mapStarsToVote(undefined)).toBeNull()
+  })
+
+  it('normalizeItem 对带旧 stars 字段的记录完成迁移；新 vote 字段优先', () => {
+    const legacy = { ...mkItem(), annotation: { notes: '旧批注', stars: 4, keepForever: false, linkedReviewId: null } as unknown as Item['annotation'] }
+    expect(normalizeItem(legacy).annotation.vote).toBe('want')
+    expect(normalizeItem(legacy).annotation.notes).toBe('旧批注')
+    const modern = mkItem({ annotation: { notes: '', vote: 'no', keepForever: false, linkedReviewId: null } })
+    expect(normalizeItem(modern).annotation.vote).toBe('no')
   })
 })

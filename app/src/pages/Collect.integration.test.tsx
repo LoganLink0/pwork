@@ -59,22 +59,18 @@ describe('信息采集 C1（W2）', () => {
     const summary = await screen.findByTestId('run-summary')
     expect(within(summary).getByText(/筛除/)).toBeInTheDocument()
 
-    // 星级：点击一次 → 1 星
-    const stars = screen.getByRole('button', { name: /星级：0 星/ })
-    await user.click(stars)
-    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.stars).toBe(1))
+    // 三档投票（2026-10-20 替代 5 星）：点「想要」→ want；换「不要」→ no；再点取消
+    await user.click(screen.getByRole('button', { name: /想要/ }))
+    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBe('want'))
+    await user.click(screen.getByRole('button', { name: /不要/ }))
+    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBe('no'))
+    await user.click(screen.getByRole('button', { name: /不要/ }))
+    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBeNull())
 
-    // 点满 5 星后再点一下 → 清零（评级可撤销）；每步等渲染跟上再点
-    for (const n of [1, 2, 3, 4]) {
-      await user.click(await screen.findByRole('button', { name: new RegExp(`星级：${n} 星，点击加一星`) }))
-    }
-    await user.click(await screen.findByRole('button', { name: /星级：5 星，点击清零/ }))
-    await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.stars).toBe(0))
-
-    // 详情展开：评分理由 + 四维
+    // 详情展开：分诊依据（无数字分、无四维参数）
     await user.click(screen.getByRole('button', { name: '详情' }))
-    expect(await screen.findByText(/评分理由/)).toBeInTheDocument()
-    expect(screen.getByText(/相关/)).toBeInTheDocument()
+    expect(await screen.findByText(/分诊依据/)).toBeInTheDocument()
+    expect(screen.getByText(/兴趣相关/)).toBeInTheDocument()
   })
 
   it('条目库：stage 筛选与已筛除 TTL 标注', async () => {

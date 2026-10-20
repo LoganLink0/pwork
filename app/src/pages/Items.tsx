@@ -8,7 +8,7 @@ type StageFilter = 'all' | 'scored' | 'kept' | 'discarded'
 
 /** 条目库页（PRD §4.4）：stage/分数筛选 + 搜索 + 展开详情与标注 */
 export function Items() {
-  const { items, setStars, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
+  const { items, setVote, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
   const [stage, setStage] = useState<StageFilter>('all')
   const [minScore, setMinScore] = useState(0)
   const [query, setQuery] = useState('')
@@ -88,7 +88,7 @@ export function Items() {
             showStage
             expanded={expandedId === item.id}
             onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
-            onStars={(n) => void setStars(item.id, n)}
+            onVote={(v) => void setVote(item.id, v)}
             onNotes={(t) => void setNotes(item.id, t)}
             onKeep={() => void toggleKeep(item.id)}
             onCycleOt={() => void cycleOt(item.id)}

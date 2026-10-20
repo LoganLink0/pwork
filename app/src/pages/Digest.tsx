@@ -23,7 +23,7 @@ export function Digest() {
     fetch: fetchState,
     setDigestDate,
     runFetchAll,
-    setStars,
+    setVote,
     setNotes,
     toggleKeep,
     cycleOt,
@@ -129,7 +129,7 @@ export function Digest() {
               item={item}
               expanded={expandedId === item.id}
               onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
-              onStars={(n) => void setStars(item.id, n)}
+              onVote={(v) => void setVote(item.id, v)}
               onNotes={(t) => void setNotes(item.id, t)}
               onKeep={() => void toggleKeep(item.id)}
               onCycleOt={() => void cycleOt(item.id)}

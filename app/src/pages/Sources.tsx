@@ -4,6 +4,7 @@ import { DOMAINS, TIER_LABEL, TIER_WEIGHT } from '../content/collect'
 import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
 import { exportSourcesJson } from '../db/collect'
+import { voteStatsBySource } from '../engine/sourceCredit'
 import { fmtLocal } from '../engine/datetime'
 import type { Source } from '../types/models'
 
@@ -26,8 +27,10 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
-  const { sources, items7d, addSource, editSource, toggleActive, removeSource, importSample, importJson, fetch: fetchState, importRecommended } = useCollect()
+  const { sources, items, items7d, addSource, editSource, toggleActive, removeSource, importSample, importJson, fetch: fetchState, importRecommended } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
+  // 信源信用可见性：各源近 60 天投票统计（升降由引擎在打开应用时自动做，这里只展示依据）
+  const credit = voteStatsBySource(items)
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -168,14 +171,28 @@ export function Sources() {
         <table className="src-table" data-testid="src-table">
           <thead>
             <tr>
-              <th>名称</th><th>分级</th><th>主题域</th><th>地址</th><th>健康</th><th>近7天</th><th>启用</th><th></th>
+              <th>名称</th><th>分级</th><th>想要率</th><th>主题域</th><th>地址</th><th>健康</th><th>近7天</th><th>启用</th><th></th>
             </tr>
           </thead>
           <tbody>
             {sources.map((s) => (
               <tr key={s.id} data-testid="src-row">
                 <td className="src-name">{s.name}</td>
-                <td><span className={`tier-badge ${tierCls(s.tier)}`}>{TIER_LABEL[s.tier]}</span></td>
+                <td>
+                  <span
+                    className={`tier-badge ${tierCls(s.tier)}`}
+                    title="分级由你的投票自动升降（想要率 ≥60% 升 T1、≥30% 升 T1.5、其余 T2；近 60 天投票 ≥8 条才动）"
+                  >
+                    {TIER_LABEL[s.tier]}
+                  </span>
+                </td>
+                <td className="tnum">
+                  {(() => {
+                    const st = credit.get(s.id)
+                    if (!st) return '—'
+                    return `${Math.round((st.want / st.rated) * 100)}%（${st.rated} 票）`
+                  })()}
+                </td>
                 <td>{DOMAINS.find((d) => d.key === s.domain)?.label ?? s.domain}</td>
                 <td><span className="src-url" title={s.url}>{s.url}</span></td>
                 <td><HealthCell s={s} /></td>

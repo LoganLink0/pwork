@@ -47,7 +47,7 @@ describe('备份恢复演练：12 张表全量回路', () => {
       tags: ['AI 应用'],
       otFlag: null,
       expiresAt: null,
-      annotation: { notes: '打过批注', stars: 5, keepForever: false, linkedReviewId: null },
+      annotation: { notes: '打过批注', vote: 'want', keepForever: false, linkedReviewId: null },
       createdAt: NOW,
       updatedAt: NOW,
       schemaVersion: 1,
@@ -142,7 +142,7 @@ describe('备份恢复演练：12 张表全量回路', () => {
     expect(s.name).toBe('演练源')
 
     const it2 = (await db.items.toArray()).find((x) => x.id === item.id)!
-    expect(it2.annotation.stars).toBe(5) // 用户批注/星级必须随备份走（标注/知识层）
+    expect(it2.annotation.vote).toBe('want') // 用户批注/投票必须随备份走（标注/知识层）
     expect(it2.sourceId).toBe(source.id)
 
     const rv = await db.reviews.get(review.id)

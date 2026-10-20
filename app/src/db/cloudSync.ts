@@ -106,7 +106,7 @@ function cloudToLocal(raw: Record<string, unknown>): Item {
     tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
     otFlag: (raw.otFlag as Item['otFlag']) ?? null,
     expiresAt: null,
-    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,

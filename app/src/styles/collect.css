@@ -3,17 +3,19 @@
  * 纪律同 shell.css：只消费 tokens.css 令牌。
  */
 
-/* ---------- 评分徽章（PRD §5.3：≥80 琥珀描边 / 60–79 常规 / <60 淡灰） ---------- */
+/* ---------- 分诊徽章（2026-10-20 起无数字分：必看/可看/已埋三档） ---------- */
 .score {
   flex: none;
-  width: 48px;
+  width: 52px;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
-.score .s-num {
-  font-size: var(--fs-num);
+.score .s-tier {
+  font-size: var(--fs-sm);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
+  border-radius: var(--r-sm);
+  padding: 2px 6px;
+  display: inline-block;
 }
 .score .s-cap {
   font-size: var(--fs-xs);
@@ -22,29 +24,20 @@
 .score.hi {
   color: var(--accent-text);
 }
-.score.hi .s-num {
+.score.hi .s-tier {
   border: 1px solid var(--accent);
-  border-radius: var(--r-sm);
-  padding: 0 6px;
-  display: inline-block;
 }
 .score.mid {
   color: var(--ink);
 }
-.score.mid .s-num {
+.score.mid .s-tier {
   border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  padding: 0 6px;
-  display: inline-block;
 }
 .score.lo {
   color: var(--ink-faint);
 }
-.score.lo .s-num {
+.score.lo .s-tier {
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 0 6px;
-  display: inline-block;
 }
 
 /* ---------- Digest 条目卡 ---------- */
@@ -133,18 +126,48 @@
   font-size: var(--fs-xs);
   color: var(--ink-faint);
 }
-.stars {
-  font-size: var(--fs-sm);
-  letter-spacing: 2px;
-  color: var(--ink-faint);
-  cursor: pointer;
-  user-select: none;
-  background: none;
-  border: none;
-  padding: 0;
+/* 三档投票（2026-10-20 替代 5 星）：一次点击直达，点当前档取消 */
+.vote-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
 }
-.stars .on {
-  color: var(--accent);
+.vote-btn {
+  font-size: var(--fs-xs);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 3px 8px;
+  color: var(--ink-soft);
+  background: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    background-color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+.vote-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.vote-btn:active {
+  transform: scale(0.96);
+}
+.vote-btn.vote-want.on {
+  border-color: var(--accent);
+  background: var(--accent-soft, var(--surface-2));
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.vote-btn.vote-meh.on {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+.vote-btn.vote-no.on {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
 }
 .mini-btn {
   font-size: var(--fs-xs);

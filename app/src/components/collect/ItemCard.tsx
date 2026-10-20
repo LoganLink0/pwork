@@ -14,12 +14,18 @@ function scoreCls(total: number): string {
   return total >= 80 ? 'hi' : total >= 60 ? 'mid' : 'lo'
 }
 
+/** 分诊三档（2026-10-20 第一性重设计）：数字分不再上卡片——分诊只说"值不值得看" */
+function tierLabel(item: Item): string {
+  if (item.stage === 'discarded') return '已埋'
+  return item.score.total >= 80 ? '必看' : '可看'
+}
+
 export interface ItemCardProps {
   item: Item
-  /** 展开详情（批注/评分理由/字段） */
+  /** 展开详情（批注/分诊理由/字段） */
   expanded: boolean
   onToggle: () => void
-  onStars: (n: number) => void
+  onVote: (vote: 'want' | 'meh' | 'no' | null) => void
   onNotes: (text: string) => void
   onKeep: () => void
   onCycleOt: () => void
@@ -33,8 +39,8 @@ export interface ItemCardProps {
   onDelete?: () => void
 }
 
-/** 条目卡（PRD §4.4）：评分徽章 + 标题外链 + 摘要 + 元信息 + 我的星级 + 展开标注 */
-export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete }: ItemCardProps) {
+/** 条目卡：分诊徽章 + 标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注 */
+export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete }: ItemCardProps) {
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const a = item.annotation
   const ot = item.otFlag ? OT_LABEL[item.otFlag] : null
@@ -56,9 +62,9 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
 
   return (
     <div className="digest-item" data-testid="item-card">
-      <div className={`score ${scoreCls(item.score.total)}`} title={`评分理由：${item.scoreReason || '—'}`}>
-        <div className="s-num tnum">{item.score.total}</div>
-        <div className="s-cap">评分</div>
+      <div className={`score ${scoreCls(item.score.total)}`} title={`分诊依据：${item.scoreReason || '—'}`}>
+        <div className="s-tier">{tierLabel(item)}</div>
+        <div className="s-cap">分诊</div>
       </div>
       <div className="d-main">
         <div className="d-title">
@@ -86,7 +92,7 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
         </div>
         {expanded && (
           <div className="item-expand">
-            <div className="why">评分理由：{item.scoreReason || '—'}（规则评分 · 四维：源 {item.score.source.toFixed(2)} / 新 {item.score.novelty.toFixed(2)} / 相关 {item.score.relevance.toFixed(2)} / 工具 {item.score.utility.toFixed(2)}）</div>
+            <div className="why">分诊依据：{item.scoreReason || '—'}（规则引擎：信源信用 / 新鲜度 / 兴趣相关 / 实用词命中）</div>
             <div className="kv">
               {fmtLocal(item.fetchedAt)} 抓取{item.publishedAt ? ` · 发布 ${fmtLocal(item.publishedAt)}` : ''}<br />
               fingerprint {item.fingerprint}
@@ -122,18 +128,36 @@ export function ItemCard({ item, expanded, onToggle, onStars, onNotes, onKeep, o
         )}
       </div>
       <div className="d-ops">
-        <div className="stars-cap">我的星级</div>
-        <button
-          type="button"
-          className="stars"
-          title="星级是你的评分，会用来调整评分标准；点满 5 星后再点一下清零"
-          onClick={() => onStars(a.stars >= 5 ? 0 : (a.stars % 5) + 1)}
-          aria-label={`星级：${a.stars} 星，点击${a.stars >= 5 ? '清零' : '加一星'}`}
-        >
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span key={n} className={n <= a.stars ? 'on' : ''}>★</span>
-          ))}
-        </button>
+        <div className="stars-cap">我的判断</div>
+        <div className="vote-group" role="group" aria-label={`判断：${item.title}`}>
+          <button
+            type="button"
+            className={`vote-btn vote-want ${a.vote === 'want' ? 'on' : ''}`}
+            title="这条是我想要更多的——驱动信源信用与兴趣画像"
+            onClick={() => onVote(a.vote === 'want' ? null : 'want')}
+            aria-pressed={a.vote === 'want'}
+          >
+            ✦ 想要
+          </button>
+          <button
+            type="button"
+            className={`vote-btn vote-meh ${a.vote === 'meh' ? 'on' : ''}`}
+            title="可看可不看"
+            onClick={() => onVote(a.vote === 'meh' ? null : 'meh')}
+            aria-pressed={a.vote === 'meh'}
+          >
+            一般
+          </button>
+          <button
+            type="button"
+            className={`vote-btn vote-no ${a.vote === 'no' ? 'on' : ''}`}
+            title="浪费注意力——同类内容会被降权"
+            onClick={() => onVote(a.vote === 'no' ? null : 'no')}
+            aria-pressed={a.vote === 'no'}
+          >
+            ✗ 不要
+          </button>
+        </div>
         <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert}>
           {converted ? '已转待办 ✓' : '转行动卡'}
         </button>

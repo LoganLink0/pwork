@@ -13,6 +13,8 @@ import { useTasks } from './store/tasks'
 import { useGoals } from './store/goals'
 import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
+import { applySourceCredit } from './engine/sourceCredit'
+import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
@@ -149,6 +151,24 @@ export default function App() {
             )
           })
       }
+      // 信源信用（2026-10-20 第一性重设计）：「想要」投票自动升降信源档位，变化才通知
+      void applySourceCredit()
+        .then((changes) => {
+          if (changes.length > 0) {
+            const label = (c: { name: string; fromTier: number; toTier: number }) =>
+              `「${c.name}」${c.toTier < c.fromTier ? '升' : '降'}为 T${c.toTier}`
+            toast('info', `信源信用（按你的投票）：${changes.map(label).join('、')}`)
+            void useCollect.getState().load()
+          }
+        })
+        .catch((e) => {
+          void recordError(
+            { where: '信源信用.自动升降', kind: 'app', message: e instanceof Error ? e.message : String(e) },
+            { silent: true },
+          )
+        })
+      // AI 兴趣画像：攒够「想要」投票自动归纳（阈值与防重见 engine/interestProfile.ts）
+      void autoRefreshInterestProfile()
     }
   }, [load, loadCollect, loadTasks])
 

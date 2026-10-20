@@ -58,7 +58,7 @@ interface CollectState {
   importSample: () => Promise<{ imported: number; skipped: number }>
   importRecommended: () => Promise<{ imported: number; skipped: number }>
   importJson: (text: string) => Promise<{ imported: number; skipped: number }>
-  setStars: (itemId: string, stars: number) => Promise<void>
+  setVote: (itemId: string, vote: 'want' | 'meh' | 'no' | null) => Promise<void>
   setNotes: (itemId: string, notes: string) => Promise<void>
   toggleKeep: (itemId: string) => Promise<void>
   deleteItem: (itemId: string) => Promise<void>
@@ -164,8 +164,8 @@ export const useCollect = create<CollectState>((set, get) => ({
     return r
   },
 
-  setStars: async (itemId, stars) => {
-    await updateAnnotation(itemId, { stars })
+  setVote: async (itemId, vote) => {
+    await updateAnnotation(itemId, { vote })
     set({ items: await refreshItem(itemId, get().items) })
     set(await reloadDigest(get()))
   },

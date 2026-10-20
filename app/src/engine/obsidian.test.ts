@@ -22,7 +22,7 @@ function mkItem(over: Partial<Item> = {}): Item {
     tags: ['AI 应用'],
     otFlag: 'opportunity',
     expiresAt: null,
-    annotation: { notes: '', stars: 0, keepForever: false, linkedReviewId: null },
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,

@@ -225,7 +225,7 @@ export function Process() {
                 <textarea
                   className="input"
                   style={{ width: '100%', minHeight: 72, resize: 'vertical' }}
-                  placeholder="问点什么……例如：我最近关于评分权重的想法有哪些？"
+                  placeholder="问点什么……例如：我最近关于增长打法的想法有哪些？"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   aria-label="全库提问"
