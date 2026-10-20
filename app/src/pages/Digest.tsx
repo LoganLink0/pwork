@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
 import { todayLocal } from '../engine/datetime'
+import { alignmentStats } from '../engine/itemTier'
 import { obsidianDaily } from '../engine/obsidian'
 import { downloadFile } from '../db/repo'
 import { cloudConfigured, syncFromCloud } from '../db/cloudSync'
@@ -20,6 +21,7 @@ export function Digest() {
     digestDate,
     digestDateOptions,
     config,
+    items,
     fetch: fetchState,
     setDigestDate,
     runFetchAll,
@@ -32,6 +34,9 @@ export function Digest() {
   const createTask = useTasks((s) => s.create)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [converted, setConverted] = useState<Set<string>>(new Set())
+
+  // 对齐可见性：你标「想要」的条目当时被分层的情况——可略占比越低，分层越贴近你的标准
+  const align = useMemo(() => alignmentStats(items), [items])
 
   const convert = (id: string, title: string) => {
     void createTask({ title, origin: { kind: 'item', refId: id } })
@@ -141,6 +146,11 @@ export function Digest() {
               }}
             />
           ))}
+          {align && (
+            <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
+              徽章准不准，看这行：最近 30 天你标「想要」的 {align.want} 条，当时分层为 必看 {align.must} · 可看 {align.may} · 可略 {align.skip}——落在「可略」里的就是系统还没学会的主题，你的投票会让它们越来越少。
+            </div>
+          )}
           <div style={{ textAlign: 'center', marginTop: 'var(--sp-4)' }}>
             <Link to="/input/items" className="btn-ghost">查看条目库（全部状态）→</Link>
           </div>

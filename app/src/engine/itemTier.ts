@@ -34,3 +34,24 @@ export function itemTiers(items: Item[]): Map<string, ItemTier> {
 }
 
 export const TIER_LABEL: Record<ItemTier, string> = { must: '必看', may: '可看', skip: '可略' }
+
+/**
+ * 对齐统计（2026-10-20）：最近 N 天你标「想要」的条目，当时被分层的情况。
+ * 必看占比升高 = 系统的预判越来越接近你的标准；落在"可略"里的是它还没学会的部分。
+ */
+export function alignmentStats(items: Item[], days = 30): { want: number; must: number; may: number; skip: number } | null {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)
+  const recent = items.filter((i) => !i.deletedAt && i.annotation?.vote === 'want' && (i.fetchedAt ?? '') >= since)
+  if (recent.length === 0) return null
+  const tiers = itemTiers(items) // 全量重算，与页面展示口径一致
+  let must = 0
+  let may = 0
+  let skip = 0
+  for (const i of recent) {
+    const t = tiers.get(i.id)
+    if (t === 'must') must += 1
+    else if (t === 'may') may += 1
+    else skip += 1
+  }
+  return { want: recent.length, must, may, skip }
+}

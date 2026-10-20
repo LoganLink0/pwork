@@ -10,6 +10,8 @@ import { chatCompletion } from '../modules/review/engine/llm'
 import { llmConfigFrom, loadCoachConfig } from '../modules/review/engine/coach'
 import { useCollect } from '../store/collect'
 import { recordError } from './errorLog'
+import { itemTiers } from './itemTier'
+import type { Item } from '../types/models'
 
 export const PROFILE_MIN_WANTS = 20 // 启用门槛：至少 20 条「想要」投票
 export const PROFILE_AUTO_DELTA = 15 // 自动重归纳：距上次归纳新增 15 条「想要」
@@ -20,6 +22,17 @@ export function wantTitles(items: { deletedAt?: string; fetchedAt: string; title
     .filter((i) => !i.deletedAt && i.annotation?.vote === 'want')
     .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
     .slice(0, 200)
+    .map((i) => i.title)
+}
+
+/** 系统当时没排进当天前两名、但你标了「想要」的标题——信息量最大的样本：
+ *  现有词表漏掉的主题全在这里，归纳时单独喂给 AI 重点学习 */
+export function underestimatedWants(items: Item[]): string[] {
+  const tiers = itemTiers(items)
+  return items
+    .filter((i) => !i.deletedAt && i.annotation?.vote === 'want' && tiers.get(i.id) !== 'must')
+    .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
+    .slice(0, 50)
     .map((i) => i.title)
 }
 
@@ -39,13 +52,19 @@ export function parseInterests(reply: string): string[] {
 export async function refreshInterestProfile(): Promise<{ ok: true; words: number } | { ok: false; error: string }> {
   const ai = loadCoachConfig()
   if (ai.mode !== 'llm') return { ok: false, error: 'AI 未启用（设置 → AI · BYOK 选 LLM 模式）——保持现有词表' }
-  const titles = wantTitles(await db.items.toArray())
+  const all = await db.items.toArray()
+  const titles = wantTitles(all)
   if (titles.length < PROFILE_MIN_WANTS) {
     return { ok: false, error: `「想要」投票还不够（${titles.length}/${PROFILE_MIN_WANTS}）——先在信息日报里投票` }
   }
+  // 被低估样本：系统排位不高但你标了想要——词表漏掉的主题，让 AI 重点补课
+  const under = underestimatedWants(all)
+  const underSection = under.length
+    ? `\n\n其中这些当时没有排进当天前两名，但你明确想要更多——现有词表大概率漏了这类主题，归纳时重点从它们身上找：\n${under.map((t, i) => `${i + 1}. ${t}`).join('\n')}`
+    : ''
   const dislikes = useCollect.getState().config.dislikes
   const system = '你是兴趣画像归纳器。从用户明确表示"想要更多"的信息标题中，归纳这位用户关注什么的词表。只输出 JSON，不要多余文字。'
-  const user = `用户标记"想要更多"的标题（最近 ${titles.length} 条）：\n${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\n用户的屏蔽词（归纳时要避开）：${dislikes.join('、') || '无'}\n\n归纳 15–30 个兴趣关键词：中文为主，保留必要的英文专有名词；写"用户关注什么"（如 独立开发、增长打法），不要写"这些文章讲了什么"。输出：{"interests": ["词1", "词2"]}`
+  const user = `用户标记"想要更多"的标题（最近 ${titles.length} 条）：\n${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}${underSection}\n\n用户的屏蔽词（归纳时要避开）：${dislikes.join('、') || '无'}\n\n归纳 15–30 个兴趣关键词：中文为主，保留必要的英文专有名词；写"用户关注什么"（如 独立开发、增长打法），不要写"这些文章讲了什么"。输出：{"interests": ["词1", "词2"]}`
   const reply = await chatCompletion(llmConfigFrom(ai), system, user, { maxTokens: 2000, timeoutMs: 60_000 })
   const interests = parseInterests(reply)
   if (interests.length === 0) throw new Error('归纳结果为空')

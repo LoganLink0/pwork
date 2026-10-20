@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { itemTiers } from './itemTier'
+import { alignmentStats, itemTiers } from './itemTier'
 import { newId } from '../db/repo'
 import type { Item } from '../types/models'
 
@@ -58,6 +58,22 @@ describe('itemTiers（同日排名分层：前 2 必看 / 3–8 可看 / 其余�
     expect([...t.values()].filter((v) => v === 'must')).toHaveLength(2)
     expect([...t.values()].filter((v) => v === 'may')).toHaveLength(6)
     expect([...t.values()].filter((v) => v === 'skip')).toHaveLength(2)
+  })
+
+  it('alignmentStats：只统计近 30 天 vote=want 的条目；无投票返回 null', () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const old = new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10)
+    const want = { notes: '', vote: 'want' as const, keepForever: false, linkedReviewId: null }
+    const no = { notes: '', vote: 'no' as const, keepForever: false, linkedReviewId: null }
+    const items = [
+      { ...mk(today, 90), annotation: want },
+      { ...mk(today, 85), annotation: want },
+      { ...mk(today, 60), annotation: want },
+      { ...mk(today, 55), annotation: no }, // 非想要不计
+      { ...mk(old, 90), annotation: want }, // 超出 30 天窗口不计
+    ]
+    expect(alignmentStats(items)).toEqual({ want: 3, must: 2, may: 1, skip: 0 })
+    expect(alignmentStats([items[3]!])).toBeNull()
   })
 
   it('同分时按抓取时间先后稳定排序', () => {

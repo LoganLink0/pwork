@@ -1,5 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { parseInterests, wantTitles, PROFILE_MIN_WANTS } from './interestProfile'
+import { parseInterests, wantTitles, underestimatedWants, PROFILE_MIN_WANTS } from './interestProfile'
+import { newId } from '../db/repo'
+import type { Item } from '../types/models'
+
+function mkVoteItem(title: string, vote: 'want' | 'meh' | 'no' | null, day: string, score = 68): Item {
+  return {
+    id: newId('itm'),
+    sourceId: 's',
+    sourceName: '源',
+    url: `https://a.com/${newId('x')}`,
+    title,
+    summary: '',
+    fingerprint: newId('fp'),
+    eventGroup: null,
+    publishedAt: null,
+    fetchedAt: `${day}T10:00:00.000Z`,
+    stage: 'scored',
+    score: { total: score, source: 1, novelty: 1, relevance: 0.5, utility: 0.3 },
+    scoreReason: 'r',
+    aiBy: 'rules',
+    tags: [],
+    otFlag: null,
+    expiresAt: null,
+    annotation: { notes: '', vote, keepForever: false, linkedReviewId: null },
+    createdAt: `${day}T10:00:00.000Z`,
+    updatedAt: `${day}T10:00:00.000Z`,
+    schemaVersion: 1,
+  }
+}
+
+describe('underestimatedWants（被低估样本：非当天前两名但你标了想要）', () => {
+  it('只取 vote=want 且分层非必看的条目', () => {
+    const items = [
+      mkVoteItem('第一名标题', 'want', '2026-10-20', 90), // 必看 → 不算被低估
+      mkVoteItem('第二名标题', 'want', '2026-10-20', 80), // 必看 → 不算
+      mkVoteItem('被低估的好东西', 'want', '2026-10-20', 60), // 可看 → 算
+      mkVoteItem('一般的想要', 'want', '2026-10-20', 55), // 可略 → 算
+      mkVoteItem('不想要的低分', 'no', '2026-10-20', 50), // 非 want → 不算
+    ]
+    const under = underestimatedWants(items)
+    expect(under).toHaveLength(2)
+    expect(new Set(under)).toEqual(new Set(['被低估的好东西', '一般的想要']))
+  })
+})
 
 describe('wantTitles（「想要」投票的标题集合）', () => {
   it('只取 vote=want 且未删除，按时间倒序截断', () => {
