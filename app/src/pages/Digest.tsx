@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
@@ -6,6 +6,12 @@ import { ItemCard } from '../components/collect/ItemCard'
 import { todayLocal } from '../engine/datetime'
 import { obsidianDaily } from '../engine/obsidian'
 import { downloadFile } from '../db/repo'
+import { cloudConfigured, syncFromCloud } from '../db/cloudSync'
+import { recordError } from '../engine/errorLog'
+
+// 进页拉云端：进本页时若配置了云端同步就拉一轮增量——应用开着不动也能在日报页看到云端新抓的
+// 条目（打开应用自动同步只覆盖"刚打开"的场景）。5 分钟内不重复拉，往返切换不成反复请求。
+let lastDigestPullAt = 0
 
 /** 信息日报页（04 §4 ⑤ 分发的 UI；Top N 硬顶、两分钟扫完、无未读数） */
 export function Digest() {
@@ -36,6 +42,20 @@ export function Digest() {
   const prevDate = digestDateOptions[todayIdx + 1] // 列表倒序：+1 是更早一天
   const nextDate = todayIdx > 0 ? digestDateOptions[todayIdx - 1] : undefined
   const isToday = digestDate === todayLocal()
+
+  useEffect(() => {
+    if (!cloudConfigured()) return
+    if (Date.now() - lastDigestPullAt < 5 * 60_000) return
+    lastDigestPullAt = Date.now()
+    void syncFromCloud().then(async (r) => {
+      if (!r.ok) {
+        // 与"打开应用自动同步"同一纪律：云端偶发不可达不打扰，只入错误日志
+        void recordError({ where: '信息日报.进页拉云端', kind: 'app', message: r.error ?? '未知失败' }, { silent: true })
+        return
+      }
+      if (r.newCount > 0) await useCollect.getState().load()
+    })
+  }, [])
 
   return (
     <section>
