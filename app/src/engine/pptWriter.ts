@@ -252,7 +252,7 @@ export async function exportWriterPptx(outline: WriterOutline): Promise<string> 
   pptx.title = outline.title
   const specs = outlineToSlides(outline)
   await renderReport(pptx, specs)
-  const safe = outline.title.replace(/[\/:*?"<>|]/g, '_').slice(0, 60)
+  const safe = outline.title.replace(/[/:*?"<>|]/g, '_').slice(0, 60)
   const filename = `PWORK-报告-${safe || '未命名'}.pptx`
   await pptx.writeFile({ fileName: filename })
   return filename
