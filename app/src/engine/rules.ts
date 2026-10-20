@@ -69,10 +69,12 @@ export function hitInterests(text: string, interests: string[]): string[] {
   return interests.filter((i) => i.trim() && lower.includes(i.trim().toLowerCase()))
 }
 
-/** 规则评分（与 04 §4.1 同公式，四维均为规则近似；aiBy='rules'；权重取自配置并归一化） */
+/** 规则评分（与 04 §4.1 同公式，四维均为规则近似；aiBy='rules'）
+ * 2026-10-20 起零参数：权重固定默认值——设置页已无权重入口，存量 config.weights
+ *（旧版手调/一键采纳留下的）一律忽略，否则等于一个看不见的隐藏参数还在暗中生效。 */
 export function scoreByRules(input: ScoreInput): { score: ScoreBreakdown; reason: string; tags: string[] } {
   const text = `${input.title} ${input.summary}`
-  const W = normalizeWeights(input.config.weights)
+  const W = normalizeWeights(DEFAULT_WEIGHTS)
 
   // source：信源权重（机器给定，无需 AI）
   const source = clamp01(input.source.weight)

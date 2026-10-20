@@ -29,9 +29,9 @@ export function obsidianDaily(itemList: Item[], dateLocal: string): string {
   itemList.forEach((it, i) => {
     const ot = it.otFlag ? ` ｜ ${OT_MARK[it.otFlag]}` : ''
     lines.push(`### ${i + 1}. [${it.title}](${it.url})`)
-    lines.push(`评分 ${it.score.total} ｜ 来源：${it.sourceName} ｜ ${it.tags.map((t) => `#${t}`).join(' ')}${ot}`)
+    lines.push(`来源：${it.sourceName} ｜ ${it.tags.map((t) => `#${t}`).join(' ')}${ot}`)
     if (it.summary) lines.push(it.summary)
-    lines.push(`> 我的批注：（在 Obsidian 里写，同步回工作台）`)
+    lines.push(`> 我的想法：`)
     lines.push('')
   })
   lines.push('---')

@@ -91,11 +91,11 @@ describe('scoreByRules（04 §4.1 公式的规则近似）', () => {
     expect(legacy.score.total).toBe(withDefaults.score.total)
   })
 
-  it('权重可调：utility 拉满后工具词条目总分上升', () => {
+  it('零参数（2026-10-20）：存量自定义权重不再生效——塞进 config 也按默认算', () => {
     const input = { source: src(1), title: '开源工具与教程案例', summary: '', domainCountToday: 0, config: CONFIG }
     const before = scoreByRules(input).score.total
     const after = scoreByRules({ ...input, config: { ...CONFIG, weights: { source: 0, novelty: 0, relevance: 0, utility: 1 } } }).score.total
-    expect(after).toBeGreaterThan(before)
+    expect(after).toBe(before) // 设置页已无权重入口，旧存的权重一律忽略
   })
 })
 

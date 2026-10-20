@@ -135,15 +135,7 @@ export function Sources() {
                 <option value="1.5">T1.5</option>
                 <option value="2">T2</option>
               </select>
-            </label>
-            <label>权重
-              <input
-                className="input"
-                type="number" min="0" max="1" step="0.1"
-                placeholder="tier 映射，可微调"
-                value={form.weight ?? TIER_WEIGHT[form.tier] ?? 0.4}
-                onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
-              />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>投票攒够 8 条后由你的投票自动调整</span>
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-1)', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
               操作
