@@ -59,12 +59,12 @@ describe('信息采集 C1（W2）', () => {
     const summary = await screen.findByTestId('run-summary')
     expect(within(summary).getByText(/筛除/)).toBeInTheDocument()
 
-    // 三档投票（2026-10-20 替代 5 星）：点「想要」→ want；换「不要」→ no；再点取消
-    await user.click(screen.getByRole('button', { name: /想要/ }))
+    // 三档投票（多推/没想好/少推）：点「多推」→ want；换「少推」→ no；再点取消
+    await user.click(screen.getByRole('button', { name: /多推/ }))
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBe('want'))
-    await user.click(screen.getByRole('button', { name: /不要/ }))
+    await user.click(screen.getByRole('button', { name: /少推/ }))
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBe('no'))
-    await user.click(screen.getByRole('button', { name: /不要/ }))
+    await user.click(screen.getByRole('button', { name: /少推/ }))
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBeNull())
 
     // 分层徽章：当日排第 1 → 必看

@@ -163,7 +163,7 @@ export function Sources() {
         <table className="src-table" data-testid="src-table">
           <thead>
             <tr>
-              <th>名称</th><th>分级</th><th>想要率</th><th>主题域</th><th>地址</th><th>健康</th><th>近7天</th><th>启用</th><th></th>
+              <th>名称</th><th>分级</th><th>多推率</th><th>主题域</th><th>地址</th><th>健康</th><th>近7天</th><th>启用</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -173,7 +173,7 @@ export function Sources() {
                 <td>
                   <span
                     className={`tier-badge ${tierCls(s.tier)}`}
-                    title="分级由你的投票自动升降（想要率 ≥60% 升 T1、≥30% 升 T1.5、其余 T2；近 60 天投票 ≥8 条才动）"
+                    title="分级由你的投票自动升降（多推率 ≥60% 升 T1、≥30% 升 T1.5、其余 T2；近 60 天投票 ≥8 条才动）"
                   >
                     {TIER_LABEL[s.tier]}
                   </span>

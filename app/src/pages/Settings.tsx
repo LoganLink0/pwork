@@ -378,10 +378,10 @@ export function Settings() {
                 .catch((e) => setProfileMsg(`失败：${e instanceof Error ? e.message : String(e)}（词表未动）`))
                 .finally(() => setProfileBusy(false))
             }}>
-              {profileBusy ? '⟳ 归纳中…' : '🤖 用「想要」投票归纳兴趣域'}
+              {profileBusy ? '⟳ 归纳中…' : '🤖 用「多推」投票归纳兴趣域'}
             </button>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              {profileMsg || `据信息日报里你的「想要」投票归纳（需 ≥${PROFILE_MIN_WANTS} 条；攒够后打开应用也会自动更新）`}
+              {profileMsg || `据信息日报里你的「多推」投票归纳（需 ≥${PROFILE_MIN_WANTS} 条；攒够后打开应用也会自动更新）`}
             </span>
           </div>
           <div className="set-row">

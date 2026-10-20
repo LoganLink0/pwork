@@ -151,7 +151,7 @@ export default function App() {
             )
           })
       }
-      // 信源信用（2026-10-20 第一性重设计）：「想要」投票自动升降信源档位，变化才通知
+      // 信源信用（2026-10-20 第一性重设计）：「多推」投票自动升降信源档位，变化才通知
       void applySourceCredit()
         .then((changes) => {
           if (changes.length > 0) {
@@ -167,7 +167,7 @@ export default function App() {
             { silent: true },
           )
         })
-      // AI 兴趣画像：攒够「想要」投票自动归纳（阈值与防重见 engine/interestProfile.ts）
+      // AI 兴趣画像：攒够「多推」投票自动归纳（阈值与防重见 engine/interestProfile.ts）
       void autoRefreshInterestProfile()
     }
   }, [load, loadCollect, loadTasks])

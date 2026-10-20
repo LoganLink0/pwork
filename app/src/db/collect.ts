@@ -238,21 +238,25 @@ export async function digestDates(): Promise<string[]> {
   return [...dates].sort().reverse()
 }
 
-/** 标注更新（星级/批注/keepForever/otFlag 手动标记） */
+/** 标注更新（投票/批注/keepForever/otFlag 手动标记）。
+ *  get+put 包在同一个读写事务里：IndexedDB 事务按库串行，读-改-写原子化——
+ *  否则两个快速操作（如投票与批注同时落盘）在 await 让出后可能用旧读互相覆盖。 */
 export async function updateAnnotation(
   id: string,
   patch: Partial<Item['annotation']> & { otFlag?: Item['otFlag'] },
 ): Promise<void> {
-  const raw = await db.items.get(id)
-  if (!raw) return
-  const item = normalizeItem(raw)
-  await db.items.put({
-    ...item,
-    annotation: { ...item.annotation, ...patch },
-    otFlag: patch.otFlag !== undefined ? patch.otFlag : item.otFlag,
-    // 「想要」投票 = 明确的价值信号 → 升 kept（Curated，随备份）；一般/不要留在 scored 参与统计
-    stage: item.stage === 'scored' && ((patch.notes ?? '') !== '' || patch.vote === 'want' || patch.keepForever) ? 'kept' : item.stage,
-    updatedAt: new Date().toISOString(),
+  await db.transaction('rw', db.items, async () => {
+    const raw = await db.items.get(id)
+    if (!raw) return
+    const item = normalizeItem(raw)
+    await db.items.put({
+      ...item,
+      annotation: { ...item.annotation, ...patch },
+      otFlag: patch.otFlag !== undefined ? patch.otFlag : item.otFlag,
+      // 「多推」投票 = 明确的价值信号 → 升 kept（Curated，随备份）；没想好/少推留在 scored 参与统计
+      stage: item.stage === 'scored' && ((patch.notes ?? '') !== '' || patch.vote === 'want' || patch.keepForever) ? 'kept' : item.stage,
+      updatedAt: new Date().toISOString(),
+    })
   })
 }
 

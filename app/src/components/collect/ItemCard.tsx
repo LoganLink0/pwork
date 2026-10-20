@@ -125,37 +125,37 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
         )}
       </div>
       <div className="d-ops">
-        {/* 一行三段式投票：点一下立即保存；选中段实色填充=已生效；再点当前档取消、点其他档切换 */}
+        {/* 一行三段式投票（多推/没想好/少推）：点一下立即保存；选中段实色填充=已生效；再点当前档取消、点其他档切换 */}
         <div className="vote-group" role="group" aria-label={`我的判断：${item.title}`}>
           <button
             type="button"
             className={`vote-btn vote-want ${a.vote === 'want' ? 'on' : ''}`}
-            title={a.vote === 'want' ? '当前：想要（已保存）——再点一下取消，点其他档切换' : '记为「想要」——驱动信源分级与兴趣词表'}
-            aria-label="想要"
+            title={a.vote === 'want' ? '当前：多推（已保存）——再点一下取消，点其他档切换' : '记为「多推」——希望多看到这类内容，驱动信源分级与兴趣词表'}
+            aria-label="多推"
             onClick={() => onVote(a.vote === 'want' ? null : 'want')}
             aria-pressed={a.vote === 'want'}
           >
-            ✦ 想要
+            ✦ 多推
           </button>
           <button
             type="button"
             className={`vote-btn vote-meh ${a.vote === 'meh' ? 'on' : ''}`}
-            title={a.vote === 'meh' ? '当前：一般（已保存）——再点一下取消，点其他档切换' : '记为「一般」——可看可不看'}
-            aria-label="一般"
+            title={a.vote === 'meh' ? '当前：没想好（已保存）——再点一下取消，点其他档切换' : '记为「没想好」——暂不表态，不计入任何倾向'}
+            aria-label="没想好"
             onClick={() => onVote(a.vote === 'meh' ? null : 'meh')}
             aria-pressed={a.vote === 'meh'}
           >
-            ◦ 一般
+            ◦ 没想好
           </button>
           <button
             type="button"
             className={`vote-btn vote-no ${a.vote === 'no' ? 'on' : ''}`}
-            title={a.vote === 'no' ? '当前：不要（已保存）——再点一下取消，点其他档切换' : '记为「不要」——浪费注意力，同类内容会被降权'}
-            aria-label="不要"
+            title={a.vote === 'no' ? '当前：少推（已保存）——再点一下取消，点其他档切换' : '记为「少推」——少来这类内容，同类会被降权'}
+            aria-label="少推"
             onClick={() => onVote(a.vote === 'no' ? null : 'no')}
             aria-pressed={a.vote === 'no'}
           >
-            ✗ 不要
+            ✗ 少推
           </button>
         </div>
         <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert}>
