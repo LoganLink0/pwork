@@ -22,10 +22,23 @@ worker/           Cloudflare Worker（云端定时抓取 → D1，独立测试�
 ## 核心数据流
 
 **采集流水线**（输入模块的心脏）：
-`runFetchAll`（store）→ `runCollect`（engine/collect：并发≤5 编排）→ 每源 `fetchFeed`（engine/rss 三级通路：直连 → rsshub 换镜像 → 转接服务，逐源 10s 超时，读体单独防护）→ `prefilter`（屏蔽词/标题过短砍量）→ `fingerprintOf` 去重 → `scoreByRules`（四维：信源权重×可调权重归一化，≤30 字理由）→ 入库 stage 流转（raw→scored→kept/discarded）→ `digestFor` 当日 Top N 分发。每源失败原因进 health；整轮失败进 FetchProgress.error + 错误日志（按钮永不卡死）。
+`runFetchAll`（store）→ `runCollect`（engine/collect：并发≤5 编排）→ 每源 `fetchFeed`（engine/rss 三级通路：直连 → rsshub 换镜像 → 转接服务，逐源 10s 超时，读体单独防护）→ `prefilter`（屏蔽词/标题过短砍量）→ `fingerprintOf` 去重 → `scoreByRules`（四维：信源分级/新鲜度/兴趣词/实用词；权重固定默认——2026-10-20 起零参数，存量配置忽略，≤30 字理由）→ 入库 stage 流转（raw→scored→kept/discarded）→ `digestFor` 当日 Top N 分发。每源失败原因进 health；整轮失败进 FetchProgress.error + 错误日志（按钮永不卡死）。
 
-**星级调参闭环**（回路）：
-ItemCard 打星（annotation.stars，5 星再点归零）→ `starStats`（4–5 星条目的兴趣词/信源/主题域聚合）→ `starAdvice`（可解释建议）→ 设置页一键采纳改 `config.weights` → 下次 `scoreByRules` 生效。
+**采集调参闭环**（回路，2026-10-20 重设计；按控制论的信号流描述——迭代任何一节前先定位自己在环上的位置）：
+
+```text
+信源抓取 ──→ 前馈预筛（屏蔽词/标题过短：评分前砍掉已知扰动）
+        ──→ 分层筛选（worker 两段 AI：便宜模型预筛→强模型评分；AI 失败回落规则＝安全旁路）
+        ──→ 本地合并 + 同日排名分层（前 2 必看 / 3–8 可看 / 其余可略）
+        ──→ 信息日报（你阅读的地方）
+        ──→ 你的投票（多推/没想好/少推 ＝ 观测器回传的误差信号）
+        ──→ 控制器：①信源分级自动升降（多推率 ≥60%→T1 / ≥30%→T1.5，≥8 票才动）
+                    ②AI 兴趣词表归纳（≥20 票启动，每 +15 票自动重跑；被低估样本重点补课）
+        └──→ 回到「分层筛选」的输入——下一轮更贴近你的标准
+
+稳定性边界（防极限环）：投票可取消；429 仅自动重试 1 次；信源连败 3 次停用；AI 失败回落规则、不无限重试。
+系统辨识（误差统计→前馈修正）：日报页对齐行（多推条目当时的分层分布）＋ 条目库筛除原因聚合（哪类原因/哪个屏蔽词/哪个源）。
+```
 
 **AI 通路**（L2 明示）：
 前端 → 本地网关 127.0.0.1:8788（桌面版=Rust 内嵌随应用启停；开发=tools/gateway.mjs，端口被占内嵌版让位）→ 上游 LLM API。Key 双路径加载（%APPDATA%/gateway.env 生产、app/.env.local 开发）。网关记账 JSONL（2MB 滚动）→ /usage 汇总。三层降级：LLM 失败→规则引擎；网关不可达→错误明示；不配 Key→全功能可用。
@@ -50,5 +63,5 @@ tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900
 ## 已知架构边界
 
 - 多标签页同库并发：Dexie last-write-wins，未做跨页协调（单用户低险，backlog）。
-- engine 评分链朴素（规则近似，可解释优先）——复杂度让位于用户可调参。
+- engine 评分链朴素（规则近似，可解释优先）——复杂度让位于投票驱动的自动调参（用户侧零参数）。
 - worker 与本地"天"的口径不同（云端 UTC / 本地本地日），文档化设计非疏漏（复盘 1.6）。

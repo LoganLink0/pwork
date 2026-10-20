@@ -3,6 +3,7 @@ import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
 import { itemTiers } from '../engine/itemTier'
+import { rejectionStats } from '../engine/rejectionStats'
 import type { Item } from '../types/models'
 
 type StageFilter = 'all' | 'must' | 'kept' | 'discarded'
@@ -56,6 +57,10 @@ export function Items() {
     { key: 'discarded', label: `已筛除 ${counts.discarded}` },
   ]
 
+  // 筛除原因聚合（控制论"系统辨识"落地）：只在本视图有数据时出现——
+  // 哪类原因最多、哪个屏蔽词杀得最狠、哪个源独占垃圾产量，调源/调词有依据
+  const rejects = useMemo(() => rejectionStats(items), [items])
+
   return (
     <section>
       <div className="page-head">
@@ -79,6 +84,18 @@ export function Items() {
           aria-label="搜索条目"
         />
       </div>
+
+      {stage === 'discarded' && rejects && (
+        <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
+          近 30 天筛除 {rejects.total} 条：
+          {rejects.byReason
+            .map((b) => `${b.reason} ${b.count} 条${b.topWord ? `（最多的是「${b.topWord.word}」${b.topWord.count} 次）` : ''}`)
+            .join(' · ')}
+          {rejects.topSource && rejects.topSource.share >= 0.4
+            ? `。「${rejects.topSource.name}」独占 ${Math.round(rejects.topSource.share * 100)}%——可去信源管理停用它，或检查是不是该源的抓取解析出了问题。`
+            : '。屏蔽词误杀多就去 设置 → 采集偏好 调整词表。'}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="empty">
