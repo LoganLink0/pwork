@@ -138,6 +138,39 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  // D1 直连代理（2026-10-20）：api.cloudflare.com 不带 CORS 头，浏览器页面直连必被拦；
+  // 云端同步/设备同步的 D1 查询经此转发。Token 随请求带来——不落盘、不进日志。
+  if (path === '/d1/query' && req.method === 'POST') {
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', async () => {
+      try {
+        const { accountId, databaseId, token, sql, params } = JSON.parse(body || '{}')
+        const okAccount = /^[0-9a-f]{32}$/i.test(accountId ?? '')
+        const okDb = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId ?? '')
+        if (!okAccount || !okDb || typeof token !== 'string' || !token || typeof sql !== 'string' || !sql) {
+          json(res, 400, { ok: false, error: '账户 ID / 数据库 ID / Token / SQL 缺失或格式不对' })
+          return
+        }
+        const upstream = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+            body: JSON.stringify({ sql, params: Array.isArray(params) ? params : [] }),
+          },
+        )
+        const text = await upstream.text()
+        // Cloudflare 响应（{success, result, errors}）原样透传，前端按既有结构解析
+        res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(text)
+      } catch (e) {
+        json(res, 502, { ok: false, error: `D1 代理失败：${e instanceof Error ? e.message : String(e)}` })
+      }
+    })
+    return
+  }
+
   if (path.endsWith('/chat/completions') && req.method === 'POST') {
     if (!CHAT_KEY) {
       json(res, 503, { error: '网关未配置 PWORK_LLM_API_KEY——请在 app/.env.local 填写后重启网关' })

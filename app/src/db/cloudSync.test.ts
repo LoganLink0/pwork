@@ -51,7 +51,7 @@ describe('cloudSync（W4/C2 本地拉取端）', () => {
 })
 
 describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
-  it('经 api.cloudflare.com 查询 D1 并按 snake_case 映射入库', async () => {
+  it('经本地网关代理查询 D1 并按 snake_case 映射入库', async () => {
     saveCloudConfig({ mode: 'd1', endpoint: '', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
     const row = {
       id: 'cloud_1', source_id: 'src_1', source_name: 'HNRSS', url: 'https://e.com/x', title: 'AI 应用开源工具发布',
@@ -62,17 +62,32 @@ describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
     const calls: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { body?: string }) => {
       calls.push(url)
-      expect(JSON.parse(init!.body!).sql).toContain('fetched_at > ?')
+      const payload = JSON.parse(init!.body!)
+      expect(payload.sql).toContain('fetched_at > ?')
       return new Response(JSON.stringify({ success: true, result: [{ results: [row] }] }), { status: 200 })
     }))
     const r = await syncFromCloud()
     expect(r.ok).toBe(true)
     expect(r.newCount).toBe(1)
-    expect(calls[0]).toContain('/accounts/acc1/d1/database/db1/query')
+    // 2026-10-20 起 D1 查询先走本地网关代理（api.cloudflare.com 无 CORS 头，浏览器直连必被拦）
+    expect(calls[0]).toBe('http://127.0.0.1:8788/d1/query')
     const stored = await db.items.where('fingerprint').equals('fp_d1').first()
     expect(stored?.title).toBe('AI 应用开源工具发布')
     expect(stored?.otFlag).toBe('opportunity')
     expect(stored?.score.total).toBe(77)
+  })
+
+  it('网关不在 → 回退直连 api.cloudflare.com', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: '', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(url)
+      if (String(url).includes('127.0.0.1:8788')) throw new TypeError('Failed to fetch')
+      return new Response(JSON.stringify({ success: true, result: [{ results: [] }] }), { status: 200 })
+    }))
+    const r = await syncFromCloud()
+    expect(r.ok).toBe(true)
+    expect(calls[1]).toContain('/accounts/acc1/d1/database/db1/query')
   })
 
   it('D1 缺配置 → 明确报错', async () => {

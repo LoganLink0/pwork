@@ -202,14 +202,28 @@ async function pushViaEndpoint(config: CloudConfig): Promise<PushResult> {
 /* ------------------------------ ② D1 直连模式 ------------------------------ */
 
 async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
-  const resp = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
-    {
+  // api.cloudflare.com 不发 CORS 头（预检 405），浏览器页面直连必被拦——D1 查询先走本地
+  // 网关代理（8788，随 dev/serve/桌面版自启，已带跨域头）；网关不在再退直连（Node 语境
+  // 如脚本/测试可用；浏览器此路不通）
+  let resp: Response
+  try {
+    resp = await fetch('http://127.0.0.1:8788/d1/query', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
-      body: JSON.stringify({ sql, params }),
-    },
-  )
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, token: config.token, sql, params }),
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (!resp.ok) throw new Error(`D1 网关代理 HTTP ${resp.status}`)
+  } catch {
+    resp = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+        body: JSON.stringify({ sql, params }),
+      },
+    )
+  }
   if (!resp.ok) {
     const body = await resp.text().catch(() => '')
     throw new Error(`Cloudflare API HTTP ${resp.status}${body ? `：${body.slice(0, 120)}` : ''}`)
@@ -312,7 +326,7 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
       message:
         config.mode === 'endpoint'
           ? '连不上（workers.dev 在大陆网络常被阻断）——建议切到 D1 直连模式'
-          : '连不上：检查账户 ID / 数据库 ID / Token 是否正确',
+          : '连不上：本地网关（127.0.0.1:8788）未在运行，或 账户 ID / 数据库 ID / Token 有误',
     }
   }
 }

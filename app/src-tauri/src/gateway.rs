@@ -112,6 +112,19 @@ fn regex_free_ends_with_version(u: &str) -> bool {
     seg[1..].chars().all(|c| c.is_ascii_alphanumeric())
 }
 
+/// D1 直连代理入参校验：账户 ID = 32 位十六进制；数据库 ID = 标准 UUID（8-4-4-4-12）
+fn valid_account_id(s: &str) -> bool {
+    s.len() == 32 && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+fn valid_database_id(s: &str) -> bool {
+    s.len() == 36
+        && s.bytes().enumerate().all(|(i, b)| match i {
+            8 | 13 | 18 | 23 => b == b'-',
+            _ => b.is_ascii_hexdigit(),
+        })
+}
+
 fn cors_headers(origin: &str) -> Vec<Header> {
     let mut hs = Vec::new();
     let lower = origin.to_lowercase();
@@ -236,7 +249,7 @@ pub fn start(data_dir: PathBuf) {
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
-            let reads_body = path.ends_with("/chat/completions") || path == "/search";
+            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query";
             let body: Result<String, String> = if reads_body {
                 let mut b = String::new();
                 match req.as_reader().read_to_string(&mut b) {
@@ -356,6 +369,58 @@ pub fn start(data_dir: PathBuf) {
                                         (502, json!({ "ok": false, "error": format!("搜索上游 {status}：{text}") }))
                                     } else {
                                         (502, json!({ "ok": false, "error": format!("搜索上游请求失败：{msg}") }))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if path == "/d1/query" && method == Method::Post {
+                // D1 直连代理（与 Node 版一致）：api.cloudflare.com 无 CORS 头，浏览器经此转发。
+                // Token 随请求带来，不落盘不记账。
+                match body.as_deref() {
+                    Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                    Ok("") => (400, json!({ "ok": false, "error": "请求体为空" })),
+                    Ok(body) => {
+                        let req_v: Value = match serde_json::from_str(body) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                let _ = req.respond(Response::from_string("{\"ok\":false,\"error\":\"请求体不是 JSON\"}").with_status_code(400));
+                                continue;
+                            }
+                        };
+                        let account = req_v.get("accountId").and_then(|v| v.as_str()).unwrap_or("");
+                        let database = req_v.get("databaseId").and_then(|v| v.as_str()).unwrap_or("");
+                        let token = req_v.get("token").and_then(|v| v.as_str()).unwrap_or("");
+                        let sql = req_v.get("sql").and_then(|v| v.as_str()).unwrap_or("");
+                        if !valid_account_id(account) || !valid_database_id(database) || token.is_empty() || sql.is_empty() {
+                            (400, json!({ "ok": false, "error": "账户 ID / 数据库 ID / Token / SQL 缺失或格式不对" }))
+                        } else {
+                            let up_body = json!({ "sql": sql, "params": req_v.get("params").cloned().unwrap_or(json!([])) }).to_string();
+                            let url = format!("https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{database}/query");
+                            match ureq::post(&url)
+                                .set("content-type", "application/json")
+                                .set("authorization", &format!("Bearer {token}"))
+                                .timeout(std::time::Duration::from_secs(30))
+                                .send_string(&up_body)
+                            {
+                                Ok(up) => {
+                                    let status = up.status();
+                                    let text = up.into_string().unwrap_or_default();
+                                    // Cloudflare 响应原样透传（status + JSON）
+                                    match serde_json::from_str::<Value>(&text) {
+                                        Ok(v) => (status, v),
+                                        Err(_) => (502, json!({ "ok": false, "error": "上游返回非 JSON" })),
+                                    }
+                                }
+                                Err(err) => {
+                                    let msg = format!("{err}");
+                                    if let Some(up) = err.into_response() {
+                                        let status = up.status();
+                                        let text = up.into_string().unwrap_or_default();
+                                        (status, json!({ "ok": false, "error": format!("D1 上游返回 {status}：{text}") }))
+                                    } else {
+                                        (502, json!({ "ok": false, "error": format!("D1 上游请求失败：{msg}") }))
                                     }
                                 }
                             }
