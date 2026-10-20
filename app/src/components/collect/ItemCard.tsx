@@ -10,19 +10,9 @@ const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string;
   trend: { text: '趋势', cls: 'ot-trend', icon: '📈' },
 }
 
-function scoreCls(total: number): string {
-  return total >= 80 ? 'hi' : total >= 60 ? 'mid' : 'lo'
-}
-
-/** 分诊三档（2026-10-20 第一性重设计）：数字分不再上卡片——分诊只说"值不值得看" */
-function tierLabel(item: Item): string {
-  if (item.stage === 'discarded') return '已埋'
-  return item.score.total >= 80 ? '必看' : '可看'
-}
-
 export interface ItemCardProps {
   item: Item
-  /** 展开详情（批注/分诊理由/字段） */
+  /** 展开详情（批注/筛选理由/字段） */
   expanded: boolean
   onToggle: () => void
   onVote: (vote: 'want' | 'meh' | 'no' | null) => void
@@ -33,13 +23,13 @@ export interface ItemCardProps {
   onConvert?: () => void
   /** 已转待办状态（按钮显示"已转待办"） */
   converted?: boolean
-  /** 显示 stage 徽章与 TTL 标注（条目库视图） */
+  /** 显示状态徽章与保留期标注（条目库视图） */
   showStage?: boolean
   /** 软删除（不传则按钮不显示）；删除后所有列表/日报/报告即刻过滤 */
   onDelete?: () => void
 }
 
-/** 条目卡：分诊徽章 + 标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注 */
+/** 条目卡：标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注。分数已取消——不显示任何分数衍生标记 */
 export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete }: ItemCardProps) {
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const a = item.annotation
@@ -62,10 +52,6 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
 
   return (
     <div className="digest-item" data-testid="item-card">
-      <div className={`score ${scoreCls(item.score.total)}`} title={`分诊依据：${item.scoreReason || '—'}`}>
-        <div className="s-tier">{tierLabel(item)}</div>
-        <div className="s-cap">分诊</div>
-      </div>
       <div className="d-main">
         <div className="d-title">
           <a href={item.url} target="_blank" rel="noreferrer noopener">{item.title}</a>
@@ -80,7 +66,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           {ot && <span className={`otflag ${ot.cls}`}>{ot.icon} {ot.text}</span>}
           {showStage && (
             <span className={`stage-badge stage-${item.stage}`}>
-              {item.stage === 'discarded' ? '已筛除' : item.stage === 'kept' ? '已保留' : '已评分'}
+              {item.stage === 'discarded' ? '已筛除' : item.stage === 'kept' ? '我标注的' : '上过日报'}
             </span>
           )}
           {showStage && item.stage === 'discarded' && item.expiresAt && (
@@ -92,7 +78,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
         </div>
         {expanded && (
           <div className="item-expand">
-            <div className="why">分诊依据：{item.scoreReason || '—'}（规则引擎：信源信用 / 新鲜度 / 兴趣相关 / 实用词命中）</div>
+            <div className="why">筛选理由：{item.scoreReason || '—'}（依据信源分级、新鲜度、兴趣词命中）</div>
             <div className="kv">
               {fmtLocal(item.fetchedAt)} 抓取{item.publishedAt ? ` · 发布 ${fmtLocal(item.publishedAt)}` : ''}<br />
               fingerprint {item.fingerprint}

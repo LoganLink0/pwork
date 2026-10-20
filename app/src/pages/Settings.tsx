@@ -316,7 +316,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>采集偏好</h2>
-        <div className="desc">写清你关注的领域——条目越相关得分越高；随使用随时调整</div>
+        <div className="desc">写清你关注的领域——越相关越可能进日报；随使用随时调整</div>
         <div className="set-body">
           <div className="set-row">
             <label>兴趣域</label>

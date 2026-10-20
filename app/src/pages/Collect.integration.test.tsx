@@ -67,10 +67,10 @@ describe('信息采集 C1（W2）', () => {
     await user.click(screen.getByRole('button', { name: /不要/ }))
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBeNull())
 
-    // 详情展开：分诊依据（无数字分、无四维参数）
+    // 详情展开：筛选理由（无分数衍生标记）
     await user.click(screen.getByRole('button', { name: '详情' }))
-    expect(await screen.findByText(/分诊依据/)).toBeInTheDocument()
-    expect(screen.getByText(/兴趣相关/)).toBeInTheDocument()
+    expect(await screen.findByText(/筛选理由/)).toBeInTheDocument()
+    expect(screen.getByText(/兴趣词命中/)).toBeInTheDocument()
   })
 
   it('条目库：stage 筛选与已筛除 TTL 标注', async () => {

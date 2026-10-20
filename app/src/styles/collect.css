@@ -3,43 +3,6 @@
  * 纪律同 shell.css：只消费 tokens.css 令牌。
  */
 
-/* ---------- 分诊徽章（2026-10-20 起无数字分：必看/可看/已埋三档） ---------- */
-.score {
-  flex: none;
-  width: 52px;
-  text-align: center;
-}
-.score .s-tier {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  line-height: 1.2;
-  border-radius: var(--r-sm);
-  padding: 2px 6px;
-  display: inline-block;
-}
-.score .s-cap {
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-}
-.score.hi {
-  color: var(--accent-text);
-}
-.score.hi .s-tier {
-  border: 1px solid var(--accent);
-}
-.score.mid {
-  color: var(--ink);
-}
-.score.mid .s-tier {
-  border: 1px solid var(--line-strong);
-}
-.score.lo {
-  color: var(--ink-faint);
-}
-.score.lo .s-tier {
-  border: 1px solid var(--line);
-}
-
 /* ---------- Digest 条目卡 ---------- */
 .digest-item {
   background: var(--surface);

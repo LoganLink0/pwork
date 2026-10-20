@@ -41,8 +41,8 @@ export function Items() {
 
   const stageChips: { key: StageFilter; label: string }[] = [
     { key: 'all', label: `全部 ${counts.all}` },
-    { key: 'scored', label: `已评分 ${counts.scored}` },
-    { key: 'kept', label: `已保留 ${counts.kept}` },
+    { key: 'scored', label: `上过日报 ${counts.scored}` },
+    { key: 'kept', label: `我标注的 ${counts.kept}` },
     { key: 'discarded', label: `已筛除 ${counts.discarded}` },
   ]
 
@@ -78,7 +78,7 @@ export function Items() {
       {filtered.length === 0 ? (
         <div className="empty">
           <div className="e-ico" aria-hidden>🗂</div>
-          <p>{items.length === 0 ? '还没有条目。去 Digest 页抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
+          <p>{items.length === 0 ? '还没有条目。去信息日报抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
         </div>
       ) : (
         filtered.map((item: Item) => (
