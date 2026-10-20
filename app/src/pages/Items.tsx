@@ -2,20 +2,23 @@ import { useMemo, useState } from 'react'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
+import { itemTiers } from '../engine/itemTier'
 import type { Item } from '../types/models'
 
-type StageFilter = 'all' | 'scored' | 'kept' | 'discarded'
+type StageFilter = 'all' | 'must' | 'kept' | 'discarded'
 
-/** 条目库页（PRD §4.4）：stage/分数筛选 + 搜索 + 展开详情与标注 */
+/** 条目库页（PRD §4.4）：分层/状态筛选 + 搜索 + 展开详情与标注 */
 export function Items() {
   const { items, setVote, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
   const [stage, setStage] = useState<StageFilter>('all')
-  const [minScore, setMinScore] = useState(0)
   const [query, setQuery] = useState('')
   const [otOnly, setOtOnly] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const createTask = useTasks((s) => s.create)
   const [converted, setConverted] = useState<Set<string>>(new Set())
+
+  // 分层按同日排名得出（必看=当天前 2 名）：徽章与「必看」筛选共用
+  const tiers = useMemo(() => itemTiers(items), [items])
 
   const convert = (id: string, title: string) => {
     void createTask({ title, origin: { kind: 'item', refId: id } })
@@ -25,23 +28,30 @@ export function Items() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items.filter((i) => {
-      if (stage !== 'all' && i.stage !== stage) return false
-      if (i.score.total < minScore) return false
+      if (stage === 'must' && tiers.get(i.id) !== 'must') return false
+      if (stage === 'kept' && i.stage !== 'kept') return false
+      if (stage === 'discarded' && i.stage !== 'discarded') return false
       if (otOnly && !i.otFlag) return false
       if (q && !(i.title.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q) || i.sourceName.toLowerCase().includes(q))) return false
       return true
     })
-  }, [items, stage, minScore, query, otOnly])
+  }, [items, stage, tiers, query, otOnly])
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: items.length, scored: 0, kept: 0, discarded: 0 }
-    for (const i of items) c[i.stage] = (c[i.stage] ?? 0) + 1
-    return c
-  }, [items])
+    let must = 0
+    let kept = 0
+    let discarded = 0
+    for (const i of items) {
+      if (tiers.get(i.id) === 'must') must += 1
+      if (i.stage === 'kept') kept += 1
+      if (i.stage === 'discarded') discarded += 1
+    }
+    return { all: items.length, must, kept, discarded }
+  }, [items, tiers])
 
   const stageChips: { key: StageFilter; label: string }[] = [
     { key: 'all', label: `全部 ${counts.all}` },
-    { key: 'scored', label: `上过日报 ${counts.scored}` },
+    { key: 'must', label: `必看 ${counts.must}` },
     { key: 'kept', label: `我标注的 ${counts.kept}` },
     { key: 'discarded', label: `已筛除 ${counts.discarded}` },
   ]
@@ -57,11 +67,6 @@ export function Items() {
         {stageChips.map((c) => (
           <button key={c.key} type="button" className={`chip${stage === c.key ? ' on' : ''}`} onClick={() => setStage(c.key)}>
             {c.label}
-          </button>
-        ))}
-        {[60, 80].map((n) => (
-          <button key={n} type="button" className={`chip${minScore === n ? ' on' : ''}`} onClick={() => setMinScore(minScore === n ? 0 : n)}>
-            ≥{n} 分
           </button>
         ))}
         <button type="button" className={`chip${otOnly ? ' on' : ''}`} onClick={() => setOtOnly(!otOnly)}>🎯 机会/威胁/趋势</button>
@@ -89,6 +94,7 @@ export function Items() {
             expanded={expandedId === item.id}
             onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
             onVote={(v) => void setVote(item.id, v)}
+            tier={tiers.get(item.id)}
             onNotes={(t) => void setNotes(item.id, t)}
             onKeep={() => void toggleKeep(item.id)}
             onCycleOt={() => void cycleOt(item.id)}

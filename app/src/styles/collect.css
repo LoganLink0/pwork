@@ -3,6 +3,31 @@
  * 纪律同 shell.css：只消费 tokens.css 令牌。
  */
 
+/* ---------- 分层徽章（按同日排名：前 2 必看 / 3–8 可看 / 其余可略） ---------- */
+.tier {
+  flex: none;
+  width: 48px;
+  align-self: center;
+  text-align: center;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  border-radius: var(--r-sm);
+  padding: 2px 6px;
+  display: inline-block;
+}
+.tier-must {
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+.tier-may {
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+.tier-skip {
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+}
+
 /* ---------- Digest 条目卡 ---------- */
 .digest-item {
   background: var(--surface);

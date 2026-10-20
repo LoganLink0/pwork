@@ -123,13 +123,14 @@ export function Digest() {
         </div>
       ) : (
         <>
-          {digest.map((item) => (
+          {digest.map((item, idx) => (
             <ItemCard
               key={item.id}
               item={item}
               expanded={expandedId === item.id}
               onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
               onVote={(v) => void setVote(item.id, v)}
+              tier={idx < 2 ? 'must' : idx < 8 ? 'may' : 'skip'}
               onNotes={(t) => void setNotes(item.id, t)}
               onKeep={() => void toggleKeep(item.id)}
               onCycleOt={() => void cycleOt(item.id)}

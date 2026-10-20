@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Item } from '../../types/models'
 import { fmtLocal } from '../../engine/datetime'
+import { TIER_LABEL } from '../../engine/itemTier'
 import { useNotes } from '../../store/notes'
 
 const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string; icon: string }> = {
@@ -27,10 +28,12 @@ export interface ItemCardProps {
   showStage?: boolean
   /** 软删除（不传则按钮不显示）；删除后所有列表/日报/报告即刻过滤 */
   onDelete?: () => void
+  /** 分层徽章（必看/可看/可略，按同日排名得出）；不传则不显示 */
+  tier?: 'must' | 'may' | 'skip'
 }
 
-/** 条目卡：标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注。分数已取消——不显示任何分数衍生标记 */
-export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete }: ItemCardProps) {
+/** 条目卡：分层徽章 + 标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注 */
+export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete, tier }: ItemCardProps) {
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const a = item.annotation
   const ot = item.otFlag ? OT_LABEL[item.otFlag] : null
@@ -52,6 +55,14 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
 
   return (
     <div className="digest-item" data-testid="item-card">
+      {tier && (
+        <div
+          className={`tier tier-${tier}`}
+          title={tier === 'must' ? '当天抓回来的条目里排前两名' : tier === 'may' ? '当天排第 3–8 名' : '当天排名靠后，时间紧可以先略过'}
+        >
+          {TIER_LABEL[tier]}
+        </div>
+      )}
       <div className="d-main">
         <div className="d-title">
           <a href={item.url} target="_blank" rel="noreferrer noopener">{item.title}</a>

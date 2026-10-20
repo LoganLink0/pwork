@@ -67,6 +67,9 @@ describe('信息采集 C1（W2）', () => {
     await user.click(screen.getByRole('button', { name: /不要/ }))
     await waitFor(() => expect(useCollect.getState().digest[0]!.annotation.vote).toBeNull())
 
+    // 分层徽章：当日排第 1 → 必看
+    expect(await screen.findByText('必看', { selector: '.tier' })).toBeInTheDocument()
+
     // 详情展开：筛选理由（无分数衍生标记）
     await user.click(screen.getByRole('button', { name: '详情' }))
     expect(await screen.findByText(/筛选理由/)).toBeInTheDocument()
