@@ -125,37 +125,37 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
         )}
       </div>
       <div className="d-ops">
-        {/* 一行三段式投票：未选中只显示图标，选中展开文字——保住一次点击，不把卡片撑高 */}
+        {/* 一行三段式投票：点一下立即保存；选中段实色填充=已生效；再点当前档取消、点其他档切换 */}
         <div className="vote-group" role="group" aria-label={`我的判断：${item.title}`}>
           <button
             type="button"
             className={`vote-btn vote-want ${a.vote === 'want' ? 'on' : ''}`}
-            title="想要更多——驱动信源分级与兴趣词表"
+            title={a.vote === 'want' ? '当前：想要（已保存）——再点一下取消，点其他档切换' : '记为「想要」——驱动信源分级与兴趣词表'}
             aria-label="想要"
             onClick={() => onVote(a.vote === 'want' ? null : 'want')}
             aria-pressed={a.vote === 'want'}
           >
-            ✦{a.vote === 'want' ? ' 想要' : ''}
+            ✦ 想要
           </button>
           <button
             type="button"
             className={`vote-btn vote-meh ${a.vote === 'meh' ? 'on' : ''}`}
-            title="可看可不看"
+            title={a.vote === 'meh' ? '当前：一般（已保存）——再点一下取消，点其他档切换' : '记为「一般」——可看可不看'}
             aria-label="一般"
             onClick={() => onVote(a.vote === 'meh' ? null : 'meh')}
             aria-pressed={a.vote === 'meh'}
           >
-            ◦{a.vote === 'meh' ? ' 一般' : ''}
+            ◦ 一般
           </button>
           <button
             type="button"
             className={`vote-btn vote-no ${a.vote === 'no' ? 'on' : ''}`}
-            title="浪费注意力——同类内容会被降权"
+            title={a.vote === 'no' ? '当前：不要（已保存）——再点一下取消，点其他档切换' : '记为「不要」——浪费注意力，同类内容会被降权'}
             aria-label="不要"
             onClick={() => onVote(a.vote === 'no' ? null : 'no')}
             aria-pressed={a.vote === 'no'}
           >
-            ✗{a.vote === 'no' ? ' 不要' : ''}
+            ✗ 不要
           </button>
         </div>
         <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert}>

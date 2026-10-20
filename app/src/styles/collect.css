@@ -110,20 +110,20 @@
   gap: 2px;
   justify-content: center;
 }
-/* 三档投票（2026-10-20 替代 5 星）：一行三段式，一次点击直达，点当前档取消；
-   未选中只显图标、选中展开文字——不为少数动作把所有卡片撑高 */
+/* 三档投票（2026-10-20 替代 5 星）：一行三段式，点一下立即保存；
+   未选=淡描边（可点），选中=实色填充（一眼锁定=已生效）；再点当前档取消、点其他档切换 */
 .vote-group {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 .vote-group .vote-btn {
-  font-size: var(--fs-sm);
-  line-height: 1.4;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
   border: 1px solid var(--line-strong);
   background: none;
   color: var(--ink-faint);
-  padding: 2px 7px;
+  padding: 2px 8px;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
@@ -138,25 +138,26 @@
 .vote-group .vote-btn:last-child {
   border-radius: 0 var(--r-sm) var(--r-sm) 0;
 }
-.vote-group .vote-btn:hover {
-  color: var(--accent-text);
+.vote-group .vote-btn:hover:not(.on) {
+  color: var(--ink);
   background: var(--surface-2);
 }
 .vote-group .vote-btn.vote-want.on {
-  border-color: var(--accent);
-  background: var(--surface-2);
-  color: var(--accent-text);
+  border-color: var(--accent-deep);
+  background: var(--accent-deep);
+  color: #fff;
   font-weight: 600;
 }
 .vote-group .vote-btn.vote-meh.on {
-  color: var(--ink);
-  background: var(--surface-2);
+  border-color: var(--ink-soft);
+  background: var(--ink-soft);
+  color: #fff;
   font-weight: 600;
 }
 .vote-group .vote-btn.vote-no.on {
   border-color: var(--danger);
-  color: var(--danger);
-  background: var(--surface-2);
+  background: var(--danger);
+  color: #fff;
   font-weight: 600;
 }
 .mini-btn {
