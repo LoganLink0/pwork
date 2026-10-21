@@ -57,3 +57,24 @@ describe('cycleOt 标记切换', () => {
     expect(await flagOf()).toBeNull()
   })
 })
+
+describe('页面跨天长开：日报日期自动翻篇（2026-10-21）', () => {
+  beforeEach(async () => {
+    await db.items.clear()
+  })
+
+  it('未手动选过日期 → load() 把停在昨天的 digestDate 翻到今天', async () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    useCollect.setState({ digestDate: yesterday, dateManuallySet: false })
+    await useCollect.getState().load()
+    expect(useCollect.getState().digestDate).toBe(new Date().toISOString().slice(0, 10))
+  })
+
+  it('手动选过历史日期 → load() 不强改（尊重用户的选择）', async () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    await useCollect.getState().setDigestDate(yesterday)
+    expect(useCollect.getState().dateManuallySet).toBe(true)
+    await useCollect.getState().load()
+    expect(useCollect.getState().digestDate).toBe(yesterday)
+  })
+})

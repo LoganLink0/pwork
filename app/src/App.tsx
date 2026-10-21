@@ -92,6 +92,29 @@ function FirstRunRedirect() {
 /** 自动同步只跑一次（StrictMode 开发期双挂载 / HMR 重挂载都不重复拉云端） */
 let autoSyncRan = false
 
+/** 窗口重新可见时的拉新节流（页面长开跨小时：cron 抓的新数据不该等刷新才看见） */
+let lastFocusPullAt = 0
+
+/** 窗口重新可见/聚焦 → 配了云端就拉一轮增量（静默失败；有新条目才出声） */
+function pullCloudOnFocus() {
+  if (!cloudConfigured()) return
+  if (Date.now() - lastFocusPullAt < 5 * 60_000) return
+  lastFocusPullAt = Date.now()
+  void syncFromCloud().then(async (r) => {
+    if (!r.ok) {
+      void recordError(
+        { where: '云端同步.窗口聚焦拉新', kind: 'app', message: r.error ?? '未知失败' },
+        { silent: true },
+      )
+      return
+    }
+    if (r.newCount > 0) {
+      await useCollect.getState().load()
+      toast('ok', `已拉取云端新条目 ${r.newCount} 条`)
+    }
+  })
+}
+
 export default function App() {
   const load = useNotes((s) => s.load)
   const loadCollect = useCollect((s) => s.load)
@@ -171,6 +194,19 @@ export default function App() {
       void autoRefreshInterestProfile()
     }
   }, [load, loadCollect, loadTasks])
+
+  // 窗口重新可见/聚焦：拉一轮云端增量（页面长开跨小时，cron 抓的新数据不等刷新）
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') pullCloudOnFocus()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', pullCloudOnFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', pullCloudOnFocus)
+    }
+  }, [])
 
   return (
     <HashRouter>

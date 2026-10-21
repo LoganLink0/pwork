@@ -43,6 +43,8 @@ interface CollectState {
   items7d: Record<string, number> // sourceId → 近 7 天产出
   digest: Item[] // 当前日期 Top N
   digestDate: string
+  /** 用户手动选过日期后不再自动跟随"今天"（页面跨天长开时，未手选则 load() 自动翻到新的一天） */
+  dateManuallySet: boolean
   digestDateOptions: string[]
   config: CollectConfig
   fetch: FetchProgress
@@ -77,6 +79,7 @@ export const useCollect = create<CollectState>((set, get) => ({
   items7d: {},
   digest: [],
   digestDate: todayLocal(),
+  dateManuallySet: false,
   digestDateOptions: [],
   config: loadCollectConfig(),
   fetch: { running: false, summary: null, lastRunAt: null, error: null },
@@ -87,11 +90,14 @@ export const useCollect = create<CollectState>((set, get) => ({
     track(maintenance(), '采集例行清理 maintenance')
     const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
     set({ sources, items, items7d, loaded: true })
+    // 页面跨天长开：digestDate 在开页时求值一次会卡在昨天——未手动选过日期就自动翻到今天
+    const today = todayLocal()
+    if (!get().dateManuallySet && get().digestDate !== today) set({ digestDate: today })
     set(await reloadDigest(get()))
   },
 
   setDigestDate: async (date) => {
-    set({ digestDate: date })
+    set({ digestDate: date, dateManuallySet: true })
     set(await reloadDigest(get()))
   },
 
