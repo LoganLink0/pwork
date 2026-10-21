@@ -31,78 +31,55 @@ export const RESEARCH_TYPES: { id: ResearchType; name: string; hint: string; pla
 ]
 
 const TEMPLATES: Record<ResearchType, FrameworkSection[]> = {
+  // 2026-10-21 瘦身到 3 节（用户拍板"不要 6 章"）：节数 = 要问的次数 = 要回填的空数，
+  // 覆盖面靠每节内的问题密度保住，不靠拆章
   company: [
     {
-      heading: '一、公司画像',
-      questions: ['成立时间、注册资本、所在地、组织形态？', '规模多大（员工数 / 营收量级）？', '创始人/核心团队背景？'],
-      sources: ['官网「关于我们」', '企查查 / 天眼查', '招聘页（规模与扩张信号）'],
+      heading: '一、公司画像与业务',
+      questions: ['成立时间、规模（员工/营收量级）、所在地？', '主营业务线、客户是谁、怎么收费？', '创始人/核心团队背景？'],
+      sources: ['官网 + 企查查/天眼查', '招股书 / 年报 / 融资新闻', '招聘页（规模与扩张信号）'],
     },
     {
-      heading: '二、业务与商业模式',
-      questions: ['主营业务线有哪些？', '客户是谁、怎么收费（商业模式）？', '靠什么赚钱、哪块最赚钱？'],
-      sources: ['官网产品页', '招股书 / 年报 / 融资新闻', '行业媒体（36氪 / 晚点等）'],
+      heading: '二、行业位置与近期动态',
+      questions: ['行业规模增速、主要竞品与差异化？', '近 12 个月大事（融资/发布/人事/负面）？', '在招岗位与官方内容透露的方向？'],
+      sources: ['行业报告 + 竞品官网', '新闻搜索（近一年）', '官方公众号 / 博客'],
     },
     {
-      heading: '三、行业位置与竞品',
-      questions: ['所在行业规模与增速？', '主要竞品是谁、差异化在哪？', '这家公司处于什么位置（份额/口碑）？'],
-      sources: ['行业研究报告', '竞品官网对比', '第三方点评 / 社区讨论'],
-    },
-    {
-      heading: '四、近期动态与信号',
-      questions: ['近 12 个月有什么大事（融资 / 发布 / 人事 / 负面）？', '在招岗位透露什么方向？', '官方博客/公众号最近在说什么？'],
-      sources: ['新闻搜索（近一年）', '官方公众号 / 博客', '招聘网站在招列表'],
-    },
-    {
-      heading: '五、痛点与切入判断',
-      questions: ['它可能有什么业务痛点？', '与我的目标（合作/求职/销售）的切入点在哪？', '最值得接触的人和路径？'],
+      heading: '三、切入判断',
+      questions: ['它可能的业务痛点？', '与我的目标（合作/求职/销售）的切入点？', '最值得接触的人和路径？'],
       sources: ['以上调研的综合判断', '身边可触达的人脉'],
     },
   ],
   position: [
     {
-      heading: '一、岗位画像',
-      questions: ['这个岗位日常做什么、核心 KPI 是什么？', '在团队/业务里的位置和汇报关系？', '不同公司的同类岗位要求差异？'],
-      sources: ['多份招聘 JD 对比（3–5 份）', '团队介绍页 / 面试官背景', '职业社区（脉脉 / 一亩三分地等）'],
+      heading: '一、岗位与雇主要求',
+      questions: ['日常职责与核心 KPI？', 'JD 反复出现的关键词（硬技能/工具/资格）与软素质暗示？', '不同公司同类岗位的要求差异？'],
+      sources: ['多份 JD 对比（3–5 份）', '面经 / 职业社区', '团队介绍页'],
     },
     {
-      heading: '二、雇主看重什么',
-      questions: ['JD 里反复出现的关键词（硬技能/工具/资格）？', '显性要求之外的软素质暗示？', '什么经历类型最被强调？'],
-      sources: ['JD 措辞逐句分析', '面经 / 面试分享', '在职者访谈'],
+      heading: '二、公司与匹配差距',
+      questions: ['公司业务与这个岗位的关系（为什么招人）？', '现有背景 vs 要求的逐条对照，最硬的差距？', '哪些差距能靠简历措辞补、哪些必须实补？'],
+      sources: ['公司官网 / 新闻', '自己现有简历 + JD 关键词清单'],
     },
     {
-      heading: '三、公司背景',
-      questions: ['公司业务与这个岗位的关系（为什么招人）？', '该业务线是核心还是边缘？', '团队近期动向？'],
-      sources: ['公司官网 / 新闻', '招股书业务分部', '岗位发布时间与刷新频率'],
-    },
-    {
-      heading: '四、匹配差距',
-      questions: ['现有背景 vs 岗位要求的逐条对照？', '最硬的差距是什么？', '哪些差距可以在简历措辞里补、哪些必须实补？'],
-      sources: ['自己现有简历', 'JD 关键词清单'],
-    },
-    {
-      heading: '五、简历与面试动作',
-      questions: ['哪段经历应该前置、怎么量化？', '要补什么关键词、删什么？', '大概率被问到的公司与行业问题？'],
+      heading: '三、简历与面试动作',
+      questions: ['哪段经历前置、怎么量化？补什么关键词、删什么？', '大概率被问到的公司与行业问题？', '下一步动作？'],
       sources: ['以上对照结论', '目标公司近一年新闻'],
     },
   ],
   free: [
     {
-      heading: '一、背景与界定',
-      questions: ['这个主题/问题具体指什么？边界在哪？', '为什么现在值得调研？', '关键术语和口径？'],
-      sources: ['百科 / 官方定义', '综述文章'],
+      heading: '一、背景与关键事实',
+      questions: ['主题边界、关键术语与口径？', '核心数据（规模/增速/价格）与主要参与者？', '时间线上的关键节点？'],
+      sources: ['百科 / 综述文章', '行业报告 / 统计口径', '新闻检索'],
     },
     {
-      heading: '二、关键事实与数据',
-      questions: ['核心数据有哪些（规模/增速/价格）？', '主要参与者/利益方是谁？', '时间线上的关键节点？'],
-      sources: ['行业报告 / 统计口径', '新闻检索', '公司公告'],
-    },
-    {
-      heading: '三、不同立场与争论',
+      heading: '二、不同立场与争论',
       questions: ['主流观点与反对观点各是什么？', '各方利益与偏见？', '不确定性最大的地方？'],
-      sources: ['多来源交叉验证', '社区/专业讨论'],
+      sources: ['多来源交叉验证', '社区 / 专业讨论'],
     },
     {
-      heading: '四、结论与行动建议',
+      heading: '三、结论与行动建议',
       questions: ['对我要做的决策，最相关的 3 条结论？', '还缺什么信息、去哪补？', '下一步动作？'],
       sources: ['以上综合', '自己的一手验证'],
     },
@@ -157,7 +134,7 @@ export function buildFullPrompt(fw: ResearchFramework): string {
 /* ---------------------- AI 定制框架（可选增强，走网关/BYOK） ---------------------- */
 
 export const FRAMEWORK_SYSTEM_PROMPT =
-  '你是资深商业调研顾问。根据用户的调研目标设计调研框架：4-6 个维度，每个维度 2-4 个具体问题、2-3 条去哪查的来源建议。问题必须具体可回答（能落到数字/事实），不要空泛。只输出 JSON，格式：{"sections":[{"heading":"一、…","questions":["…"],"sources":["…"]}]}'
+  '你是资深商业调研顾问。根据用户的调研目标设计调研框架：恰好 3 个维度（不要多也不要少），每个维度 2–3 个具体问题、2 条去哪查的来源建议。问题必须具体可回答（能落到数字/事实），不要空泛。只输出 JSON，不要任何解释文字，格式：{"sections":[{"heading":"一、…","questions":["…"],"sources":["…"]}]}'
 
 export function buildFrameworkUserPrompt(type: ResearchType, target: string): string {
   const extra =
@@ -169,10 +146,11 @@ export function buildFrameworkUserPrompt(type: ResearchType, target: string): st
   return `调研类型：${typeName(type)}\n调研目标：${target}\n${extra}\n请给出定制化的调研框架（JSON）。`
 }
 
-/** AI 框架结果的最小校验与规整（字段缺失/类型不对时抛错，由调用方落回模板） */
+/** AI 框架结果的最小校验与规整（字段缺失/类型不对时抛错，由调用方落回模板）。
+ *  超过 3 节截到 3（提示词要求恰好 3，AI 偶尔多给时不放行——节数=要问的次数） */
 export function normalizeAiFramework(raw: unknown, type: ResearchType, target: string): ResearchFramework {
   const sections = (raw as { sections?: unknown }).sections
-  if (!Array.isArray(sections) || sections.length < 3) throw new Error('AI 框架节数不足')
+  if (!Array.isArray(sections) || sections.length < 1) throw new Error('AI 框架节数不足')
   const norm: FrameworkSection[] = sections.map((s) => {
     const sec = s as { heading?: unknown; questions?: unknown; sources?: unknown }
     if (typeof sec.heading !== 'string' || !sec.heading.trim()) throw new Error('AI 框架节缺标题')
@@ -182,7 +160,45 @@ export function normalizeAiFramework(raw: unknown, type: ResearchType, target: s
       sources: Array.isArray(sec.sources) ? sec.sources.filter((x): x is string => typeof x === 'string' && !!x.trim()) : [],
     }
   })
-  return { type, target, sections: norm, generatedBy: 'ai' }
+  return { type, target, sections: norm.slice(0, 3), generatedBy: 'ai' }
+}
+
+/** 整篇 AI 回答按框架章节自动拆分（2026-10-21 用户拍板"不要逐节回填"）：
+ *  逐行找各节标题（容忍序号/markdown 装饰/空白差异），标题之间的内容归该节；
+ *  对不上任何标题的内容进「补充发现」（出稿照样当素材用）——整体对不上时全文进补充发现。 */
+export function splitAnswerIntoSections(text: string, fw: { sections: { heading: string }[] }): { heading: string; content: string }[] {
+  const keys = fw.sections.map((s) => {
+    const full = s.heading.replace(/^[一二三四五六七八九十\d]+[、.．]?\s*/, '').replace(/\s+/g, '')
+    return { heading: s.heading, full, bare: full.replace(/（.*?）|\(.*?\)/g, '') }
+  })
+  const buckets = new Map<string, string[]>(fw.sections.map((s) => [s.heading, [] as string[]]))
+  const extra: string[] = []
+  let current: string | null = null
+  for (const raw of text.split(/\r?\n/)) {
+    const norm = raw.replace(/[*#>\s]/g, '')
+    // 行与键都剥掉"一、"式序号再比对；标题带括号注释时，回答里省略括号也能对上
+    const plain = norm.replace(/^[一二三四五六七八九十\d]+[、.．]/, '')
+    const hit = plain.length > 0 && norm.length <= 36
+      ? keys.find((k) =>
+          (k.full.length >= 2 && (plain === k.full || plain.startsWith(k.full))) ||
+          (k.bare.length >= 4 && plain.startsWith(k.bare)),
+        )
+      : undefined
+    if (hit) {
+      current = hit.heading
+      continue
+    }
+    ;(current ? buckets.get(current)! : extra).push(raw)
+  }
+  const out: { heading: string; content: string }[] = []
+  for (const { heading } of fw.sections) {
+    const lines = buckets.get(heading) ?? []
+    const content = lines.join('\n').trim()
+    if (content) out.push({ heading, content })
+  }
+  const extraContent = extra.join('\n').trim()
+  if (extraContent) out.push({ heading: '补充发现', content: extraContent })
+  return out
 }
 
 /* ---------------------- 发现的存取约定（数据块为实现层） ---------------------- */

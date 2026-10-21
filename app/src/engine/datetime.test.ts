@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtLocal, greetWord, nextCalendarDay, relTime, todayLocal, weekdayLocal } from './datetime'
+import { fmtCompact, fmtLocal, greetWord, nextCalendarDay, relTime, todayLocal, weekdayLocal } from './datetime'
 
 /** UTC 时区漂移回归（开发复盘 1.4）：本地 0:30 不得被算成"昨天/明天" */
 describe('todayLocal / fmtLocal（本地时区）', () => {
@@ -73,5 +73,14 @@ describe('nextCalendarDay（日报日期导航：日历口径，不被"有数据
     expect(nextCalendarDay('2026-10-22', '2026-10-21')).toBeNull()
     expect(nextCalendarDay('', '2026-10-21')).toBeNull()
     expect(nextCalendarDay('bad', '2026-10-21')).toBeNull()
+  })
+})
+
+describe('fmtCompact（条目卡入库时间）', () => {
+  it('同一天只显 HH:mm；跨天显 MM-DD HH:mm；非法输入空串', () => {
+    const now = new Date(2026, 9, 21, 12, 0)
+    expect(fmtCompact('2026-10-21T09:14:00.000Z'.replace('T09', 'T02'), now)).toBe('10:14') // 本地 10:14
+    expect(fmtCompact(new Date(2026, 9, 19, 8, 5).toISOString(), now)).toBe('10-19 08:05')
+    expect(fmtCompact('not-a-date')).toBe('')
   })
 })

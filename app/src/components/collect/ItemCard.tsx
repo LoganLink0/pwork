@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Item } from '../../types/models'
-import { fmtLocal } from '../../engine/datetime'
+import { fmtLocal, fmtCompact } from '../../engine/datetime'
 import { TIER_LABEL } from '../../engine/itemTier'
 import { useNotes } from '../../store/notes'
 
@@ -71,6 +71,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
         {item.summary && <div className="d-summary">{item.summary}</div>}
         <div className="d-meta">
           <span>{item.sourceName}</span>
+          <span className="tnum" title={`入库：${fmtLocal(item.fetchedAt)}`}>入库 {fmtCompact(item.fetchedAt)}</span>
           {item.tags.map((t) => (
             <span className="tagchip" key={t}>#{t}</span>
           ))}

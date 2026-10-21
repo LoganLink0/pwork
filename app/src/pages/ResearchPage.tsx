@@ -25,6 +25,7 @@ import {
   loadFramework,
   normalizeAiFramework,
   saveFramework,
+  splitAnswerIntoSections,
   typeName,
   type ResearchFramework,
   type ResearchType,
@@ -140,8 +141,9 @@ export function ResearchPage() {
             llmConfigFrom(loadCoachConfig()),
             FRAMEWORK_SYSTEM_PROMPT,
             buildFrameworkUserPrompt(useType, t),
-            // 框架是长生成（实测默认超时跑不完 3000 tokens 就断）——给足时间，超时仍会落回模板
-            { maxTokens: 3000, timeoutMs: 90000 },
+            // 深度思考型模型的思考先吃 maxTokens 预算——3000 时 JSON 经常没写完就断流
+            //（2026-10-21 用户踩中"AI 没有返回 JSON"），给足 8000；超时仍落回模板
+            { maxTokens: 8000, timeoutMs: 120000 },
           )
           next = normalizeAiFramework(parseAiJson(text), useType, t)
           break
@@ -267,6 +269,47 @@ export function ResearchPage() {
     }
     if (!content.trim()) return
     await saveBlock({ id: existing?.id, title: heading, content, profileId, usage: 'internal' })
+  }
+
+  /** 一键调研全部章节（2026-10-21 用户拍板"不要逐节去问"）：顺序跑完所有节的联网调研，
+   *  单节失败不中断，结束给汇总 */
+  const [allProgress, setAllProgress] = useState<{ done: number; total: number } | null>(null)
+  const researchAllOnline = async () => {
+    if (!fw || webBusy !== null || allProgress) return
+    setAllProgress({ done: 0, total: fw.sections.length })
+    let ok = 0
+    for (let i = 0; i < fw.sections.length; i++) {
+      try {
+        await researchOnline(fw.sections[i]!.heading)
+        ok += 1
+      } catch {
+        /* 单节失败继续；researchOnline 内部已 toast 原因 */
+      }
+      setAllProgress({ done: i + 1, total: fw.sections.length })
+    }
+    setAllProgress(null)
+    setMsg(`一键调研完成：${ok}/${fw.sections.length} 节成功`)
+  }
+
+  /** 整篇 AI 回答粘贴进来，按章节标题自动拆开填入（2026-10-21 用户拍板"不要逐节回填"） */
+  const [pasteAll, setPasteAll] = useState('')
+  const applyPastedAnswer = async () => {
+    if (!fw || !pasteAll.trim() || !profileId) return
+    const parts = splitAnswerIntoSections(pasteAll, fw)
+    if (parts.length === 0) {
+      setMsg('粘贴的内容是空的')
+      return
+    }
+    for (const p of parts) {
+      const prev = findingDrafts[p.heading] ?? findingsOf(p.heading)?.content ?? ''
+      const merged = prev ? `${prev}\n\n—— 整篇回答拆分（${new Date().toLocaleDateString()}）：\n${p.content}` : p.content
+      setFindingDrafts((d) => ({ ...d, [p.heading]: merged }))
+      await saveBlock({ id: findingsOf(p.heading)?.id, title: p.heading, content: merged, profileId, usage: 'internal' })
+    }
+    await loadBlocks()
+    setPasteAll('')
+    const matched = parts.filter((p) => p.heading !== '补充发现').length
+    setMsg(`已拆分填入 ${matched} 节${parts.some((p) => p.heading === '补充发现') ? '，对不上标题的部分进了「补充发现」（出稿照样当素材）' : ''}`)
   }
 
   const onFile = async (file: File) => {
@@ -404,7 +447,18 @@ export function ResearchPage() {
             ) : (
               <>
                 <div className="set-row" style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
-                  <button type="button" className="btn-primary" onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
+                  {coachReady && searchReady && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={webBusy !== null || allProgress !== null}
+                      onClick={() => void researchAllOnline()}
+                      title="自动跑完所有节的联网搜索与作答——不用逐节点"
+                    >
+                      {allProgress ? `⟳ 一键调研中（${allProgress.done}/${allProgress.total}）…` : `🌐 一键调研全部（${fw.sections.length} 节）`}
+                    </button>
+                  )}
+                  <button type="button" className={coachReady && searchReady ? 'btn-ghost' : 'btn-primary'} onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
                     📋 复制完整提示词（{fw.sections.length} 节合一）
                   </button>
                   {/* 跳转清单与处理页「快速启动」共用（取前 4 个，按最近使用排序）；点击记一次使用 */}
@@ -421,9 +475,25 @@ export function ResearchPage() {
                       去{s.name} ↗
                     </a>
                   ))}
-                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                    复制 → 打开一个 AI → 粘贴即问；回来把答案贴进各节发现
+                </div>
+                <div className="set-row" style={{ marginBottom: 'var(--sp-3)', alignItems: 'stretch', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                    在外部 AI 问完拿回整篇回答？直接粘到下面，自动按章节拆开填入——不用逐节回填：
                   </span>
+                  <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                    <textarea
+                      className="input"
+                      rows={3}
+                      style={{ flex: 1, minWidth: 260 }}
+                      placeholder="粘贴整份 AI 回答（各节会按标题自动拆开；对不上标题的部分进「补充发现」）"
+                      value={pasteAll}
+                      aria-label="粘贴整份回答"
+                      onChange={(e) => setPasteAll(e.target.value)}
+                    />
+                    <button type="button" className="btn-primary" style={{ alignSelf: 'flex-end' }} disabled={!pasteAll.trim()} onClick={() => void applyPastedAnswer()}>
+                      拆分并填入
+                    </button>
+                  </div>
                 </div>
                 <div className="set-row" style={{ marginBottom: 'var(--sp-3)' }}>
                   <button type="button" className="btn-ghost" disabled={fwBusy} onClick={() => void generateFramework(undefined, true)}>

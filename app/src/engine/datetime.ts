@@ -25,6 +25,14 @@ export function nextCalendarDay(date: string, today = todayLocal()): string | nu
   return next <= today ? next : today
 }
 
+/** 条目卡上的紧凑入库时间：同一天只显 HH:mm，跨天显 MM-DD HH:mm（核查信息有效性用） */
+export function fmtCompact(iso: string, now = new Date()): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return todayLocal(d) === todayLocal(now) ? hm : `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hm}`
+}
+
 /**
  * ISO 时间串 → 本地日期 'YYYY-MM-DD'。
  * 开发复盘 1.4 的深层版教训：入库时间戳是 UTC ISO，按本地日筛选/统计时
