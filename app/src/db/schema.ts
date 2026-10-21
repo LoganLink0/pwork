@@ -45,6 +45,7 @@ export class PworkDB extends Dexie {
   caseFiles!: Table<CaseFile, string>
   aiCache!: Table<AiCacheEntry, string>
   errorLog!: Table<ErrorLogEntry, string>
+  kv!: Table<KvRow, string>
 
   constructor() {
     super('pwork-workbench')
@@ -97,7 +98,16 @@ export class PworkDB extends Dexie {
     this.version(12).stores({
       errorLog: 'id, at',
     })
+    // v13（键值存储）：只能进 IndexedDB 的结构化值——自定义备份目录的 FS Access 句柄等
+    this.version(13).stores({
+      kv: 'key',
+    })
   }
+}
+
+export interface KvRow {
+  key: string
+  value: unknown
 }
 
 export const db = new PworkDB()

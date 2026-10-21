@@ -106,12 +106,14 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByRole('button', { name: /全量导出/ })).toBeInTheDocument()
   })
 
-  it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染', async () => {
+  it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染（2026-10-22 重排：四模块卡已移除）', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
     expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '四模块模型' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '快捷键' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '术语表' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '四模块模型' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '排错' })).toBeInTheDocument()
     expect(screen.getByText(/rsshub.app 公共实例在大陆网络不可达/)).toBeInTheDocument()
 

@@ -56,21 +56,6 @@ export const QUICK_START: QuickStep[] = [
   },
 ]
 
-export interface ModuleIntro {
-  name: string
-  mark: string
-  status: string
-  desc: string
-  to?: string
-}
-
-export const MODULES: ModuleIntro[] = [
-  { name: '输入', mark: 'var(--m-input)', status: '已上线', desc: '速记（我想到的）+ 信源/条目库（网上来的）；外部数据降级为周报数据源，从周报导出页维护', to: '/input/notes' },
-  { name: '处理', mark: 'var(--m-process)', status: '已上线', desc: '工具箱按形态分类（文字/音频/图片/视频 + 专题）· 快速启动（常用 AI/网页自定义入口）· AI 全库问答；全库检索在 Ctrl K 命令面板', to: '/process' },
-  { name: '输出', mark: 'var(--m-output)', status: '已上线', desc: '按产出形态分组：文（周报 / 调研分析 / PPT 撰写 / 文章草稿）、音（朗读音频）、图（数据卡片）、视频（远期）——调研分析输入目标即得框架与提示词', to: '/output' },
-  { name: '回路', mark: 'var(--m-review)', status: '已迁入', desc: 'CLAP 复盘、因果循环图、认知资产——产出的行动项与洞察又变成下一轮的输入', to: '/review' },
-]
-
 export interface Shortcut {
   keys: string
   desc: string

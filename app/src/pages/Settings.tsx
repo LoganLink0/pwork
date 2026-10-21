@@ -12,7 +12,7 @@ import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } fro
 import { chatCompletion } from '../modules/review/engine/llm'
 import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
-import { loadAutoBackup, saveAutoBackup } from '../engine/autoBackup'
+import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, type SyncConfig } from '../db/syncRecords'
@@ -43,6 +43,12 @@ export function Settings() {
     () => localStorage.getItem('pwork-last-backup'),
   )
   const [autoBk, setAutoBk] = useState(() => loadAutoBackup())
+  // 自定义备份目录（FS Access）：文件夹句柄存 IndexedDB，这里只持有名字做展示
+  const [backupDirName, setBackupDirName] = useState<string | null>(null)
+  const [bkMsg, setBkMsg] = useState('')
+  useEffect(() => {
+    void getBackupDirName().then(setBackupDirName)
+  }, [])
   const setAutoBackup = (patch: Partial<typeof autoBk>) => {
     const next = { ...autoBk, ...patch }
     setAutoBk(next)
@@ -56,9 +62,10 @@ export function Settings() {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(() => lastSyncAt())
 
-  // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）
+  // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）——默认只看最近 5 条，其余折叠
   const [errors, setErrors] = useState<ErrorLogEntry[]>([])
   const [errBusy, setErrBusy] = useState(false)
+  const [errExpanded, setErrExpanded] = useState(false)
   const refreshErrors = async () => {
     setErrBusy(true)
     try {
@@ -220,7 +227,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" style={{ gridColumn: '1 / -1' }}>
         <h2>外观</h2>
         <div className="desc">选择明亮或暗色；「跟随系统」随电脑设置自动切换</div>
         <div className="set-body">
@@ -299,10 +306,54 @@ export function Settings() {
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {autoBk.enabled
-                ? `到期后打开应用自动备份${isDesktopApp() ? '到应用数据目录的 backups 文件夹' : '到浏览器下载文件夹'}${autoBk.lastAt ? `（上次自动备份：${fmtLocal(autoBk.lastAt)}）` : '（还没备份过，下次打开应用时执行）'}`
+                ? `到期后打开应用自动备份${isDesktopApp() ? '到应用数据目录的 backups 文件夹' : backupDirName ? `到「${backupDirName}」文件夹` : '到浏览器下载文件夹'}${autoBk.lastAt ? `（上次自动备份：${fmtLocal(autoBk.lastAt)}）` : '（还没备份过，下次打开应用时执行）'}`
                 : '本地优先应用，建议开启——数据只存在这台电脑上'}
             </span>
           </div>
+          {customBackupDirSupported() && (
+            <div className="set-row">
+              <label>备份位置</label>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  void pickBackupDir()
+                    .then((name) => {
+                      setBackupDirName(name)
+                      setBkMsg(name ? `自动备份将写入「${name}」文件夹（授权一次长期有效）` : '未选择文件夹')
+                    })
+                    .catch(() => setBkMsg('未选择文件夹'))
+                }}
+              >
+                选择文件夹…
+              </button>
+              {backupDirName && (
+                <>
+                  <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>当前：{backupDirName}</span>
+                  <button
+                    type="button"
+                    className="mini-btn"
+                    onClick={() => {
+                      void clearBackupDir().then(() => {
+                        setBackupDirName(null)
+                        setBkMsg('已恢复为浏览器下载文件夹')
+                      })
+                    }}
+                  >
+                    恢复默认
+                  </button>
+                </>
+              )}
+              {!backupDirName && (
+                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                  默认存到浏览器下载文件夹；选一个自己的文件夹，授权一次后自动备份直接写进去
+                </span>
+              )}
+              {bkMsg && (
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>{bkMsg}</span>
+              )}
+            </div>
+          )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
             导出内容：速记、信源、条目、采集偏好、任务、目标、复盘（含行动项与洞察）、外部数据块、简历辅导数据。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。
           </div>
@@ -409,7 +460,7 @@ export function Settings() {
             </div>
           ) : (
             <div className="errlog-list" data-testid="errlog-list">
-              {errors.map((e) => (
+              {(errExpanded ? errors : errors.slice(0, 5)).map((e) => (
                 <details key={e.id} className="errlog-item">
                   <summary>
                     <span className="errlog-time tnum">{fmtLocal(e.at)}</span>
@@ -420,6 +471,16 @@ export function Settings() {
                   <pre className="errlog-detail">{e.stack ?? e.detail ?? '（没有更多细节）'}</pre>
                 </details>
               ))}
+              {errors.length > 5 && (
+                <button
+                  type="button"
+                  className="mini-btn"
+                  style={{ marginTop: 'var(--sp-2)' }}
+                  onClick={() => setErrExpanded((v) => !v)}
+                >
+                  {errExpanded ? `收起（只看最近 5 条）` : `展开全部 ${errors.length} 条`}
+                </button>
+              )}
             </div>
           )}
           <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
@@ -756,7 +817,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" style={{ gridColumn: 2 }}>
         <h2>关于</h2>
         <div className="desc">本地优先的四模块个人操作系统 · 数据只属于你</div>
         <div className="set-body">

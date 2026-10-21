@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useCollect } from './collect'
 import { putItem } from '../db/collect'
 import { db } from '../db/schema'
+import { todayLocal } from '../engine/datetime'
 import type { Item } from '../types/models'
 
 /** 机会/威胁/趋势标记的切换顺序：未标记 → 机会 → 威胁 → 趋势 → 取消 */
@@ -67,7 +68,7 @@ describe('页面跨天长开：日报日期自动翻篇（2026-10-21）', () => 
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
     useCollect.setState({ digestDate: yesterday, dateManuallySet: false })
     await useCollect.getState().load()
-    expect(useCollect.getState().digestDate).toBe(new Date().toISOString().slice(0, 10))
+    expect(useCollect.getState().digestDate).toBe(todayLocal())
   })
 
   it('手动选过历史日期 → load() 不强改（尊重用户的选择）', async () => {

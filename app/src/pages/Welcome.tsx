@@ -75,7 +75,7 @@ export function Welcome() {
 
       <div className="set-card">
         <h2>① 快速上手</h2>
-        <div className="desc">每一步几十秒；处理与输出模块按路线图后续开放，不着急</div>
+        <div className="desc">每一步几十秒。整个工作台是一个闭环：输入（记下来）→ 处理（加工）→ 输出（成稿）→ 回路（复盘，产出又回到待办）</div>
         <div className="set-body">
           {QUICK_START.map((s) => (
             <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>

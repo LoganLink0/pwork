@@ -56,13 +56,17 @@ export interface AutoBackupResult {
   downloaded: boolean
   reason?: 'disabled' | 'not-due'
   fileName?: string
+  /** 实际落点：自定义文件夹 / 桌面应用数据目录 / 浏览器下载 */
+  location?: 'dir' | 'disk' | 'download'
 }
 
 /**
  * 桌面版：写进应用数据目录的 backups/ 文件夹（用户可备份/拷贝的固定位置）；
- * 浏览器版：走下载文件夹。写盘失败（权限等）时回落浏览器下载，不丢备份。
+ * 浏览器版：默认走下载文件夹，可在设置页授权一个自定义文件夹（FS Access，一次授权长期有效）。
+ * 任何写盘失败都回落浏览器下载，不丢备份。
  */
-async function deliverBackup(fileName: string, content: string): Promise<'disk' | 'download'> {
+async function deliverBackup(fileName: string, content: string): Promise<'dir' | 'disk' | 'download'> {
+  if (await writeToCustomDir(fileName, content)) return 'dir'
   if (isDesktopApp()) {
     try {
       const { mkdir, writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
@@ -75,6 +79,63 @@ async function deliverBackup(fileName: string, content: string): Promise<'disk' 
   }
   downloadFile(fileName, content, 'application/json')
   return 'download'
+}
+
+/* --------------------- 自定义备份目录（2026-10-22 用户需求） --------------------- */
+
+const DIR_KEY = 'pwork-backup-dir'
+
+/** 浏览器安全上下文才支持目录授权；桌面版固定写应用数据目录，不提供该选项 */
+export function customBackupDirSupported(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    'showDirectoryPicker' in window &&
+    window.isSecureContext === true &&
+    !isDesktopApp()
+  )
+}
+
+/** 选一个文件夹（浏览器弹窗授权一次）；返回文件夹名，取消返回 null */
+export async function pickBackupDir(): Promise<string | null> {
+  const w = window as unknown as { showDirectoryPicker: (o: { mode: string; id: string }) => Promise<FileSystemDirectoryHandle> }
+  const handle = await w.showDirectoryPicker({ mode: 'readwrite', id: 'pwork-backup' })
+  const { db } = await import('../db/schema')
+  await db.kv.put({ key: DIR_KEY, value: handle })
+  return handle.name
+}
+
+/** 清除自定义目录（回落下载文件夹） */
+export async function clearBackupDir(): Promise<void> {
+  const { db } = await import('../db/schema')
+  await db.kv.delete(DIR_KEY)
+}
+
+/** 当前自定义目录名（没设置返回 null；设置页展示用） */
+export async function getBackupDirName(): Promise<string | null> {
+  const { db } = await import('../db/schema')
+  const row = (await db.kv.get(DIR_KEY)) as { key: string; value: FileSystemDirectoryHandle } | undefined
+  return row?.value?.name ?? null
+}
+
+/** 写入自定义目录。后台运行没有用户手势，权限失效时不能重新请求——返回 false 由调用方回落 */
+async function writeToCustomDir(fileName: string, content: string): Promise<boolean> {
+  try {
+    const { db } = await import('../db/schema')
+    const row = (await db.kv.get(DIR_KEY)) as { key: string; value: FileSystemDirectoryHandle } | undefined
+    const handle = row?.value
+    if (!handle) return false
+    const perm = await (
+      handle as FileSystemDirectoryHandle & { queryPermission?: (o: { mode: string }) => Promise<string> }
+    ).queryPermission?.({ mode: 'readwrite' })
+    if (perm && perm !== 'granted') return false
+    const fileHandle = await handle.getFileHandle(fileName, { create: true })
+    const writable = await fileHandle.createWritable()
+    await writable.write(content)
+    await writable.close()
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -93,17 +154,14 @@ export async function runAutoBackupIfDue(
   if (!autoBackupDue(cfg, now)) return { downloaded: false, reason: cfg.enabled ? 'not-due' : 'disabled' }
 
   const build = opts?.build ?? (async () => buildBackupBundle())
-  const deliver =
-    opts?.download
-      ? (filename: string, content: string) => {
-          opts!.download!(filename, content)
-        }
-      : deliverBackup
 
   const bundle = await build()
   const fileName = backupFileName(now)
-  deliver(fileName, JSON.stringify(bundle, null, 2))
+  // 测试注入 download 时跳过真实落盘（桌面写盘/自定义目录都不可用）
+  const location: AutoBackupResult['location'] = opts?.download
+    ? (opts.download(fileName, JSON.stringify(bundle, null, 2)), 'download')
+    : await deliverBackup(fileName, JSON.stringify(bundle, null, 2))
   localStorage.setItem('pwork-last-backup', now.toISOString())
   saveAutoBackup({ ...cfg, lastAt: now.toISOString() })
-  return { downloaded: true, fileName }
+  return { downloaded: true, fileName, location }
 }

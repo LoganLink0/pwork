@@ -3,9 +3,10 @@
  * 命令面板与 /process 页共用；只查标题类字段，不做全文索引（5 万条量级内够用）。
  */
 import { db } from '../db/schema'
-import { todayLocal } from './datetime'
+import { todayLocal, fmtCompact } from './datetime'
+import { GLOSSARY } from '../content/help'
 
-export type SearchKind = 'note' | 'task' | 'item' | 'review' | 'insight'
+export type SearchKind = 'note' | 'task' | 'item' | 'review' | 'insight' | 'term'
 
 export interface SearchHit {
   kind: SearchKind
@@ -21,6 +22,7 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   item: '条目',
   review: '复盘',
   insight: '洞察',
+  term: '术语',
 }
 
 function hit(kind: SearchKind, id: string, title: string, sub: string, to: string, q: string): SearchHit | null {
@@ -57,9 +59,16 @@ export async function searchAll(qRaw: string): Promise<SearchHit[]> {
   }
   for (const i of items) {
     if (i.deletedAt || i.stage === 'discarded') continue
-    const h = hit('item', i.id, i.title, `${i.sourceName} · ${i.score.total} 分`, '/input/items', q)
+    const h = hit('item', i.id, i.title, `${i.sourceName} · 入库 ${fmtCompact(i.fetchedAt)}`, '/input/items', q)
     if (h) out.push(h)
     if (out.filter((x) => x.kind === 'item').length >= 5) break
+  }
+  // 术语表（2026-10-22 用户反馈"名词搜不到"）：词条与释义都可命中，跳到帮助页
+  for (const g of GLOSSARY) {
+    if (out.filter((x) => x.kind === 'term').length >= 5) break
+    if (g.term.toLowerCase().includes(q) || g.def.toLowerCase().includes(q)) {
+      out.push({ kind: 'term', id: `term:${g.term}`, title: g.term, sub: g.def.slice(0, 60), to: '/help' })
+    }
   }
   for (const r of reviews) {
     const h = hit('review', r.id, r.title, r.status === 'archived' ? '已归档' : '进行中', `/review/archive/${r.id}`, q)
