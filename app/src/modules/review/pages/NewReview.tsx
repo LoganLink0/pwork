@@ -86,7 +86,6 @@ export function NewReview() {
             kind={KIND_BY_TYPE[t.type]}
             title={t.name}
             tagline={t.tagline}
-            milestone={t.milestone}
             onClick={() => {
               const note = searchParams.get('note') ?? ''
               const tail = note ? `&note=${encodeURIComponent(note)}` : ''

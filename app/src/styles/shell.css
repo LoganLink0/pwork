@@ -453,6 +453,14 @@ button.nav-item {
   transition: box-shadow var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
 }
 
+/* 链接形态的模块卡（外部工具等）：可点整卡，悬停描边提示 */
+a.mcard-link {
+  cursor: pointer;
+}
+a.mcard-link:hover {
+  border-color: var(--accent);
+}
+
 .mcard:hover {
   box-shadow: var(--shadow-2);
   transform: translateY(-1px);
@@ -821,6 +829,25 @@ a.mcard .m-link:hover {
   flex-direction: column;
   gap: var(--sp-4);
   max-width: 840px;
+}
+
+/* 宽屏双列模式（设置/帮助页用，2026-10-21 用户反馈页面利用率太低）：
+   卡片进两列网格，页头/提示条横跨整行；窄屏自动回落单列 */
+.settings-wide {
+  max-width: 1280px;
+}
+@media (min-width: 1100px) {
+  .settings-wide {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-4);
+    align-items: start;
+  }
+  .settings-wide > .page-head,
+  .settings-wide > .notice,
+  .settings-wide > .run-banner {
+    grid-column: 1 / -1;
+  }
 }
 
 .set-card {

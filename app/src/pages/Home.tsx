@@ -212,7 +212,7 @@ export function Home() {
           <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} />
         </div>
 
-        <Link to={process.to ?? '/'} className={`mcard ${process.mark}`}>
+        <div className={`mcard ${process.mark}`}>
           <div className="m-head">
             <span className="m-ico" aria-hidden>{process.icon}</span>
             <span className="m-name">{process.label}</span>
@@ -220,12 +220,19 @@ export function Home() {
           </div>
           <div className="m-sub">工具箱 · AI 问答</div>
           <div className="m-links">
-            <div className="m-link">工具箱<span className="cnt">文字/音频/图片/视频/专题</span></div>
-            <div className="m-link">AI 问答<span className="cnt">→</span></div>
+            <Link className="m-link" to="/process">
+              工具箱<span className="cnt">文字/音频/图片/视频</span>
+            </Link>
+            <Link className="m-link" to="/process">
+              AI 问答<span className="cnt">检索全库回答 →</span>
+            </Link>
+            <Link className="m-link" to="/cases">
+              简历辅导专题<span className="cnt">独立应用 →</span>
+            </Link>
           </div>
-        </Link>
+        </div>
 
-        <Link to={output.to ?? '/output'} className={`mcard ${output.mark}`}>
+        <div className={`mcard ${output.mark}`}>
           <div className="m-head">
             <span className="m-ico" aria-hidden>{output.icon}</span>
             <span className="m-name">{output.label}</span>
@@ -233,10 +240,20 @@ export function Home() {
           </div>
           <div className="m-sub">周期成稿 · 听觉 · 分享</div>
           <div className="m-links">
-            <div className="m-link">HTML/PPT 导出<span className="cnt">→</span></div>
-            <div className="m-link">朗读音频<span className="cnt">→</span></div>
+            <Link className="m-link" to="/output/report">
+              周报导出<span className="cnt">HTML · PPT</span>
+            </Link>
+            <Link className="m-link" to="/output/research">
+              调研分析<span className="cnt">出稿 →</span>
+            </Link>
+            <Link className="m-link" to="/output/article">
+              文章草稿<span className="cnt">速记成文</span>
+            </Link>
+            <Link className="m-link" to="/output/read">
+              朗读音频<span className="cnt">通勤听 →</span>
+            </Link>
           </div>
-        </Link>
+        </div>
 
         <div className={`mcard ${review.mark}`}>
           <div className="m-head">

@@ -8,7 +8,7 @@ import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, QUICK_START, SHORTCU
  */
 export function Help() {
   return (
-    <section className="settings">
+    <section className="settings settings-wide">
       <div className="page-head">
         <h1>帮助</h1>
         <span className="sub">四模块系统怎么用 · 数据在哪、怎么丢不了 · 出了问题看排错</span>

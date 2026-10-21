@@ -211,7 +211,7 @@ export function Settings() {
   }
 
   return (
-    <section className="settings">
+    <section className="settings settings-wide">
       <div className="page-head" style={{ marginBottom: 0 }}>
         <h1>设置</h1>
         <span className="sub">外观 · 数据备份 · 采集偏好 · 云端同步 · AI 配置——凭据只存本机，永不进备份</span>
@@ -616,8 +616,8 @@ export function Settings() {
           <div className="set-row">
             <label>模式</label>
             <div className="radio">
-              <button type="button" className={ai.mode === 'rule' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'rule' })}>规则引擎</button>
-              <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>LLM（BYOK）</button>
+              <button type="button" className={ai.mode === 'rule' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'rule' })}>规则评分（不用 AI）</button>
+              <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>AI（自带 Key）</button>
             </div>
           </div>
           {ai.mode === 'llm' && (
@@ -773,10 +773,6 @@ export function Settings() {
             <span className="val">
               <kbd>N</kbd> 速记浮层 · <kbd>Ctrl K</kbd> / <kbd>/</kbd> 命令面板 · 浮层内 <kbd>Esc</kbd> 存草稿
             </span>
-          </div>
-          <div className="set-row">
-            <label>设计系统</label>
-            <span className="val"><a href="#/design">组件样例页 /design</a></span>
           </div>
         </div>
       </div>

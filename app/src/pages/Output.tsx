@@ -105,15 +105,20 @@ export function Output() {
         <h2>外部工具精选（跳转官网）</h2>
         <div className="desc">更好用的外部能力不重复造轮子——直接绑定跳转；欢迎积累增补</div>
         <div className="set-body">
-          {EXTERNAL.map((e) => (
-            <div className="set-row" key={e.url}>
-              <label style={{ width: 'auto', fontWeight: 600, color: 'var(--ink)' }}>{e.name}</label>
-              <span className="val" style={{ color: 'var(--ink-soft)' }}>{e.desc}</span>
-              <a href={e.url} target="_blank" rel="noreferrer noopener" className="btn-ghost" style={{ marginLeft: 'auto', textDecoration: 'none' }}>
-                打开 ↗
+          <div className="module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+            {EXTERNAL.map((e) => (
+              <a key={e.url} href={e.url} target="_blank" rel="noreferrer noopener" className="mcard mcard-link">
+                <div className="m-head">
+                  <span className="m-ico" aria-hidden>🌐</span>
+                  <span className="m-name">{e.name}</span>
+                </div>
+                <div className="m-sub">{e.desc}</div>
+                <div className="m-links">
+                  <span className="m-link">打开官网<span className="cnt">↗</span></span>
+                </div>
               </a>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
