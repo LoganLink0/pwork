@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
-import { todayLocal } from '../engine/datetime'
+import { todayLocal, nextCalendarDay } from '../engine/datetime'
 import { alignmentStats } from '../engine/itemTier'
 import { obsidianDaily } from '../engine/obsidian'
 import { downloadFile } from '../db/repo'
@@ -43,9 +43,10 @@ export function Digest() {
     setConverted((prev) => new Set(prev).add(id))
   }
 
-  const todayIdx = digestDateOptions.indexOf(digestDate)
-  const prevDate = digestDateOptions[todayIdx + 1] // 列表倒序：+1 是更早一天
-  const nextDate = todayIdx > 0 ? digestDateOptions[todayIdx - 1] : undefined
+  // 日期导航：▶ 按日历走（最多到今天，空的日子看空态——今天没数据不能把人卡在昨天）；
+  // ◀ 跳到上一个有数据的日子（连续空日不折磨人）
+  const prevDate = digestDateOptions.find((d) => d < digestDate)
+  const nextDate = nextCalendarDay(digestDate) ?? undefined
   const isToday = digestDate === todayLocal()
 
   useEffect(() => {

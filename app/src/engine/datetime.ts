@@ -17,6 +17,14 @@ export function todayLocal(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+/** 日历口径的后一天（'YYYY-MM-DD'），最多到 today；已在今天或越界返回 null。
+ *  日报日期导航用：不能被"有数据的日子"绑死——今天还没条目时也要能走到今天看空态。 */
+export function nextCalendarDay(date: string, today = todayLocal()): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date >= today) return null
+  const next = new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+  return next <= today ? next : today
+}
+
 /**
  * ISO 时间串 → 本地日期 'YYYY-MM-DD'。
  * 开发复盘 1.4 的深层版教训：入库时间戳是 UTC ISO，按本地日筛选/统计时

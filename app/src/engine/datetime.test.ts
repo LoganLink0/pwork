@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtLocal, greetWord, relTime, todayLocal, weekdayLocal } from './datetime'
+import { fmtLocal, greetWord, nextCalendarDay, relTime, todayLocal, weekdayLocal } from './datetime'
 
 /** UTC 时区漂移回归（开发复盘 1.4）：本地 0:30 不得被算成"昨天/明天" */
 describe('todayLocal / fmtLocal（本地时区）', () => {
@@ -58,5 +58,20 @@ describe('greetWord / weekdayLocal', () => {
 
   it('weekdayLocal 中文星期', () => {
     expect(weekdayLocal(new Date(2026, 7, 30))).toBe('日') // 2026-08-30 是周日
+  })
+})
+
+describe('nextCalendarDay（日报日期导航：日历口径，不被"有数据的日子"绑死）', () => {
+  it('昨天 → 今天；普通日 → 次日；跨月也对', () => {
+    expect(nextCalendarDay('2026-10-20', '2026-10-21')).toBe('2026-10-21')
+    expect(nextCalendarDay('2026-10-18', '2026-10-21')).toBe('2026-10-19')
+    expect(nextCalendarDay('2026-09-30', '2026-10-21')).toBe('2026-10-01')
+  })
+
+  it('已在今天或日期越界/非法 → null（▶ 禁用）', () => {
+    expect(nextCalendarDay('2026-10-21', '2026-10-21')).toBeNull()
+    expect(nextCalendarDay('2026-10-22', '2026-10-21')).toBeNull()
+    expect(nextCalendarDay('', '2026-10-21')).toBeNull()
+    expect(nextCalendarDay('bad', '2026-10-21')).toBeNull()
   })
 })
