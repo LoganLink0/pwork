@@ -54,7 +54,7 @@ export function ArticleDraftPage() {
         inputKey,
         system: ARTICLE_SYSTEM_PROMPT,
         user: buildArticleUserPrompt({ days, materials, view }),
-        maxTokens: 8000,
+        maxTokens: 32768,
       })
       setDraft(parseArticle(text))
     } catch (e) {

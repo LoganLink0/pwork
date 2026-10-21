@@ -78,7 +78,7 @@ export function PptWriter() {
         inputKey,
         system: OUTLINE_SYSTEM_PROMPT,
         user: buildOutlineUserPrompt({ topic: topic.trim(), audience, pageTarget }, materials),
-        maxTokens: 8000,
+        maxTokens: 32768,
       })
       setOutline(parseOutline(text))
     } catch (e) {

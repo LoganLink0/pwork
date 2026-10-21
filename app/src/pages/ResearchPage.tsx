@@ -165,7 +165,7 @@ export function ResearchPage() {
             buildFrameworkUserPrompt(useType, t),
             // 深度思考型模型的思考先吃 maxTokens 预算——3000 时 JSON 经常没写完就断流
             //（2026-10-21 用户踩中"AI 没有返回 JSON"），给足 8000；超时仍落回模板
-            { maxTokens: 8000, timeoutMs: 120000 },
+            { maxTokens: 16384, timeoutMs: 120000 },
           )
           next = normalizeAiFramework(parseAiJson(text), useType, t)
           break
@@ -221,7 +221,7 @@ export function ResearchPage() {
         inputKey: ['research-ask', fw.target, heading, type].join('|'),
         system: '你是调研助理。基于你已有的知识回答；不确定的明确标注「未核实」。分点、简体中文。',
         user: buildSectionPrompt(fw, section),
-        maxTokens: 2000,
+        maxTokens: 8192,
       })
       await appendFinding(`${heading} · AI 回答（未核实，需交叉验证）`, text)
     } catch (e) {
@@ -270,7 +270,7 @@ export function ResearchPage() {
           '',
           '请综合检索结果回答上述问题。',
         ].join('\n'),
-        maxTokens: 3000,
+        maxTokens: 8192,
       })
       await appendFinding(`${heading} · 联网调研`, `${text.trim()}\n来源：\n${hits.map((h, i) => `[${i + 1}] ${h.title} — ${h.link}`).join('\n')}`)
       setMsg(`联网调研完成：检索 ${queries.length} 次，引用 ${hits.length} 个来源`)
@@ -344,7 +344,7 @@ export function ResearchPage() {
         inputKey,
         system: ARTICLE_SYSTEM_PROMPT,
         user: buildArticleUserPrompt({ materials: articleMaterials, view, scopeLabel: fw?.target }),
-        maxTokens: 8000,
+        maxTokens: 32768,
       })
       setDraft(parseArticle(text))
     } catch (e) {

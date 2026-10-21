@@ -166,7 +166,7 @@ export function Settings() {
     setAiTesting(true)
     setAiTestMsg('')
     try {
-      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 64, timeoutMs: 15000 })
+      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 512, timeoutMs: 15000 })
       setAiTestMsg(`连通正常（回复：${reply.trim().slice(0, 20)}）`)
       setAiTestOk(true)
     } catch (e) {

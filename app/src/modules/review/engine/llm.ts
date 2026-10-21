@@ -46,11 +46,18 @@ export async function chatCompletion(
       throw new Error(`HTTP ${res.status}${body ? `：${body.slice(0, 120)}` : ''}`)
     }
     const data = (await res.json()) as {
-      choices?: { message?: { content?: string; reasoning_content?: string } }[]
+      choices?: { message?: { content?: string }; finish_reason?: string }[]
     }
-    const msg = data.choices?.[0]?.message
-    const text = msg?.content?.trim() ? msg.content : (msg?.reasoning_content ?? '')
-    if (typeof text !== 'string' || text.trim() === '') throw new Error('响应为空')
+    const choice = data.choices?.[0]
+    const text = choice?.message?.content
+    // 截断必须如实报错：被腰斩的 JSON/文本喂给调用方只会变成"AI 没有返回 JSON"这种
+    // 误导性症状（2026-10-21 用户踩中）；思考型模型的思考也占 max_tokens 预算
+    if (choice?.finish_reason === 'length') {
+      throw new Error('AI 输出被输出上限截断（思考型模型的思考也占预算）——内容不完整已放弃，请重试')
+    }
+    if (typeof text !== 'string' || text.trim() === '') {
+      throw new Error('AI 响应为空（思考耗尽了输出预算？）——请重试，仍失败则减少一次要生成的内容量')
+    }
     return text
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
