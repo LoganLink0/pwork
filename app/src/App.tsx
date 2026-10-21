@@ -95,15 +95,16 @@ let autoSyncRan = false
 /** 窗口重新可见时的拉新节流（页面长开跨小时：cron 抓的新数据不该等刷新才看见） */
 let lastFocusPullAt = 0
 
-/** 窗口重新可见/聚焦 → 配了云端就拉一轮增量（静默失败；有新条目才出声） */
-function pullCloudOnFocus() {
+/** 拉一轮云端增量（静默失败；有新条目才出声）。触发源两个：窗口聚焦事件 + 15 分钟定时——
+ *  只挂事件有漏洞：窗口一直可见就一直等不到事件（2026-10-21 用户实测踩中） */
+function pullCloudIncremental() {
   if (!cloudConfigured()) return
   if (Date.now() - lastFocusPullAt < 5 * 60_000) return
   lastFocusPullAt = Date.now()
   void syncFromCloud().then(async (r) => {
     if (!r.ok) {
       void recordError(
-        { where: '云端同步.窗口聚焦拉新', kind: 'app', message: r.error ?? '未知失败' },
+        { where: '云端同步.定时拉新', kind: 'app', message: r.error ?? '未知失败' },
         { silent: true },
       )
       return
@@ -195,16 +196,19 @@ export default function App() {
     }
   }, [load, loadCollect, loadTasks])
 
-  // 窗口重新可见/聚焦：拉一轮云端增量（页面长开跨小时，cron 抓的新数据不等刷新）
+  // 窗口重新可见/聚焦 + 每 15 分钟定时：拉一轮云端增量
+  // （页面长开跨小时，cron 抓的新数据不等刷新；持续可见的窗口等不到事件，靠定时兜底）
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') pullCloudOnFocus()
+      if (document.visibilityState === 'visible') pullCloudIncremental()
     }
     document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', pullCloudOnFocus)
+    window.addEventListener('focus', pullCloudIncremental)
+    const timer = window.setInterval(pullCloudIncremental, 15 * 60_000)
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', pullCloudOnFocus)
+      window.removeEventListener('focus', pullCloudIncremental)
+      window.clearInterval(timer)
     }
   }, [])
 
