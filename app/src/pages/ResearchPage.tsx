@@ -16,6 +16,7 @@ import {
   type ArticleView,
 } from '../engine/articleWriter'
 import {
+  FINDINGS_TITLE,
   FRAMEWORK_SYSTEM_PROMPT,
   RESEARCH_TYPES,
   buildFramework,
@@ -23,9 +24,9 @@ import {
   buildFullPrompt,
   buildSectionPrompt,
   loadFramework,
+  mergeLegacySectionBlocks,
   normalizeAiFramework,
   saveFramework,
-  splitAnswerIntoSections,
   typeName,
   type ResearchFramework,
   type ResearchType,
@@ -44,10 +45,11 @@ const WEB_ANSWER_SYSTEM =
   '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'
 
 /**
- * 调研分析（输出模块，2026-10-13 第一性原理重构）：
- * 单元是「调研任务」——输入目标 → 拿调研框架（内置模板 / AI 定制）→ 逐节提示词
- * （复制出去问任何 AI 或搜索引擎；配了网关可直接问）→ 把发现贴回各节 → 出稿导出。
- * 存储沿用数据块（发现按节标题挂任务名下），但这些是实现细节，界面不出现该词汇。
+ * 调研分析（输出模块；2026-10-13 任务式重构，2026-10-21 发现流重设计）：
+ * 单元是「调研任务」——输入目标 → 建议调研角度（纯展示 + 组装整份提示词）→
+ * 一条「发现」流水：一键联网调研追加、外部 AI 整篇回答直接粘贴、手写随笔，
+ * 全部进同一处，不按角度归档——角度管"问全"，流水管"记下"。
+ * 存储沿用数据块（发现是任务名下的一个块），但这是实现细节，界面不出现该词汇。
  */
 export function ResearchPage() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
@@ -60,9 +62,10 @@ export function ResearchPage() {
   const [askBusy, setAskBusy] = useState<string | null>(null)
   const [webBusy, setWebBusy] = useState<string | null>(null)
   const [searchReady, setSearchReady] = useState(false)
-  /** 发现草稿：节标题 → 文本（onBlur 落库） */
-  const [findingDrafts, setFindingDrafts] = useState<Record<string, string>>({})
+  /** 发现草稿（单一流水；null=未编辑，展示库里的值；onBlur 落库） */
+  const [findingDraft, setFindingDraft] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const migratedFor = useRef<string | null>(null)
 
   // 出稿
   const [view, setView] = useState<ArticleView>(ARTICLE_VIEWS[0]!)
@@ -80,8 +83,9 @@ export function ResearchPage() {
   }
   const profile = profiles.find((p) => p.id === profileId) ?? null
   const taskBlocks = blocks.filter((b) => b.profileId === profileId)
-  const findingsOf = (heading: string) => taskBlocks.find((b) => b.title === heading)
-  const extraMaterials = taskBlocks.filter((b) => !fw?.sections.some((s) => s.heading === b.title))
+  const findingsBlock = taskBlocks.find((b) => b.title === FINDINGS_TITLE)
+  const extraMaterials = taskBlocks.filter((b) => b.title !== FINDINGS_TITLE)
+  const findingsValue = findingDraft ?? findingsBlock?.content ?? ''
   const articleMaterials: ArticleMaterial[] = taskBlocks.map((b) => ({
     id: b.id,
     kind: 'note' as const,
@@ -99,10 +103,28 @@ export function ResearchPage() {
   // 切换任务时载入其框架与发现
   useEffect(() => {
     setFw(profileId ? loadFramework(profileId) : null)
-    setFindingDrafts({})
+    setFindingDraft(null)
     setDraft(null)
     setMsg('')
   }, [profileId])
+
+  // 旧版分节发现的自动合并（一次性）：按节存的块拼成一条流水，节标题转分隔行
+  useEffect(() => {
+    if (!profileId || !fw || migratedFor.current === profileId) return
+    migratedFor.current = profileId
+    const legacy = mergeLegacySectionBlocks(taskBlocks, fw.sections.map((s) => s.heading))
+    if (!legacy) return
+    void (async () => {
+      const merged = findingsBlock ? `${findingsBlock.content.trim()}\n\n${legacy.content}` : legacy.content
+      await saveBlock({ id: findingsBlock?.id, title: FINDINGS_TITLE, content: merged, profileId, usage: 'internal' })
+      for (const b of taskBlocks) {
+        if (legacy.legacyTitles.includes(b.title)) await removeBlock(b.id)
+      }
+      await loadBlocks()
+      setMsg('已把按节保存的旧发现合并成一条流水（内容一字未丢）')
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 迁移只按任务跑一次
+  }, [profileId, fw, blocks])
 
   // 网关是否配了搜索（决定显示「联网调研」还是「直接问 AI」）；coachReady 为假时按钮本就不显示
   useEffect(() => {
@@ -115,7 +137,7 @@ export function ResearchPage() {
     if (!fw) return
     try {
       await navigator.clipboard.writeText(buildFullPrompt(fw))
-      setMsg('完整提示词已复制——打开任一 AI 站点粘贴即问，回来把答案贴进各节发现')
+      setMsg('完整提示词已复制——打开任一 AI 站点粘贴即问，整篇回答直接粘进「发现」')
     } catch {
       setMsg('复制失败：浏览器未授权剪贴板（设置里允许后重试）')
     }
@@ -176,6 +198,17 @@ export function ResearchPage() {
     await generateFramework(p.id)
   }
 
+  /** 往发现流水追加一段（带分隔标题），落库并刷新 */
+  const appendFinding = async (sectionTitle: string, body: string) => {
+    if (!profileId) return
+    const stamp = new Date().toLocaleDateString()
+    const prev = findingsValue
+    const merged = `${prev ? prev.trimEnd() + '\n\n' : ''}## ${sectionTitle}（${stamp}）\n${body.trim()}`
+    setFindingDraft(merged)
+    await saveBlock({ id: findingsBlock?.id, title: FINDINGS_TITLE, content: merged, profileId, usage: 'internal' })
+    await loadBlocks()
+  }
+
   /** 直接问 AI（基于模型已有知识；建议同时把外部检索结果贴进来交叉验证） */
   const askAi = async (heading: string) => {
     if (!fw || askBusy) return
@@ -190,11 +223,7 @@ export function ResearchPage() {
         user: buildSectionPrompt(fw, section),
         maxTokens: 2000,
       })
-      const prev = findingDrafts[heading] ?? findingsOf(heading)?.content ?? ''
-      const merged = prev ? `${prev}\n\n—— AI 回答（${new Date().toLocaleDateString()}，未核实，需交叉验证）：\n${text.trim()}` : `—— AI 回答（未核实，需交叉验证）：\n${text.trim()}`
-      setFindingDrafts((d) => ({ ...d, [heading]: merged }))
-      await saveBlock({ id: findingsOf(heading)?.id, title: heading, content: merged, profileId: profileId!, usage: 'internal' })
-      await loadBlocks()
+      await appendFinding(`${heading} · AI 回答（未核实，需交叉验证）`, text)
     } catch (e) {
       setMsg(`问 AI 失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -202,7 +231,7 @@ export function ResearchPage() {
     }
   }
 
-  /** 联网调研（2026-10-13"替我调研"）：搜该节问题 → 带来源喂给模型 → 答案与来源链接落进发现 */
+  /** 联网调研单个角度：搜该角度问题 → 带来源喂给模型 → 答案与来源链接追加进发现 */
   const researchOnline = async (heading: string) => {
     if (!fw || webBusy) return
     const section = fw.sections.find((s) => s.heading === heading)!
@@ -243,14 +272,7 @@ export function ResearchPage() {
         ].join('\n'),
         maxTokens: 3000,
       })
-      const prev = findingDrafts[heading] ?? findingsOf(heading)?.content ?? ''
-      const stamp = new Date().toLocaleDateString()
-      const merged = `${prev ? prev + '\n\n' : ''}—— 联网调研（${stamp}）：\n${text.trim()}\n来源：\n${hits
-        .map((h, i) => `[${i + 1}] ${h.title} — ${h.link}`)
-        .join('\n')}`
-      setFindingDrafts((d) => ({ ...d, [heading]: merged }))
-      await saveBlock({ id: findingsOf(heading)?.id, title: heading, content: merged, profileId: profileId!, usage: 'internal' })
-      await loadBlocks()
+      await appendFinding(`${heading} · 联网调研`, `${text.trim()}\n来源：\n${hits.map((h, i) => `[${i + 1}] ${h.title} — ${h.link}`).join('\n')}`)
       setMsg(`联网调研完成：检索 ${queries.length} 次，引用 ${hits.length} 个来源`)
     } catch (e) {
       setMsg(`联网调研失败：${e instanceof Error ? e.message : String(e)}`)
@@ -259,20 +281,18 @@ export function ResearchPage() {
     }
   }
 
-  const saveFinding = async (heading: string, content: string) => {
+  const saveFinding = async (content: string) => {
     if (!profileId) return
-    const existing = findingsOf(heading)
-    if (existing && existing.content === content) return
-    if (!content.trim() && existing) {
-      await removeBlock(existing.id)
+    if (findingsBlock && findingsBlock.content === content) return
+    if (!content.trim() && findingsBlock) {
+      await removeBlock(findingsBlock.id)
       return
     }
     if (!content.trim()) return
-    await saveBlock({ id: existing?.id, title: heading, content, profileId, usage: 'internal' })
+    await saveBlock({ id: findingsBlock?.id, title: FINDINGS_TITLE, content, profileId, usage: 'internal' })
   }
 
-  /** 一键调研全部章节（2026-10-21 用户拍板"不要逐节去问"）：顺序跑完所有节的联网调研，
-   *  单节失败不中断，结束给汇总 */
+  /** 一键调研全部角度（2026-10-21 用户拍板"不要逐节去问"）：顺序跑完，单节失败不中断 */
   const [allProgress, setAllProgress] = useState<{ done: number; total: number } | null>(null)
   const researchAllOnline = async () => {
     if (!fw || webBusy !== null || allProgress) return
@@ -288,28 +308,7 @@ export function ResearchPage() {
       setAllProgress({ done: i + 1, total: fw.sections.length })
     }
     setAllProgress(null)
-    setMsg(`一键调研完成：${ok}/${fw.sections.length} 节成功`)
-  }
-
-  /** 整篇 AI 回答粘贴进来，按章节标题自动拆开填入（2026-10-21 用户拍板"不要逐节回填"） */
-  const [pasteAll, setPasteAll] = useState('')
-  const applyPastedAnswer = async () => {
-    if (!fw || !pasteAll.trim() || !profileId) return
-    const parts = splitAnswerIntoSections(pasteAll, fw)
-    if (parts.length === 0) {
-      setMsg('粘贴的内容是空的')
-      return
-    }
-    for (const p of parts) {
-      const prev = findingDrafts[p.heading] ?? findingsOf(p.heading)?.content ?? ''
-      const merged = prev ? `${prev}\n\n—— 整篇回答拆分（${new Date().toLocaleDateString()}）：\n${p.content}` : p.content
-      setFindingDrafts((d) => ({ ...d, [p.heading]: merged }))
-      await saveBlock({ id: findingsOf(p.heading)?.id, title: p.heading, content: merged, profileId, usage: 'internal' })
-    }
-    await loadBlocks()
-    setPasteAll('')
-    const matched = parts.filter((p) => p.heading !== '补充发现').length
-    setMsg(`已拆分填入 ${matched} 节${parts.some((p) => p.heading === '补充发现') ? '，对不上标题的部分进了「补充发现」（出稿照样当素材）' : ''}`)
+    setMsg(`一键调研完成：${ok}/${fw.sections.length} 个角度成功，结果已追加进发现`)
   }
 
   const onFile = async (file: File) => {
@@ -378,7 +377,7 @@ export function ResearchPage() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>调研分析</h1>
-        <span className="sub">输入调研目标 → 拿框架与逐节提示词 → 贴回发现 → 出稿（Markdown / Word）</span>
+        <span className="sub">输入调研目标 → 照建议角度调研 → 发现记在一处 → 出稿（Markdown / Word）</span>
       </div>
 
       <div className="set-card">
@@ -424,11 +423,11 @@ export function ResearchPage() {
 
       {profile && (
         <div className="set-card">
-          <h2>② 调研框架与发现</h2>
+          <h2>② 建议调研角度</h2>
           <div className="desc">
             {fw
-              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个维度——${coachReady && searchReady ? '每节可「联网调研」自动搜+答，或' : ''}复制完整提示词一次问全，把发现贴回对应节`
-              : '还没有框架——回到 ① 点「开始调研」生成'}
+              ? `${fw.generatedBy === 'ai' ? 'AI 定制' : '内置模板'} · ${fw.sections.length} 个角度——${coachReady && searchReady ? '可一键全部调研，或单个角度补查；也可' : ''}复制完整提示词去外部 AI 问`
+              : '还没有角度建议——回到 ① 点「开始调研」生成'}
           </div>
           <div className="set-body">
             {fw === null ? (
@@ -453,13 +452,13 @@ export function ResearchPage() {
                       className="btn-primary"
                       disabled={webBusy !== null || allProgress !== null}
                       onClick={() => void researchAllOnline()}
-                      title="自动跑完所有节的联网搜索与作答——不用逐节点"
+                      title="按下面的角度自动跑完联网搜索与作答，结果追加进「发现」——不用逐个点"
                     >
-                      {allProgress ? `⟳ 一键调研中（${allProgress.done}/${allProgress.total}）…` : `🌐 一键调研全部（${fw.sections.length} 节）`}
+                      {allProgress ? `⟳ 一键调研中（${allProgress.done}/${allProgress.total}）…` : `🌐 一键调研（全部 ${fw.sections.length} 个角度）`}
                     </button>
                   )}
                   <button type="button" className={coachReady && searchReady ? 'btn-ghost' : 'btn-primary'} onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
-                    📋 复制完整提示词（{fw.sections.length} 节合一）
+                    📋 复制完整提示词（{fw.sections.length} 个角度合一）
                   </button>
                   {/* 跳转清单与处理页「快速启动」共用（取前 4 个，按最近使用排序）；点击记一次使用 */}
                   {byRecentUse(loadQuickSites()).slice(0, 4).map((s) => (
@@ -476,76 +475,52 @@ export function ResearchPage() {
                     </a>
                   ))}
                 </div>
-                <div className="set-row" style={{ marginBottom: 'var(--sp-3)', alignItems: 'stretch', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                    在外部 AI 问完拿回整篇回答？直接粘到下面，自动按章节拆开填入——不用逐节回填：
-                  </span>
-                  <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
-                    <textarea
-                      className="input"
-                      rows={3}
-                      style={{ flex: 1, minWidth: 260 }}
-                      placeholder="粘贴整份 AI 回答（各节会按标题自动拆开；对不上标题的部分进「补充发现」）"
-                      value={pasteAll}
-                      aria-label="粘贴整份回答"
-                      onChange={(e) => setPasteAll(e.target.value)}
-                    />
-                    <button type="button" className="btn-primary" style={{ alignSelf: 'flex-end' }} disabled={!pasteAll.trim()} onClick={() => void applyPastedAnswer()}>
-                      拆分并填入
-                    </button>
-                  </div>
-                </div>
                 <div className="set-row" style={{ marginBottom: 'var(--sp-3)' }}>
                   <button type="button" className="btn-ghost" disabled={fwBusy} onClick={() => void generateFramework(undefined, true)}>
-                    ↻ 重新生成框架
+                    ↻ 换一组角度
                   </button>
                   <button type="button" className="mini-btn" onClick={() => void removeTask()}>删除任务</button>
-                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>已填的发现会保留</span>
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>角度只是建议——发现都在下面一处，不按角度归档</span>
                 </div>
-                {fw.sections.map((s) => {
-                  const draftText = findingDrafts[s.heading] ?? findingsOf(s.heading)?.content ?? ''
-                  return (
-                    <div key={s.heading} style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: 'var(--sp-3)', marginBottom: 'var(--sp-3)' }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600 }}>{s.heading}</span>
-                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>去哪查：{s.sources.join(' / ')}</span>
-                      </div>
-                      {s.questions.length > 0 && (
-                        <ul style={{ margin: 'var(--sp-2) 0', paddingLeft: 'var(--sp-5)', fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', lineHeight: 1.9 }}>
-                          {s.questions.map((q, i) => (
-                            <li key={i}>{q}</li>
-                          ))}
-                        </ul>
+                {fw.sections.map((s) => (
+                  <div key={s.heading} style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: 'var(--sp-3)', marginBottom: 'var(--sp-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600 }}>{s.heading}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>去哪查：{s.sources.join(' / ')}</span>
+                      {coachReady && searchReady && (
+                        <button
+                          type="button"
+                          className="mini-btn"
+                          disabled={webBusy !== null || allProgress !== null}
+                          onClick={() => void researchOnline(s.heading)}
+                          title="只调研这个角度：搜索 → AI 带来源作答 → 追加进发现"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          {webBusy === s.heading ? '⟳ 调研中…' : '🌐 只查此角度'}
+                        </button>
                       )}
-                      <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', marginBottom: 'var(--sp-2)' }}>
-                        {coachReady && searchReady ? (
-                          <button
-                            type="button"
-                            className="btn-primary"
-                            disabled={webBusy !== null}
-                            onClick={() => void researchOnline(s.heading)}
-                            title="搜索本节问题 → AI 带来源作答（消耗少量搜索额度）"
-                          >
-                            {webBusy === s.heading ? '⟳ 联网调研中…' : '🌐 联网调研'}
-                          </button>
-                        ) : coachReady ? (
-                          <button type="button" className="btn-ghost" disabled={askBusy !== null} onClick={() => void askAi(s.heading)}>
-                            {askBusy === s.heading ? '⟳ AI 回答中…' : '🤖 直接问 AI'}
-                          </button>
-                        ) : null}
-                      </div>
-                      <textarea
-                        className="input"
-                        rows={draftText ? 5 : 2}
-                        placeholder="把这一节的发现贴回来（外部检索结果、AI 回答会追加到这里）"
-                        value={draftText}
-                        aria-label={`${s.heading} 的发现`}
-                        onChange={(e) => setFindingDrafts((d) => ({ ...d, [s.heading]: e.target.value }))}
-                        onBlur={(e) => void saveFinding(s.heading, e.target.value)}
-                      />
+                      {coachReady && !searchReady && (
+                        <button
+                          type="button"
+                          className="mini-btn"
+                          disabled={askBusy !== null}
+                          onClick={() => void askAi(s.heading)}
+                          title="让 AI 按已有知识回答这个角度的问题，追加进发现"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          {askBusy === s.heading ? '⟳ AI 回答中…' : '🤖 问 AI 此角度'}
+                        </button>
+                      )}
                     </div>
-                  )
-                })}
+                    {s.questions.length > 0 && (
+                      <ul style={{ margin: 'var(--sp-2) 0 0', paddingLeft: 'var(--sp-5)', fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', lineHeight: 1.9 }}>
+                        {s.questions.map((q, i) => (
+                          <li key={i}>{q}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
               </>
             )}
           </div>
@@ -554,8 +529,27 @@ export function ResearchPage() {
 
       {profile && (
         <div className="set-card">
-          <h2>③ 出稿</h2>
-          <div className="desc">把各节发现整理成分析稿，逐节修改后导出；没有 AI 用手动骨架照样能写</div>
+          <h2>③ 发现</h2>
+          <div className="desc">一条流水记到底——一键调研和「只查此角度」的结果自动追加进来；在外部 AI 问完的整篇回答直接粘贴进来；自己读到什么也随手记。出稿时全部都会用上。</div>
+          <div className="set-body">
+            <textarea
+              className="input"
+              rows={Math.min(20, Math.max(8, Math.ceil(findingsValue.length / 60) + 2))}
+              placeholder="发现都记在这里（联网调研与 AI 回答自动追加；外部 AI 的整篇回答直接粘贴）"
+              value={findingsValue}
+              aria-label="发现"
+              data-testid="research-findings"
+              onChange={(e) => setFindingDraft(e.target.value)}
+              onBlur={(e) => void saveFinding(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {profile && (
+        <div className="set-card">
+          <h2>④ 出稿</h2>
+          <div className="desc">把发现整理成分析稿，逐节修改后导出；没有 AI 用手动骨架照样能写</div>
           <div className="set-body">
             <div className="set-row">
               <label>视角</label>

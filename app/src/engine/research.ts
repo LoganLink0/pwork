@@ -163,42 +163,26 @@ export function normalizeAiFramework(raw: unknown, type: ResearchType, target: s
   return { type, target, sections: norm.slice(0, 3), generatedBy: 'ai' }
 }
 
-/** 整篇 AI 回答按框架章节自动拆分（2026-10-21 用户拍板"不要逐节回填"）：
- *  逐行找各节标题（容忍序号/markdown 装饰/空白差异），标题之间的内容归该节；
- *  对不上任何标题的内容进「补充发现」（出稿照样当素材用）——整体对不上时全文进补充发现。 */
-export function splitAnswerIntoSections(text: string, fw: { sections: { heading: string }[] }): { heading: string; content: string }[] {
-  const keys = fw.sections.map((s) => {
-    const full = s.heading.replace(/^[一二三四五六七八九十\d]+[、.．]?\s*/, '').replace(/\s+/g, '')
-    return { heading: s.heading, full, bare: full.replace(/（.*?）|\(.*?\)/g, '') }
-  })
-  const buckets = new Map<string, string[]>(fw.sections.map((s) => [s.heading, [] as string[]]))
-  const extra: string[] = []
-  let current: string | null = null
-  for (const raw of text.split(/\r?\n/)) {
-    const norm = raw.replace(/[*#>\s]/g, '')
-    // 行与键都剥掉"一、"式序号再比对；标题带括号注释时，回答里省略括号也能对上
-    const plain = norm.replace(/^[一二三四五六七八九十\d]+[、.．]/, '')
-    const hit = plain.length > 0 && norm.length <= 36
-      ? keys.find((k) =>
-          (k.full.length >= 2 && (plain === k.full || plain.startsWith(k.full))) ||
-          (k.bare.length >= 4 && plain.startsWith(k.bare)),
-        )
-      : undefined
-    if (hit) {
-      current = hit.heading
-      continue
-    }
-    ;(current ? buckets.get(current)! : extra).push(raw)
-  }
-  const out: { heading: string; content: string }[] = []
-  for (const { heading } of fw.sections) {
-    const lines = buckets.get(heading) ?? []
-    const content = lines.join('\n').trim()
-    if (content) out.push({ heading, content })
-  }
-  const extraContent = extra.join('\n').trim()
-  if (extraContent) out.push({ heading: '补充发现', content: extraContent })
-  return out
+/** 单一发现流的块标题（2026-10-21 第二性重设计：角度只是"建议问什么"，
+ *  发现是一条流水——一键调研/外部 AI 整篇回答/手写都追加进来，不再按节归档） */
+export const FINDINGS_TITLE = '发现'
+
+/**
+ * 旧版分节发现的合并迁移：把按节标题存的块按框架顺序拼成一条流水
+ * （节标题转为 "## 标题" 分隔行，内容一字不丢）。没有旧分节块时返回 null。
+ */
+export function mergeLegacySectionBlocks(
+  blocks: { title: string; content: string }[],
+  headings: string[],
+): { content: string; legacyTitles: string[] } | null {
+  const legacy = blocks.filter((b) => headings.includes(b.title))
+  if (legacy.length === 0) return null
+  const content = headings
+    .map((h) => legacy.find((b) => b.title === h))
+    .filter((b): b is { title: string; content: string } => Boolean(b))
+    .map((b) => `## ${b.title}\n${b.content.trim()}`)
+    .join('\n\n')
+  return { content, legacyTitles: legacy.map((b) => b.title) }
 }
 
 /* ---------------------- 发现的存取约定（数据块为实现层） ---------------------- */

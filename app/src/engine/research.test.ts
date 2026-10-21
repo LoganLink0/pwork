@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  FINDINGS_TITLE,
   RESEARCH_TYPES,
   buildFramework,
   buildSectionPrompt,
   loadFramework,
+  mergeLegacySectionBlocks,
   normalizeAiFramework,
   saveFramework,
-  splitAnswerIntoSections,
   typeName,
 } from './research'
 import type { ResearchType } from './research'
@@ -69,42 +70,26 @@ describe('调研任务引擎（2026-10-13 第一性原理版）', () => {
   })
 })
 
-describe('splitAnswerIntoSections（整篇回答自动拆分，2026-10-21）', () => {
-  const fw = { sections: [{ heading: '一、公司画像与业务' }, { heading: '二、行业位置与近期动态' }, { heading: '三、切入判断' }] }
+describe('mergeLegacySectionBlocks（旧分节发现 → 单一流水迁移，2026-10-21）', () => {
+  const headings = ['一、公司画像与业务', '二、行业位置与近期动态', '三、切入判断']
 
-  it('按标题拆到对应节：容忍序号差异、markdown 加粗、标题前的开场白', () => {
-    const answer = [
-      '好的，以下是调研结果：',
-      '**一、公司画像与业务**',
-      '成立于 2011 年，员工约 2 万人。',
-      '## 二、行业位置与近期动态',
-      '行业增速 20%，竞品主要是 A 和 B。',
-      '三、切入判断',
-      '建议从供应链切入。',
-    ].join('\n')
-    const parts = splitAnswerIntoSections(answer, fw)
-    expect(parts).toHaveLength(4) // 3 个匹配节 + 开场白进「补充发现」
-    expect(parts[0]).toMatchObject({ heading: '一、公司画像与业务' })
-    expect(parts[0]!.content).toContain('2 万人')
-    expect(parts[1]!.content).toContain('竞品')
-    expect(parts[2]!.content).toContain('供应链')
-    expect(parts[3]).toMatchObject({ heading: '补充发现' })
-    expect(parts[3]!.content).toContain('以下是调研结果')
+  it('按框架顺序拼成一条流水，节标题转 "## " 分隔行；无关块（补充材料）不动', () => {
+    const blocks = [
+      { title: '三、切入判断', content: '从供应链切入。' },
+      { title: '某招聘 JD', content: '材料……' }, // 补充材料：不在标题清单里
+      { title: '一、公司画像与业务', content: '员工 2 万人。' },
+    ]
+    const r = mergeLegacySectionBlocks(blocks, headings)!
+    expect(r.content).toBe('## 一、公司画像与业务\n员工 2 万人。\n\n## 三、切入判断\n从供应链切入。')
+    expect(r.legacyTitles).toEqual(['三、切入判断', '一、公司画像与业务'])
   })
 
-  it('对不上任何标题 → 全文进「补充发现」（出稿照样当素材）', () => {
-    const parts = splitAnswerIntoSections('AI 没有按章节回答，\n就一大段内容。', fw)
-    expect(parts).toHaveLength(1)
-    expect(parts[0]!.heading).toBe('补充发现')
-    expect(parts[0]!.content).toContain('一大段')
+  it('没有旧分节块 → null（新任务/已迁移任务零动作）', () => {
+    expect(mergeLegacySectionBlocks([{ title: '某文件', content: 'x' }], headings)).toBeNull()
+    expect(mergeLegacySectionBlocks([], headings)).toBeNull()
   })
 
-  it('标题带括号注释（AI 定制框架常见），回答里省略括号也能对上', () => {
-    const fwParens = { sections: [{ heading: '一、公司主体画像与商业模式（是谁、靠什么赚钱）' }, { heading: '二、行业位置' }] }
-    const parts = splitAnswerIntoSections('一、公司主体画像与商业模式\n员工 2 万人。\n二、行业位置\n增速 20%。', fwParens)
-    expect(parts).toHaveLength(2)
-    expect(parts[0]!.heading).toContain('公司主体画像')
-    expect(parts[0]!.content).toContain('2 万人')
-    expect(parts[1]!.content).toContain('20%')
+  it('发现流块标题约定为「发现」', () => {
+    expect(FINDINGS_TITLE).toBe('发现')
   })
 })
