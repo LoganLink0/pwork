@@ -5,7 +5,8 @@ import type { ThemePref } from '../../engine/appearance'
 
 const THEME_ORDER: ThemePref[] = ['auto', 'light', 'dark']
 const THEME_ICON: Record<ThemePref, string> = { auto: '◐', light: '☀', dark: '☾' }
-const THEME_TITLE: Record<ThemePref, string> = { auto: '主题：跟随系统', light: '主题：明亮', dark: '主题：暗色' }
+const THEME_LABEL: Record<ThemePref, string> = { auto: '跟随系统', light: '明亮', dark: '暗色' }
+const THEME_TITLE: Record<ThemePref, string> = { auto: '主题：跟随系统（点击切到明亮）', light: '主题：明亮（点击切到暗色）', dark: '主题：暗色（点击切到跟随系统）' }
 
 /** 顶栏（PRD §4.1）：面包屑 + 搜索(⌘K) + 速记 + 主题 + 设置 */
 export function Topbar() {
@@ -48,11 +49,12 @@ export function Topbar() {
       <button
         type="button"
         className="iconbtn"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: 'auto', padding: '0 10px', fontSize: 'var(--fs-xs)' }}
         title={THEME_TITLE[theme]}
         aria-label={THEME_TITLE[theme]}
         onClick={() => setTheme(nextTheme)}
       >
-        {THEME_ICON[theme]}
+        {THEME_ICON[theme]} {THEME_LABEL[theme]}
       </button>
       <Link to="/settings" className="iconbtn" title="设置" aria-label="设置">
         ⚙

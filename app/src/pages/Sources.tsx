@@ -98,6 +98,32 @@ export function Sources() {
           {form === null && (
             <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加信源</button>
           )}
+          {sources.length > 1 && (
+            sources.every((s) => !s.active) ? (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  if (!window.confirm(`全部启用 ${sources.length} 个信源？`)) return
+                  for (const s of sources.filter((x) => !x.active)) void toggleActive(s.id, true)
+                }}
+              >
+                全部启用
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-ghost"
+                title="临时停用全部信源（如调试时不想抓取）；逐个恢复或再点全部启用"
+                onClick={() => {
+                  if (!window.confirm(`全部暂停 ${sources.filter((s) => s.active).length} 个活跃信源？暂停后不参与抓取，随时可恢复。`)) return
+                  for (const s of sources.filter((x) => x.active)) void toggleActive(s.id, false)
+                }}
+              >
+                全部暂停
+              </button>
+            )
+          )}
         </div>
       </div>
 

@@ -54,6 +54,18 @@ function PaletteDialog() {
     requestAnimationFrame(() => inputRef.current?.focus())
   }, [])
 
+  // Esc 挂在 window（非容器 onKeyDown）：用户鼠标点到面板外再按 Esc 也必须能关（2026-10-22 E2E 巡检发现）
+  useEffect(() => {
+    const onWinKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        close()
+      }
+    }
+    window.addEventListener('keydown', onWinKey)
+    return () => window.removeEventListener('keydown', onWinKey)
+  }, [close])
+
   const items = useMemo<PaletteItem[]>(() => {
     const q = query.trim().toLowerCase()
     const match = (s: string) => !q || s.toLowerCase().includes(q)
