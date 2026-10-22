@@ -252,7 +252,7 @@ export function Settings() {
 
       <div className="set-card">
         <h2>数据</h2>
-        <div className="desc">备份先行：任何删除、迁移、清理前，先全量导出</div>
+        <div className="desc">全量导出、导入、自动备份与备份位置——换机迁移也从这里走</div>
         <div className="set-body">
           {(noteCount > 0 || sources.length > 0 || items.length > 0 || trashCount > 0) && (
             <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -830,10 +830,8 @@ export function Settings() {
             <span className="val">速记、信息日报、任务/目标、报告导出、文章草稿、调研分析、复盘均已上线；数据视频为远期规划</span>
           </div>
           <div className="set-row">
-            <label>快捷键</label>
-            <span className="val">
-              <kbd>N</kbd> 速记浮层 · <kbd>Ctrl K</kbd> / <kbd>/</kbd> 命令面板 · 浮层内 <kbd>Esc</kbd> 存草稿
-            </span>
+            <label>帮助</label>
+            <span className="val">快捷键、术语表、配置指南都在 <a href="#/help">帮助页</a></span>
           </div>
         </div>
       </div>

@@ -118,12 +118,9 @@ export function Digest() {
         <div className="empty">
           <div className="e-ico" aria-hidden>📰</div>
           <p>
-            {isToday ? '今日还没有条目。' : `${digestDate} 没有条目。`}
+            {isToday ? '今日还没有条目——点上方「⟳ 立即抓取」，或等云端定时抓取后自动出现。' : `${digestDate} 没有条目。`}
           </p>
           <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
-            <button type="button" className="btn-primary" disabled={fetchState.running} onClick={() => void runFetchAll()}>
-              {fetchState.running ? '⟳ 抓取中…' : '立即抓取'}
-            </button>
             <Link to="/input/sources" className="btn-ghost">先去信源管理 →</Link>
           </div>
         </div>
