@@ -886,6 +886,17 @@ a.mcard .m-link:hover {
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
+/* 图标锁定等宽等高：emoji 原生尺寸不一（💾≠☁≠🤖），不锁会导致文字错位 */
+.settings-nav-item > span:first-child {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
 .settings-nav-item:hover {
   background: var(--surface-2);
   color: var(--ink);
