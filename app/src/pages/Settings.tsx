@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle } from '../db/backup'
@@ -32,8 +32,20 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   app: '内部错误',
 }
 
-/** 设置页（PRD §4.8）：W1 交付外观与数据导出；AI·BYOK 与导入随 W2/W3 点亮 */
+const SETTINGS_TABS = [
+  { id: 'appearance', label: '外观', icon: '◐' },
+  { id: 'data', label: '数据', icon: '💾' },
+  { id: 'collect', label: '采集偏好', icon: '🏷' },
+  { id: 'errors', label: '错误日志', icon: '📋' },
+  { id: 'cloud', label: '云端同步', icon: '☁' },
+  { id: 'ai', label: 'AI', icon: '🤖' },
+  { id: 'about', label: '关于', icon: 'ⓘ' },
+] as const
+
+/** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
 export function Settings() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = SETTINGS_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'appearance'
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
   const noteCount = useNotes((s) => s.notes.length)
@@ -218,16 +230,32 @@ export function Settings() {
   }
 
   return (
-    <section className="settings settings-wide">
+    <section className="settings-page">
       <div className="page-head" style={{ marginBottom: 0 }}>
         <h1>设置</h1>
-        <span className="sub">外观 · 数据备份 · 采集偏好 · 云端同步 · AI 配置——凭据只存本机，永不进备份</span>
+        <span className="sub">凭据只存本机，永不进备份</span>
         <div className="right">
           <Link to="/welcome" className="btn-ghost">↩ 首访引导</Link>
         </div>
       </div>
 
-      <div className="set-card" style={{ gridColumn: '1 / -1' }}>
+      <div className="settings-layout">
+        <nav className="settings-nav" aria-label="设置分类">
+          {SETTINGS_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`settings-nav-item${tab === t.id ? ' on' : ''}`}
+              onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
+              aria-current={tab === t.id ? 'page' : undefined}
+            >
+              <span aria-hidden>{t.icon}</span> {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="settings-content">
+      <div className="set-card" data-tab="appearance" style={{ display: tab === 'appearance' ? undefined : 'none' }}>
         <h2>外观</h2>
         <div className="desc">选择明亮或暗色；「跟随系统」随电脑设置自动切换</div>
         <div className="set-body">
@@ -250,7 +278,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" data-tab="data" style={{ display: tab === 'data' ? undefined : 'none' }}>
         <h2>数据</h2>
         <div className="desc">全量导出、导入、自动备份与备份位置——换机迁移也从这里走</div>
         <div className="set-body">
@@ -365,7 +393,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" data-tab="collect" style={{ display: tab === 'collect' ? undefined : 'none' }}>
         <h2>采集偏好</h2>
         <div className="desc">写清你关注的领域——越相关越可能进日报；随使用随时调整</div>
         <div className="set-body">
@@ -450,7 +478,7 @@ export function Settings() {
       </div>
 
 
-      <div className="set-card">
+      <div className="set-card" data-tab="errors" style={{ display: tab === 'errors' ? undefined : 'none' }}>
         <h2>错误日志</h2>
         <div className="desc">程序出错时立即记录在这里：哪里出了什么问题、技术细节，供排查迭代。上限 300 条，最旧的先删。</div>
         <div className="set-body">
@@ -519,7 +547,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" data-tab="cloud" style={{ display: tab === 'cloud' ? undefined : 'none' }}>
         <h2>云端同步</h2>
         <div className="desc">Cloudflare Worker 定时抓取 → 本地拉取合并；云端数据随时可丢可重建，本地才是你的真实数据。不确定自己需不需要？<Link to="/help">看帮助 → 配置指南</Link>——不配云端，一切功能照常</div>
         <div className="set-body">
@@ -670,7 +698,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
         <h2>AI · BYOK</h2>
         <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / 全库问答 / 采集筛选）；AI 不可用时自动改用规则评分</div>
         <div className="set-body">
@@ -817,7 +845,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card" style={{ gridColumn: 2 }}>
+      <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
         <h2>关于</h2>
         <div className="desc">本地优先的四模块个人操作系统 · 数据只属于你</div>
         <div className="set-body">
@@ -833,6 +861,8 @@ export function Settings() {
             <label>帮助</label>
             <span className="val">快捷键、术语表、配置指南都在 <a href="#/help">帮助页</a></span>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </section>

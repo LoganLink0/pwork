@@ -89,7 +89,7 @@ describe('工作台壳（W1）', () => {
     await user.keyboard('{Escape}')
   })
 
-  it('设置页：主题三态切换写入 localStorage 并生效', async () => {
+  it('设置页：左导航切换分类 + 主题切换写入 localStorage + 数据分类的导出入口', async () => {
     const user = userEvent.setup()
     render(<App />)
     // 顶栏（banner）里的设置入口，避免与侧边栏同名链接多匹配
@@ -102,7 +102,8 @@ describe('工作台壳（W1）', () => {
     await user.click(screen.getByRole('button', { name: '跟随系统' }))
     expect(document.documentElement.dataset.theme).toBeUndefined()
 
-    // 全量导出按钮存在（铁律 6 入口）
+    // 左导航切到数据分类后，全量导出按钮出现（铁律 6 入口）
+    await user.click(screen.getByRole('button', { name: /数据/ }))
     expect(screen.getByRole('button', { name: /全量导出/ })).toBeInTheDocument()
   })
 
@@ -110,11 +111,14 @@ describe('工作台壳（W1）', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
+    // 左导航可见 + 默认分类（快速上手）内容显示
     expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '快捷键' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '术语表' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '快捷键' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '术语表' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '四模块模型' })).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '排错' })).toBeInTheDocument()
+    // 切到排错分类后内容出现
+    await user.click(screen.getByRole('button', { name: '排错' }))
+    expect(await screen.findByRole('heading', { name: '排错' })).toBeInTheDocument()
     expect(screen.getByText(/rsshub.app 公共实例在大陆网络不可达/)).toBeInTheDocument()
 
     // ? 快捷键（非输入态）跳转帮助页

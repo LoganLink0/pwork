@@ -1,20 +1,48 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, QUICK_START, SHORTCUTS } from '../content/help'
+
+const HELP_TABS = [
+  { id: 'quick', label: '快速上手', icon: '▶' },
+  { id: 'shortcuts', label: '快捷键', icon: '⌨' },
+  { id: 'privacy', label: '数据与隐私', icon: '🔒' },
+  { id: 'config', label: '配置指南', icon: '⚙' },
+  { id: 'troubleshoot', label: '排错', icon: '🔧' },
+  { id: 'glossary', label: '术语表', icon: '📖' },
+] as const
 
 /**
  * 帮助页（/help）：回答"这个四模块系统本身怎么用"。
+ * 左侧分类导航 + 右侧当前分类全宽内容（与设置页同款布局，2026-10-22）。
  * 内容驱动自 content/help.ts；样式复用 set-card/set-row/notice，零新组件。
  * 回路方法论（CLAP 等）不在这里重复——见 /review/help。
  */
 export function Help() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = HELP_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'quick'
   return (
-    <section className="settings settings-wide">
+    <section className="settings-page">
       <div className="page-head">
         <h1>帮助</h1>
         <span className="sub">四模块系统怎么用 · 数据在哪、怎么丢不了 · 出了问题看排错</span>
       </div>
 
-      <div className="set-card">
+      <div className="settings-layout">
+        <nav className="settings-nav" aria-label="帮助分类">
+          {HELP_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`settings-nav-item${tab === t.id ? ' on' : ''}`}
+              onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
+              aria-current={tab === t.id ? 'page' : undefined}
+            >
+              <span aria-hidden>{t.icon}</span> {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="settings-content">
+      <div className="set-card" data-tab="quick" style={{ display: tab === 'quick' ? undefined : 'none' }}>
         <h2>快速上手</h2>
         <div className="desc">每一阶段产品都完整可用——按下面的顺序，十分钟走通一次闭环</div>
         <div className="set-body">
@@ -33,7 +61,7 @@ export function Help() {
       </div>
 
 
-      <div className="set-card">
+      <div className="set-card" data-tab="shortcuts" style={{ display: tab === 'shortcuts' ? undefined : 'none' }}>
         <h2>快捷键</h2>
         <div className="desc">键盘可达性是日常快节奏场景的生命线</div>
         <div className="set-body">
@@ -49,7 +77,7 @@ export function Help() {
       </div>
 
 
-      <div className="set-card">
+      <div className="set-card" data-tab="privacy" style={{ display: tab === 'privacy' ? undefined : 'none' }}>
         <h2>数据与隐私</h2>
         <div className="desc">数据只属于你——在哪里、怎么丢不了、谁会看到</div>
         <div className="set-body">
@@ -63,7 +91,7 @@ export function Help() {
       </div>
 
 
-      <div className="set-card">
+      <div className="set-card" data-tab="config" style={{ display: tab === 'config' ? undefined : 'none' }}>
         <h2>配置指南</h2>
         <div className="desc">装完即用；唯一建议开的是自动备份——AI、云端同步、转接服务都是可选，先看"我需要吗"再动手</div>
         <div className="set-body">
@@ -85,7 +113,7 @@ export function Help() {
       </div>
 
 
-      <div className="set-card">
+      <div className="set-card" data-tab="troubleshoot" style={{ display: tab === 'troubleshoot' ? undefined : 'none' }}>
         <h2>排错</h2>
         <div className="desc">真实踩坑沉淀——随使用持续增长</div>
         <div className="set-body">
@@ -106,7 +134,7 @@ export function Help() {
         </div>
       </div>
 
-      <div className="set-card">
+      <div className="set-card" data-tab="glossary" style={{ display: tab === 'glossary' ? undefined : 'none' }}>
         <h2>术语表</h2>
         <div className="desc">应用里的专门说法——什么意思，在这里查</div>
         <div className="set-body">
@@ -118,7 +146,8 @@ export function Help() {
           ))}
         </div>
       </div>
-
+        </div>
+      </div>
     </section>
   )
 }
