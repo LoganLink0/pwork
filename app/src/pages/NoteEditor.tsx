@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { getNote, noteToMarkdown, downloadFile, attachTaskToNote } from '../db/repo'
 import { useTasks } from '../store/tasks'
 import { useNotes } from '../store/notes'
@@ -30,6 +32,8 @@ export function NoteEditor() {
   const [notFound, setNotFound] = useState(false)
   const createTask = useTasks((s) => s.create)
   const [taskCreated, setTaskCreated] = useState(false)
+  const [mode, setMode] = useState<'edit' | 'read'>('edit')
+  const taRef = useRef<HTMLTextAreaElement>(null)
 
   // noteRef 供卸载时的 flush 使用（Hook 全部先于早退 return —— 开发复盘 1.1）
   const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false })
@@ -106,6 +110,12 @@ export function NoteEditor() {
     [updateNote],
   )
 
+  // 阅读态渲染（放在早退 return 之前：Hook 不得条件调用）
+  const html = useMemo(
+    () => (mode === 'read' ? DOMPurify.sanitize(marked.parse(body, { async: false })) : ''),
+    [mode, body],
+  )
+
   /** 新速记：内容非空时首次创建，随后 replace 到真实 id 路由 */
   async function ensureCreated(): Promise<string | null> {
     if (stateRef.current.noteId) return stateRef.current.noteId
@@ -142,12 +152,17 @@ export function NoteEditor() {
   }
 
   const deleted = note?.deletedAt != null
+  const charCount = body.replace(/\s/g, '').length
+  const lineCount = body ? body.split('\n').length : 0
 
   return (
     <div className="editor" data-testid="note-editor">
       <div className="editor-head">
         <span>Markdown · 自动保存</span>
-        <span className="saved">{savedAt ? `已保存 ${fmtLocal(savedAt)}` : '未保存'}</span>
+        <span className="saved" data-testid="note-stats">
+          {charCount} 字 · {lineCount} 行
+          {savedAt ? ` · 已保存 ${fmtLocal(savedAt)}` : ' · 未保存'}
+        </span>
       </div>
       <input
         className="e-title"
@@ -156,21 +171,41 @@ export function NoteEditor() {
         onChange={(e) => setTitle(e.target.value)}
         aria-label="速记标题"
       />
-      <div className="e-toolbar" aria-hidden>
+      <div className="e-toolbar" aria-label="格式工具栏">
         <button type="button" onClick={() => wrapSelection('**', '**')}><b>B</b></button>
         <button type="button" onClick={() => wrapSelection('*', '*')}><b>I</b></button>
         <button type="button" onClick={() => insertLine('- ')}>• 列表</button>
         <button type="button" onClick={() => insertLine('> ')}>❝ 引用</button>
         <button type="button" onClick={() => wrapSelection('`', '`')}>⟨⟩ 代码</button>
+        <span style={{ flex: 1 }} />
+        <button
+          type="button"
+          onClick={() => setMode(mode === 'edit' ? 'read' : 'edit')}
+          title={mode === 'edit' ? '渲染 Markdown 阅读态' : '回到编辑'}
+          data-testid="preview-toggle"
+        >
+          {mode === 'edit' ? '预览' : '编辑'}
+        </button>
       </div>
-      <textarea
-        className="e-body"
-        value={body}
-        placeholder="想到什么写什么……（Markdown）"
-        onChange={(e) => setBody(e.target.value)}
-        onBlur={() => void flush()}
-        aria-label="速记正文"
-      />
+      {mode === 'edit' ? (
+        <textarea
+          ref={taRef}
+          className="e-body"
+          value={body}
+          placeholder="想到什么写什么……（Markdown）"
+          onChange={(e) => setBody(e.target.value)}
+          onBlur={() => void flush()}
+          aria-label="速记正文"
+        />
+      ) : (
+        <div className="e-body md-body" data-testid="note-preview" aria-label="渲染后的正文">
+          {body.trim() ? (
+            <div dangerouslySetInnerHTML={{ __html: html }} />
+          ) : (
+            <p className="coach-say" style={{ margin: 0 }}>（空）</p>
+          )}
+        </div>
+      )}
       <details className="fm">
         <summary>frontmatter 与元信息</summary>
         <div className="fm-row">
@@ -264,11 +299,28 @@ export function NoteEditor() {
     return text.split(/[\s,，#]+/).map((t) => t.trim()).filter(Boolean)
   }
 
+  /** 包裹选区（无选区时在光标处插入成对标记，光标落在中间）；作用于真实选区而非全文首尾 */
   function wrapSelection(before: string, after: string) {
-    setBody((b) => `${before}${b}${after}`)
+    const ta = taRef.current
+    const s = ta?.selectionStart ?? body.length
+    const e = ta?.selectionEnd ?? s
+    const selected = body.slice(s, e)
+    setBody(body.slice(0, s) + before + selected + after + body.slice(e))
+    requestAnimationFrame(() => {
+      ta?.focus()
+      ta?.setSelectionRange(s + before.length, s + before.length + selected.length)
+    })
   }
 
+  /** 在光标所在行行首插入前缀（列表/引用），不再追加到全文末尾 */
   function insertLine(prefix: string) {
-    setBody((b) => `${b}${b.endsWith('\n') || b === '' ? '' : '\n'}${prefix}`)
+    const ta = taRef.current
+    const pos = ta?.selectionStart ?? body.length
+    const lineStart = body.lastIndexOf('\n', Math.max(0, pos - 1)) + 1
+    setBody(body.slice(0, lineStart) + prefix + body.slice(lineStart))
+    requestAnimationFrame(() => {
+      ta?.focus()
+      ta?.setSelectionRange(pos + prefix.length, pos + prefix.length)
+    })
   }
 }

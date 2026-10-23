@@ -111,11 +111,14 @@ export async function updateNoteFields(
     const raw = await db.notes.get(id)
     if (!raw) return
     const current = normalizeNote(raw)
+    const body = patch.body ?? current.body
     await db.notes.put({
       ...current,
-      body: patch.body ?? current.body,
-      title: patch.title?.trim() ? patch.title : current.title,
+      body,
+      // 标题清空时回退正文首行（与"标题可选，默认取首行"的创建语义一致）
+      title: patch.title !== undefined ? patch.title.trim() || deriveTitle(body) : current.title,
       tags: patch.tags ?? current.tags,
+      links: patch.links ?? current.links,
       updatedAt: new Date().toISOString(),
     })
   })
@@ -150,6 +153,19 @@ export async function restoreNote(id: string): Promise<void> {
   const note = await db.notes.get(id)
   if (!note || !note.deletedAt) return
   await db.notes.put({ ...note, deletedAt: null, updatedAt: new Date().toISOString() })
+}
+
+/** 彻底删除单条（仅在回收站手动触发；先确认，删后不可恢复） */
+export async function purgeNote(id: string): Promise<void> {
+  await db.notes.delete(id)
+}
+
+/** 回收站自动清理：软删除超过 N 天的物理删除（load 时每日一次） */
+export async function purgeOldDeletedNotes(days = 30, now = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
+  const stale = (await db.notes.toArray()).filter((n) => n.deletedAt !== null && n.deletedAt < cutoff)
+  await db.notes.bulkDelete(stale.map((n) => n.id))
+  return stale.length
 }
 
 /* ------------------------------ 导出（备份先行，铁律 6） ------------------------------ */

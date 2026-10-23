@@ -2,8 +2,32 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { STATS_VIEW } from '../content/copy'
 import { insightTimeline, monthlyTrend, scenarioDistribution, topPatterns } from '../engine/stats'
-import { actionStats, listInsights, listReviews, type ActionStats } from '../db/repo'
-import type { InsightRecord, ReviewRecord } from '../types/models'
+import { actionStats, listAllActions, listInsights, listReviews, type ActionStats } from '../db/repo'
+import type { ActionItem, InsightRecord, ReviewRecord } from '../types/models'
+import { todayLocal } from '../../../engine/datetime'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** 行动项从复盘归档到收口的耗时分档（done 口径） */
+function closeDurationBuckets(actions: ActionItem[], reviews: ReviewRecord[]): { label: string; count: number }[] {
+  const createdAtOf = new Map(reviews.map((r) => [r.id, r.createdAt]))
+  const buckets = [
+    { label: '≤1 天', max: 1, count: 0 },
+    { label: '≤3 天', max: 3, count: 0 },
+    { label: '≤7 天', max: 7, count: 0 },
+    { label: '≤30 天', max: 30, count: 0 },
+    { label: '>30 天', max: Infinity, count: 0 },
+  ]
+  for (const a of actions) {
+    if (a.status !== 'done' || !a.closedAt) continue
+    const start = createdAtOf.get(a.reviewId)
+    if (!start) continue
+    const days = (new Date(a.closedAt).getTime() - new Date(start).getTime()) / DAY_MS
+    const hit = buckets.find((b) => days <= b.max)
+    if (hit) hit.count++
+  }
+  return buckets
+}
 
 function Bar({ segments, label, value }: { segments: { width: number; cls: string; title: string }[]; label: string; value: string }) {
   return (
@@ -19,31 +43,100 @@ function Bar({ segments, label, value }: { segments: { width: number; cls: strin
   )
 }
 
-/** ⑧ 聚合分析：全部数字从本地档案实时计算（M7） */
+/** ⑧ 聚合分析：全部数字从本地档案实时计算（M7）；窗口 3/6/12 月可选，可导出摘要卡片图 */
 export function StatsView() {
   const [reviews, setReviews] = useState<ReviewRecord[] | null>(null)
   const [insights, setInsights] = useState<InsightRecord[]>([])
   const [actStats, setActStats] = useState<ActionStats | null>(null)
+  const [actions, setActions] = useState<ActionItem[]>([])
+  const [windowMonths, setWindowMonths] = useState<3 | 6 | 12>(6)
 
   useEffect(() => {
     let live = true
-    void Promise.all([listReviews(), listInsights(), actionStats()]).then(([rs, ins, as]) => {
+    void Promise.all([listReviews(), listInsights(), actionStats(), listAllActions()]).then(([rs, ins, as, acts]) => {
       if (!live) return
       setReviews(rs)
       setInsights(ins)
       setActStats(as)
+      setActions(acts)
     })
     return () => {
       live = false
     }
   }, [])
 
-  const trend = monthlyTrend(reviews ?? [], insights, 6)
+  const trend = monthlyTrend(reviews ?? [], insights, windowMonths)
   const scenarios = scenarioDistribution(reviews ?? [])
   const patterns = topPatterns(insights, 5)
-  const timeline = insightTimeline(insights, 6)
+  const timeline = insightTimeline(insights, windowMonths)
   const maxScenario = Math.max(1, ...scenarios.map((s) => s.count))
   const total = reviews?.length ?? 0
+  const validityRate = insights.length ? insights.filter((i) => i.verified).length / insights.length : null
+  const durations = closeDurationBuckets(actions, reviews ?? [])
+  const maxDuration = Math.max(1, ...durations.map((d) => d.count))
+
+  /** 导出摘要卡片 PNG（Canvas，浅色主题固定配色；复用数据卡片同款路径） */
+  function exportPng() {
+    const c = document.createElement('canvas')
+    c.width = 1000
+    c.height = 620
+    const ctx = c.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = '#f5f4f1'
+    ctx.fillRect(0, 0, c.width, c.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.strokeStyle = '#e6e4df'
+    if (ctx.roundRect) {
+      ctx.beginPath()
+      ctx.roundRect(40, 40, c.width - 80, c.height - 80, 16)
+      ctx.fill()
+      ctx.stroke()
+    } else {
+      ctx.fillRect(40, 40, c.width - 80, c.height - 80)
+      ctx.strokeRect(40, 40, c.width - 80, c.height - 80)
+    }
+    ctx.fillStyle = '#211e1a'
+    ctx.font = '700 34px sans-serif'
+    ctx.fillText('复盘节奏 · 摘要', 80, 110)
+    ctx.fillStyle = '#736e66'
+    ctx.font = '18px sans-serif'
+    ctx.fillText(`近 ${windowMonths} 个月 · 导出于 ${todayLocal()} · 共 ${total} 份档案`, 80, 145)
+
+    const stats: [string, string][] = [
+      ['复盘档案', String(total)],
+      ['洞察卡', String(insights.length)],
+      ['行动闭环率', actStats ? `${Math.round(actStats.closureRate * 100)}%` : '—'],
+      ['洞察有效率', validityRate === null ? '—' : `${Math.round(validityRate * 100)}%`],
+    ]
+    stats.forEach(([label, num], i) => {
+      const x = 80 + i * 220
+      ctx.fillStyle = '#211e1a'
+      ctx.font = '700 56px sans-serif'
+      ctx.fillText(num, x, 250)
+      ctx.fillStyle = '#736e66'
+      ctx.font = '18px sans-serif'
+      ctx.fillText(label, x, 285)
+    })
+
+    const maxReviews = Math.max(1, ...trend.map((b) => b.reviews))
+    ctx.fillStyle = '#736e66'
+    ctx.font = '18px sans-serif'
+    ctx.fillText('月度档案数', 80, 360)
+    trend.forEach((b, i) => {
+      const x = 80 + i * ((c.width - 160) / trend.length)
+      const h = (b.reviews / maxReviews) * 180
+      ctx.fillStyle = '#e8833a'
+      ctx.fillRect(x, 560 - h, 36, h)
+      ctx.fillStyle = '#736e66'
+      ctx.font = '14px sans-serif'
+      ctx.fillText(b.month.slice(2), x, 585)
+    })
+
+    const a = document.createElement('a')
+    a.href = c.toDataURL('image/png')
+    a.download = `复盘分析-${todayLocal()}.png`
+    a.click()
+  }
 
   return (
     <div className="container">
@@ -66,10 +159,32 @@ export function StatsView() {
           <div className="stat-num tnum">{actStats ? `${Math.round(actStats.closureRate * 100)}%` : '…'}</div>
           <div className="stat-label">行动闭环率</div>
         </div>
+        <div className="stat-card">
+          <div className="stat-num tnum">{validityRate === null ? '—' : `${Math.round(validityRate * 100)}%`}</div>
+          <div className="stat-label">洞察有效率（回访验证）</div>
+        </div>
       </section>
 
       <section className="detail-section" aria-label={STATS_VIEW.trendTitle}>
         <h2>{STATS_VIEW.trendTitle}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+          <div className="seg" role="group" aria-label="时间窗口">
+            {([3, 6, 12] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`seg-item${windowMonths === m ? ' seg-item--on' : ''}`}
+                onClick={() => setWindowMonths(m)}
+              >
+                近 {m} 月
+              </button>
+            ))}
+          </div>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="btn-ghost" onClick={exportPng}>
+            导出摘要 PNG
+          </button>
+        </div>
         <p className="coach-say">{STATS_VIEW.trendLegend}</p>
         {total === 0 ? (
           <p className="coach-say">{STATS_VIEW.empty}</p>
@@ -94,6 +209,25 @@ export function StatsView() {
                 />
               )
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="detail-section" aria-label="行动项收口耗时">
+        <h2>行动项收口耗时</h2>
+        <p className="coach-say">从复盘归档到「完成」用了多久——越靠左闭环越快。</p>
+        {durations.every((d) => d.count === 0) ? (
+          <p className="coach-say">还没有已完成的行动项。</p>
+        ) : (
+          <div className="bars">
+            {durations.map((d) => (
+              <Bar
+                key={d.label}
+                label={d.label}
+                value={`${d.count}`}
+                segments={[{ width: (d.count / maxDuration) * 100, cls: 'bar-scenario', title: `${d.label} ${d.count}` }]}
+              />
+            ))}
           </div>
         )}
       </section>

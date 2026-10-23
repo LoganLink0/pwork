@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { attachTaskToNote } from '../../db/repo'
 import { useNotes } from '../../store/notes'
 import { useTasks } from '../../store/tasks'
 import { useUi } from '../../store/ui'
@@ -86,7 +87,10 @@ function QuickNoteDialog() {
           .filter(Boolean),
         source: 'quick',
       })
-      await createTask({ title: note.title || body, origin: { kind: 'note', refId: note.id } })
+      await createTask({ title: note.title || body, origin: { kind: 'note', refId: note.id } }).then(async (t) => {
+        // 双向挂接与编辑器一致：任务 id 写回 note.links.taskIds（溯源不悬空）
+        await attachTaskToNote(note.id, t.id)
+      })
       setBody('')
       setTags('')
       localStorage.removeItem(DRAFT_KEY)
@@ -97,7 +101,7 @@ function QuickNoteDialog() {
   }
 
   return (
-    <div className="overlay" onClick={(e) => e.target === e.currentTarget && close()}>
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && (saveDraft(), close())}>
       <div className="qn-modal" role="dialog" aria-label="速记">
         <textarea
           ref={taRef}

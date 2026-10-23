@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DASHBOARD_STATS, DETAIL, GREETING } from '../content/copy'
+import { DASHBOARD_STATS, DETAIL, GREETING, SCENARIO_LABEL } from '../content/copy'
 import { isDue } from '../engine/revisit'
 import { fmtLocal, todayLocal } from '../engine/datetime'
+import { reviewToMarkdown } from '../engine/markdown'
+import { downloadFile } from '../../../db/repo'
 import { actionStats, closeAction, listInsights, listOpenActions, listReviews, updateAction, type ActionStats } from '../db/repo'
+import { setTaskStatus } from '../../../db/tasksRepo'
 import type { ActionItem, ReviewRecord } from '../types/models'
 import { KnowledgeCapsule } from '../components/ui/KnowledgeCapsule'
 import { Icon } from '../../../components/shell/icons'
@@ -24,6 +27,8 @@ export function Dashboard() {
   const [insightCount, setInsightCount] = useState(0)
   const [dueCount, setDueCount] = useState(0)
   const [searchQ, setSearchQ] = useState('')
+  const [filterScenario, setFilterScenario] = useState<'all' | string>('all')
+  const [filterType, setFilterType] = useState<'all' | 'personal' | 'team' | 'org'>('all')
   const [editingActionId, setEditingActionId] = useState<string | null>(null)
   const [actionDraft, setActionDraft] = useState({ text: '', due: '' })
 
@@ -46,7 +51,11 @@ export function Dashboard() {
   }, [reload])
 
   async function close(id: string, status: 'done' | 'dropped') {
+    const a = open.find((x) => x.id === id)
     await closeAction(id, status)
+    // 双向同步（任务库是状态 SSOT）：行动项在任务库有影子任务时一并收口，
+    // 否则任务页仍显示未完成、两处状态漂移（setTaskStatus 会幂等地再写一次 closeAction）
+    if (a?.taskId) await setTaskStatus(a.taskId, status)
     await reload()
   }
 
@@ -63,6 +72,31 @@ export function Dashboard() {
   }
 
   const closurePct = stats ? `${Math.round(stats.closureRate * 100)}%` : '—'
+
+  /** 标题搜索 + 场景/类型筛选的合成视图 */
+  const visibleReviews = (reviews ?? []).filter((r) => {
+    if (filterScenario !== 'all' && r.scenario !== filterScenario) return false
+    if (filterType !== 'all' && r.type !== filterType) return false
+    return r.title.toLowerCase().includes(searchQ.trim().toLowerCase())
+  })
+
+  /** 按月聚合导出全部档案（md；含进行中，状态随文标注） */
+  function exportArchiveMd() {
+    if (!reviews?.length) return
+    const byMonth = new Map<string, typeof reviews>()
+    for (const r of [...reviews].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+      const key = a.createdAt.slice(0, 7)
+      const arr = byMonth.get(key) ?? []
+      arr.push(r)
+      byMonth.set(key, arr)
+    }
+    const parts = [...byMonth.entries()].reverse().map(([month, rs]) => {
+      const body = rs.map((r) => `### ${r.title}（${r.status === 'archived' ? '已归档' : '进行中'}）\n\n${reviewToMarkdown(r)}`).join('\n\n---\n\n')
+      return `## ${month}\n\n${body}`
+    })
+    const md = `# 复盘档案（按月）\n\n导出于 ${fmtLocal(new Date().toISOString())} · 共 ${reviews.length} 份\n\n${parts.join('\n\n')}\n`
+    downloadFile(`复盘档案-${todayLocal()}.md`, md, 'text/markdown')
+  }
 
   return (
     <div className="container">
@@ -96,7 +130,7 @@ export function Dashboard() {
           <div className="stat-num tnum">{insightCount}</div>
           <div className="stat-label">{DASHBOARD_STATS.insights}</div>
         </div>
-        <Link className="stat-card" to="/review/assets">
+        <Link className="stat-card" to="/review/analytics">
           <div className="stat-num tnum">{closurePct}</div>
           <div className="stat-label">{DASHBOARD_STATS.closure}</div>
         </Link>
@@ -112,13 +146,42 @@ export function Dashboard() {
           <div className="panel-head">
             <h2>最近档案</h2>
             {reviews !== null && reviews.length > 0 && (
-              <input
-                className="input"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                placeholder={DASHBOARD_STATS.searchPlaceholder}
-                aria-label={DASHBOARD_STATS.searchPlaceholder}
-              />
+              <>
+                <select
+                  className="lane-select"
+                  value={filterScenario}
+                  onChange={(e) => setFilterScenario(e.target.value)}
+                  aria-label="按场景筛选"
+                  style={{ flex: 'none', width: 'auto' }}
+                >
+                  <option value="all">全部场景</option>
+                  {Object.entries(SCENARIO_LABEL).map(([k, label]) => (
+                    <option key={k} value={k}>{label}</option>
+                  ))}
+                </select>
+                <select
+                  className="lane-select"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as typeof filterType)}
+                  aria-label="按类型筛选"
+                  style={{ flex: 'none', width: 'auto' }}
+                >
+                  <option value="all">全部类型</option>
+                  <option value="personal">个人</option>
+                  <option value="team">团队</option>
+                  <option value="org">组织</option>
+                </select>
+                <input
+                  className="input"
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  placeholder={DASHBOARD_STATS.searchPlaceholder}
+                  aria-label={DASHBOARD_STATS.searchPlaceholder}
+                />
+                <button type="button" className="btn-ghost" style={{ flex: 'none' }} onClick={exportArchiveMd}>
+                  导出档案
+                </button>
+              </>
             )}
           </div>
         {reviews === null ? (
@@ -130,12 +193,10 @@ export function Dashboard() {
           </p>
         ) : (
             <ul className="review-list">
-              {reviews.filter((r) => r.title.toLowerCase().includes(searchQ.trim().toLowerCase())).length === 0 &&
-              searchQ.trim() !== '' ? (
+              {visibleReviews.length === 0 && searchQ.trim() !== '' && (
                 <li className="coach-say">{DASHBOARD_STATS.noMatch}</li>
-              ) : null}
-              {reviews
-                .filter((r) => r.title.toLowerCase().includes(searchQ.trim().toLowerCase()))
+              )}
+              {visibleReviews
                 .map((r) => (
                 <li key={r.id} className="review-row">
                   <div>

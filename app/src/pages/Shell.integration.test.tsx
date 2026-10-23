@@ -89,6 +89,22 @@ describe('工作台壳（W1）', () => {
     await user.keyboard('{Escape}')
   })
 
+  it('速记浮层：点遮罩关闭同样存草稿（与 Esc 行为一致，2026-10-24 修复）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard('n')
+    await user.type(await screen.findByLabelText('速记内容'), '遮罩关闭的草稿')
+    const overlay = document.querySelector('.overlay')
+    expect(overlay).toBeTruthy()
+    await user.click(overlay!)
+    await waitFor(() => expect(screen.queryByLabelText('速记内容')).toBeNull())
+
+    await user.keyboard('n')
+    expect(await screen.findByLabelText('速记内容')).toHaveValue('遮罩关闭的草稿')
+    await user.clear(screen.getByLabelText('速记内容'))
+    await user.keyboard('{Escape}')
+  })
+
   it('设置页：左导航切换分类 + 主题切换写入 localStorage + 数据分类的导出入口', async () => {
     const user = userEvent.setup()
     render(<App />)

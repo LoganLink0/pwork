@@ -30,17 +30,19 @@ export function StepLogic({ quick }: { quick: boolean }) {
   const causes = draft.clap.logic.causes
   const pack = getPack(draft.scenario)
 
-  // 决策检查单：勾选即生成一张原因卡（再点取消）；以文案前缀识别归属
+  // 决策检查单：勾选即生成一张原因卡（再点取消）；以 biasId 识别归属，
+  // 旧档案（无 biasId、只有文案）继续按文案匹配兼容取消
   function toggleBias(item: { id: string; label: string }) {
     const text = `可能的偏差｜${item.label}`
-    const exists = causes.some((x) => x.text === text)
+    const exists = causes.some((x) => x.biasId === item.id || (!x.biasId && x.text === text))
     if (exists) {
-      setCauses((cs) => cs.filter((x) => x.text !== text))
+      setCauses((cs) => cs.filter((x) => x.biasId !== item.id && x.text !== text))
     } else {
-      setCauses((cs) => [...cs, { text, gapRef: comp.gaps.indexOf(comp.gaps[0]), controllability: 'half', tool: 'none', depth: [] }])
+      setCauses((cs) => [...cs, { text, gapRef: comp.gaps.indexOf(comp.gaps[0]), controllability: 'half', tool: 'none', depth: [], biasId: item.id }])
     }
   }
-  const biasChecked = (item: { id: string; label: string }) => causes.some((x) => x.text === `可能的偏差｜${item.label}`)
+  const biasChecked = (item: { id: string; label: string }) =>
+    causes.some((x) => x.biasId === item.id || x.text === `可能的偏差｜${item.label}`)
 
   function addHabitCause() {
     if (!habit.cue.trim() && !habit.routine.trim() && !habit.reward.trim()) return

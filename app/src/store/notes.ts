@@ -3,6 +3,8 @@ import {
   createNote,
   listActiveNotes,
   listDeletedNotes,
+  purgeNote,
+  purgeOldDeletedNotes,
   restoreNote,
   softDeleteNote,
   updateNoteFields,
@@ -10,6 +12,9 @@ import {
 } from '../db/repo'
 import type { Note } from '../types/models'
 import { localDateOf, todayLocal } from '../engine/datetime'
+
+const PURGE_CHECK_KEY = 'pwork-notes-purge-at'
+const PURGE_AFTER_DAYS = 30
 
 /**
  * 速记状态（Zustand）：先同步置内存、再异步落库（FUPAN 正面实践延续）。
@@ -25,6 +30,8 @@ interface NotesState {
   update: (id: string, patch: Partial<Pick<Note, 'body' | 'title' | 'tags'>>) => Promise<void>
   softDelete: (id: string) => Promise<void>
   restore: (id: string) => Promise<void>
+  /** 彻底删除（仅回收站手动触发，先确认） */
+  purge: (id: string) => Promise<void>
 }
 
 async function reload(): Promise<Pick<NotesState, 'notes' | 'trash'>> {
@@ -38,6 +45,11 @@ export const useNotes = create<NotesState>((set) => ({
   loaded: false,
 
   load: async () => {
+    // 回收站 30 天自动清理：每日首次 load 执行一次（记录检查日，避免每次打开都扫）
+    if (localStorage.getItem(PURGE_CHECK_KEY) !== todayLocal()) {
+      localStorage.setItem(PURGE_CHECK_KEY, todayLocal())
+      await purgeOldDeletedNotes(PURGE_AFTER_DAYS)
+    }
     set({ ...(await reload()), loaded: true })
   },
 
@@ -63,6 +75,12 @@ export const useNotes = create<NotesState>((set) => ({
 
   restore: async (id) => {
     await restoreNote(id)
+    const { notes, trash } = await reload()
+    set({ notes, trash })
+  },
+
+  purge: async (id) => {
+    await purgeNote(id)
     const { notes, trash } = await reload()
     set({ notes, trash })
   },

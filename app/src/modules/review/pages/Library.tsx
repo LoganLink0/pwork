@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LIBRARY, } from '../content/copy'
 import { KnowledgeCapsule } from '../components/ui/KnowledgeCapsule'
-import { isDue, lastRevisitInvalid } from '../engine/revisit'
+import { currentIntervalDays, daysUntilDue, isDue, isRetired, lastRevisitPartial, type RevisitResult } from '../engine/revisit'
 import { deleteInsight, listInsights, listReviews, updateInsight } from '../db/repo'
 import { hashTheme } from '../engine/theme'
 import type { InsightRecord, ReviewRecord } from '../types/models'
@@ -20,6 +20,7 @@ export function Library() {
   const [insights, setInsights] = useState<InsightRecord[] | null>(null)
   const [reviews, setReviews] = useState<ReviewRecord[]>([])
   const [q, setQ] = useState('')
+  const [tag, setTag] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [opsMsg, setOpsMsg] = useState('')
@@ -49,11 +50,20 @@ export function Library() {
     return [...groups.values()].filter((g) => g.length >= 3)
   }, [insights])
 
+  const allTags = useMemo(
+    () => Array.from(new Set((insights ?? []).flatMap((i) => i.tags))).sort((a, b) => a.localeCompare(b)),
+    [insights],
+  )
+
   const filtered = useMemo(() => {
     if (!insights) return []
     const kw = q.trim()
-    return kw ? insights.filter((i) => i.text.includes(kw)) : insights
-  }, [insights, q])
+    return insights.filter((i) => {
+      if (tag && !i.tags.includes(tag)) return false
+      if (!kw) return true
+      return i.text.includes(kw)
+    })
+  }, [insights, q, tag])
 
   function startEdit(ins: InsightRecord) {
     setEditingId(ins.id)
@@ -76,11 +86,12 @@ export function Library() {
     await deleteInsight(ins.id)
   }
 
-  async function mark(ins: InsightRecord, stillValid: boolean) {
+  /** 回访三态：成立推高 verified、间隔翻倍；部分失效重置 30 天；需要修正则终结生命周期 */
+  async function mark(ins: InsightRecord, result: RevisitResult) {
     const next: InsightRecord = {
       ...ins,
-      verified: stillValid ? ins.verified : false,
-      revisit: [...ins.revisit, { at: new Date().toISOString(), stillValid }],
+      verified: result === 'valid' ? true : result === 'invalid' ? false : ins.verified,
+      revisit: [...ins.revisit, { at: new Date().toISOString(), stillValid: result !== 'invalid', result }],
     }
     setInsights((list) => (list ? list.map((i) => (i.id === ins.id ? next : i)) : list))
     await updateInsight(next)
@@ -127,6 +138,20 @@ export function Library() {
           placeholder={LIBRARY.searchPlaceholder}
           aria-label={LIBRARY.searchPlaceholder}
         />
+        {allTags.length > 0 && (
+          <div style={{ display: 'flex', gap: 'var(--sp-1)', flexWrap: 'wrap', margin: 'var(--sp-2) 0' }}>
+            {allTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`chip${tag === t ? ' on' : ''}`}
+                onClick={() => setTag(tag === t ? null : t)}
+              >
+                #{t}
+              </button>
+            ))}
+          </div>
+        )}
         {insights === null ? (
           <p className="coach-say">正在打开资产库……</p>
         ) : filtered.length === 0 ? (
@@ -134,7 +159,9 @@ export function Library() {
         ) : (
           filtered.map((ins) => {
             const due = isDue(ins)
-            const revised = lastRevisitInvalid(ins)
+            const retired = isRetired(ins)
+            const partial = lastRevisitPartial(ins)
+            const days = daysUntilDue(ins)
             return (
               <div
                 key={ins.id}
@@ -171,7 +198,9 @@ export function Library() {
                 </div>
                 <p className="coach-say" style={{ margin: 0 }}>
                   【{ins.kind === 'inductive' ? '归纳·待验证' : '演绎·确定'}】{fmtDate(ins.createdAt)}
-                  {revised && <span className="status-badge"> · {LIBRARY.revised}</span>}
+                  {retired && <span className="status-badge"> · {LIBRARY.revised}（回访已终结）</span>}
+                  {partial && <span className="status-badge"> · {LIBRARY.partiallyRevised}</span>}
+                  {ins.tags.length > 0 && <> · {ins.tags.map((t) => `#${t}`).join(' ')}</>}
                   {ins.reviewId && reviewTitle(ins.reviewId) && (
                     <>
                       {' · '}
@@ -179,26 +208,31 @@ export function Library() {
                     </>
                   )}
                 </p>
-                {due ? (
+                {due && !retired ? (
                   <div>
                     <div className="field-label">
                       <span>{LIBRARY.dueAsk}</span>
                     </div>
                     <div className="seg" role="group" aria-label={LIBRARY.dueAsk}>
-                      <button className="seg-item" onClick={() => mark(ins, true)}>
+                      <button className="seg-item" onClick={() => mark(ins, 'valid')}>
                         {LIBRARY.stillValid}
                       </button>
-                      <button className="seg-item" onClick={() => mark(ins, false)}>
+                      <button className="seg-item" onClick={() => mark(ins, 'partial')}>
+                        {LIBRARY.partial}
+                      </button>
+                      <button className="seg-item" onClick={() => mark(ins, 'invalid')}>
                         {LIBRARY.invalidated}
                       </button>
                     </div>
                   </div>
-                ) : (
-                  ins.revisit.length > 0 && (
-                    <p className="coach-say tnum" style={{ margin: 0 }}>
-                      上次回访：{fmtDate(ins.revisit.reduce((a, b) => (a.at > b.at ? a : b)).at)}
-                    </p>
-                  )
+                ) : retired ? null : (
+                  <p className="coach-say tnum" style={{ margin: 0 }}>
+                    {ins.revisit.length > 0
+                      ? `上次回访：${fmtDate(ins.revisit.reduce((a, b) => (a.at > b.at ? a : b)).at)}`
+                      : '尚未回访'}
+                    {days > 0 ? ` · ${LIBRARY.nextInDays(days)}` : ''}
+                    {` · 当前间隔 ${currentIntervalDays(ins)} 天`}
+                  </p>
                 )}
               </div>
             )

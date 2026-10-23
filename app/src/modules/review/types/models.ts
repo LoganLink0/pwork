@@ -78,6 +78,8 @@ export interface CauseItem {
   tool: ToolKey
   /** 5Why 深挖链（课程 09 讲深挖式提问） */
   depth: string[]
+  /** 决策偏差检查单生成的卡：勾选状态以此键识别（旧数据按文案前缀兼容识别） */
+  biasId?: string
 }
 
 /* ------------------------------ 因果循环图（CLD，课程 10 讲） ------------------------------ */
@@ -275,8 +277,8 @@ export interface InsightRecord {
   patternGroup: string
   /** 沉淀时间（回访周期的锚点） */
   createdAt: string
-  /** 间隔重复回访记录 */
-  revisit: { at: string; stillValid: boolean }[]
+  /** 间隔重复回访记录（result 三态；旧记录无 result，读侧以 stillValid 推导兼容） */
+  revisit: { at: string; stillValid: boolean; result?: 'valid' | 'partial' | 'invalid' }[]
 }
 
 /** 全量导出 / 导入的包裹格式 */

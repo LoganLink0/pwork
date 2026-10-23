@@ -9,14 +9,66 @@ import {
   newId,
   noteToMarkdown,
   normalizeNote,
+  purgeNote,
+  purgeOldDeletedNotes,
   restoreNote,
   saveNote,
   softDeleteNote,
+  updateNoteFields,
 } from './repo'
 import { db } from './schema'
 import type { Note } from '../types/models'
 
 // 铁律 7：fake-indexeddb 内存实现，与真实库物理隔离（setup.ts 已 clear）
+
+describe('updateNoteFields（2026-10-24 修复批）', () => {
+  it('links 传入时随更新落库（此前被静默丢弃）', async () => {
+    const n = await createNote({ body: '要挂接的速记' })
+    await updateNoteFields(n.id, { links: { itemIds: ['item_1'], reviewIds: ['rev_1'], taskIds: ['task_1'] } })
+    const got = await getNote(n.id)
+    expect(got?.links).toEqual({ itemIds: ['item_1'], reviewIds: ['rev_1'], taskIds: ['task_1'] })
+  })
+
+  it('标题清空时回退正文首行（与创建语义一致）', async () => {
+    const n = await createNote({ body: '首行会变成标题\n第二行' })
+    await updateNoteFields(n.id, { title: '' })
+    const got = await getNote(n.id)
+    expect(got?.title).toBe('首行会变成标题')
+    // 改正文后清空标题，回退取新正文首行
+    await updateNoteFields(n.id, { body: '新的首行\n', title: '  ' })
+    expect((await getNote(n.id))?.title).toBe('新的首行')
+  })
+
+  it('不传 links 时不覆盖已有挂接', async () => {
+    const n = await createNote({ body: 'x', links: { itemIds: ['item_9'], reviewIds: [], taskIds: [] } })
+    await updateNoteFields(n.id, { body: '改一下' })
+    expect((await getNote(n.id))?.links.itemIds).toEqual(['item_9'])
+  })
+})
+
+describe('回收站彻底删除与自动清理', () => {
+  it('purgeNote 物理删除，listDeletedNotes 不再出现', async () => {
+    const n = await createNote({ body: '待彻底删除' })
+    await softDeleteNote(n.id)
+    expect((await listDeletedNotes()).some((x) => x.id === n.id)).toBe(true)
+    await purgeNote(n.id)
+    expect((await listDeletedNotes()).some((x) => x.id === n.id)).toBe(false)
+    expect(await getNote(n.id)).toBeUndefined()
+  })
+
+  it('purgeOldDeletedNotes 只清超过 30 天的软删除，活跃与近期的保留', async () => {
+    const old = await createNote({ body: '旧的' })
+    await db.notes.update(old.id, { deletedAt: '2026-01-01T00:00:00.000Z' })
+    const recent = await createNote({ body: '近期删的' })
+    await softDeleteNote(recent.id)
+    const alive = await createNote({ body: '活跃的' })
+    const removed = await purgeOldDeletedNotes(30, new Date('2026-10-24T00:00:00.000Z'))
+    expect(removed).toBe(1)
+    expect(await getNote(old.id)).toBeUndefined()
+    expect((await getNote(recent.id))?.deletedAt).not.toBeNull()
+    expect((await getNote(alive.id))?.deletedAt).toBeNull()
+  })
+})
 
 describe('newId', () => {
   it('带前缀且不重复', () => {

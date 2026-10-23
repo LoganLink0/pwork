@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TEMPLATES } from '../content/templates'
 import { StickyCard } from '../components/ui/StickyCard'
+import { listReviews } from '../db/repo'
 import { useTasks } from '../../../store/tasks'
 import { useGoals } from '../../../store/goals'
 import { useCollect } from '../../../store/collect'
@@ -57,10 +58,27 @@ function MaterialCard() {
   )
 }
 
-/** ② 新建复盘：模板选择（M2 增加症状问诊路由器） */
+/** ② 新建复盘：模板选择（M2 增加症状问诊路由器）；按历史使用频次排序，常用靠前 */
 export function NewReview() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // 历史频次：用过最多的模板排前面（稳定排序，未用过的保持定义顺序）
+  const [usage, setUsage] = useState<Map<string, number>>(new Map())
+  useEffect(() => {
+    let live = true
+    void listReviews().then((rs) => {
+      if (!live) return
+      const count = new Map<string, number>()
+      for (const r of rs) count.set(r.templateId, (count.get(r.templateId) ?? 0) + 1)
+      setUsage(count)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+  const sorted = [...TEMPLATES].sort(
+    (a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0),
+  )
   return (
     <div className="container">
       <header className="page-head">
@@ -80,12 +98,12 @@ export function NewReview() {
           gap: 'var(--sp-4)',
         }}
       >
-        {TEMPLATES.map((t) => (
+        {sorted.map((t) => (
           <StickyCard
             key={t.id}
             kind={KIND_BY_TYPE[t.type]}
             title={t.name}
-            tagline={t.tagline}
+            tagline={usage.get(t.id) ? `用过 ${usage.get(t.id)} 次 · ${t.tagline}` : t.tagline}
             onClick={() => {
               const note = searchParams.get('note') ?? ''
               const tail = note ? `&note=${encodeURIComponent(note)}` : ''

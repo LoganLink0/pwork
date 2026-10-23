@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from '../App'
 import { useNotes } from '../store/notes'
+import { db as db2 } from '../db/schema'
 
 /** 速记模块集成（PRD §4.3）：列表、筛选、编辑器自动保存、软删除与回收站 */
 
@@ -111,5 +112,45 @@ describe('速记模块（W1）', () => {
     await user.click(list().getByText('导出测试'))
     await screen.findByTestId('note-editor')
     expect(screen.getByRole('button', { name: '导出 md' })).toBeEnabled()
+  })
+
+  it('时间线按日分组（今天 + 条数）；编辑器预览渲染 Markdown、字数行数可见（2026-10-24）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const s = useNotes.getState()
+    await s.load()
+    await s.create({ body: '# 分组标题\n\n正文有 **加粗** 一段' })
+    await s.create({ body: '同日第二条' })
+    await gotoNotes(user)
+
+    // 活动视图按自然日分组：今天分组头 + 条数
+    expect(list().getByText('今天')).toBeInTheDocument()
+    expect(list().getByText('2 条')).toBeInTheDocument()
+
+    // 打开第一条 → 预览：h1 与 strong 渲染出来，字数/行数可见
+    await user.click(list().getByText(/分组标题/))
+    await screen.findByTestId('note-editor')
+    expect(screen.getByTestId('note-stats').textContent).toMatch(/字 · \d+ 行/)
+    await user.click(screen.getByTestId('preview-toggle'))
+    const preview = await screen.findByTestId('note-preview')
+    expect(preview.querySelector('h1')?.textContent).toBe('分组标题')
+    expect(preview.querySelector('strong')?.textContent).toBe('加粗')
+    await user.click(screen.getByTestId('preview-toggle'))
+    expect(screen.getByLabelText('速记正文')).toBeInTheDocument()
+  })
+
+  it('回收站彻底删除（先确认）物理删除', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const s = useNotes.getState()
+    await s.load()
+    const n = await s.create({ body: '待彻底删除的一条' })
+    await s.softDelete(n.id)
+    await gotoNotes(user)
+    await user.click(screen.getByRole('button', { name: /回收站/ }))
+    window.confirm = () => true
+    await user.click(await screen.findByRole('button', { name: '彻底删除' }))
+    await waitFor(() => expect(useNotes.getState().trash).toHaveLength(0))
+    expect(await db2.notes.get(n.id)).toBeUndefined()
   })
 })

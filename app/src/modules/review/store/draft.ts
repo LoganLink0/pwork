@@ -18,7 +18,7 @@ import { addInsight, getReview, newId, saveReview, upsertActions } from '../db/r
 import { attachReviewToNote } from '../../../db/repo'
 import { generateSummary } from '../engine/summary'
 import { hashTheme } from '../engine/theme'
-import { ARCHIVE } from '../content/copy'
+import { ARCHIVE, SCENARIO_LABEL } from '../content/copy'
 import { createTasksFromActions } from '../../../db/tasksRepo'
 import { useTasks } from '../../../store/tasks'
 
@@ -146,7 +146,8 @@ export const useDraft = create<DraftState>((set, get) => ({
         id: newId('ins'),
         reviewId: next.id,
         text: ins.text,
-        tags: [],
+        // 场景作为默认标签（资产库可按场景筛选）；此前恒为空，字段形同虚设
+        tags: [SCENARIO_LABEL[next.scenario]],
         kind: ins.kind,
         verified: ins.kind === 'deductive',
         patternGroup: hashTheme(ins.text),
