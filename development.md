@@ -24,13 +24,17 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 
 ## 回归清单（每次收尾必过，按序）
 
-1. `npx vitest run` → 355 全绿
+1. `npx vitest run` → 384 全绿
 2. `npx tsc -b` → 0 错
-3. `npm run lint` → 27/0（基线不变）
+3. `npm run lint` → 25/0（基线不变）
 4. 涉及桌面版：`npx tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
 5. 涉及抓取链：真实抓一轮看横幅（耗时/源成败/无卡死）
 6. 涉及 worker：worker 测试 19 绿
 7. 提交纪律：一个 commit 一件事；`git add -A` 前先 `git status` 过目（防误装残留/无关文件混入，复盘 3.17）
+
+视觉类改动加两步（2026-10-23 起常用）：
+- 浏览器计算样式采样断言（字号/圆角/对比度——探针见会话记录，h1=28/h2=18/引导句 13/tnum 12）
+- 窄屏 390px 溢出扫描 + 新增 UI 元素的暗色主题过目
 
 ## 开发约定
 
@@ -39,6 +43,8 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 - 时间纪律：本地日期一律 `localDateOf/todayLocal`，禁裸 `toISOString().slice(0,10)`；注入参数体内禁读系统时钟（复盘 2.7）。
 - 错误纪律：`void asyncFn()` 前想"它拒绝了谁知道"（全局网+错误日志）；静默 catch 要写明为什么静默。
 - UI 改动对照 [DESIGN.md](./DESIGN.md) 与应用内 /design 页；新功能做入口审查（三步内可达）。
+- 界面图标一律走 `components/shell/icons.tsx` 的 `Icon`（单色线性 SVG，尺寸四档 18/20/14/32）；彩色 emoji 不进界面，按钮文字不带装饰符号（DESIGN.md 图标节）。速记 Markdown 渲染用 marked + DOMPurify（DOMPurify 消毒后再注入，勿绕过）。
+- 可点元素：优先真 `button`；div/span 扮演必须带 `role` + `tabIndex` + 键盘事件，全局 `[role='button' 等]` 已给手型，悬停反馈按卡片 hover 体系补（复盘 3.28）。
 - 源文件一律用编辑工具写（Mimosa 钩子拦 Bash 写源码）；弹窗输入禁用 prompt（复盘 3.12）。
 
 ## 端口占用速查

@@ -42,6 +42,12 @@
 - 需要语义色的图标由使用处包 span 着色：停=cat-action、继续/达成=cat-good、开始=accent-text、增强回路=cat-good、恶性=cat-action。
 - 保留的单色字符：✓ ✗ ★ ✦ ✕ ＋ → ↗（线性字形且承载语义）。导出文档（md/PPT/HTML）内的 emoji 属文档内容，不受本节限制。
 
+## 交互反馈（可点即有回应）
+
+- 鼠标语义：真 `button` 与 `[role=button/checkbox/radio/tab]` 一律手型（base.css 全局规则）；div/span 扮演交互元素必须带 role + tabIndex + 键盘事件。
+- 悬停反馈：可点卡片上浮 + 阴影（shadow-2 体系）；分段项未选中态描边着色；按钮沿 `.btn-*:hover`。悬停无变化的可点元素视同缺陷（2026-10-24 模板卡事故，复盘 3.28）。
+- 字号收敛口径（机械断言可验）：h1=28 / 内容区 h2=18 / 引导句 13 / tnum 元信息 12，全站一致；Hero 32 与统计数字 24 为令牌角色。
+
 ## 动效（只动 transform/opacity）
 
 - 令牌：`--dur-1 120ms`（按压/着色）→ `--dur-2 200ms`（抬升/展开）→ `--dur-3 320ms`（路由入场/弹层）；统一缓动 `--ease` cubic-bezier(.22,.61,.36,1)。

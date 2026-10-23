@@ -8,18 +8,24 @@
 
 | 组件 | 接口要点 |
 |---|---|
-| `Sidebar` / `Topbar` / `BottomNav` | 消费 content/nav.ts 的 MODULE_NAV；导航项挂 `mark-*` 类注入模块色 |
-| `CommandPalette` | Ctrl+K 或 `/` 唤起；有查询词时 Enter 落在首个匹配（快速动作与页面同样参与过滤，复盘 1.2） |
-| `QuickNote` | `useUi().openQuick()` 打开；浮层内 Esc 存草稿（localStorage DRAFT_KEY） |
+| `Sidebar` / `Topbar` / `BottomNav` | 消费 content/nav.ts 的 MODULE_NAV；导航项挂 `mark-*` 类注入模块色；图标为 `Icon` 键名（icons.tsx） |
+| `Icon`（icons.tsx） | 单色线性 SVG 库（24×24/描边 2/currentColor）；`name` 键 + 可选 `size`（默认 18；卡头 20/行内 14/空态 32）；界面禁彩色 emoji（DESIGN.md 图标节） |
+| `SettingsNav` | 设置页/帮助页共用的左栏分类导航（桌面竖排、<768px 横滚带渐隐提示）；props：`tabs/active/onSelect/ariaLabel`，tab 的 icon 为 Icon 键名 |
+| `CommandPalette` | Ctrl+K 或 `/` 唤起；纯本地检索（快速动作+页面+速记+全库，searchAll 同源）；有查询词时 Enter 落在首个匹配（AI 问答已暂停，TODO 记录重启前置） |
+| `QuickNote` | `useUi().openQuick()` 打开；Esc 与点遮罩均存草稿（localStorage DRAFT_KEY）；Ctrl+Enter 保存；转待办回写 note.links.taskIds |
 | `ErrorBoundary` / `ErrorBar` | 渲染崩溃兜底 + 即时错误条；错误入口统一走 `recordError`，勿直接操作 useErrorBar |
 
 ### 采集件 components/collect/ItemCard.tsx
 
-props：`item` + 回调 `onStars/onNotes/onKeep/onCycleOt/onDelete/onConvert`。星级点击语义：0→…→5→**0**（点满清零，aria-label 随状态变化，集成测试覆盖全循环）。
+props：`item` + 回调 `onVote/onNotes/onKeep/onCycleOt/onDelete/onConvert` + 可选 `tier/showStage/converted`。投票三态（want/meh/no，点同值取消）；分层徽章（必看/可看/可略，按同日排名由 engine/itemTier 计算）；机会/威胁/趋势标记走 Icon 键（target/alert/trending）。
+
+### 速记编辑器 pages/NoteEditor.tsx
+
+编辑/预览双态（预览走 marked + DOMPurify 渲染 `.md-body`）；字数/行数常显（`note-stats`）；工具栏作用于真实选区；自动保存 600ms 防抖 + 卸载 flush；标题清空回退正文首行。
 
 ### 通用样式组件（class 约定，非 React 组件）
 
-表单卡 `set-card>h2+.desc+.set-body`、行 `set-row`、输入 `.input`、分段 `.radio`、徽章 `.chip/.mini-btn/.text-btn`、横幅 `.run-banner(.warn)`、统计条 `.stat-bar/.stat-fill`、日志列表 `.errlog-item`。定义都在 shell.css/collect.css；新类名先跑 `npm run audit:classes`。
+表单卡 `set-card>h2+.desc+.set-body`、行 `set-row`、输入 `.input`、分段 `.seg-item`（未选中 hover 描边着色）、徽章 `.chip/.mini-btn/.text-btn`、横幅 `.run-banner(.warn)`、统计条 `.stat-bar/.stat-fill`、日志列表 `.errlog-item`、速记时间线分组 `.note-day>.note-day-head`、Markdown 阅读态 `.md-body`。定义都在 shell.css/collect.css；新类名先跑 `npm run audit:classes`。
 
 ## engine 纯函数（全部零 React；测试同名文件）
 

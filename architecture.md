@@ -65,3 +65,9 @@ tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900
 - 多标签页同库并发：Dexie last-write-wins，未做跨页协调（单用户低险，backlog）。
 - engine 评分链朴素（规则近似，可解释优先）——复杂度让位于投票驱动的自动调参（用户侧零参数）。
 - worker 与本地"天"的口径不同（云端 UTC / 本地本地日），文档化设计非疏漏（复盘 1.6）。
+- 速记「彻底删除」只清本机：设备同步按全表快照推记录，云端 pwork_sync_records 的旧 payload 不随 purge 删除——新设备首次全量初始化会把已删速记以软删态拉回（不会复活为活跃；跨设备一致删除待设计，TODO 观察项）。
+- AI 全库问答暂停（2026-10-23）：上下文只给检索标题导致答非所问；重启前置（正文级上下文 → 可选嵌入索引）见 TODO，DeepSeek 无 embeddings 端点已核实。
+
+## 运行时依赖要点（前端）
+
+生产依赖极少：React 19 / react-router / zustand / Dexie / docx / jszip / marked + dompurify（2026-10-24 引入，速记 Markdown 预览：marked 解析 → DOMPurify 消毒 → 注入）。界面图标为零依赖自绘 SVG（components/shell/icons.tsx），无图标库。
