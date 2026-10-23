@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import App from '../App'
 import { useNotes } from '../store/notes'
 
@@ -72,48 +72,6 @@ describe('工作台壳（W1）', () => {
     await user.type(within(dialog).getByLabelText('搜索'), '简历辅导')
     await user.click(await within(dialog).findByText('打开简历辅导应用'))
     await waitFor(() => expect(screen.getByRole('heading', { name: '简历辅导（独立应用）' })).toBeInTheDocument())
-  })
-
-  it('命令面板问 AI（未配 Key）：动作项出现，回车引导到 设置 → AI', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.keyboard('{Control>}k{/Control}')
-    const dialog = await screen.findByRole('dialog', { name: '命令面板' })
-    await user.type(within(dialog).getByLabelText('搜索'), '我最近的增长想法')
-    expect(within(dialog).getByText(/问 AI：我最近的增长想法/)).toBeInTheDocument()
-    expect(within(dialog).getByText('未配 Key · 回车去设置')).toBeInTheDocument()
-    await user.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByRole('heading', { name: '设置' })).toBeInTheDocument())
-    expect(screen.getByRole('heading', { name: 'AI · BYOK' })).toBeInTheDocument()
-  })
-
-  it('命令面板问 AI（已配 Key）：Enter 提问 → 答案与来源出现（2026-10-23 自处理页并入）', async () => {
-    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true, apiKey: 'pwork-gateway' }))
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ choices: [{ message: { content: '你最近在想付费墙的定价梯度 [1]' }, finish_reason: 'stop' }] }),
-    }))
-    vi.stubGlobal('fetch', fetchMock)
-    try {
-      const user = userEvent.setup()
-      render(<App />)
-      // 造一条速记作为检索上下文
-      await user.keyboard('n')
-      await user.type(await screen.findByLabelText('速记内容'), '增长打法：先做付费墙定价梯度')
-      await user.keyboard('{Control>}{Enter}{/Control}')
-      await waitFor(() => expect(useNotes.getState().notes.length).toBe(1))
-      await user.keyboard('{Control>}k{/Control}')
-      const dialog = await screen.findByRole('dialog', { name: '命令面板' })
-      await user.type(within(dialog).getByLabelText('搜索'), '增长打法')
-      await user.keyboard('{Enter}')
-      expect(await within(dialog).findByTestId('palette-answer', {}, { timeout: 6000 })).toHaveTextContent('定价梯度')
-      // 来源列出检索命中的速记，点击跳原文
-      await user.click(within(dialog).getByRole('button', { name: /^\[1\]/ }))
-      await waitFor(() => expect(screen.getByTestId('note-editor')).toBeInTheDocument())
-    } finally {
-      vi.unstubAllGlobals()
-      localStorage.removeItem('fupan-coach')
-    }
   })
 
   it('速记浮层：N 唤起，Esc 存草稿，重开可恢复', async () => {

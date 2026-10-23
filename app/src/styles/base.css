@@ -27,6 +27,19 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* 键位提示统一药丸样式：字族必须继承正文（单字族原则）——
+   浏览器给 kbd 的默认 monospace 曾让面板里的 Esc 与全站英文字形不一致 */
+kbd {
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink-faint);
+  background: var(--surface-2);
+}
+
 h1,
 h2,
 h3,

@@ -7,8 +7,8 @@ import { toast } from '../engine/toast'
 
 /**
  * 处理模块主页：工具箱 + 快速启动。
- * 跨模块检索与 AI 全库问答都在 Ctrl K 命令面板（同一能力不占两处入口；
- * 2026-10-23 问答自本页并入面板，带外部材料的深问走研究页的文件导入）。
+ * 跨模块检索在 Ctrl K 命令面板（同一能力不占两处入口）。
+ * AI 全库问答暂停（上下文深度与检索升级前不达预期，2026-10-23 用户拍板；见 TODO）。
  * 工具注册表见 content/processTools.ts——加新工具先注册再实现组件。
  */
 export function Process() {
@@ -52,7 +52,7 @@ export function Process() {
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
         <h1>处理</h1>
-        <span className="sub">工具箱（文字/音频/图片/视频）· 快速启动；跨模块检索与 AI 全库问答在 <kbd>Ctrl K</kbd> 命令面板</span>
+        <span className="sub">工具箱（文字/音频/图片/视频）· 快速启动；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>
       </div>
 
       <div className="set-card">
