@@ -31,7 +31,7 @@
 ## 间距·圆角·阴影
 
 - 间距 8px 基：`--sp-1..7` = 4/8/12/16/24/32/48。页面留白节奏统一 `sp-5` 起。
-- 圆角：`--r-sm 8`（输入/按钮/小卡）→ `md 12`（卡片/表格）→ `lg 16`（面板/弹层）；胶囊用 99px。
+- 圆角：`--r-sm 8`（输入/按钮）→ `md 12`（浮层/内嵌件：toast、quick-add）→ `lg 16`（卡片容器：set-card、mcard、tile、digest-item、task-card、src-table、note-list、editor）；胶囊用 99px。卡片层不许用 12。
 - 阴影单体系：`--shadow-1`（静置）→ `--shadow-2`（悬停抬升）→ `--shadow-pop`（弹层）。禁止彩色阴影。
 
 ## 动效（只动 transform/opacity）

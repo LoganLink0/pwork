@@ -18,6 +18,7 @@ import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestPro
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, type SyncConfig } from '../db/syncRecords'
 import type { ErrorLogEntry } from '../types/models'
 import type { ThemePref } from '../engine/appearance'
+import { SettingsNav } from '../components/shell/SettingsNav'
 
 const THEMES: { key: ThemePref; label: string }[] = [
   { key: 'auto', label: '跟随系统' },
@@ -33,13 +34,13 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
 }
 
 const SETTINGS_TABS = [
-  { id: 'appearance', label: '外观', icon: '◐' },
-  { id: 'data', label: '数据', icon: '💾' },
-  { id: 'collect', label: '采集偏好', icon: '🏷' },
-  { id: 'errors', label: '错误日志', icon: '📋' },
-  { id: 'cloud', label: '云端同步', icon: '☁' },
-  { id: 'ai', label: 'AI', icon: '🤖' },
-  { id: 'about', label: '关于', icon: 'ⓘ' },
+  { id: 'appearance', label: '外观', icon: 'appearance' },
+  { id: 'data', label: '数据', icon: 'data' },
+  { id: 'collect', label: '采集偏好', icon: 'collect' },
+  { id: 'errors', label: '错误日志', icon: 'errors' },
+  { id: 'cloud', label: '云端同步', icon: 'cloud' },
+  { id: 'ai', label: 'AI', icon: 'ai' },
+  { id: 'about', label: '关于', icon: 'about' },
 ] as const
 
 /** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
@@ -240,19 +241,12 @@ export function Settings() {
       </div>
 
       <div className="settings-layout">
-        <nav className="settings-nav" aria-label="设置分类">
-          {SETTINGS_TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`settings-nav-item${tab === t.id ? ' on' : ''}`}
-              onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
-              aria-current={tab === t.id ? 'page' : undefined}
-            >
-              <span aria-hidden>{t.icon}</span> {t.label}
-            </button>
-          ))}
-        </nav>
+        <SettingsNav
+          tabs={SETTINGS_TABS}
+          active={tab}
+          onSelect={(id) => setSearchParams({ tab: id }, { replace: true })}
+          ariaLabel="设置分类"
+        />
 
         <div className="settings-content">
       <div className="set-card" data-tab="appearance" style={{ display: tab === 'appearance' ? undefined : 'none' }}>

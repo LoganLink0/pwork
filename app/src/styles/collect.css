@@ -32,7 +32,7 @@
 .digest-item {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
   padding: var(--sp-4) var(--sp-5);
   margin-bottom: var(--sp-3);
@@ -236,7 +236,7 @@
   border-collapse: collapse;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   overflow: hidden;
   box-shadow: var(--shadow-1);
   font-size: var(--fs-sm);
@@ -352,7 +352,7 @@
 .src-form {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
   padding: var(--sp-4) var(--sp-5);
   margin-bottom: var(--sp-4);
@@ -520,7 +520,7 @@
    已结束行用 data-status 区分 done（划线+绿徽章）/ dropped（灰徽章）。 */
 .task-card {
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--surface);
   overflow: hidden;
 }

@@ -18,10 +18,12 @@
   --line-strong: #cfcac1;
   --ink: #211e1a;
   --ink-soft: #66625a;
-  --ink-faint: #97928a;
+  /* 原 #97928a 在白底仅 2.8:1，弱化文字也是正文（时间戳/提示 12px），压到 AA（≥4.5:1） */
+  --ink-faint: #736e66;
 
   /* ------- 唯一强调色：琥珀（三级） ------- */
   --accent: #e8833a;
+  /* 实心按钮底色：白字压 #b0500f 为 5.05:1（AA）。深浅主题共用，按主题调浅会跌破 4.5:1 */
   --accent-deep: #b0500f;
   --accent-text: #a34e12;
 
@@ -66,7 +68,7 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  /* ------- 圆角与阴影（单阴影体系） ------- */
+  /* ------- 圆角与阴影（单阴影体系）：8 控件 / 12 浮层与内嵌件 / 16 卡片容器 ------- */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
@@ -100,7 +102,6 @@
     --ink-soft: #b6b2a8;
     --ink-faint: #908a7d;
     --accent: #e8833a;
-    --accent-deep: #c96a2e;
     --accent-text: #eda868;
     --cat-good: #5aab7f;
     --cat-need: #d3805c;
@@ -124,7 +125,6 @@
   --ink-soft: #b3afa5;
   --ink-faint: #827d73;
   --accent: #e8833a;
-  --accent-deep: #c96a2e;
   --accent-text: #eda868;
   --cat-good: #5aab7f;
   --cat-need: #d3805c;

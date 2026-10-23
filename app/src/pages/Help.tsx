@@ -1,13 +1,14 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, QUICK_START, SHORTCUTS } from '../content/help'
+import { SettingsNav } from '../components/shell/SettingsNav'
 
 const HELP_TABS = [
-  { id: 'quick', label: '快速上手', icon: '▶' },
-  { id: 'shortcuts', label: '快捷键', icon: '⌨' },
-  { id: 'privacy', label: '数据与隐私', icon: '🔒' },
-  { id: 'config', label: '配置指南', icon: '⚙' },
-  { id: 'troubleshoot', label: '排错', icon: '🔧' },
-  { id: 'glossary', label: '术语表', icon: '📖' },
+  { id: 'quick', label: '快速上手', icon: 'quick' },
+  { id: 'shortcuts', label: '快捷键', icon: 'shortcuts' },
+  { id: 'privacy', label: '数据与隐私', icon: 'privacy' },
+  { id: 'config', label: '配置指南', icon: 'config' },
+  { id: 'troubleshoot', label: '排错', icon: 'troubleshoot' },
+  { id: 'glossary', label: '术语表', icon: 'glossary' },
 ] as const
 
 /**
@@ -27,19 +28,12 @@ export function Help() {
       </div>
 
       <div className="settings-layout">
-        <nav className="settings-nav" aria-label="帮助分类">
-          {HELP_TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`settings-nav-item${tab === t.id ? ' on' : ''}`}
-              onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
-              aria-current={tab === t.id ? 'page' : undefined}
-            >
-              <span aria-hidden>{t.icon}</span> {t.label}
-            </button>
-          ))}
-        </nav>
+        <SettingsNav
+          tabs={HELP_TABS}
+          active={tab}
+          onSelect={(id) => setSearchParams({ tab: id }, { replace: true })}
+          ariaLabel="帮助分类"
+        />
 
         <div className="settings-content">
       <div className="set-card" data-tab="quick" style={{ display: tab === 'quick' ? undefined : 'none' }}>

@@ -339,7 +339,7 @@ button.nav-item {
   display: block;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
   padding: var(--sp-4) var(--sp-5);
   text-decoration: none;
@@ -622,7 +622,7 @@ a.mcard .m-link:hover {
 .note-list {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   overflow: hidden;
 }
 
@@ -670,7 +670,7 @@ a.mcard .m-link:hover {
 .editor {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
 }
 
@@ -886,7 +886,7 @@ a.mcard .m-link:hover {
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
-/* 图标锁定等宽等高：emoji 原生尺寸不一（💾≠☁≠🤖），不锁会导致文字错位 */
+/* 图标盒锁定 20×20，内嵌 SVG 统一 18×18、跟随文字色（见 navIcons.tsx），分类间视觉重量一致 */
 .settings-nav-item > span:first-child {
   flex: none;
   width: 20px;
@@ -894,8 +894,12 @@ a.mcard .m-link:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
   line-height: 1;
+}
+.settings-nav-item svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 .settings-nav-item:hover {
   background: var(--surface-2);
@@ -924,6 +928,18 @@ a.mcard .m-link:hover {
     padding-bottom: 4px;
     -webkit-overflow-scrolling: touch;
   }
+  /* 横滚未到底时右侧渐隐，提示还能滑（.can-right 由 SettingsNav 监听滚动/缩放切换） */
+  .settings-nav.can-right::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    flex: none;
+    width: 20px;
+    margin-left: -22px;
+    align-self: stretch;
+    background: linear-gradient(to right, transparent, var(--bg));
+    pointer-events: none;
+  }
   .settings-nav-item {
     flex: none;
     white-space: nowrap;
@@ -939,7 +955,7 @@ a.mcard .m-link:hover {
 .set-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
 }
 
