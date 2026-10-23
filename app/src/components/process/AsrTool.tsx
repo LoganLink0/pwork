@@ -95,7 +95,7 @@ export function AsrTool() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
       <div className="set-row">
         {!listening ? (
-          <button type="button" className="btn-primary" onClick={start}>🎙 开始录音转写</button>
+          <button type="button" className="btn-primary" onClick={start}>开始录音转写</button>
         ) : (
           <button type="button" className="btn-ghost" onClick={stop}>■ 停止</button>
         )}

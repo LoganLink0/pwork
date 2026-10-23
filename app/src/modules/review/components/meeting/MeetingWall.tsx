@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MEETING } from '../../content/copy'
+import { Icon } from '../../../../components/shell/icons'
 import { removeGapAt } from '../../engine/cascade'
 import { useDraft } from '../../store/draft'
 import { stickyStraight } from '../ui/DebiasField'
@@ -86,11 +87,21 @@ export function MeetingWall() {
       ) : (
         <div className="wall">
           <div {...columnProps(true)}>
-            <h3 className="wall-col-title">🟡 {MEETING.sideGood}</h3>
+            <h3 className="wall-col-title">
+              <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: 'var(--accent)' }}>
+                <Icon name="dot" size={10} />
+              </span>
+              {MEETING.sideGood}
+            </h3>
             {goodIdx.map(({ i }) => renderCard(i))}
           </div>
           <div {...columnProps(false)}>
-            <h3 className="wall-col-title">🔵 {MEETING.sideNeed}</h3>
+            <h3 className="wall-col-title">
+              <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: 'var(--cat-insight)' }}>
+                <Icon name="dot" size={10} />
+              </span>
+              {MEETING.sideNeed}
+            </h3>
             {needIdx.map(({ i }) => renderCard(i))}
           </div>
         </div>

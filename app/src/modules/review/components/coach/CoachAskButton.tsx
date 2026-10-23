@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getCoach, type CoachContext } from '../../engine/coach'
+import { Icon } from '../../../../components/shell/icons'
 
 interface CoachAskButtonProps {
   ctx: CoachContext
@@ -38,7 +39,7 @@ export function CoachAskButton({ ctx, onPick }: CoachAskButtonProps) {
     <div className="coach-ask">
       {state === 'idle' && (
         <button className="btn-small coach-ask-btn" onClick={ask}>
-          🤖 AI 追问
+          <Icon name="sparkle" size={13} /> AI 追问
         </button>
       )}
       {state === 'loading' && <span className="coach-say">AI 正在组织问题……</span>}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
+import { Icon } from '../components/shell/icons'
 import { todayLocal, nextCalendarDay } from '../engine/datetime'
 import { alignmentStats } from '../engine/itemTier'
 import { obsidianDaily } from '../engine/obsidian'
@@ -80,7 +81,7 @@ export function Digest() {
             onClick={() => void runFetchAll()}
             data-testid="fetch-all"
           >
-            {fetchState.running ? '⟳ 抓取中…' : '⟳ 立即抓取'}
+            {fetchState.running ? '抓取中…' : '立即抓取'}
           </button>
           <button
             type="button"
@@ -91,7 +92,7 @@ export function Digest() {
             }
             title="导出为 Obsidian 日报文件"
           >
-            ⬇ 导出 Obsidian 日报
+            导出 Obsidian 日报
           </button>
         </div>
       </div>
@@ -116,9 +117,9 @@ export function Digest() {
 
       {digest.length === 0 ? (
         <div className="empty">
-          <div className="e-ico" aria-hidden>📰</div>
+          <div className="e-ico" aria-hidden><Icon name="fileText" size={32} /></div>
           <p>
-            {isToday ? '今日还没有条目——点上方「⟳ 立即抓取」，或等云端定时抓取后自动出现。' : `${digestDate} 没有条目。`}
+            {isToday ? '今日还没有条目——点上方「立即抓取」，或等云端定时抓取后自动出现。' : `${digestDate} 没有条目。`}
           </p>
           <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
             <Link to="/input/sources" className="btn-ghost">先去信源管理 →</Link>

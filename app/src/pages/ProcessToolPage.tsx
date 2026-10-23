@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { Icon } from '../components/shell/icons'
 import { CATEGORY_META, ENGINE_LABEL, getTool } from '../content/processTools'
 import { TtsTool } from '../components/process/TtsTool'
 import { AsrTool } from '../components/process/AsrTool'
@@ -45,7 +46,7 @@ export function ProcessToolPage() {
           <span className="sub">{cat.name}类 · BYOK 云引擎</span>
         </div>
         <div className="placeholder" style={{ margin: 'var(--sp-6) auto' }}>
-          <div className="p-ico" aria-hidden>🔑</div>
+          <div className="p-ico" aria-hidden><Icon name="key" size={32} /></div>
           <h2>待点亮：需要对应的 AI 服务 Key</h2>
           <p>{tool.desc}</p>
           <div className="will">

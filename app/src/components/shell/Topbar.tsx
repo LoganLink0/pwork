@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import { crumbFor } from '../../content/nav'
 import { useUi } from '../../store/ui'
+import { Icon } from './icons'
 import type { ThemePref } from '../../engine/appearance'
 
 const THEME_ORDER: ThemePref[] = ['auto', 'light', 'dark']
-const THEME_ICON: Record<ThemePref, string> = { auto: '◐', light: '☀', dark: '☾' }
+const THEME_ICON: Record<ThemePref, string> = { auto: 'appearance', light: 'sun', dark: 'moon' }
 const THEME_LABEL: Record<ThemePref, string> = { auto: '跟随系统', light: '明亮', dark: '暗色' }
 const THEME_TITLE: Record<ThemePref, string> = { auto: '主题：跟随系统（点击切到明亮）', light: '主题：明亮（点击切到暗色）', dark: '主题：暗色（点击切到跟随系统）' }
 
@@ -29,7 +30,7 @@ export function Topbar() {
         <span>{trail}</span>
       </div>
       <button type="button" className="searchbox" onClick={openPalette} aria-label="打开搜索与命令面板">
-        🔍 <span>搜索或跳转…</span> <kbd>Ctrl K</kbd>
+        <Icon name="search" /> <span>搜索或跳转…</span> <kbd>Ctrl K</kbd>
       </button>
       {updateReady && (
         <button
@@ -44,7 +45,7 @@ export function Topbar() {
         </button>
       )}
       <button type="button" className="quicknote-btn" onClick={openQuick}>
-        ⚡ 速记
+        <Icon name="zap" /> 速记
       </button>
       <button
         type="button"
@@ -54,10 +55,10 @@ export function Topbar() {
         aria-label={THEME_TITLE[theme]}
         onClick={() => setTheme(nextTheme)}
       >
-        {THEME_ICON[theme]} {THEME_LABEL[theme]}
+        <Icon name={THEME_ICON[theme]} /> {THEME_LABEL[theme]}
       </button>
       <Link to="/settings" className="iconbtn" title="设置" aria-label="设置">
-        ⚙
+        <Icon name="settings" />
       </Link>
     </header>
   )

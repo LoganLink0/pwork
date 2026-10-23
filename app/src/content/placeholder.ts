@@ -14,7 +14,7 @@ export interface PlaceholderContent {
 
 export const PLACEHOLDER: Record<string, PlaceholderContent> = {
   draft: {
-    icon: '✍',
+    icon: 'pen',
     title: '文章草稿',
     lead: '将要解决：速记与洞察聚合 → 博客文章骨架 + AI 润色。',
     will: [
@@ -25,7 +25,7 @@ export const PLACEHOLDER: Record<string, PlaceholderContent> = {
     goTo: '/process',
   },
   video: {
-    icon: '🎬',
+    icon: 'video',
     title: '数据视频（远期规划）',
     lead: '将要解决：数据变化 → 短视频。',
     will: [

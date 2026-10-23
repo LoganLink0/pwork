@@ -79,7 +79,7 @@ export function ReportGenerator() {
     setPptMsg('')
     try {
       const name = await exportReportPptx(data, snapshotsRef.current)
-      setPptMsg(`✅ 已生成 ${name}`)
+      setPptMsg(`已生成 ${name}`)
     } catch (e) {
       setPptMsg(`PPT 生成失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -159,7 +159,7 @@ export function ReportGenerator() {
           {coachReady() ? (
             <div className="set-row">
               <button type="button" className="btn-ghost" disabled={aiState === 'running'} onClick={() => void runAi()} data-testid="ai-summary-btn">
-                {aiState === 'running' ? '生成中…' : '🤖 AI 写总结段'}
+                {aiState === 'running' ? '生成中…' : 'AI 写总结段'}
               </button>
               {aiSummary && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>已生成，见报告末尾</span>}
               {aiState === 'error' && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{aiError}</span>}
@@ -181,13 +181,13 @@ export function ReportGenerator() {
               <button type="button" className={format === 'md' ? 'on' : ''} onClick={() => setFormat('md')}>Markdown</button>
               <button type="button" className={format === 'html' ? 'on' : ''} onClick={() => setFormat('html')}>HTML</button>
             </div>
-            <button type="button" className="btn-ghost" onClick={() => download('md')} disabled={!data}>⬇ 下载 .md</button>
-            <button type="button" className="btn-ghost" onClick={() => download('html')} disabled={!data}>⬇ 下载 .html</button>
+            <button type="button" className="btn-ghost" onClick={() => download('md')} disabled={!data}>下载 .md</button>
+            <button type="button" className="btn-ghost" onClick={() => download('html')} disabled={!data}>下载 .html</button>
             <button type="button" className="btn-ghost" onClick={() => void exportPpt()} disabled={!data || pptBusy} data-testid="ppt-btn">
-              {pptBusy ? '生成中…' : '⬇ 导出 PPT'}
+              {pptBusy ? '生成中…' : '导出 PPT'}
             </button>
-            <button type="button" className="btn-ghost" onClick={printPdf} disabled={!data}>🖨 打印 / PDF</button>
-            <Link to="/output/read" className="btn-ghost">🎧 朗读版 →</Link>
+            <button type="button" className="btn-ghost" onClick={printPdf} disabled={!data}>打印 / PDF</button>
+            <Link to="/output/read" className="btn-ghost">朗读版 →</Link>
           </div>
           {pptMsg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{pptMsg}</div>}
           {data && (
@@ -216,7 +216,7 @@ export function ReportGenerator() {
               onChange={(e) => setObsidianVault(e.target.value)}
               aria-label="Obsidian vault"
             />
-            <button type="button" className="btn-ghost" onClick={toObsidian} disabled={!data}>📓 写入 Obsidian</button>
+            <button type="button" className="btn-ghost" onClick={toObsidian} disabled={!data}>写入 Obsidian</button>
             {obsidianMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{obsidianMsg}</span>}
           </div>
           <pre

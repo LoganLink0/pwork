@@ -1,7 +1,18 @@
 import { EMOTION_LEXICON } from '../../content/emotion-lexicon'
+import { Icon } from '../../../../components/shell/icons'
 import { useDraft } from '../../store/draft'
 import type { EmotionCheck } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
+
+/** 情绪词典核心词 → 图标键（情绪脸谱） */
+const EMOTION_ICON_KEYS: Record<string, string> = {
+  愉悦: 'faceJoy',
+  愤怒: 'faceAnger',
+  悲伤: 'faceSad',
+  恐惧: 'faceFear',
+  惊讶: 'faceSurprise',
+  厌恶: 'faceDisgust',
+}
 
 const DEFAULT: EmotionCheck = { words: [], intensity: 0, trigger: '' }
 
@@ -54,7 +65,7 @@ export function EmotionPicker({ value }: EmotionPickerProps) {
         <div key={family.core} style={{ marginBottom: 'var(--sp-2)' }}>
           <div className="field-label" style={{ margin: 'var(--sp-1) 0' }}>
             <span>
-              {family.icon} {family.core}
+              <Icon name={EMOTION_ICON_KEYS[family.core] ?? 'faceJoy'} size={14} /> {family.core}
             </span>
           </div>
           <div className="seg" role="group" aria-label={`${family.core}类细分情绪`}>

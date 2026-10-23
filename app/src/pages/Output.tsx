@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Icon } from '../components/shell/icons'
 import { useTasks } from '../store/tasks'
 import { useCollect } from '../store/collect'
 import { useGoals } from '../store/goals'
@@ -11,36 +12,36 @@ interface Tool { to: string; icon: string; name: string; desc: string; status: s
 const TOOL_GROUPS: { id: string; icon: string; name: string; desc: string; tools: Tool[] }[] = [
   {
     id: 'doc',
-    icon: '📄',
+    icon: 'file',
     name: '文 · 文档与演示',
     desc: '把库里的积累变成能发出去、交出去的成稿',
     tools: [
-      { to: '/output/report', icon: '📊', name: '周报导出', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'HTML · PPT · MD' },
-      { to: '/output/research', icon: '🔎', name: '调研分析', desc: '输入目标 → 拿调研框架与逐节提示词 → 贴回发现 → 出稿', status: 'MD · Word' },
-      { to: '/output/write', icon: '🧩', name: 'PPT 撰写', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '.pptx' },
-      { to: '/output/article', icon: '✍', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架', status: 'Markdown' },
+      { to: '/output/report', icon: 'barChart', name: '周报导出', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'HTML · PPT · MD' },
+      { to: '/output/research', icon: 'search', name: '调研分析', desc: '输入目标 → 拿调研框架与逐节提示词 → 贴回发现 → 出稿', status: 'MD · Word' },
+      { to: '/output/write', icon: 'grid', name: 'PPT 撰写', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '.pptx' },
+      { to: '/output/article', icon: 'pen', name: '文章草稿', desc: '速记与洞察按周期聚合 → AI 整理骨架', status: 'Markdown' },
     ],
   },
   {
     id: 'audio',
-    icon: '🎧',
+    icon: 'headphones',
     name: '音 · 聆听',
     desc: '通勤场景——用听的回顾一个周期',
-    tools: [{ to: '/output/read', icon: '🎧', name: '朗读音频', desc: '周报转语音', status: '音频' }],
+    tools: [{ to: '/output/read', icon: 'volume', name: '朗读音频', desc: '周报转语音', status: '音频' }],
   },
   {
     id: 'image',
-    icon: '🖼',
+    icon: 'image',
     name: '图 · 分享',
     desc: '关键数字变成一张可发出去的图',
-    tools: [{ to: '/output/card', icon: '🖼', name: '数据卡片', desc: '关键数字生成分享卡片图', status: '图片' }],
+    tools: [{ to: '/output/card', icon: 'creditCard', name: '数据卡片', desc: '关键数字生成分享卡片图', status: '图片' }],
   },
   {
     id: 'video',
-    icon: '🎬',
+    icon: 'film',
     name: '视频',
     desc: '数据变化 → 短视频',
-    tools: [{ to: '/output/video', icon: '🎬', name: '数据视频', desc: '数据变化 → 短视频', status: '远期' }],
+    tools: [{ to: '/output/video', icon: 'video', name: '数据视频', desc: '数据变化 → 短视频', status: '远期' }],
   },
 ]
 
@@ -81,7 +82,7 @@ export function Output() {
             {TOOL_GROUPS.map((g) => (
               <div key={g.id} className="mcard">
                 <div className="m-head">
-                  <span className="m-ico" aria-hidden>{g.icon}</span>
+                  <span className="m-ico" aria-hidden><Icon name={g.icon} /></span>
                   <span className="m-name">{g.name}</span>
                 </div>
                 <div className="m-sub">{g.desc}</div>
@@ -89,7 +90,8 @@ export function Output() {
                   {g.tools.map((t) => (
                     <Link key={t.to} to={t.to} className="m-link" title={t.desc} style={t.status === '远期规划' ? { opacity: 0.55 } : undefined}>
                       <span>
-                        {t.icon} {t.name}
+                        <span className="m-ico-inline" aria-hidden><Icon name={t.icon} size={14} /></span>
+                        {t.name}
                       </span>
                       <span className="cnt">{t.status}</span>
                     </Link>
@@ -109,7 +111,7 @@ export function Output() {
             {EXTERNAL.map((e) => (
               <a key={e.url} href={e.url} target="_blank" rel="noreferrer noopener" className="mcard mcard-link">
                 <div className="m-head">
-                  <span className="m-ico" aria-hidden>🌐</span>
+                  <span className="m-ico" aria-hidden><Icon name="globe" /></span>
                   <span className="m-name">{e.name}</span>
                 </div>
                 <div className="m-sub">{e.desc}</div>

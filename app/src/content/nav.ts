@@ -23,38 +23,38 @@ export interface NavModule {
 }
 
 export const WORKSPACE_NAV: { to: string; icon: string; label: string; end?: boolean; mark: string }[] = [
-  { to: '/', icon: '◈', label: '今日', end: true, mark: 'mark-workspace' },
-  { to: '/tasks', icon: '✓', label: '待办', mark: 'mark-workspace' },
-  { to: '/goals', icon: '◎', label: '目标', mark: 'mark-workspace' },
+  { to: '/', icon: 'today', label: '今日', end: true, mark: 'mark-workspace' },
+  { to: '/tasks', icon: 'tasks', label: '待办', mark: 'mark-workspace' },
+  { to: '/goals', icon: 'goals', label: '目标', mark: 'mark-workspace' },
 ]
 
 export const MODULE_NAV: NavModule[] = [
   {
     key: 'input',
-    icon: '⚡',
+    icon: 'inbox',
     label: '输入',
     status: 'active',
     mark: 'mark-input',
     children: [
-      { to: '/input/notes', icon: '✎', label: '速记', countFrom: 'notes' },
-      { to: '/input/digest', icon: '📰', label: '信息日报' },
-      { to: '/input/sources', icon: '⛓', label: '信源', countFrom: 'sources' },
-      { to: '/input/items', icon: '🗂', label: '条目库' },
+      { to: '/input/notes', icon: 'pen', label: '速记', countFrom: 'notes' },
+      { to: '/input/digest', icon: 'fileText', label: '信息日报' },
+      { to: '/input/sources', icon: 'rss', label: '信源', countFrom: 'sources' },
+      { to: '/input/items', icon: 'archive', label: '条目库' },
     ],
   },
-  { key: 'process', icon: '⚗', label: '处理', status: 'active', mark: 'mark-process', to: '/process' },
-  { key: 'output', icon: '📤', label: '输出', status: 'active', mark: 'mark-output', to: '/output' },
+  { key: 'process', icon: 'cpu', label: '处理', status: 'active', mark: 'mark-process', to: '/process' },
+  { key: 'output', icon: 'upload', label: '输出', status: 'active', mark: 'mark-output', to: '/output' },
   {
     key: 'review',
-    icon: '◐',
+    icon: 'repeat',
     label: '回路',
     status: 'built',
     mark: 'mark-review',
     children: [
-      { to: '/review', icon: '▤', label: '复盘档案' },
-      { to: '/review/new', icon: '＋', label: '新建复盘' },
-      { to: '/review/assets', icon: '◆', label: '认知资产' },
-      { to: '/review/analytics', icon: '📊', label: '聚合分析' },
+      { to: '/review', icon: 'folder', label: '复盘档案' },
+      { to: '/review/new', icon: 'plusCircle', label: '新建复盘' },
+      { to: '/review/assets', icon: 'layers', label: '认知资产' },
+      { to: '/review/analytics', icon: 'pieChart', label: '聚合分析' },
     ],
   },
 ]
@@ -96,11 +96,11 @@ export const PAGE_META: Record<string, [string, string, string]> = {
 
 /** 移动端底部导航（PRD §4.1：<768px 五项） */
 export const BOTTOM_NAV = [
-  { to: '/', icon: '◈', label: '今日', end: true },
-  { to: '/input/notes', icon: '⚡', label: '输入' },
-  { to: '/tasks', icon: '✓', label: '待办' },
-  { to: '/review', icon: '◐', label: '回路' },
-  { to: '/settings', icon: '⋯', label: '更多' },
+  { to: '/', icon: 'today', label: '今日', end: true },
+  { to: '/input/notes', icon: 'inbox', label: '输入' },
+  { to: '/tasks', icon: 'tasks', label: '待办' },
+  { to: '/review', icon: 'repeat', label: '回路' },
+  { to: '/settings', icon: 'more', label: '更多' },
 ]
 
 /** 面包屑：精确匹配优先，否则按前缀最长匹配（覆盖 /input/notes/:id 等详情路由） */

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Icon } from '../components/shell/icons'
 import { useNotes } from '../store/notes'
 import { relTime } from '../engine/datetime'
 
@@ -115,7 +116,7 @@ export function Notes() {
 export function NotesEmptyPane() {
   return (
     <div className="empty">
-      <div className="e-ico" aria-hidden>✎</div>
+      <div className="e-ico" aria-hidden><Icon name="pen" size={32} /></div>
       <p>选择左侧一条速记，或新建一条。</p>
       <Link to="/input/notes/new" className="btn-primary">＋ 新速记</Link>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MODULE_NAV, MODULE_STATUS_LABEL } from '../content/nav'
+import { Icon } from '../components/shell/icons'
 import { useUi } from '../store/ui'
 import { useNotes, todayNoteCount } from '../store/notes'
 import { useCollect } from '../store/collect'
@@ -96,13 +97,13 @@ export function Home() {
           </p>
         </div>
         <button type="button" className="btn-primary" onClick={openQuick}>
-          ⚡ 记一条
+          记一条
         </button>
       </div>
 
       {activeSources === 0 && (
         <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="sources-reminder">
-          📰 还没有添加信源——可一键导入 13 个按主题精选、实测可达的推荐信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策）。
+          还没有添加信源——可一键导入 13 个按主题精选、实测可达的推荐信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策）。
           <button
             type="button"
             className="mini-btn"
@@ -111,11 +112,11 @@ export function Home() {
             onClick={() => {
               setImportMsg(null)
               void importRecommended().then((r) => {
-                setImportMsg(`已导入 ${r.imported} 个信源（跳过 ${r.skipped} 个已存在）。去「信息日报」点⟳立即抓取试试。`)
+                setImportMsg(`已导入 ${r.imported} 个信源（跳过 ${r.skipped} 个已存在）。去「信息日报」点立即抓取试试。`)
               })
             }}
           >
-            ⬇ 一键导入推荐信源
+            一键导入推荐信源
           </button>
           <Link to="/input/sources" style={{ marginLeft: 'var(--sp-2)' }}>去信源管理 →</Link>
           {importMsg && <div style={{ marginTop: 'var(--sp-1)', fontSize: 'var(--fs-xs)' }}>{importMsg}</div>}
@@ -123,7 +124,7 @@ export function Home() {
       )}
       {backupWarn && (
         <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="backup-reminder">
-          ⏳ 距上次全量备份已超过 30 天——本地优先应用，备份是唯一的安全网。
+          距上次全量备份已超过 30 天——本地优先应用，备份是唯一的安全网。
           <Link to="/settings" style={{ marginLeft: 'var(--sp-2)', fontWeight: 600 }}>去导出 →</Link>
           <button
             type="button"
@@ -184,7 +185,7 @@ export function Home() {
                 : `${reviewInfo.count} 份档案`}
             </div>
             <div className="t-sub">
-              {signals.length > 0 ? `⚡ ${signals[0]!.message}` : `${reviewInfo.count} 份档案 · 节奏保持中`}
+              {signals.length > 0 ? signals[0]!.message : `${reviewInfo.count} 份档案 · 节奏保持中`}
             </div>
             <span className={`t-link${signals.length > 0 ? ' hot' : ''}`}>
               {signals.length > 0 ? '开始复盘 →' : '看复盘档案 →'}
@@ -204,7 +205,7 @@ export function Home() {
       <div className="module-grid">
         <div className={`mcard ${input.mark}`}>
           <div className="m-head">
-            <span className="m-ico" aria-hidden>{input.icon}</span>
+            <span className="m-ico" aria-hidden><Icon name={input.icon} /></span>
             <span className="m-name">{input.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[input.status]}</span>
           </div>
@@ -214,7 +215,7 @@ export function Home() {
 
         <div className={`mcard ${process.mark}`}>
           <div className="m-head">
-            <span className="m-ico" aria-hidden>{process.icon}</span>
+            <span className="m-ico" aria-hidden><Icon name={process.icon} /></span>
             <span className="m-name">{process.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[process.status]}</span>
           </div>
@@ -234,7 +235,7 @@ export function Home() {
 
         <div className={`mcard ${output.mark}`}>
           <div className="m-head">
-            <span className="m-ico" aria-hidden>{output.icon}</span>
+            <span className="m-ico" aria-hidden><Icon name={output.icon} /></span>
             <span className="m-name">{output.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[output.status]}</span>
           </div>
@@ -257,7 +258,7 @@ export function Home() {
 
         <div className={`mcard ${review.mark}`}>
           <div className="m-head">
-            <span className="m-ico" aria-hidden>{review.icon}</span>
+            <span className="m-ico" aria-hidden><Icon name={review.icon} /></span>
             <span className="m-name">{review.label}</span>
             <span className="m-tag">{MODULE_STATUS_LABEL[review.status]}</span>
           </div>

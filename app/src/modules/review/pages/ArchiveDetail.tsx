@@ -9,6 +9,7 @@ import type { ActionItem, ReviewRecord } from '../types/models'
 import { DeltaBadge } from '../components/ui/DeltaBadge'
 import { CONTROL_LABEL, CONFIDENCE_LABEL } from '../content/copy'
 import { DoubleCheckPanel } from '../components/doublecheck/DoubleCheckPanel'
+import { Icon } from '../../../components/shell/icons'
 
 /** 挂载速记条：档案页回看这次复盘带着哪条速记来 */
 function AttachedNotes({ ids }: { ids: string[] }) {
@@ -22,7 +23,7 @@ function AttachedNotes({ ids }: { ids: string[] }) {
     <div className="seg" aria-label="挂载的速记">
       {ids.map((id) => (
         <Link key={id} className="seg-item seg-item--on" to={`/input/notes/${id}`} style={{ textDecoration: 'none' }}>
-          ✎ {titles[id] ?? id}
+          <Icon name="pen" size={12} /> {titles[id] ?? id}
         </Link>
       ))}
     </div>
@@ -197,7 +198,10 @@ export function ArchiveDetail() {
         {c.project.actions.length ? (
           c.project.actions.map((a, i) => (
             <p key={i}>
-              {a.kind === 'stop' ? '⛔' : a.kind === 'continue' ? '✅' : '🚀'} {a.text || '（未填写）'}
+              <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 4, color: a.kind === 'stop' ? 'var(--cat-action)' : a.kind === 'continue' ? 'var(--cat-good)' : 'var(--accent-text)' }}>
+                <Icon name={a.kind === 'stop' ? 'stop' : a.kind === 'continue' ? 'done' : 'play'} size={14} />
+              </span>
+              {a.text || '（未填写）'}
               {a.ifThen?.trim() && <span className="coach-say">（执行意图：{a.ifThen}）</span>}
               {a.due && <span className="tnum coach-say">（期限 {a.due}）</span>}
             </p>

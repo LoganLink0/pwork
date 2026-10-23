@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MEETING } from '../../content/copy'
+import { Icon } from '../../../../components/shell/icons'
 import { useDraft } from '../../store/draft'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
 import type { Delta } from '../../types/models'
@@ -65,7 +66,10 @@ export function CollectPanel() {
           className={`seg-item ${side === 'good' ? 'seg-item--on' : ''}`}
           onClick={() => setSide('good')}
         >
-          🟡 {MEETING.sideGood}
+          <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: 'var(--accent)' }}>
+            <Icon name="dot" size={10} />
+          </span>
+          {MEETING.sideGood}
         </button>
         <button
           type="button"
@@ -74,7 +78,10 @@ export function CollectPanel() {
           className={`seg-item ${side === 'need' ? 'seg-item--on' : ''}`}
           onClick={() => setSide('need')}
         >
-          🔵 {MEETING.sideNeed}
+          <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: 'var(--cat-insight)' }}>
+            <Icon name="dot" size={10} />
+          </span>
+          {MEETING.sideNeed}
         </button>
       </div>
 

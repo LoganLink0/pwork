@@ -135,8 +135,8 @@ export function ConvertTool({ preset, kindLabel }: { preset: ConvertPreset; kind
       )}
       {state.stage === 'done' && state.resultUrl && (
         <div className="notice">
-          ✅ 转换完成：<b>{state.outputName}</b>（{state.resultSize < 1024 * 1024 ? `${(state.resultSize / 1024).toFixed(0)} KB` : `${(state.resultSize / 1024 / 1024).toFixed(1)} MB`}）　
-          <a href={state.resultUrl} download={state.outputName} className="btn-ghost" style={{ textDecoration: 'none' }}>⬇ 下载</a>
+          <b>{state.outputName}</b>（{state.resultSize < 1024 * 1024 ? `${(state.resultSize / 1024).toFixed(0)} KB` : `${(state.resultSize / 1024 / 1024).toFixed(1)} MB`}）　
+          <a href={state.resultUrl} download={state.outputName} className="btn-ghost" style={{ textDecoration: 'none' }}></a>
         </div>
       )}
     </div>

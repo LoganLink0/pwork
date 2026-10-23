@@ -6,8 +6,14 @@ import { fmtLocal, todayLocal } from '../engine/datetime'
 import { actionStats, closeAction, listInsights, listOpenActions, listReviews, updateAction, type ActionStats } from '../db/repo'
 import type { ActionItem, ReviewRecord } from '../types/models'
 import { KnowledgeCapsule } from '../components/ui/KnowledgeCapsule'
+import { Icon } from '../../../components/shell/icons'
 
-const KIND_MARK = { stop: '⛔', continue: '✅', start: '🚀' } as const
+/** 行动项三分类的图形标记：颜色走类别色（停=红 / 继续=绿 / 开始=琥珀） */
+const KIND_MARK: Record<ActionItem['kind'], { icon: string; color: string }> = {
+  stop: { icon: 'stop', color: 'var(--cat-action)' },
+  continue: { icon: 'done', color: 'var(--cat-good)' },
+  start: { icon: 'play', color: 'var(--accent-text)' },
+}
 
 /** ① 仪表盘：Hero + 统计卡阵 + 双栏（档案 / 行动待办） */
 export function Dashboard() {
@@ -202,7 +208,10 @@ export function Dashboard() {
                       <>
                         <div>
                           <strong>
-                            {KIND_MARK[a.kind]} {a.text}
+                            <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 4, color: KIND_MARK[a.kind].color }}>
+                              <Icon name={KIND_MARK[a.kind].icon} size={14} />
+                            </span>
+                            {a.text}
                           </strong>
                           {a.ifThen?.trim() && <div className="coach-say">执行意图：{a.ifThen}</div>}
                           {a.due && (

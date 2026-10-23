@@ -1,5 +1,6 @@
 import { WIZARD } from '../../content/copy'
 import { getPack } from '../../content/scenario-packs'
+import { Icon } from '../../../../components/shell/icons'
 import { useDraft } from '../../store/draft'
 import type { ActionDraft, ActionKind } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
@@ -8,10 +9,10 @@ import { ConfidenceMeter } from '../ui/ConfidenceMeter'
 
 const emptyAction = (): ActionDraft => ({ kind: 'start', text: '', confidence: 1 })
 
-const KIND_LABEL: Record<ActionKind, string> = {
-  stop: '⛔ 停下',
-  continue: '✅ 继续',
-  start: '🚀 开始',
+const KIND_LABEL: Record<ActionKind, { text: string; icon: string; color: string }> = {
+  stop: { text: '停下', icon: 'stop', color: 'var(--cat-action)' },
+  continue: { text: '继续', icon: 'done', color: 'var(--cat-good)' },
+  start: { text: '开始', icon: 'play', color: 'var(--accent-text)' },
 }
 
 /** 第四步 · 规划（CLAP·P）：Stop/Continue/Start 行动卡 + 执行意图 if-then。 */
@@ -56,7 +57,10 @@ export function StepProject({ quick }: { quick: boolean }) {
                 className={`seg-item ${a.kind === k ? 'seg-item--on' : ''}`}
                 onClick={() => updateAction(i, { kind: k })}
               >
-                {KIND_LABEL[k]}
+                <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: KIND_LABEL[k].color }}>
+                  <Icon name={KIND_LABEL[k].icon} size={12} />
+                </span>
+                {KIND_LABEL[k].text}
               </button>
             ))}
           </div>

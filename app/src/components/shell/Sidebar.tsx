@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { MODULE_NAV, WORKSPACE_NAV } from '../../content/nav'
+import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useCollect } from '../../store/collect'
 import { useTasks } from '../../store/tasks'
@@ -51,7 +52,7 @@ export function Sidebar() {
           end={item.end}
           className={({ isActive }) => `nav-item ${item.mark}${isActive ? ' active' : ''}`}
         >
-          <span className="ico" aria-hidden>{item.icon}</span>
+          <span className="ico" aria-hidden><Icon name={item.icon} /></span>
           {item.label}
           {item.to === '/tasks' && todayDue > 0 && <span className="cnt tnum">{todayDue}</span>}
         </NavLink>
@@ -67,7 +68,7 @@ export function Sidebar() {
               aria-expanded={open[mod.key] ?? true}
               onClick={() => toggle(mod.key)}
             >
-              <span className="ico" aria-hidden>{mod.icon}</span>
+              <span className="ico" aria-hidden><Icon name={mod.icon} /></span>
               <b style={{ fontWeight: 600 }}>{mod.label}</b>
             </button>
             {(open[mod.key] ?? true) && (
@@ -79,7 +80,7 @@ export function Sidebar() {
                     end
                     className={({ isActive }) => `nav-item ${mod.mark}${isActive ? ' active' : ''}`}
                   >
-                    <span className="ico" aria-hidden>{child.icon}</span>
+                    <span className="ico" aria-hidden><Icon name={child.icon} /></span>
                     {child.label}
                     {child.countFrom && countOf(child.countFrom) !== null && (
                       <span className="cnt tnum">{countOf(child.countFrom)}</span>
@@ -95,7 +96,7 @@ export function Sidebar() {
             to={mod.to ?? '/'}
             className={`nav-item ${mod.status === 'planned' ? 'dim' : ''} ${mod.mark}`}
           >
-            <span className="ico" aria-hidden>{mod.icon}</span>
+            <span className="ico" aria-hidden><Icon name={mod.icon} /></span>
             {mod.label}
             {mod.status === 'planned' && <span className="plan-tag">规划中</span>}
           </NavLink>
@@ -104,11 +105,11 @@ export function Sidebar() {
 
       <div className="spacer" />
       <NavLink to="/help" className={({ isActive }) => `nav-item mark-workspace${isActive ? ' active' : ''}`}>
-        <span className="ico" aria-hidden>?</span>
+        <span className="ico" aria-hidden><Icon name="helpCircle" /></span>
         帮助
       </NavLink>
       <NavLink to="/settings" className={({ isActive }) => `nav-item mark-workspace${isActive ? ' active' : ''}`}>
-        <span className="ico" aria-hidden>⚙</span>
+        <span className="ico" aria-hidden><Icon name="settings" /></span>
         设置
       </NavLink>
       <div className="foot">

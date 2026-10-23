@@ -49,7 +49,7 @@ function MaterialCard() {
         )}
         {signals.length > 0 && (
           <div className="notice" style={{ marginTop: 'var(--sp-2)' }} role="status">
-            <b>⚡ 信号</b>：{signals.map((x) => x.message).join('；')}
+            <b>信号</b>：{signals.map((x) => x.message).join('；')}
           </div>
         )}
       </div>

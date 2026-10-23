@@ -90,8 +90,7 @@ export function CardTool() {
         </button>
         {url && (
           <a href={url} download={`pwork-card-${todayLocal()}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>
-            ⬇ 下载 PNG
-          </a>
+                      </a>
         )}
       </div>
       {url && <img src={url} alt="卡片预览" style={{ maxWidth: 420, borderRadius: 'var(--r-md)', border: '1px solid var(--line)', alignSelf: 'center' }} />}

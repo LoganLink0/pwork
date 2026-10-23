@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { searchAll, KIND_LABEL, type SearchHit } from '../engine/searchAll'
+import { Icon } from '../components/shell/icons'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
@@ -109,7 +110,7 @@ export function Process() {
               return (
                 <div key={cat} className="mcard" style={{ borderLeft: '3px solid ' + meta.mark }}>
                   <div className="m-head">
-                    <span className="m-ico" aria-hidden>{meta.icon}</span>
+                    <span className="m-ico" aria-hidden><Icon name={meta.icon} /></span>
                     <span className="m-name">{meta.name}</span>
                   </div>
                   <div className="m-sub">{meta.desc}</div>
@@ -123,7 +124,11 @@ export function Process() {
                       ) : (
                         <Link key={t.id} to={toolRoute(t.id)} className="m-link" style={t.status === 'byok-pending' ? { opacity: 0.55 } : undefined}>
                           <span>
-                            {t.status === 'byok-pending' && <span aria-hidden>🔑 </span>}
+                            {t.status === 'byok-pending' && (
+                              <span aria-hidden className="kmark" style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 4, color: 'var(--accent-text)' }}>
+                                <Icon name="key" size={13} />
+                              </span>
+                            )}
                             {t.name}
                           </span>
                           <span className="cnt">{t.status === 'ready' ? ENGINE_LABEL[t.engine].replace('本地 · ', '') : '需 Key'}</span>

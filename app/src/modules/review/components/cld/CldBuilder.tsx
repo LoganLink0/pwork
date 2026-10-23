@@ -5,6 +5,7 @@ import { newId } from '../../db/repo'
 import { cyclePathLabel, detectLoops, rootCandidates } from '../../engine/cld'
 import { useDraft } from '../../store/draft'
 import { emptyCld, type CldEdge, type CldGraph, type CldPolarity } from '../../types/models'
+import { Icon } from '../../../../components/shell/icons'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
 import { CldCanvas } from './CldCanvas'
 
@@ -184,7 +185,7 @@ export function CldBuilder() {
       <div className="seg" role="group" aria-label={CLD.templateTitle}>
         {CLD_TEMPLATES.map((t) => (
           <button key={t.id} type="button" className="seg-item" title={t.desc} onClick={() => loadTemplate(t.id)}>
-            📦 {t.name}
+            <Icon name="box" size={12} /> {t.name}
           </button>
         ))}
       </div>
@@ -369,7 +370,7 @@ export function CldBuilder() {
                     }))
                   }
                 >
-                  {CLD.loopLabel(loop.kind, '飞轮/恶性循环')}
+                  {CLD.loopLabel(loop.kind)}
                 </button>
                 <button
                   className="btn-small"
@@ -386,7 +387,10 @@ export function CldBuilder() {
                 {cld.loops.map((loop) => (
                   <div key={loop.id} className={`loop-compare-card ${loop.kind === 'reinforcing' ? 'loop-fly' : 'loop-vicious'}`}>
                     <div className="loop-compare-head">
-                      {loop.kind === 'reinforcing' ? '🟢' : '🔴'} <strong>{loop.label}</strong>
+                      <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4, color: loop.kind === 'reinforcing' ? 'var(--cat-good)' : 'var(--cat-action)' }}>
+                        <Icon name="dot" size={10} />
+                      </span>{' '}
+                      <strong>{loop.label}</strong>
                       <span className="coach-say">{loop.kind === 'reinforcing' ? '增强回路' : '制衡/恶性'}</span>
                     </div>
                     <ol className="loop-compare-path">

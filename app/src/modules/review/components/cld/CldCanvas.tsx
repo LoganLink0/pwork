@@ -146,7 +146,7 @@ export function CldCanvas({ graph, onMoveNode }: CldCanvasProps) {
           const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
           return (
             <text key={loop.id} x={cx} y={cy - 8} textAnchor="middle" fontSize="13" fill="var(--accent-text)" fontWeight="700">
-              🔄 {loop.label}
+              {loop.label}
             </text>
           )
         })}

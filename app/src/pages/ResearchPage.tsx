@@ -404,7 +404,7 @@ export function ResearchPage() {
               onKeyDown={(e) => e.key === 'Enter' && void startTask()}
             />
             <button type="button" className="btn-primary" disabled={!target.trim() || fwBusy} onClick={() => void startTask()} data-testid="start-research">
-              {fwBusy ? '⟳ 生成框架中…' : '开始调研'}
+              {fwBusy ? '生成框架中…' : '开始调研'}
             </button>
           </div>
           <div className="set-row">
@@ -432,7 +432,7 @@ export function ResearchPage() {
           <div className="set-body">
             {fw === null ? (
               fwBusy ? (
-                <div className="notice">⟳ 框架生成中（AI 定制最长约 90 秒，超时自动用内置模板）——不用等在原地。</div>
+                <div className="notice">框架生成中（AI 定制最长约 90 秒，超时自动用内置模板）——不用等在原地。</div>
               ) : profile ? (
                 <div className="notice" style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span>这个任务还没有框架（可能创建于框架功能之前）。</span>
@@ -454,11 +454,11 @@ export function ResearchPage() {
                       onClick={() => void researchAllOnline()}
                       title="按下面的角度自动跑完联网搜索与作答，结果追加进「发现」——不用逐个点"
                     >
-                      {allProgress ? `⟳ 一键调研中（${allProgress.done}/${allProgress.total}）…` : `🌐 一键调研（全部 ${fw.sections.length} 个角度）`}
+                      {allProgress ? `一键调研中（${allProgress.done}/${allProgress.total}）…` : `一键调研（全部 ${fw.sections.length} 个角度）`}
                     </button>
                   )}
                   <button type="button" className={coachReady && searchReady ? 'btn-ghost' : 'btn-primary'} onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">
-                    📋 复制完整提示词（{fw.sections.length} 个角度合一）
+                    复制完整提示词（{fw.sections.length} 个角度合一）
                   </button>
                   {/* 跳转清单与处理页「快速启动」共用（取前 4 个，按最近使用排序）；点击记一次使用 */}
                   {byRecentUse(loadQuickSites()).slice(0, 4).map((s) => (
@@ -496,7 +496,7 @@ export function ResearchPage() {
                           title="只调研这个角度：搜索 → AI 带来源作答 → 追加进发现"
                           style={{ marginLeft: 'auto' }}
                         >
-                          {webBusy === s.heading ? '⟳ 调研中…' : '🌐 只查此角度'}
+                          {webBusy === s.heading ? '调研中…' : '只查此角度'}
                         </button>
                       )}
                       {coachReady && !searchReady && (
@@ -508,7 +508,7 @@ export function ResearchPage() {
                           title="让 AI 按已有知识回答这个角度的问题，追加进发现"
                           style={{ marginLeft: 'auto' }}
                         >
-                          {askBusy === s.heading ? '⟳ AI 回答中…' : '🤖 问 AI 此角度'}
+                          {askBusy === s.heading ? 'AI 回答中…' : '问 AI 此角度'}
                         </button>
                       )}
                     </div>
@@ -582,7 +582,7 @@ export function ResearchPage() {
                 onClick={() => void generateAnalysis()}
                 data-testid="research-generate"
               >
-                {aiBusy ? '⟳ AI 整理中…' : '🤖 AI 整理成分析草稿'}
+                {aiBusy ? 'AI 整理中…' : 'AI 整理成分析草稿'}
               </button>
               <button type="button" className="btn-ghost" disabled={!articleMaterials.length} onClick={() => setDraft(view.skeleton())}>
                 用手动骨架（不需要 AI）
@@ -599,7 +599,7 @@ export function ResearchPage() {
             </div>
             <div className="set-row" style={{ flexWrap: 'wrap' }}>
               <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} data-testid="import-material">
-                ⬆ 补充材料（Word / PDF / CSV / 文本）
+                补充材料（Word / PDF / CSV / 文本）
               </button>
               <input
                 ref={fileRef}
@@ -629,8 +629,8 @@ export function ResearchPage() {
           <div className="set-body">
             <div className="set-row">
               <label>导出</label>
-              <button type="button" className="btn-ghost" onClick={() => doExport('md')}>⬇ Markdown</button>
-              <button type="button" className="btn-ghost" onClick={() => doExport('docx')}>⬇ Word（.docx）</button>
+              <button type="button" className="btn-ghost" onClick={() => doExport('md')}>Markdown</button>
+              <button type="button" className="btn-ghost" onClick={() => doExport('docx')}>Word（.docx）</button>
               <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>Word 可另存 PDF</span>
             </div>
             <ArticleEditor draft={draft} onChange={setDraft} />

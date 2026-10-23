@@ -94,7 +94,7 @@ describe('调研分析页（任务式）', () => {
     // AI 框架生成的 stub 返回非 JSON → 自动落回内置模板
     expect(await screen.findByText('一、公司画像与业务')).toBeInTheDocument()
 
-    const webBtns = await screen.findAllByRole('button', { name: '🌐 只查此角度' })
+    const webBtns = await screen.findAllByRole('button', { name: '只查此角度' })
     await user.click(webBtns[0]!)
     const ta = (await screen.findByLabelText('发现')) as HTMLTextAreaElement
     await waitFor(() => {

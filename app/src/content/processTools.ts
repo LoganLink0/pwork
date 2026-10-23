@@ -37,11 +37,11 @@ export interface ProcessTool {
 export const CATEGORY_ORDER: ToolCategory[] = ['text', 'audio', 'image', 'video', 'topic']
 
 export const CATEGORY_META: Record<ToolCategory, { name: string; icon: string; mark: string; desc: string }> = {
-  text: { name: '文字', icon: '✎', mark: 'var(--cat-insight)', desc: '最抽象，最轻；一切加工的起点' },
-  audio: { name: '音频', icon: '🎧', mark: 'var(--cat-need)', desc: '随听随记，解放双眼' },
-  image: { name: '图片', icon: '🖼', mark: 'var(--cat-good)', desc: '直观可见，便于分享' },
-  video: { name: '视频', icon: '🎬', mark: 'var(--cat-action)', desc: '信息最丰富，也最重' },
-  topic: { name: '专题', icon: '◆', mark: 'var(--accent)', desc: '围绕一个具体场景的成套能力' },
+  text: { name: '文字', icon: 'fileText', mark: 'var(--cat-insight)', desc: '最抽象，最轻；一切加工的起点' },
+  audio: { name: '音频', icon: 'headphones', mark: 'var(--cat-need)', desc: '随听随记，解放双眼' },
+  image: { name: '图片', icon: 'image', mark: 'var(--cat-good)', desc: '直观可见，便于分享' },
+  video: { name: '视频', icon: 'film', mark: 'var(--cat-action)', desc: '信息最丰富，也最重' },
+  topic: { name: '专题', icon: 'folder', mark: 'var(--accent)', desc: '围绕一个具体场景的成套能力' },
 }
 
 export const ENGINE_LABEL: Record<ToolEngine, string> = {

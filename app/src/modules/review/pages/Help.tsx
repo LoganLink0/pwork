@@ -2,12 +2,25 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CONTROL_LABEL, DELTA_LABEL, CONFIDENCE_LABEL, HELP } from '../content/copy'
 import { EXAMPLE_META, EXAMPLE_UBER_CLD, buildExampleClap } from '../content/example'
-import { useDraft } from '../store/draft'
+import { Icon } from '../../../components/shell/icons'
+import { useDraft } from '../../store/draft'
 import { CldCanvas } from '../components/cld/CldCanvas'
 import { DeltaBadge } from '../components/ui/DeltaBadge'
 import { KnowledgeCapsule } from '../components/ui/KnowledgeCapsule'
 
-const KIND_MARK = { stop: '⛔', continue: '✅', start: '🚀' } as const
+const KIND_MARK = {
+  stop: { icon: 'stop', color: 'var(--cat-action)' },
+  continue: { icon: 'done', color: 'var(--cat-good)' },
+  start: { icon: 'play', color: 'var(--accent-text)' },
+} as const
+
+function KindMark({ kind }: { kind: keyof typeof KIND_MARK }) {
+  return (
+    <span aria-hidden style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 4, color: KIND_MARK[kind].color }}>
+      <Icon name={KIND_MARK[kind].icon} size={14} />
+    </span>
+  )
+}
 
 /** 帮助页：以「小林的周复盘」完整示例引导新用户走一遍 CLAP */
 export function Help() {
@@ -130,9 +143,9 @@ export function Help() {
             <p>{HELP.exampleSteps[3].desc}</p>
           </div>
           <div className="cause-card">
-            <p className="help-filled">{KIND_MARK.start} 每周日晚核对下周学习清单</p>
+            <p className="help-filled"><KindMark kind="start" /> 每周日晚核对下周学习清单</p>
             <p className="help-why">执行意图：如果周日晚上 8 点，就花 15 分钟核对并调整学习计划</p>
-            <p className="help-filled">{KIND_MARK.continue} 保持工作日的晨间学习时段</p>
+            <p className="help-filled"><KindMark kind="continue" /> 保持工作日的晨间学习时段</p>
           </div>
         </div>
 

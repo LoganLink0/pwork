@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCollect } from '../store/collect'
+import { Icon } from '../components/shell/icons'
 import { DOMAINS, TIER_LABEL, TIER_WEIGHT } from '../content/collect'
 import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
@@ -68,7 +69,7 @@ export function Sources() {
         <h1>信源</h1>
         <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 手动抓取，不自动定时</span>
         <div className="right">
-          <button type="button" className="btn-ghost" onClick={() => void doExport()}>⬇ 导出 JSON</button>
+          <button type="button" className="btn-ghost" onClick={() => void doExport()}>导出 JSON</button>
           <button
             type="button"
             className="btn-ghost"
@@ -80,10 +81,10 @@ export function Sources() {
               })
             }}
           >
-            ⬇ 导入推荐信源包
+            导入推荐信源包
           </button>
           <label className="btn-ghost" style={{ cursor: 'pointer' }}>
-            ⬆ 导入 JSON
+            导入 JSON
             <input
               type="file"
               accept=".json,application/json"
@@ -129,7 +130,7 @@ export function Sources() {
 
       {(autoStopped.length > 0 || inactiveFail.length > 0) && (
         <div className="run-banner" role="alert">
-          <span className="warn">⚠ {inactiveFail.length} 个源连续失败 ≥3 次已自动停用</span>
+          <span className="warn"><Icon name="alert" size={13} /> {inactiveFail.length} 个源连续失败 ≥3 次已自动停用</span>
           （死源静默污染数据是最常见死法）：{inactiveFail.map((s) => s.name).join('、')}。请在编辑里检查地址或重新启用。
         </div>
       )}
@@ -176,7 +177,7 @@ export function Sources() {
 
       {sources.length === 0 ? (
         <div className="empty">
-          <div className="e-ico" aria-hidden>⛓</div>
+          <div className="e-ico" aria-hidden><Icon name="rss" size={32} /></div>
           <p>还没有信源。建议先添加 5–10 个用两周，再决定哪些值得长期订阅。</p>
           <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
             <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加第一个信源</button>

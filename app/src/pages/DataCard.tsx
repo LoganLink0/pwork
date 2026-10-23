@@ -90,7 +90,7 @@ export function DataCard() {
             <div style={{ paddingTop: 'var(--sp-3)' }}>
               <img src={url} alt="数据快照卡片" style={{ maxWidth: '100%', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />
               <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
-                <a href={url} download={`pwork-snapshot-${data?.today ?? ''}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>⬇ 下载 PNG</a>
+                <a href={url} download={`pwork-snapshot-${data?.today ?? ''}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>下载 PNG</a>
               </div>
             </div>
           )}

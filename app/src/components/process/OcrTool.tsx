@@ -73,7 +73,7 @@ export function OcrTool() {
       {preview && <img src={preview} alt="预览" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />}
       <div className="set-row">
         <button type="button" className="btn-primary" disabled={!fileRef.current || stage === 'loading' || stage === 'recognizing'} onClick={() => void recognize()}>
-          {stage === 'loading' || stage === 'recognizing' ? '识别中…' : '🔍 开始识别'}
+          {stage === 'loading' || stage === 'recognizing' ? '识别中…' : '开始识别'}
         </button>
         {stage === 'loading' || stage === 'recognizing' ? (
           <span className="val" style={{ flex: 1 }}>

@@ -90,9 +90,9 @@ export function ImageProcessTool() {
           </div>
           {result && (
             <div className="notice">
-              ✅ 输出 {result.w}×{result.h} · {fmtSize(result.size)}
+               {result.w}×{result.h} · {fmtSize(result.size)}
               {file.size > 0 && result.size < file.size && <>（比原图小 {Math.round((1 - result.size / file.size) * 100)}%）</>}　
-              <a href={result.url} download={`image.${ext}`} className="btn-ghost" style={{ textDecoration: 'none' }}>⬇ 下载</a>
+              <a href={result.url} download={`image.${ext}`} className="btn-ghost" style={{ textDecoration: 'none' }}></a>
             </div>
           )}
         </>

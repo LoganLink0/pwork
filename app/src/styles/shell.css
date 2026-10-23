@@ -112,9 +112,14 @@ button.nav-item {
 
 .nav-item .ico {
   width: 18px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
   font-size: var(--fs-sm);
+}
+.nav-item .ico svg {
+  display: block;
 }
 
 .nav-item .cnt {
@@ -483,7 +488,21 @@ a.mcard-link:hover {
 .mcard .m-ico {
   font-size: var(--fs-xl);
   width: 26px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.mcard .m-ico svg {
+  display: block;
+}
+/* 工具链接行内的 14px 小图标（与名称同色，视觉不抢） */
+.m-ico-inline {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -2px;
+  margin-right: 4px;
+  color: var(--ink-faint);
 }
 
 .mcard .m-name {
@@ -1551,6 +1570,11 @@ a.mcard .m-link:hover {
   color: var(--ink);
   transition: background-color var(--dur-1) var(--ease);
 }
+.p-item > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
 
 .p-item .p-sub {
   margin-left: auto;
@@ -1689,6 +1713,9 @@ a.mcard .m-link:hover {
 
 .bottomnav .bn .ico {
   font-size: var(--fs-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bottomnav .bn:active {

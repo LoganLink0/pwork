@@ -118,9 +118,9 @@ export function Settings() {
         await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
       }
       setSync({ ...sync, lastSyncAt: new Date().toISOString(), lastPushed: push.pushed, lastPulled: pull.pulled })
-      setCloudMsg(`✅ 同步完成：拉取 ${pull.pulled} 条（合并 ${changed} 条${pull.configApplied ? '，采集配置已更新' : ''}），推送 ${push.pushed} 条增量`)
+      setCloudMsg(`同步完成：拉取 ${pull.pulled} 条（合并 ${changed} 条${pull.configApplied ? '，采集配置已更新' : ''}），推送 ${push.pushed} 条增量`)
     } catch (e) {
-      setCloudMsg(`❌ 设备同步失败：${e instanceof Error ? e.message : String(e)}`)
+      setCloudMsg(`设备同步失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setSyncBusy(false)
     }
@@ -284,10 +284,10 @@ export function Settings() {
           <div className="set-row">
             <label>全量备份</label>
             <button type="button" className="btn-primary" onClick={() => void doExport()}>
-              ⬇ 全量导出
+              全量导出
             </button>
               <label className="btn-ghost" style={{ cursor: 'pointer' }} title="可导入本应用的备份文件，也兼容 FUPAN 旧版导出">
-                ⬆ 导入
+                导入
                 <input
                   type="file"
                   accept=".json,application/json"
@@ -447,11 +447,11 @@ export function Settings() {
               setProfileBusy(true)
               setProfileMsg('')
               void refreshInterestProfile()
-                .then((r) => setProfileMsg(r.ok ? `✅ 词表已更新：${r.words} 个关键词` : `未执行：${r.error}`))
+                .then((r) => setProfileMsg(r.ok ? `词表已更新：${r.words} 个关键词` : `未执行：${r.error}`))
                 .catch((e) => setProfileMsg(`失败：${e instanceof Error ? e.message : String(e)}（词表未动）`))
                 .finally(() => setProfileBusy(false))
             }}>
-              {profileBusy ? '⟳ 归纳中…' : '🤖 用「多推」投票归纳兴趣域'}
+              {profileBusy ? '归纳中…' : '用「多推」投票归纳兴趣域'}
             </button>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {profileMsg || `据信息日报里你的「多推」投票归纳（需 ≥${PROFILE_MIN_WANTS} 条；攒够后打开应用也会自动更新）`}
@@ -518,7 +518,7 @@ export function Settings() {
                 downloadFile(`pwork-错误日志-${stamp}.md`, formatErrorLog(errors), 'text/markdown')
               }}
             >
-              ⬇ 导出
+              导出
             </button>
             <button
               type="button"
@@ -624,13 +624,13 @@ export function Settings() {
           <div className="set-row">
             <label>同步</label>
             <button type="button" className="btn-primary" disabled={cloudBusy} onClick={() => void doSync()} data-testid="cloud-sync">
-              {cloudBusy ? '⟳ 同步中…' : '⬇ 立即同步'}
+              {cloudBusy ? '同步中…' : '立即同步'}
             </button>
             <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doPush()}>
-              ⬆ 推送信源清单
+              推送信源清单
             </button>
             <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doIngest()} data-testid="ingest-pull">
-              ⬇ 拉取推送数据
+              拉取推送数据
             </button>
             <button
               type="button"
@@ -642,7 +642,7 @@ export function Settings() {
                 setCloudMsg(null)
                 try {
                   const r = await testConnection()
-                  setCloudMsg(`${r.ok ? '✅ ' : '❌ '}${r.message}`)
+                  setCloudMsg(`${r.ok ? '' : ''}${r.message}`)
                 } finally {
                   setCloudBusy(false)
                 }
@@ -680,7 +680,7 @@ export function Settings() {
             <label>本机标识</label>
             <span className="val tnum">{deviceId()}</span>
             <button type="button" className="btn-primary" disabled={syncBusy} onClick={() => void doDeviceSync()} data-testid="device-sync">
-              {syncBusy ? '⟳ 同步中…' : '⇄ 立即同步'}
+              {syncBusy ? '同步中…' : '⇄ 立即同步'}
             </button>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {sync.lastSyncAt ? `上次 ${fmtLocal(sync.lastSyncAt)}：拉 ${sync.lastPulled} / 推 ${sync.lastPushed} 条` : '还没同步过'}

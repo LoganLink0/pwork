@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavIcon } from './navIcons'
+import { Icon } from './icons'
 
 export interface NavTab {
   id: string
@@ -49,7 +49,7 @@ export function SettingsNav({
           aria-current={active === t.id ? 'page' : undefined}
         >
           <span aria-hidden>
-            <NavIcon name={t.icon} />
+            <Icon name={t.icon} />
           </span>{' '}
           {t.label}
         </button>

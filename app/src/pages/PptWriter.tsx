@@ -115,7 +115,7 @@ export function PptWriter() {
     setExportMsg('')
     try {
       const name = await exportWriterPptx(outline)
-      setExportMsg(`✅ 已生成 ${name}（全部为原生文本框与表格，可直接编辑）`)
+      setExportMsg(`已生成 ${name}（全部为原生文本框与表格，可直接编辑）`)
     } catch (e) {
       setExportMsg(`生成失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -161,7 +161,7 @@ export function PptWriter() {
                   ＋ 添加文字材料
                 </button>
                 <button type="button" className="btn-ghost" disabled={extracting} onClick={() => fileRef.current?.click()} data-testid="writer-add-files">
-                  {extracting ? '⟳ 提取中…' : '⬆ 上传文件（Word / PDF / MD / TXT）'}
+                  {extracting ? '提取中…' : '上传文件（Word / PDF / MD / TXT）'}
                 </button>
                 <input
                   ref={fileRef}
@@ -257,7 +257,7 @@ export function PptWriter() {
                 onClick={() => void generateOutline()}
                 data-testid="writer-generate"
               >
-                {aiBusy ? '⟳ AI 起草中…' : '🤖 AI 起草大纲'}
+                {aiBusy ? 'AI 起草中…' : 'AI 起草大纲'}
               </button>
               <button
                 type="button"
@@ -381,7 +381,7 @@ export function PptWriter() {
         <div className="set-body">
           <div className="set-row">
             <button type="button" className="btn-primary" disabled={!outline || exportBusy} onClick={() => void doExport()} data-testid="writer-export">
-              {exportBusy ? '⟳ 生成中…' : '⬇ 生成可编辑 PPT'}
+              {exportBusy ? '生成中…' : '生成可编辑 PPT'}
             </button>
             {outline && (
               <button
@@ -389,7 +389,7 @@ export function PptWriter() {
                 className="btn-ghost"
                 onClick={() => downloadFile(`${outline.title}.md`, outlineToMarkdown(outline), 'text/markdown')}
               >
-                ⬇ 大纲存 .md
+                大纲存 .md
               </button>
             )}
             {exportMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{exportMsg}</span>}

@@ -16,7 +16,7 @@
 |---|---|---|---|
 | 背景 | `--bg` / `--surface` / `--surface-2` | #f5f4f1 / #ffffff / #faf9f7 | 页面 / 卡片 / 凹陷区 |
 | 边线 | `--line` / `--line-strong` | #e6e4df / #cfcac1 | 分隔 / 控件描边 |
-| 文字 | `--ink` / `--ink-soft` / `--ink-faint` | #211e1a / #66625a / #97928a | 正文 / 次要 / 弱化（三级对比必须分明） |
+| 文字 | `--ink` / `--ink-soft` / `--ink-faint` | #211e1a / #66625a / #736e66 | 正文 / 次要 / 弱化（三级对比必须分明；弱化档也要过 AA 4.5:1，勿再调浅） |
 | 强调 | `--accent` / `--accent-deep` / `--accent-text` | #e8833a / #b0500f / #a34e12 | 唯一强调色：CTA/选中/链接；deep 用于按钮底，text 用于文字 |
 | 类别 | `--cat-good/need/insight/action` | 绿/赭/蓝/红系 | **只作 3px 边线与 12px 标签**，禁止大面积填充 |
 | 模块标记 | `--m-input/process/output/review` | 蓝/绿/赭/琥珀 | 复用类别色取值，用途仅三种：侧边栏选中 3px 左线 / 模块卡标签 / 面包屑点 |
@@ -33,6 +33,14 @@
 - 间距 8px 基：`--sp-1..7` = 4/8/12/16/24/32/48。页面留白节奏统一 `sp-5` 起。
 - 圆角：`--r-sm 8`（输入/按钮）→ `md 12`（浮层/内嵌件：toast、quick-add）→ `lg 16`（卡片容器：set-card、mcard、tile、digest-item、task-card、src-table、note-list、editor）；胶囊用 99px。卡片层不许用 12。
 - 阴影单体系：`--shadow-1`（静置）→ `--shadow-2`（悬停抬升）→ `--shadow-pop`（弹层）。禁止彩色阴影。
+
+## 图标（单色线性，唯一来源 icons.tsx）
+
+- 界面图标一律用 `app/src/components/shell/icons.tsx` 的 `Icon` 组件（24×24、描边 2、`currentColor`，几何取自 Feather 公开图形）。常规尺寸：导航 18 / 卡头 20 / 行内 14 / 空态 32。
+- 彩色 emoji 不进界面——Windows/macOS 各画各的且带彩色，与单色体系冲突（2026-10-23 全站清除）。
+- 按钮文字不带装饰符号，直接说事；进行中状态用「……中」表达。
+- 需要语义色的图标由使用处包 span 着色：停=cat-action、继续/达成=cat-good、开始=accent-text、增强回路=cat-good、恶性=cat-action。
+- 保留的单色字符：✓ ✗ ★ ✦ ✕ ＋ → ↗（线性字形且承载语义）。导出文档（md/PPT/HTML）内的 emoji 属文档内容，不受本节限制。
 
 ## 动效（只动 transform/opacity）
 

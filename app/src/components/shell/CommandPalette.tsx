@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULE_NAV, WORKSPACE_NAV } from '../../content/nav'
+import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
@@ -73,13 +74,13 @@ function PaletteDialog() {
     // 快速动作同样参与查询过滤：有查询词时 Enter 必须落在用户看到的匹配结果上
     const actions: PaletteItem[] = []
     if (match('新速记')) {
-      actions.push({ key: 'act-note', group: '快速动作', icon: '⚡', label: '新速记', sub: 'N', run: () => { close(); openQuick() } })
+      actions.push({ key: 'act-note', group: '快速动作', icon: 'zap', label: '新速记', sub: 'N', run: () => { close(); openQuick() } })
     }
     if (match('新建复盘')) {
       actions.push({
         key: 'act-review',
         group: '快速动作',
-        icon: '＋',
+        icon: 'plusCircle',
         label: '新建复盘',
         run: () => { close(); navigate('/review/new') },
       })
@@ -88,7 +89,7 @@ function PaletteDialog() {
       actions.push({
         key: 'act-case',
         group: '快速动作',
-        icon: '→',
+        icon: 'play',
         label: '打开简历辅导应用',
         run: () => { close(); navigate('/cases') },
       })
@@ -96,15 +97,15 @@ function PaletteDialog() {
 
     const pageEntries: { to: string; icon: string; label: string; sub: string }[] = [
       ...WORKSPACE_NAV.filter((w) => w.to !== '/').map((w) => ({ to: w.to, icon: w.icon, label: w.label, sub: '页面' })),
-      { to: '/', icon: '◈', label: '今日', sub: '页面' },
+      { to: '/', icon: 'today', label: '今日', sub: '页面' },
       // 顶层直达模块（处理/输出无 children）也要能被搜到
       ...MODULE_NAV.filter((m) => m.to).map((m) => ({ to: m.to!, icon: m.icon, label: m.label, sub: '页面' })),
       ...MODULE_NAV.flatMap((m) =>
         (m.children ?? []).map((c) => ({ to: c.to, icon: c.icon, label: c.label, sub: m.label })),
       ),
-      { to: '/settings', icon: '⚙', label: '设置', sub: '页面' },
-      { to: '/help', icon: '?', label: '帮助', sub: '页面' },
-      { to: '/design', icon: '🎨', label: '设计系统样例', sub: '开发' },
+      { to: '/settings', icon: 'settings', label: '设置', sub: '页面' },
+      { to: '/help', icon: 'helpCircle', label: '帮助', sub: '页面' },
+      { to: '/design', icon: 'layout', label: '设计系统样例', sub: '开发' },
     ]
     const pages: PaletteItem[] = pageEntries
       .filter((p) => match(p.label))
@@ -116,7 +117,7 @@ function PaletteDialog() {
       .map((n) => ({
         key: `note-${n.id}`,
         group: '速记',
-        icon: '✎',
+        icon: 'pen',
         label: n.title || n.body.slice(0, 24) || '（无标题）',
         sub: relTime(n.updatedAt),
         run: () => { close(); navigate(`/input/notes/${n.id}`) },
@@ -141,7 +142,7 @@ function PaletteDialog() {
       ...libraryHits.map((h) => ({
         key: `lib-${h.kind}-${h.id}`,
         group: '全库检索',
-        icon: '🔎',
+        icon: 'search',
         label: h.title,
         sub: `${KIND_LABEL[h.kind]} · ${h.sub}`,
         accent: false,
@@ -182,7 +183,7 @@ function PaletteDialog() {
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && close()}>
       <div className="palette" role="dialog" aria-label="命令面板">
         <div className="p-input">
-          🔍
+          <Icon name="search" size={14} />
           <input
             ref={inputRef}
             value={query}
@@ -211,7 +212,7 @@ function PaletteDialog() {
                   onClick={() => runItem(item)}
                   onMouseEnter={() => setSel(i)}
                 >
-                  <span className={item.accent ? 'mark-act' : ''} aria-hidden>{item.icon}</span>
+                  <span className={item.accent ? 'mark-act' : ''} aria-hidden><Icon name={item.icon} size={14} /></span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                   {item.sub && <span className="p-sub">{item.sub}</span>}
                 </div>

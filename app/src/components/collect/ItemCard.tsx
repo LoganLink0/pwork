@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import type { Item } from '../../types/models'
 import { fmtLocal, fmtCompact } from '../../engine/datetime'
 import { TIER_LABEL } from '../../engine/itemTier'
+import { Icon } from '../shell/icons'
 import { useNotes } from '../../store/notes'
 
 const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string; icon: string }> = {
-  opportunity: { text: '机会', cls: 'ot-opp', icon: '🎯' },
-  threat: { text: '威胁', cls: 'ot-threat', icon: '⚠' },
-  trend: { text: '趋势', cls: 'ot-trend', icon: '📈' },
+  opportunity: { text: '机会', cls: 'ot-opp', icon: 'target' },
+  threat: { text: '威胁', cls: 'ot-threat', icon: 'alert' },
+  trend: { text: '趋势', cls: 'ot-trend', icon: 'trending' },
 }
 
 export interface ItemCardProps {
@@ -75,7 +76,11 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           {item.tags.map((t) => (
             <span className="tagchip" key={t}>#{t}</span>
           ))}
-          {ot && <span className={`otflag ${ot.cls}`}>{ot.icon} {ot.text}</span>}
+          {ot && (
+            <span className={`otflag ${ot.cls}`}>
+              <Icon name={ot.icon} size={12} /> {ot.text}
+            </span>
+          )}
           {showStage && (
             <span className={`stage-badge stage-${item.stage}`}>
               {item.stage === 'discarded' ? '已筛除' : item.stage === 'kept' ? '我标注的' : '上过日报'}

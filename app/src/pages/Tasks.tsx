@@ -247,7 +247,7 @@ export function Tasks() {
         <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「放弃」留底</span>
         <div className="right">
           <button type="button" className="btn-ghost" disabled={scanBusy} onClick={() => void runScan()} data-testid="scan-todos">
-            {scanBusy ? '⟳ 扫描中…' : '⭳ 从项目扫描待办'}
+            {scanBusy ? '扫描中…' : '从项目扫描待办'}
           </button>
         </div>
       </div>

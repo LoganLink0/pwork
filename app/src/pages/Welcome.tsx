@@ -27,7 +27,7 @@ export function Welcome() {
 
   const importSamples = async () => {
     const r = await importSources(SAMPLE_SOURCES)
-    setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点⟳立即抓取试试` : '示例信源已存在（按地址去重）')
+    setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点立即抓取试试` : '示例信源已存在（按地址去重）')
   }
 
   const addInterest = () => {
