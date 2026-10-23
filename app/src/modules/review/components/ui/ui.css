@@ -52,6 +52,12 @@
   background: var(--surface-2);
 }
 
+/* 可点卡片（模板选择等 role=button 的卡）：悬停上浮，给出"能点"的提示 */
+.sticky[role='button']:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-2);
+}
+
 /* 卡内的表单控件保持中性 */
 .note .input {
   background: var(--surface-2);

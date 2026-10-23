@@ -28,6 +28,12 @@
   --cat: var(--cat-action);
 }
 
+/* 可点卡片（role=button，模板选择）：悬停上浮给出"能点"提示 */
+.review-root .sticky[role='button']:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-2);
+}
+
 .review-root .sticky .sticky-title {
   font-weight: 600;
   font-size: var(--fs-md);
@@ -501,6 +507,12 @@
   font-size: var(--fs-sm);
   min-height: 32px;
   font-weight: 500;
+}
+
+/* 未选中分段项的悬停反馈（选中态已有实心样式） */
+.review-root .seg-item:not(.seg-item--on):hover {
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
 .review-root .seg-item--on,

@@ -1792,6 +1792,10 @@ a.mcard .m-link:hover {
   justify-content: center;
 }
 
+.bottomnav .bn:hover {
+  color: var(--ink-soft);
+}
+
 .bottomnav .bn:active {
   transform: scale(0.94);
 }

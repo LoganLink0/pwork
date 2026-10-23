@@ -84,6 +84,15 @@ button {
   cursor: pointer;
 }
 
+/* div/span 扮演的交互元素（role 标注即语义按钮）——与 button 同鼠标语义；
+   曾有 StickyCard 模板卡（div+role=button）无 pointer 导致"点了没反应"的观感 */
+[role='button'],
+[role='checkbox'],
+[role='radio'],
+[role='tab'] {
+  cursor: pointer;
+}
+
 input,
 textarea,
 select {
