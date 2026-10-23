@@ -1259,6 +1259,18 @@
   font-size: var(--fs-sm);
 }
 
+/* 引导句全站归 fs-sm（此前无规则、继承正文 16px——独立应用迁入遗留，2026-10-24 字号收敛） */
+.review-root .coach-say {
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+
+/* 列表元信息行（日期/状态/期限，带 tnum 的数字行）归 fs-xs，与壳列表元数据同规格 */
+.review-root .coach-say.tnum {
+  font-size: var(--fs-xs);
+}
+
 /* ==== O/T 候选池选择器（W4，04 §7） ==== */
 .review-root .ot-picker {
   margin-top: var(--sp-2);
