@@ -1593,6 +1593,62 @@ a.mcard .m-link:hover {
   font-weight: 600;
 }
 
+/* 问 AI 答案态：列表隐藏、输入框保留（改词即回列表）；答案与来源可滚 */
+.p-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4) var(--sp-4);
+  max-height: 46vh;
+}
+.p-ask-state {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  padding: var(--sp-2) 0;
+}
+.p-ask-error {
+  color: var(--danger);
+}
+.p-answer {
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--ink);
+}
+.p-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.p-src {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  color: var(--accent-text);
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.p-src:hover {
+  background: var(--surface-2);
+  text-decoration: underline;
+}
+.p-ask-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.p-ask-hint {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+
 .palette .p-foot {
   display: flex;
   gap: var(--sp-4);
