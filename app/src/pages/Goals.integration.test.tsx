@@ -29,9 +29,9 @@ describe('目标模块', () => {
       expect(stored?.due).toBe(todayLocal())
     })
 
-    // 标题点击进编辑：标题与期限一次改全
+    // 点击整卡进编辑：标题与期限一次改全（2026-10-25 点击热区=整卡）
     const row = screen.getByText('带期限的目标').closest<HTMLElement>('[data-testid="goal-row"]')!
-    await user.click(within(row).getByRole('button', { name: '编辑：带期限的目标' }))
+    await user.click(row)
     const editRow = await screen.findByTestId('goal-edit')
     const titleInput = within(editRow).getByLabelText('目标标题')
     await user.clear(titleInput)

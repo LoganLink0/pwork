@@ -130,7 +130,7 @@ describe('待办状态机（W3/W5）', () => {
     expect(localStorage.getItem('pwork-tasks-view')).toBe('lanes')
   })
 
-  it('点击标题进编辑：改标题 + 补期限（2026-10-24 编辑按钮移除）', async () => {
+  it('点击整卡进编辑：改标题 + 补期限（2026-10-25 点击热区=整卡）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const t = useTasks.getState()
@@ -139,9 +139,9 @@ describe('待办状态机（W3/W5）', () => {
     await gotoTasks(user)
 
     const row = screen.getByText('编辑前标题').closest<HTMLElement>('[data-testid="task-row"]')!
-    // 编辑按钮已取消——标题本身就是入口
+    // 编辑按钮已取消——整卡可点（aria-label 挂在卡容器上）
     expect(within(row).queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
-    await user.click(within(row).getByRole('button', { name: '编辑：编辑前标题' }))
+    await user.click(row)
     const editRow = await screen.findByTestId('task-edit')
     await user.clear(within(editRow).getByLabelText('任务标题'))
     await user.type(within(editRow).getByLabelText('任务标题'), '编辑后标题')
@@ -172,7 +172,9 @@ describe('待办状态机（W3/W5）', () => {
     const ops = row.querySelector<HTMLElement>('.task-row-meta .ops-left')!
     expect(within(ops).getByRole('button', { name: '推迟' })).toBeInTheDocument()
     expect(within(ops).getByRole('button', { name: '搁置' })).toBeInTheDocument()
-    // 标题可点进编辑（role=button）
-    expect(within(row).getByRole('button', { name: '编辑：分组断言任务' })).toBeInTheDocument()
+    // 标题行下方带来源元数据（不再混在按钮区）
+    expect(within(row).getByText('来源:手动')).toBeInTheDocument()
+    // 整卡可点进编辑（role=button 挂卡容器）
+    expect(row).toHaveAttribute('aria-label', '编辑：分组断言任务')
   })
 })

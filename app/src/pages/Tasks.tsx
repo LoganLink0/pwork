@@ -184,7 +184,23 @@ export function Tasks() {
     }
 
     return (
-      <div key={t.id} className="task-row" data-testid="task-row" data-status={t.status}>
+      <div
+        key={t.id}
+        className="task-row task-row--editable"
+        data-testid="task-row"
+        data-status={t.status}
+        role="button"
+        tabIndex={0}
+        aria-label={`编辑：${t.title}`}
+        title="点击编辑标题与期限"
+        onClick={() => startEdit(t)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            startEdit(t)
+          }
+        }}
+      >
         <div
           className="checkbox"
           role="checkbox"
@@ -192,10 +208,14 @@ export function Tasks() {
           aria-checked={t.status === 'done'}
           aria-label={closed ? `恢复为进行中：${t.title}` : `完成：${t.title}`}
           title={closed ? '恢复为进行中' : '标记完成'}
-          onClick={() => void setStatus(t.id, closed ? 'todo' : 'done')}
+          onClick={(e) => {
+            e.stopPropagation()
+            void setStatus(t.id, closed ? 'todo' : 'done')
+          }}
           onKeyDown={(e) => {
             if (e.key === ' ' || e.key === 'Enter') {
               e.preventDefault()
+              e.stopPropagation()
               void setStatus(t.id, closed ? 'todo' : 'done')
             }
           }}
@@ -204,22 +224,7 @@ export function Tasks() {
         </div>
         <div className="task-row-body">
           <div className="task-row-top">
-            <div
-              className="t-name t-name--edit"
-              role="button"
-              tabIndex={0}
-              aria-label={`编辑：${t.title}`}
-              title="点击编辑标题与期限"
-              onClick={() => startEdit(t)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  startEdit(t)
-                }
-              }}
-            >
-              {t.title}
-            </div>
+            <div className="t-name">{t.title}</div>
             {closed ? (
               <span className={`status-badge${t.status === 'done' ? ' okb' : ' offb'}`}>
                 {t.status === 'done' ? '已闭环' : '已搁置'}
@@ -231,6 +236,8 @@ export function Tasks() {
             )}
           </div>
           <div className="task-row-meta">
+            {/* 来源徽章贴标题下（元数据行）；已结束行复用同位置 */}
+            {!closed && <OriginBadge task={t} />}
             {closed ? (
               <>
                 <OriginBadge task={t} />
@@ -239,7 +246,8 @@ export function Tasks() {
                   type="button"
                   className="mini-btn danger"
                   title="从列表移除（软删除，导出备份中仍可找回）"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     if (window.confirm('从列表移除这条待办？（可从备份找回）')) void remove(t.id)
                   }}
                 >
@@ -255,15 +263,15 @@ export function Tasks() {
                   value={lane}
                   aria-label={`调整分类：${t.title}`}
                   title="调整分类（选定后以手动为准）"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => void setLane(t.id, Number(e.target.value) as TaskLane)}
                 >
                   <option value={1}>一类 · 今天必须做</option>
                   <option value={2}>二类 · 卡住别人的</option>
                   <option value={3}>三类 · 可以绕开我</option>
                 </select>
-                <OriginBadge task={t} />
-                {/* 处理按钮一行两个；编辑入口=点击卡片标题进入（无按钮） */}
-                <span className="ops-left">
+                {/* 处理按钮一行两个；编辑入口=点击卡片任意空白处进入 */}
+                <span className="ops-left" onClick={(e) => e.stopPropagation()}>
                   <button type="button" className="mini-btn" title="期限顺延 7 天" onClick={() => void postpone(t.id, 7)}>
                     推迟
                   </button>

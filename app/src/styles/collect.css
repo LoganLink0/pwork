@@ -619,10 +619,15 @@
   white-space: nowrap;
   font-size: var(--fs-md);
 }
-/* 标题即编辑入口：悬停微亮提示可点 */
-.t-name--edit:hover {
-  color: var(--accent-text);
+/* 整卡可点进编辑：悬停微亮提示；卡内复选框/下拉/按钮已各自阻止冒泡 */
+.task-row--editable {
   cursor: pointer;
+}
+.task-row--editable:hover {
+  background: var(--surface-2);
+}
+.task-row--editable:hover .t-name {
+  color: var(--accent-text);
 }
 .t-due {
   flex: none;

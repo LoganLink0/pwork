@@ -114,7 +114,27 @@ export function Goals() {
     }
 
     return (
-      <div key={g.id} className="task-row" data-testid="goal-row" data-status={g.status}>
+      <div
+        key={g.id}
+        className="task-row task-row--editable"
+        data-testid="goal-row"
+        data-status={g.status}
+        role="button"
+        tabIndex={0}
+        aria-label={`编辑：${g.title}`}
+        title="点击编辑标题与期限"
+        onClick={() => {
+          setEditingGoalId(g.id)
+          setEditDraft({ title: g.title, due: g.due ?? '' })
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            setEditingGoalId(g.id)
+            setEditDraft({ title: g.title, due: g.due ?? '' })
+          }
+        }}
+      >
         <div
           className="checkbox"
           role="checkbox"
@@ -122,10 +142,14 @@ export function Goals() {
           aria-checked={g.status === 'done'}
           aria-label={closed ? `恢复为进行中：${g.title}` : `达成：${g.title}`}
           title={closed ? '恢复为进行中' : '标记达成'}
-          onClick={() => void setStatus(g.id, closed ? 'active' : 'done')}
+          onClick={(e) => {
+            e.stopPropagation()
+            void setStatus(g.id, closed ? 'active' : 'done')
+          }}
           onKeyDown={(e) => {
             if (e.key === ' ' || e.key === 'Enter') {
               e.preventDefault()
+              e.stopPropagation()
               void setStatus(g.id, closed ? 'active' : 'done')
             }
           }}
@@ -134,26 +158,7 @@ export function Goals() {
         </div>
         <div className="task-row-body">
           <div className="task-row-top">
-            <div
-              className="t-name t-name--edit"
-              role="button"
-              tabIndex={0}
-              aria-label={`编辑：${g.title}`}
-              title="点击编辑标题与期限"
-              onClick={() => {
-                setEditingGoalId(g.id)
-                setEditDraft({ title: g.title, due: g.due ?? '' })
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  setEditingGoalId(g.id)
-                  setEditDraft({ title: g.title, due: g.due ?? '' })
-                }
-              }}
-            >
-              {g.title}
-            </div>
+            <div className="t-name">{g.title}</div>
             {closed ? (
               <span className={`status-badge${g.status === 'done' ? ' okb' : ' offb'}`}>
                 {g.status === 'done' ? '已达成' : '已搁置'}
@@ -180,7 +185,7 @@ export function Goals() {
                 </span>
               )}
               {/* 处置按钮一行；编辑入口=点击标题进入（与待办行同构） */}
-              <span className="ops-left">
+              <span className="ops-left" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   className="mini-btn"
