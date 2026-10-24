@@ -5,7 +5,7 @@ import { SettingsNav } from '../components/shell/SettingsNav'
 const HELP_TABS = [
   { id: 'quick', label: '快速上手', icon: 'quick' },
   { id: 'shortcuts', label: '快捷键', icon: 'shortcuts' },
-  { id: 'privacy', label: '数据与隐私', icon: 'privacy' },
+  { id: 'privacy', label: '数据安全', icon: 'privacy' },
   { id: 'config', label: '配置指南', icon: 'config' },
   { id: 'troubleshoot', label: '排错', icon: 'troubleshoot' },
   { id: 'glossary', label: '术语表', icon: 'glossary' },
@@ -72,7 +72,7 @@ export function Help() {
 
 
       <div className="set-card" data-tab="privacy" style={{ display: tab === 'privacy' ? undefined : 'none' }}>
-        <h2>数据与隐私</h2>
+        <h2>数据安全</h2>
         <div className="desc">数据只属于你——在哪里、怎么丢不了、谁会看到</div>
         <div className="set-body">
           {DATA_POINTS.map((d) => (
