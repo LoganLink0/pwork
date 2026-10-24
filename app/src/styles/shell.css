@@ -1574,6 +1574,12 @@ a.mcard .m-link:hover {
   animation: overlay-in var(--dur-1) var(--ease) both;
 }
 
+/* 速记浮层：输入型对话框，完全居中（命令面板保持偏上的下拉惯例） */
+.overlay.qn-overlay {
+  align-items: center;
+  padding-top: 0;
+}
+
 @keyframes overlay-in {
   from {
     opacity: 0;

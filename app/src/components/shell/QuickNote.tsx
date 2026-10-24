@@ -108,7 +108,7 @@ function QuickNoteDialog() {
   }
 
   return (
-    <div className="overlay" onClick={(e) => e.target === e.currentTarget && (saveDraft(), close())}>
+    <div className="overlay qn-overlay" onClick={(e) => e.target === e.currentTarget && (saveDraft(), close())}>
       <div className="qn-modal" role="dialog" aria-label="速记">
         <textarea
           ref={taRef}
