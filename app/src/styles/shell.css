@@ -129,13 +129,6 @@ button.nav-item {
   font-variant-numeric: tabular-nums;
 }
 
-.nav-item .plan-tag {
-  margin-left: auto;
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-  opacity: 0.7;
-}
-
 .nav-sub {
   padding-left: 14px;
 }

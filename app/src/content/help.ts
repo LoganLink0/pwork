@@ -22,7 +22,7 @@ export const QUICK_START: QuickStep[] = [
   {
     step: '2',
     title: '每日两分钟',
-    desc: '信源页添加原生 RSS（或导入示例信源），日报页「立即抓取」；星级反馈会调整评分标准。',
+    desc: '信源页添加原生 RSS（或一键导入推荐信源包），日报页「立即抓取」；看到条目随手投票，系统会越选越合你口味。',
     action: '去信源管理',
     to: '/input/sources',
   },
@@ -163,7 +163,7 @@ export const CONFIG_GUIDE: ConfigGuideEntry[] = [
   },
   {
     title: 'AI 功能（可选：不配也完全能用）',
-    who: '想用复盘 AI 教练、全库问答、AI 写大纲、调研联网搜索的人。不配 AI，评分走本地规则、导出走内置模板，所有功能照常。',
+    who: '想用复盘 AI 教练、AI 写大纲、调研联网搜索的人。不配 AI，评分走本地规则、导出走内置模板，所有功能照常。',
     steps: [
       '桌面版：在 C:\\Users\\你的用户名\\AppData\\Roaming\\com.pwork.workbench\\ 新建文本文件 gateway.env，写入一行 PWORK_LLM_API_KEY=你的Key，重启应用（Key 从大模型服务商官网获取，如 DeepSeek / 智谱开放平台）。',
       '联网搜索（调研页「联网调研」用）默认跟随 LLM 上游、复用同一把 Key，不用额外配置；DeepSeek 搜索约 ¥0.005/次（仅成功非空结果计费）。',

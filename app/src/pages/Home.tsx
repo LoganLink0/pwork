@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MODULE_NAV, MODULE_STATUS_LABEL } from '../content/nav'
+import { MODULE_NAV } from '../content/nav'
 import { Icon } from '../components/shell/icons'
 import { useUi } from '../store/ui'
 import { useNotes, todayNoteCount } from '../store/notes'
@@ -194,9 +194,9 @@ export function Home() {
         ) : (
           <Link to="/review" className="tile quiet mark-review">
             <div className="t-label">复盘节奏</div>
-            <div className="t-num weak">已建成</div>
-            <div className="t-sub">复盘工作台已迁入 · 做一次复盘，行动项自动进待办</div>
-            <span className="t-link">了解回路模块 →</span>
+            <div className="t-num weak">还没有复盘</div>
+            <div className="t-sub">做一次复盘，行动项自动进待办</div>
+            <span className="t-link">开始第一次复盘 →</span>
           </Link>
         )}
       </div>
@@ -207,7 +207,6 @@ export function Home() {
           <div className="m-head">
             <span className="m-ico" aria-hidden><Icon name={input.icon} /></span>
             <span className="m-name">{input.label}</span>
-            <span className="m-tag">{MODULE_STATUS_LABEL[input.status]}</span>
           </div>
           <div className="m-sub">捕获想法，进入后续处理</div>
           <InputCardLinks noteCount={notes.length} sourceCount={activeSources} digestCount={digest.length} />
@@ -217,15 +216,14 @@ export function Home() {
           <div className="m-head">
             <span className="m-ico" aria-hidden><Icon name={process.icon} /></span>
             <span className="m-name">{process.label}</span>
-            <span className="m-tag">{MODULE_STATUS_LABEL[process.status]}</span>
           </div>
-          <div className="m-sub">工具箱 · AI 问答</div>
+          <div className="m-sub">工具箱 · 快速启动</div>
           <div className="m-links">
             <Link className="m-link" to="/process">
               工具箱<span className="cnt">文字/音频/图片/视频</span>
             </Link>
             <Link className="m-link" to="/process">
-              AI 问答<span className="cnt">检索全库回答 →</span>
+              快速启动<span className="cnt">常用站点直达 →</span>
             </Link>
             <Link className="m-link" to="/cases">
               简历辅导专题<span className="cnt">独立应用 →</span>
@@ -237,7 +235,6 @@ export function Home() {
           <div className="m-head">
             <span className="m-ico" aria-hidden><Icon name={output.icon} /></span>
             <span className="m-name">{output.label}</span>
-            <span className="m-tag">{MODULE_STATUS_LABEL[output.status]}</span>
           </div>
           <div className="m-sub">周期成稿 · 听觉 · 分享</div>
           <div className="m-links">
@@ -260,7 +257,6 @@ export function Home() {
           <div className="m-head">
             <span className="m-ico" aria-hidden><Icon name={review.icon} /></span>
             <span className="m-name">{review.label}</span>
-            <span className="m-tag">{MODULE_STATUS_LABEL[review.status]}</span>
           </div>
           <div className="m-sub">CLAP 复盘 · 因果循环 · 认知资产</div>
           <ReviewCardLinks count={reviewInfo?.count ?? 0} />

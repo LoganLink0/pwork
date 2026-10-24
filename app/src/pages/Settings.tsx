@@ -7,7 +7,6 @@ import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
-import { useUi } from '../store/ui'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { fmtLocal, monthLocal } from '../engine/datetime'
@@ -17,14 +16,7 @@ import { isDesktopApp } from '../engine/platform'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, type SyncConfig } from '../db/syncRecords'
 import type { ErrorLogEntry } from '../types/models'
-import type { ThemePref } from '../engine/appearance'
 import { SettingsNav } from '../components/shell/SettingsNav'
-
-const THEMES: { key: ThemePref; label: string }[] = [
-  { key: 'auto', label: '跟随系统' },
-  { key: 'light', label: '明亮' },
-  { key: 'dark', label: '暗色' },
-]
 
 const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   render: '页面崩溃',
@@ -34,7 +26,6 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
 }
 
 const SETTINGS_TABS = [
-  { id: 'appearance', label: '外观', icon: 'appearance' },
   { id: 'data', label: '数据', icon: 'data' },
   { id: 'collect', label: '采集偏好', icon: 'collect' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
@@ -46,9 +37,7 @@ const SETTINGS_TABS = [
 /** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = SETTINGS_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'appearance'
-  const theme = useUi((s) => s.theme)
-  const setTheme = useUi((s) => s.setTheme)
+  const tab = SETTINGS_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'data'
   const noteCount = useNotes((s) => s.notes.length)
   const trashCount = useNotes((s) => s.trash.length)
   const { config, setConfig, sources, items } = useCollect()
@@ -249,28 +238,6 @@ export function Settings() {
         />
 
         <div className="settings-content">
-      <div className="set-card" data-tab="appearance" style={{ display: tab === 'appearance' ? undefined : 'none' }}>
-        <h2>外观</h2>
-        <div className="desc">选择明亮或暗色；「跟随系统」随电脑设置自动切换</div>
-        <div className="set-body">
-          <div className="set-row">
-            <label>主题</label>
-            <div className="radio" role="radiogroup" aria-label="主题">
-              {THEMES.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  className={theme === t.key ? 'on' : ''}
-                  onClick={() => setTheme(t.key)}
-                  aria-pressed={theme === t.key}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="set-card" data-tab="data" style={{ display: tab === 'data' ? undefined : 'none' }}>
         <h2>数据</h2>
@@ -694,7 +661,7 @@ export function Settings() {
 
       <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
         <h2>AI · BYOK</h2>
-        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / 全库问答 / 采集筛选）；AI 不可用时自动改用规则评分</div>
+        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / AI 写大纲 / 采集筛选）；AI 不可用时自动改用规则评分</div>
         <div className="set-body">
           <div className="set-row">
             <label>模式</label>

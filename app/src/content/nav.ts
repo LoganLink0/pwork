@@ -115,9 +115,3 @@ export function crumbFor(pathname: string): [string, string, string] {
   }
   return PAGE_META['/']
 }
-
-export const MODULE_STATUS_LABEL: Record<NavModule['status'], string> = {
-  active: '活跃',
-  planned: '规划中',
-  built: '已建成',
-}

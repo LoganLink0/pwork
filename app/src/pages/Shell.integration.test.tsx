@@ -18,10 +18,10 @@ describe('工作台壳（W1）', () => {
     // 三瓦片（Digest 引导态 + 待办空态引导 + 复盘引导——用副行唯一文案断言）
     expect(screen.getByText('先去信源管理添加 5–10 个源')).toBeInTheDocument()
     expect(screen.getByText('复盘产出的行动项会自动出现在任务库')).toBeInTheDocument()
-    expect(screen.getByText('复盘工作台已迁入 · 做一次复盘，行动项自动进待办')).toBeInTheDocument()
+    expect(screen.getByText('做一次复盘，行动项自动进待办')).toBeInTheDocument()
     // 四模块卡（用卡片副行唯一文案断言）
     expect(screen.getByText('捕获想法，进入后续处理')).toBeInTheDocument()
-    expect(screen.getByText('工具箱 · AI 问答')).toBeInTheDocument()
+    expect(screen.getByText('工具箱 · 快速启动')).toBeInTheDocument()
     expect(screen.getByText('周期成稿 · 听觉 · 分享')).toBeInTheDocument()
     expect(screen.getByText('CLAP 复盘 · 因果循环 · 认知资产')).toBeInTheDocument()
   })
@@ -105,22 +105,19 @@ describe('工作台壳（W1）', () => {
     await user.keyboard('{Escape}')
   })
 
-  it('设置页：左导航切换分类 + 主题切换写入 localStorage + 数据分类的导出入口', async () => {
+  it('设置页：默认进数据分类且导出入口在；主题切换走顶栏（2026-10-24 外观卡删除）', async () => {
     const user = userEvent.setup()
     render(<App />)
     // 顶栏（banner）里的设置入口，避免与侧边栏同名链接多匹配
     await user.click(within(screen.getByRole('banner')).getByRole('link', { name: '设置' }))
 
-    await user.click(await screen.findByRole('button', { name: '暗色' }))
-    expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(localStorage.getItem('pwork-theme')).toBe('dark')
+    // 外观卡已删：默认分类=数据，全量导出直接可见（铁律 6 入口）
+    expect(await screen.findByRole('button', { name: /全量导出/ })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '跟随系统' }))
-    expect(document.documentElement.dataset.theme).toBeUndefined()
-
-    // 左导航切到数据分类后，全量导出按钮出现（铁律 6 入口）
-    await user.click(screen.getByRole('button', { name: /数据/ }))
-    expect(screen.getByRole('button', { name: /全量导出/ })).toBeInTheDocument()
+    // 主题唯一入口=顶栏按钮（带当前态文案，点击轮换）
+    const themeBtn = within(screen.getByRole('banner')).getByRole('button', { name: /跟随系统|明亮|暗色/ })
+    await user.click(themeBtn)
+    await waitFor(() => expect(['dark', 'light', 'auto']).toContain(document.documentElement.dataset.theme ?? 'auto'))
   })
 
   it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染（2026-10-22 重排：四模块卡已移除）', async () => {

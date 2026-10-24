@@ -94,11 +94,10 @@ export function Sidebar() {
           <NavLink
             key={mod.key}
             to={mod.to ?? '/'}
-            className={`nav-item ${mod.status === 'planned' ? 'dim' : ''} ${mod.mark}`}
+            className={`nav-item ${mod.mark}`}
           >
             <span className="ico" aria-hidden><Icon name={mod.icon} /></span>
             {mod.label}
-            {mod.status === 'planned' && <span className="plan-tag">规划中</span>}
           </NavLink>
         ),
       )}
