@@ -27,15 +27,16 @@ const LANE_META: Record<TaskLane, { name: string; rule: string }> = {
   3: { name: '三类 · 可以绕开我', rule: '就算我不做，事情也能继续（可交人/可推迟/可删除）' },
 }
 
-/** 本地日期展示：今天（红）/ 明天（橙）/ M月D日 */
+/** 本地日期展示：相对词带具体日期（'看到截止日期'的主体——悬停 tooltip 没人会发现） */
 function dueLabel(due: string | undefined, today: string): { text: string; over: boolean; soon: boolean } {
   if (!due) return { text: '无期限', over: false, soon: false }
   const diff = Math.round((new Date(due + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86_400_000)
-  if (diff === 0) return { text: '今天', over: true, soon: false }
-  if (diff === 1) return { text: '明天', over: false, soon: true }
-  if (diff < 0) return { text: `逾期 ${-diff} 天`, over: true, soon: false }
   const d = new Date(due + 'T12:00:00')
-  return { text: `${d.getMonth() + 1}月${d.getDate()}日`, over: false, soon: false }
+  const date = `${d.getMonth() + 1}月${d.getDate()}日`
+  if (diff === 0) return { text: `今天 · ${date}`, over: true, soon: false }
+  if (diff === 1) return { text: `明天 · ${date}`, over: false, soon: true }
+  if (diff < 0) return { text: `逾期 ${-diff} 天 · ${date}`, over: true, soon: false }
+  return { text: `${date}`, over: false, soon: false }
 }
 
 /** 来源徽章 → 溯源跳转（时间视图按 origin 字段复用） */
@@ -61,6 +62,7 @@ export function Tasks() {
   const [scanBusy, setScanBusy] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState({ title: '', due: '' })
+  const [draftDue, setDraftDue] = useState('')
   const [view, setView] = useState<'lanes' | 'schedule'>(() =>
     localStorage.getItem(VIEW_KEY) === 'schedule' ? 'schedule' : 'lanes',
   )
@@ -128,8 +130,9 @@ export function Tasks() {
 
   const submit = async () => {
     if (!draft.trim()) return
-    await create({ title: draft, origin: { kind: 'manual', refId: null } })
+    await create({ title: draft, due: draftDue || undefined, origin: { kind: 'manual', refId: null } })
     setDraft('')
+    setDraftDue('')
   }
 
   const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
@@ -320,7 +323,7 @@ export function Tasks() {
             <div className="task-row-top">
               <div className="t-name">{e.title}</div>
               <span className={`t-due${diff < 0 ? ' over' : diff <= 2 ? ' soon' : ''}`}>
-                {diff < 0 ? `逾期 ${-diff} 天` : diff === 0 ? '今天到期' : `${diff} 天后到期`}
+                {diff < 0 ? `逾期 ${-diff} 天 · ${e.due.slice(5).replace('-', '月')}日` : diff === 0 ? `今天到期 · ${e.due}` : `${e.due} · ${diff} 天后`}
               </span>
             </div>
             <div className="task-row-meta">
@@ -385,7 +388,16 @@ export function Tasks() {
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
           aria-label="新任务标题"
         />
-        <span className="qa-hint">↵ 添加 · 期限点行内「编辑」补</span>
+        <input
+          type="date"
+          style={{ flex: 'none', width: 140 }}
+          value={draftDue}
+          aria-label="新任务期限（可选）"
+          title="期限（可选）——填了会进按日期视图"
+          onChange={(e) => setDraftDue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void submit()}
+        />
+        <span className="qa-hint">↵ 添加</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)' }}>

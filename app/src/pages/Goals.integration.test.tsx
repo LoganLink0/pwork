@@ -5,7 +5,7 @@ import App from '../App'
 import { useGoals } from '../store/goals'
 import { todayLocal } from '../engine/datetime'
 
-/** 目标模块集成：行内编辑（标题/期限）与达成状态机 */
+/** 目标模块集成：创建带期限、行内编辑（标题+期限一次改全） */
 
 async function gotoGoals(user: ReturnType<typeof userEvent.setup>) {
   await user.click(within(screen.getByLabelText('主导航')).getByRole('link', { name: '目标' }))
@@ -13,26 +13,39 @@ async function gotoGoals(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('目标模块', () => {
-  it('快速创建 → 行内编辑改标题 → 期限日期框即时生效（2026-10-24）', async () => {
+  it('快速创建即可带期限 → 行内编辑一次改标题与期限（2026-10-24 重做）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const g = useGoals.getState()
     await g.load()
-    await g.create({ title: '旧目标标题' })
     await gotoGoals(user)
 
-    const row = screen.getByText('旧目标标题').closest<HTMLElement>('[data-testid="goal-row"]')!
-    // 期限：行内日期框即时写入
-    await user.type(within(row).getByLabelText('目标期限：旧目标标题'), todayLocal())
-    await waitFor(() => expect(useGoals.getState().goals[0]?.due).toBe(todayLocal()))
+    // 创建时就填期限（不再依赖行内小日期框——那个框已删）
+    await user.type(screen.getByLabelText('新目标'), '带期限的目标')
+    await user.type(screen.getByLabelText('新目标期限（可选）'), todayLocal())
+    await user.keyboard('{Enter}')
+    await waitFor(() => {
+      const stored = useGoals.getState().goals.find((x) => x.title === '带期限的目标')
+      expect(stored?.due).toBe(todayLocal())
+    })
 
-    // 标题：编辑按钮 → 改 → 保存
+    // 编辑：标题与期限一次改全
+    const row = screen.getByText('带期限的目标').closest<HTMLElement>('[data-testid="goal-row"]')!
     await user.click(within(row).getByRole('button', { name: '编辑' }))
     const editRow = await screen.findByTestId('goal-edit')
-    await user.clear(within(editRow).getByLabelText('目标标题'))
-    await user.type(within(editRow).getByLabelText('目标标题'), '新目标标题')
+    const titleInput = within(editRow).getByLabelText('目标标题')
+    await user.clear(titleInput)
+    await user.type(titleInput, '改名并延期的目标')
+    const dueInput = within(editRow).getByLabelText('目标期限')
+    await user.clear(dueInput)
+    await user.type(dueInput, todayLocal(new Date(Date.now() + 3 * 86_400_000)))
     await user.click(within(editRow).getByRole('button', { name: '保存' }))
-    await waitFor(() => expect(useGoals.getState().goals[0]?.title).toBe('新目标标题'))
-    expect(screen.getByText('新目标标题')).toBeInTheDocument()
+
+    await waitFor(() => {
+      const stored = useGoals.getState().goals.find((x) => x.title === '改名并延期的目标')
+      expect(stored?.due).toBe(todayLocal(new Date(Date.now() + 3 * 86_400_000)))
+    })
+    // 徽章带具体日期
+    expect(screen.getByText(/月\d+日 · 剩 3 天/)).toBeInTheDocument()
   })
 })

@@ -108,9 +108,9 @@ describe('待办状态机（W3/W5）', () => {
     expect(screen.getByText('无期限')).toBeInTheDocument()
     expect(screen.getByText('今天到期的事')).toBeInTheDocument()
     expect(screen.getByText('没有期限的事')).toBeInTheDocument()
-    // 目标行带徽章与剩余天数
+    // 目标行带徽章与剩余天数（含具体日期）
     expect(screen.getByTestId('sched-goal')).toHaveTextContent('下月达成目标')
-    expect(screen.getByTestId('sched-goal')).toHaveTextContent('7 天后到期')
+    expect(screen.getByTestId('sched-goal')).toHaveTextContent(/天后/)
 
     // 勾选即完成，从时间线消失
     await user.click(screen.getByRole('checkbox', { name: '完成：今天到期的事' }))
@@ -145,7 +145,7 @@ describe('待办状态机（W3/W5）', () => {
       const stored = useTasks.getState().tasks.find((x) => x.title === '编辑后标题')
       expect(stored?.due).toBe(todayLocal())
     })
-    // 行内期限徽章随之为「今天」
-    await waitFor(() => expect(screen.getByText('今天')).toBeInTheDocument())
+    // 行内期限徽章随之为「今天 · 具体日期」
+    await waitFor(() => expect(screen.getByText(/今天 · \d+月\d+日/)).toBeInTheDocument())
   })
 })

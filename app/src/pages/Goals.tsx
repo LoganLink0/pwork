@@ -24,10 +24,11 @@ function shortDate(iso: string): string {
 function dueBadge(g: Goal, today: string): { text: string; over: boolean } {
   if (!g.due) return { text: '未定期限', over: false }
   const left = diffDays(today, g.due)
-  if (left < 0) return { text: `已过期 ${-left} 天`, over: true }
-  if (left === 0) return { text: '今天到期', over: true }
   const d = new Date(g.due + 'T12:00:00')
-  return { text: `${d.getMonth() + 1}月${d.getDate()}日 · 剩 ${left} 天`, over: false }
+  const date = `${d.getMonth() + 1}月${d.getDate()}日`
+  if (left < 0) return { text: `逾期 ${-left} 天 · ${date}`, over: true }
+  if (left === 0) return { text: `今天到期 · ${date}`, over: true }
+  return { text: `${date} · 剩 ${left} 天`, over: false }
 }
 
 /** 时间条：创建→期限 的已走过比例；无期限不显示 */
@@ -42,14 +43,16 @@ function timelinePct(g: Goal, today: string): { pct: number; over: boolean } | n
 export function Goals() {
   const { goals, create, setStatus, updateProgress, updateDue, updateTitle } = useGoals()
   const [draft, setDraft] = useState('')
+  const [draftDue, setDraftDue] = useState('')
   const [progressFor, setProgressFor] = useState<string | null>(null)
   const [progressDraft, setProgressDraft] = useState('')
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState({ title: '' })
+  const [editDraft, setEditDraft] = useState({ title: '', due: '' })
   const today = todayLocal()
 
   const saveGoalEdit = async (id: string) => {
     if (editDraft.title.trim()) await updateTitle(id, editDraft.title)
+    await updateDue(id, editDraft.due || undefined)
     setEditingGoalId(null)
   }
 
@@ -59,8 +62,9 @@ export function Goals() {
 
   const submit = async () => {
     if (!draft.trim()) return
-    await create({ title: draft })
+    await create({ title: draft, due: draftDue || undefined })
     setDraft('')
+    setDraftDue('')
   }
 
   const active = goals.filter((g) => g.status === 'active')
@@ -74,7 +78,7 @@ export function Goals() {
     const strip = closed ? null : timelinePct(g, today)
     const log = g.progressLog ?? []
 
-    /** 行内编辑态：标题（期限的即时 date 框保留在原位，两者共用一次保存语义不同——标题此处改） */
+    /** 行内编辑态：标题 + 期限一次改全（期限不再用行内小框——那玩意用户根本看不见） */
     if (editingGoalId === g.id) {
       return (
         <div key={g.id} className="task-row" data-testid="goal-edit">
@@ -88,10 +92,21 @@ export function Goals() {
                 onChange={(e) => setEditDraft((s) => ({ ...s, title: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && void saveGoalEdit(g.id)}
               />
+              <input
+                className="input"
+                type="date"
+                style={{ flex: 'none', width: 150 }}
+                value={editDraft.due}
+                aria-label="目标期限"
+                title="清空日期＝不定期限"
+                onChange={(e) => setEditDraft((s) => ({ ...s, due: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && void saveGoalEdit(g.id)}
+              />
             </div>
             <div className="task-row-meta">
               <button type="button" className="mini-btn" onClick={() => void saveGoalEdit(g.id)}>保存</button>
               <button type="button" className="mini-btn" onClick={() => setEditingGoalId(null)}>取消</button>
+              <span className="sub" style={{ margin: 0 }}>清空日期＝不定期限</span>
             </div>
           </div>
         </div>
@@ -142,16 +157,6 @@ export function Goals() {
           )}
           {!closed && (
             <div className="task-row-meta">
-              <label className="goal-due">
-                期限
-                <input
-                  type="date"
-                  value={g.due ?? ''}
-                  aria-label={`目标期限：${g.title}`}
-                  title="设定或修改期限"
-                  onChange={(e) => void updateDue(g.id, e.target.value || undefined)}
-                />
-              </label>
               {g.progressNote && (
                 <span className="origin" title={g.progressNote}>
                   进度：{g.progressNote}
@@ -161,10 +166,10 @@ export function Goals() {
               <button
                 type="button"
                 className="mini-btn"
-                title="改标题（期限在左边日期框直接选）"
+                title="改标题或期限"
                 onClick={() => {
                   setEditingGoalId(g.id)
-                  setEditDraft({ title: g.title })
+                  setEditDraft({ title: g.title, due: g.due ?? '' })
                 }}
               >
                 编辑
@@ -257,7 +262,16 @@ export function Goals() {
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
           aria-label="新目标"
         />
-        <span className="qa-hint">↵ 添加 · 期限与进度在行内补</span>
+        <input
+          type="date"
+          style={{ flex: 'none', width: 140 }}
+          value={draftDue}
+          aria-label="新目标期限（可选）"
+          title="期限（可选）——目标的时间条按它计算"
+          onChange={(e) => setDraftDue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void submit()}
+        />
+        <span className="qa-hint">↵ 添加</span>
       </div>
 
       {active.length === 0 && closed.length === 0 ? (
