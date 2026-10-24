@@ -231,7 +231,7 @@ export function Library() {
                       ? `上次回访：${fmtDate(ins.revisit.reduce((a, b) => (a.at > b.at ? a : b)).at)}`
                       : '尚未回访'}
                     {days > 0 ? ` · ${LIBRARY.nextInDays(days)}` : ''}
-                    {` · 当前间隔 ${currentIntervalDays(ins)} 天`}
+                    {` · 每 ${currentIntervalDays(ins)} 天回访一次`}
                   </p>
                 )}
               </div>

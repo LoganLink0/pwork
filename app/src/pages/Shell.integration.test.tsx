@@ -120,13 +120,13 @@ describe('工作台壳（W1）', () => {
     // 浮层未关、正文清空、标签沿用、回执出现
     expect(screen.getByLabelText('速记内容')).toHaveValue('')
     expect(screen.getByLabelText('标签')).toHaveValue('会议')
-    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已存 1 条')
+    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条')
 
     // 第二条：标签沿用没动，直接写直接存
     await user.type(screen.getByLabelText('速记内容'), '连记第二条')
     await user.keyboard('{Control>}{Enter}{/Control}')
     await waitFor(() => expect(useNotes.getState().notes.filter((n) => n.body.startsWith('连记')).length).toBe(2))
-    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已存 2 条')
+    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 2 条')
 
     // 「保存」按钮：存完关闭
     await user.type(screen.getByLabelText('速记内容'), '最后一条用按钮')

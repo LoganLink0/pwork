@@ -213,9 +213,9 @@ export function StatsView() {
         )}
       </section>
 
-      <section className="detail-section" aria-label="行动项收口耗时">
-        <h2>行动项收口耗时</h2>
-        <p className="coach-say">从复盘归档到「完成」用了多久——越靠左闭环越快。</p>
+      <section className="detail-section" aria-label="行动项完成用时">
+        <h2>行动项完成用时</h2>
+        <p className="coach-say">从复盘归档到「完成」用了多久——越靠左完成得越快。</p>
         {durations.every((d) => d.count === 0) ? (
           <p className="coach-say">还没有已完成的行动项。</p>
         ) : (
