@@ -361,7 +361,8 @@
   display: grid;
   grid-template-columns: 1.1fr 2.6fr 0.9fr 0.8fr 0.9fr auto;
   gap: var(--sp-3);
-  align-items: end;
+  /* 顶缘对齐：分级列带说明文字，底缘对齐会把它的 select 顶到不同高度（2026-10-24 用户实测三种 top） */
+  align-items: start;
 }
 .src-form label {
   display: flex;
@@ -381,6 +382,9 @@
   font-size: var(--fs-sm);
   padding: 6px 10px;
   min-width: 0;
+  /* select 无 line-height 撑高机制，显式等高于 input（36px），消除 2px 高低差 */
+  box-sizing: border-box;
+  min-height: 36px;
 }
 
 /* ---------- 抓取进度条 ---------- */
