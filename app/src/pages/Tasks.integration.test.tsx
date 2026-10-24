@@ -9,7 +9,7 @@ import { todayLocal } from '../engine/datetime'
 /**
  * 待办状态机集成（PRD §4.5.1）：
  * 复选框是唯一状态开关（勾选=闭环，再点=恢复）；分类下拉手动优先；
- * 放弃=留底可恢复；已结束区计数与徽章区分闭环/放弃。
+ * 「不做」=留底可恢复；已结束区计数与徽章区分闭环/不做。
  */
 
 async function gotoTasks(user: ReturnType<typeof userEvent.setup>) {
@@ -57,36 +57,41 @@ describe('待办状态机（W3/W5）', () => {
     // 勾选闭环
     await user.click(screen.getByRole('checkbox', { name: '完成：闭环流程任务' }))
     await waitFor(() => expect(screen.getByText('已闭环')).toBeInTheDocument())
-    expect(screen.getByText(/1 闭环 · 0 放弃/)).toBeInTheDocument()
+    expect(screen.getByText(/1 闭环 · 0 不做/)).toBeInTheDocument()
 
     // 再点恢复
     await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：闭环流程任务' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：闭环流程任务' })).toBeInTheDocument())
-    expect(screen.queryByText(/1 闭环 · 0 放弃/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 闭环 · 0 不做/)).not.toBeInTheDocument()
   })
 
-  it('放弃（确认弹窗）→ 已放弃徽章 → 复选框恢复', async () => {
+  it('「不做」一键留底（无确认框）→ 已不做徽章 → 复选框恢复（2026-10-24 合并放弃+删除）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const s = useTasks.getState()
     await s.load()
-    await s.create({ title: '放弃流程任务' })
+    await s.create({ title: '不做流程任务' })
     await gotoTasks(user)
 
-    // window.confirm 确认
+    // 一键流转，不弹确认（与完成勾选同级的轻操作；彻底清除在已结束区）
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    await user.click(screen.getByRole('button', { name: '放弃' }))
-    await waitFor(() => expect(screen.getByText('已放弃')).toBeInTheDocument())
-    expect(confirmSpy).toHaveBeenCalledOnce()
-    expect(screen.getByText(/0 闭环 · 1 放弃/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '不做' }))
+    await waitFor(() => expect(screen.getByText('已不做')).toBeInTheDocument())
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(screen.getByText(/0 闭环 · 1 不做/)).toBeInTheDocument()
 
-    // 放弃不算闭环
+    // 不做不算闭环
     expect(screen.getByText(/总闭环率/)).toHaveTextContent('0%')
 
-    // 复选框恢复
-    await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：放弃流程任务' }))
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：放弃流程任务' })).toBeInTheDocument())
+    // 已结束区提供彻底清除（红色删除）
+    const closedRow = screen.getByText('已不做').closest<HTMLElement>('[data-testid="task-row"]')!
+    const delBtn = within(closedRow).getByRole('button', { name: '删除' })
+    expect(delBtn).toHaveClass('danger')
     confirmSpy.mockRestore()
+
+    // 复选框恢复
+    await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：不做流程任务' }))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：不做流程任务' })).toBeInTheDocument())
   })
 
   it('按日期视图：到期分组呈现（今天/无期限），勾选即完成，目标按期限汇入（2026-10-24）', async () => {
@@ -149,7 +154,7 @@ describe('待办状态机（W3/W5）', () => {
     await waitFor(() => expect(screen.getByText(/今天 · \d+月\d+日/)).toBeInTheDocument())
   })
 
-  it('操作区分组与危险色断言（2026-10-24 VISUALMASTER：四语义一形态的漂移修正）', async () => {
+  it('操作区分组断言：活跃行=信息组（编辑·推迟）+处置组（不做），删除只在已结束区且染红（2026-10-24）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const t = useTasks.getState()
@@ -158,15 +163,15 @@ describe('待办状态机（W3/W5）', () => {
     await gotoTasks(user)
 
     const row = screen.getByText('分组断言任务').closest<HTMLElement>('[data-testid="task-row"]')!
-    const del = within(row).getByRole('button', { name: '删除' })
-    expect(del).toHaveClass('danger')
-    // 普通操作不染危险色
-    expect(within(row).getByRole('button', { name: '编辑' })).not.toHaveClass('danger')
-    expect(within(row).getByRole('button', { name: '推迟' })).not.toHaveClass('danger')
-    expect(within(row).getByRole('button', { name: '放弃' })).not.toHaveClass('danger')
-    // 分组：处置组（放弃/删除）在 meta-spacer 之后（DOM 序断言：放弃位于 spacer 之后的所有按钮之前）
-    const meta = row.querySelector('.task-row-meta')!
-    const order = Array.from(meta.children).map((c) => c.textContent?.trim() || 'spacer')
-    expect(order.indexOf('放弃')).toBeGreaterThan(order.indexOf('spacer') >= 0 ? order.lastIndexOf('spacer', order.indexOf('放弃')) : -1)
+    // 活跃行没有删除按钮（合并进「不做」，彻底清除只在已结束区）
+    expect(within(row).queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
+    // 信息组与处置组为兄弟容器，处置组在后（DOM 序）且组内各自聚合
+    const meta = row.querySelector<HTMLElement>('.task-row-meta')!
+    const left = meta.querySelector<HTMLElement>('.ops-left')!
+    const right = meta.querySelector<HTMLElement>('.ops-right')!
+    expect(within(left).getByRole('button', { name: '编辑' })).toBeInTheDocument()
+    expect(within(left).getByRole('button', { name: '推迟' })).toBeInTheDocument()
+    expect(within(right).getByRole('button', { name: '不做' })).toBeInTheDocument()
+    expect(Array.from(meta.children).indexOf(right)).toBeGreaterThan(Array.from(meta.children).indexOf(left))
   })
 })
