@@ -130,7 +130,7 @@ describe('待办状态机（W3/W5）', () => {
     expect(localStorage.getItem('pwork-tasks-view')).toBe('lanes')
   })
 
-  it('行内编辑：改标题 + 补期限（2026-10-24）', async () => {
+  it('点击标题进编辑：改标题 + 补期限（2026-10-24 编辑按钮移除）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const t = useTasks.getState()
@@ -139,7 +139,9 @@ describe('待办状态机（W3/W5）', () => {
     await gotoTasks(user)
 
     const row = screen.getByText('编辑前标题').closest<HTMLElement>('[data-testid="task-row"]')!
-    await user.click(within(row).getByRole('button', { name: '编辑' }))
+    // 编辑按钮已取消——标题本身就是入口
+    expect(within(row).queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: '编辑：编辑前标题' }))
     const editRow = await screen.findByTestId('task-edit')
     await user.clear(within(editRow).getByLabelText('任务标题'))
     await user.type(within(editRow).getByLabelText('任务标题'), '编辑后标题')
@@ -154,7 +156,7 @@ describe('待办状态机（W3/W5）', () => {
     await waitFor(() => expect(screen.getByText(/今天 · \d+月\d+日/)).toBeInTheDocument())
   })
 
-  it('操作区分组断言：活跃行=信息组（编辑·推迟）+处置组（搁置），删除只在已结束区且染红（2026-10-24）', async () => {
+  it('操作区断言：处理按钮一行（推迟·搁置），编辑=点标题，删除只在已结束区（2026-10-24 定稿）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const t = useTasks.getState()
@@ -163,15 +165,14 @@ describe('待办状态机（W3/W5）', () => {
     await gotoTasks(user)
 
     const row = screen.getByText('分组断言任务').closest<HTMLElement>('[data-testid="task-row"]')!
-    // 活跃行没有删除按钮（合并进「搁置」，彻底清除只在已结束区）
+    // 活跃行没有删除与编辑按钮（编辑=点标题；彻底清除只在已结束区）
     expect(within(row).queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
-    // 信息组与处置组为兄弟容器，处置组在后（DOM 序）且组内各自聚合
-    const meta = row.querySelector<HTMLElement>('.task-row-meta')!
-    const left = meta.querySelector<HTMLElement>('.ops-left')!
-    const right = meta.querySelector<HTMLElement>('.ops-right')!
-    expect(within(left).getByRole('button', { name: '编辑' })).toBeInTheDocument()
-    expect(within(left).getByRole('button', { name: '推迟' })).toBeInTheDocument()
-    expect(within(right).getByRole('button', { name: '搁置' })).toBeInTheDocument()
-    expect(Array.from(meta.children).indexOf(right)).toBeGreaterThan(Array.from(meta.children).indexOf(left))
+    expect(within(row).queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    // 处理按钮同组一行：推迟·搁置
+    const ops = row.querySelector<HTMLElement>('.task-row-meta .ops-left')!
+    expect(within(ops).getByRole('button', { name: '推迟' })).toBeInTheDocument()
+    expect(within(ops).getByRole('button', { name: '搁置' })).toBeInTheDocument()
+    // 标题可点进编辑（role=button）
+    expect(within(row).getByRole('button', { name: '编辑：分组断言任务' })).toBeInTheDocument()
   })
 })

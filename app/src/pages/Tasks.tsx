@@ -204,7 +204,20 @@ export function Tasks() {
         </div>
         <div className="task-row-body">
           <div className="task-row-top">
-            <div className="t-name" title={t.ifThen ? `执行意图：${t.ifThen}` : t.title}>
+            <div
+              className="t-name t-name--edit"
+              role="button"
+              tabIndex={0}
+              aria-label={`编辑：${t.title}`}
+              title="点击编辑标题与期限"
+              onClick={() => startEdit(t)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  startEdit(t)
+                }
+              }}
+            >
               {t.title}
             </div>
             {closed ? (
@@ -249,17 +262,11 @@ export function Tasks() {
                   <option value={3}>三类 · 可以绕开我</option>
                 </select>
                 <OriginBadge task={t} />
-                {/* 两组容器替代 spacer 分组：wrap 布局下 spacer 会塌陷漂移，容器组则整组换行、处置组恒贴右缘。
-                    「搁置」合并了原放弃+删除：留底进已结束区（可恢复），彻底清除只在已结束区 */}
+                {/* 处理按钮一行两个；编辑入口=点击卡片标题进入（无按钮） */}
                 <span className="ops-left">
-                  <button type="button" className="mini-btn" title="改标题或期限" onClick={() => startEdit(t)}>
-                    编辑
-                  </button>
                   <button type="button" className="mini-btn" title="期限顺延 7 天" onClick={() => void postpone(t.id, 7)}>
                     推迟
                   </button>
-                </span>
-                <span className="ops-right">
                   <button
                     type="button"
                     className="mini-btn"

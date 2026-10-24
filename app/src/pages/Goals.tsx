@@ -134,7 +134,24 @@ export function Goals() {
         </div>
         <div className="task-row-body">
           <div className="task-row-top">
-            <div className="t-name" title={g.title}>
+            <div
+              className="t-name t-name--edit"
+              role="button"
+              tabIndex={0}
+              aria-label={`编辑：${g.title}`}
+              title="点击编辑标题与期限"
+              onClick={() => {
+                setEditingGoalId(g.id)
+                setEditDraft({ title: g.title, due: g.due ?? '' })
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  setEditingGoalId(g.id)
+                  setEditDraft({ title: g.title, due: g.due ?? '' })
+                }
+              }}
+            >
               {g.title}
             </div>
             {closed ? (
@@ -162,19 +179,8 @@ export function Goals() {
                   进度：{g.progressNote}
                 </span>
               )}
-              {/* 信息组与处置组各占一行（与待办行同构） */}
+              {/* 处置按钮一行；编辑入口=点击标题进入（与待办行同构） */}
               <span className="ops-left">
-                <button
-                  type="button"
-                  className="mini-btn"
-                  title="改标题或期限"
-                  onClick={() => {
-                    setEditingGoalId(g.id)
-                    setEditDraft({ title: g.title, due: g.due ?? '' })
-                  }}
-                >
-                  编辑
-                </button>
                 <button
                   type="button"
                   className="mini-btn"
@@ -186,8 +192,6 @@ export function Goals() {
                 >
                   记进度
                 </button>
-              </span>
-              <span className="ops-right">
                 <button
                   type="button"
                   className="mini-btn"

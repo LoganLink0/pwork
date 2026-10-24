@@ -619,6 +619,11 @@
   white-space: nowrap;
   font-size: var(--fs-md);
 }
+/* 标题即编辑入口：悬停微亮提示可点 */
+.t-name--edit:hover {
+  color: var(--accent-text);
+  cursor: pointer;
+}
 .t-due {
   flex: none;
   font-size: var(--fs-xs);
@@ -664,17 +669,12 @@
 .meta-spacer {
   flex: 1;
 }
-/* 行内操作分行排布：meta 区窄（三列布局下仅 ~280px）时任何横向挤压都会乱——
-   信息组与处置组各占一行独占整宽，任何视口下顺序恒定、无空洞 */
-.task-row-meta .ops-left,
-.task-row-meta .ops-right {
+/* 行内操作一行排布：处理按钮（推迟·搁置等）与分类/徽章同区换行，整组不散架 */
+.task-row-meta .ops-left {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   flex-basis: 100%;
-}
-.task-row-meta .ops-right {
-  justify-content: flex-end;
 }
 /* 分类下拉：手动调整入口；选定后以手动为准（taskLane 手动优先） */
 .lane-select {
