@@ -55,14 +55,26 @@ function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
 }
 
 export function Tasks() {
-  const { tasks, stats, create, setStatus, postpone, remove, setLane, load, scanProjectTodos } = useTasks()
+  const { tasks, stats, create, setStatus, postpone, remove, setLane, update, load, scanProjectTodos } = useTasks()
   const goals = useGoals((s) => s.goals)
   const [draft, setDraft] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState({ title: '', due: '' })
   const [view, setView] = useState<'lanes' | 'schedule'>(() =>
     localStorage.getItem(VIEW_KEY) === 'schedule' ? 'schedule' : 'lanes',
   )
   const today = todayLocal()
+
+  const startEdit = (t: TaskItem) => {
+    setEditingTaskId(t.id)
+    setEditDraft({ title: t.title, due: t.due ?? '' })
+  }
+
+  const saveEdit = async (id: string) => {
+    await update(id, editDraft)
+    setEditingTaskId(null)
+  }
 
   const switchView = (v: 'lanes' | 'schedule') => {
     setView(v)
@@ -132,6 +144,42 @@ export function Tasks() {
     const closed = t.status === 'done' || t.status === 'dropped'
     const d = dueLabel(t.due, today)
     const lane = resolveLane(t, today)
+
+    /** 行内编辑态：标题 + 期限（创建后补填/改期的唯一入口） */
+    if (editingTaskId === t.id) {
+      return (
+        <div key={t.id} className="task-row" data-testid="task-edit">
+          <div className="task-row-body">
+            <div className="task-row-top">
+              <input
+                className="input"
+                style={{ flex: 1, minWidth: 0 }}
+                value={editDraft.title}
+                aria-label="任务标题"
+                onChange={(e) => setEditDraft((s) => ({ ...s, title: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && void saveEdit(t.id)}
+              />
+              <input
+                className="input"
+                type="date"
+                style={{ flex: 'none', width: 150 }}
+                value={editDraft.due}
+                aria-label="任务期限"
+                title="清空日期＝无期限"
+                onChange={(e) => setEditDraft((s) => ({ ...s, due: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && void saveEdit(t.id)}
+              />
+            </div>
+            <div className="task-row-meta">
+              <button type="button" className="mini-btn" onClick={() => void saveEdit(t.id)}>保存</button>
+              <button type="button" className="mini-btn" onClick={() => setEditingTaskId(null)}>取消</button>
+              <span className="sub" style={{ margin: 0 }}>清空日期＝无期限</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div key={t.id} className="task-row" data-testid="task-row" data-status={t.status}>
         <div
@@ -199,6 +247,9 @@ export function Tasks() {
                 </select>
                 <OriginBadge task={t} />
                 <span className="meta-spacer" />
+                <button type="button" className="mini-btn" title="改标题或期限" onClick={() => startEdit(t)}>
+                  编辑
+                </button>
                 <button type="button" className="mini-btn" title="期限顺延 7 天" onClick={() => void postpone(t.id, 7)}>
                   推迟
                 </button>
@@ -334,7 +385,7 @@ export function Tasks() {
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
           aria-label="新任务标题"
         />
-        <span className="qa-hint">↵ 添加</span>
+        <span className="qa-hint">↵ 添加 · 期限点行内「编辑」补</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)' }}>

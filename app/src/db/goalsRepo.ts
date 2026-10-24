@@ -92,3 +92,12 @@ export async function updateDue(id: string, due: string | undefined): Promise<vo
   if (!raw) return
   await db.goals.put({ ...normalizeGoal(raw), due: due || undefined, updatedAt: new Date().toISOString() })
 }
+
+/** 编辑目标标题（期限走 updateDue；行内编辑入口的后端，2026-10-24） */
+export async function updateGoalTitle(id: string, title: string): Promise<void> {
+  const raw = await db.goals.get(id)
+  if (!raw) return
+  const next = title.trim()
+  if (!next) return
+  await db.goals.put({ ...normalizeGoal(raw), title: next, updatedAt: new Date().toISOString() })
+}

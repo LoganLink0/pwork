@@ -8,6 +8,7 @@ import {
   softDeleteTask,
   postponeTask,
   setTaskLane,
+  updateTaskFields,
   type CreateTaskInput,
 } from '../db/tasksRepo'
 import type { TaskItem, TaskLane } from '../types/models'
@@ -44,6 +45,8 @@ interface TasksState {
   postpone: (id: string, days?: number) => Promise<void>
   remove: (id: string) => Promise<void>
   setLane: (id: string, lane: TaskLane) => Promise<void>
+  /** 行内编辑：标题与期限（空期限=清除） */
+  update: (id: string, patch: { title?: string; due?: string }) => Promise<void>
   /** 扫描各项目 TODO.md → 导入未完成项（幂等）。trigger='open' 为开机静默（无手势不弹授权）；'manual' 可选目录/请求授权 */
   scanProjectTodos: (trigger: 'open' | 'manual') => Promise<TodoScanOutcome>
 }
@@ -85,6 +88,11 @@ export const useTasks = create<TasksState>((set) => ({
 
   setLane: async (id, lane) => {
     await setTaskLane(id, lane)
+    set(await reload())
+  },
+
+  update: async (id, patch) => {
+    await updateTaskFields(id, patch)
     set(await reload())
   },
 

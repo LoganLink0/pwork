@@ -124,4 +124,28 @@ describe('待办状态机（W3/W5）', () => {
     expect(screen.queryByTestId('schedule-view')).toBeNull()
     expect(localStorage.getItem('pwork-tasks-view')).toBe('lanes')
   })
+
+  it('行内编辑：改标题 + 补期限（2026-10-24）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const t = useTasks.getState()
+    await t.load()
+    await t.create({ title: '编辑前标题', origin: { kind: 'manual', refId: null } })
+    await gotoTasks(user)
+
+    const row = screen.getByText('编辑前标题').closest<HTMLElement>('[data-testid="task-row"]')!
+    await user.click(within(row).getByRole('button', { name: '编辑' }))
+    const editRow = await screen.findByTestId('task-edit')
+    await user.clear(within(editRow).getByLabelText('任务标题'))
+    await user.type(within(editRow).getByLabelText('任务标题'), '编辑后标题')
+    await user.type(within(editRow).getByLabelText('任务期限'), todayLocal())
+    await user.click(within(editRow).getByRole('button', { name: '保存' }))
+
+    await waitFor(() => {
+      const stored = useTasks.getState().tasks.find((x) => x.title === '编辑后标题')
+      expect(stored?.due).toBe(todayLocal())
+    })
+    // 行内期限徽章随之为「今天」
+    await waitFor(() => expect(screen.getByText('今天')).toBeInTheDocument())
+  })
 })

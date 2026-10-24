@@ -123,6 +123,18 @@ export async function setTaskLane(id: string, lane: TaskLane): Promise<void> {
   await db.tasks.put({ ...normalizeTask(raw), lane, updatedAt: new Date().toISOString() })
 }
 
+/** 编辑待办（标题/期限；期限空串=清除）。行内编辑入口的后端（2026-10-24） */
+export async function updateTaskFields(id: string, patch: { title?: string; due?: string }): Promise<void> {
+  const raw = await db.tasks.get(id)
+  if (!raw) return
+  await db.tasks.put({
+    ...normalizeTask(raw),
+    title: patch.title !== undefined ? patch.title.trim() || raw.title : raw.title,
+    due: patch.due !== undefined ? patch.due || undefined : raw.due,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 /** 推迟：due 顺延 N 天（无期限则设为今天+N） */
 export async function postponeTask(id: string, days = 7): Promise<void> {
   const raw = await db.tasks.get(id)

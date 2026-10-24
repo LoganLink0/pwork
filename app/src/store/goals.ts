@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { createGoal, listAllGoals, setGoalStatus, updateDue, updateProgress, type CreateGoalInput } from '../db/goalsRepo'
+import { createGoal, listAllGoals, setGoalStatus, updateDue, updateGoalTitle, updateProgress, type CreateGoalInput } from '../db/goalsRepo'
 import type { Goal } from '../types/models'
 
 interface GoalsState {
@@ -10,6 +10,8 @@ interface GoalsState {
   setStatus: (id: string, status: Goal['status']) => Promise<void>
   updateProgress: (id: string, progressNote: string) => Promise<void>
   updateDue: (id: string, due: string | undefined) => Promise<void>
+  /** 行内编辑标题（空标题不生效） */
+  updateTitle: (id: string, title: string) => Promise<void>
 }
 
 export const useGoals = create<GoalsState>((set) => ({
@@ -32,6 +34,10 @@ export const useGoals = create<GoalsState>((set) => ({
   },
   updateDue: async (id, due) => {
     await updateDue(id, due)
+    set({ goals: await listAllGoals() })
+  },
+  updateTitle: async (id, title) => {
+    await updateGoalTitle(id, title)
     set({ goals: await listAllGoals() })
   },
 }))

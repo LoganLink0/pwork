@@ -40,11 +40,18 @@ function timelinePct(g: Goal, today: string): { pct: number; over: boolean } | n
 }
 
 export function Goals() {
-  const { goals, create, setStatus, updateProgress, updateDue } = useGoals()
+  const { goals, create, setStatus, updateProgress, updateDue, updateTitle } = useGoals()
   const [draft, setDraft] = useState('')
   const [progressFor, setProgressFor] = useState<string | null>(null)
   const [progressDraft, setProgressDraft] = useState('')
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState({ title: '' })
   const today = todayLocal()
+
+  const saveGoalEdit = async (id: string) => {
+    if (editDraft.title.trim()) await updateTitle(id, editDraft.title)
+    setEditingGoalId(null)
+  }
 
   useEffect(() => {
     void useGoals.getState().load()
@@ -66,6 +73,31 @@ export function Goals() {
     const badge = dueBadge(g, today)
     const strip = closed ? null : timelinePct(g, today)
     const log = g.progressLog ?? []
+
+    /** 行内编辑态：标题（期限的即时 date 框保留在原位，两者共用一次保存语义不同——标题此处改） */
+    if (editingGoalId === g.id) {
+      return (
+        <div key={g.id} className="task-row" data-testid="goal-edit">
+          <div className="task-row-body">
+            <div className="task-row-top">
+              <input
+                className="input"
+                style={{ flex: 1, minWidth: 0 }}
+                value={editDraft.title}
+                aria-label="目标标题"
+                onChange={(e) => setEditDraft((s) => ({ ...s, title: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && void saveGoalEdit(g.id)}
+              />
+            </div>
+            <div className="task-row-meta">
+              <button type="button" className="mini-btn" onClick={() => void saveGoalEdit(g.id)}>保存</button>
+              <button type="button" className="mini-btn" onClick={() => setEditingGoalId(null)}>取消</button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div key={g.id} className="task-row" data-testid="goal-row" data-status={g.status}>
         <div
@@ -126,6 +158,17 @@ export function Goals() {
                 </span>
               )}
               <span className="meta-spacer" />
+              <button
+                type="button"
+                className="mini-btn"
+                title="改标题（期限在左边日期框直接选）"
+                onClick={() => {
+                  setEditingGoalId(g.id)
+                  setEditDraft({ title: g.title })
+                }}
+              >
+                编辑
+              </button>
               <button
                 type="button"
                 className="mini-btn"
