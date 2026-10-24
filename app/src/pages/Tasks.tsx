@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTasks } from '../store/tasks'
+import { useGoals } from '../store/goals'
 import { todayLocal } from '../engine/datetime'
 import { resolveLane } from '../engine/taskLane'
+import { scheduleGroups, type ScheduleEntry } from '../engine/taskSchedule'
+import { Icon } from '../components/shell/icons'
 import { toast } from '../engine/toast'
 import type { TaskItem, TaskLane, TaskOriginKind } from '../types/models'
+
+const VIEW_KEY = 'pwork-tasks-view'
 
 const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
   review: '来源:复盘',
@@ -33,8 +38,8 @@ function dueLabel(due: string | undefined, today: string): { text: string; over:
   return { text: `${d.getMonth() + 1}月${d.getDate()}日`, over: false, soon: false }
 }
 
-/** 来源徽章 → 溯源跳转 */
-function OriginBadge({ task }: { task: TaskItem }) {
+/** 来源徽章 → 溯源跳转（时间视图按 origin 字段复用） */
+function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
   const kind = task.origin?.kind ?? 'manual'
   const label = ORIGIN_LABEL[kind]
   if (kind === 'manual' || !task.origin?.refId) {
@@ -51,9 +56,18 @@ function OriginBadge({ task }: { task: TaskItem }) {
 
 export function Tasks() {
   const { tasks, stats, create, setStatus, postpone, remove, setLane, load, scanProjectTodos } = useTasks()
+  const goals = useGoals((s) => s.goals)
   const [draft, setDraft] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
+  const [view, setView] = useState<'lanes' | 'schedule'>(() =>
+    localStorage.getItem(VIEW_KEY) === 'schedule' ? 'schedule' : 'lanes',
+  )
   const today = todayLocal()
+
+  const switchView = (v: 'lanes' | 'schedule') => {
+    setView(v)
+    localStorage.setItem(VIEW_KEY, v)
+  }
 
   // 手动扫描（首次会弹目录选择器——选你的项目根目录，如 E:\AIPROJECT-GLM）
   const runScan = async () => {
@@ -240,6 +254,65 @@ export function Tasks() {
   const doneClosed = laneLists.closed.filter((t) => t.status === 'done').length
   const droppedClosed = laneLists.closed.length - doneClosed
 
+  /** 时间视图条目行：待办可勾选完成；目标带徽章跳目标页。改期/放弃回分诊视图操作 */
+  const renderScheduleEntry = (e: ScheduleEntry) => {
+    if (e.kind === 'goal') {
+      const diff = Math.round(
+        (new Date(e.due + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86_400_000,
+      )
+      return (
+        <Link key={e.id} to="/goals" className="task-row" style={{ textDecoration: 'none' }} data-testid="sched-goal">
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--accent-text)', flex: 'none' }}>
+            <Icon name="goals" size={18} />
+          </span>
+          <div className="task-row-body">
+            <div className="task-row-top">
+              <div className="t-name">{e.title}</div>
+              <span className={`t-due${diff < 0 ? ' over' : diff <= 2 ? ' soon' : ''}`}>
+                {diff < 0 ? `逾期 ${-diff} 天` : diff === 0 ? '今天到期' : `${diff} 天后到期`}
+              </span>
+            </div>
+            <div className="task-row-meta">
+              <span className="origin" data-k="goal">目标</span>
+            </div>
+          </div>
+        </Link>
+      )
+    }
+    return (
+      <div key={e.id} className="task-row">
+        <div
+          className="checkbox"
+          role="checkbox"
+          tabIndex={0}
+          aria-checked={false}
+          aria-label={`完成：${e.title}`}
+          title="标记完成"
+          onClick={() => void setStatus(e.id, 'done')}
+          onKeyDown={(ev) => {
+            if (ev.key === ' ' || ev.key === 'Enter') {
+              ev.preventDefault()
+              void setStatus(e.id, 'done')
+            }
+          }}
+        >
+          ✓
+        </div>
+        <div className="task-row-body">
+          <div className="task-row-top">
+            <div className="t-name" title={e.title}>{e.title}</div>
+            {e.overDays != null && <span className="t-due over">逾期 {e.overDays} 天</span>}
+          </div>
+          <div className="task-row-meta">
+            <OriginBadge task={{ origin: e.origin }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const groups = useMemo(() => scheduleGroups(tasks, goals), [tasks, goals])
+
   return (
     <section>
       <div className="page-head">
@@ -264,27 +337,65 @@ export function Tasks() {
         <span className="qa-hint">↵ 添加</span>
       </div>
 
-      <div className="lanes-grid">
-        {renderLaneSection(1)}
-        {renderLaneSection(2)}
-        {renderLaneSection(3)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)' }}>
+        <div className="radio" role="radiogroup" aria-label="查看方式">
+          <button type="button" className={view === 'lanes' ? 'on' : ''} onClick={() => switchView('lanes')} aria-pressed={view === 'lanes'}>
+            按分诊
+          </button>
+          <button type="button" className={view === 'schedule' ? 'on' : ''} onClick={() => switchView('schedule')} aria-pressed={view === 'schedule'} data-testid="view-schedule">
+            按日期
+          </button>
+        </div>
+        {view === 'schedule' && (
+          <span className="sub" style={{ margin: 0 }}>到期待办与目标按日排布 · 勾选即完成 · 改期与放弃请切回按分诊</span>
+        )}
       </div>
 
-      {laneLists.closed.length > 0 && (
+      {view === 'lanes' ? (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
-            <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
-              已结束
-              <span className="lane-count">
-                {doneClosed} 闭环 · {droppedClosed} 放弃
-              </span>
-            </h3>
-            <span className="sub">点复选框可恢复为进行中</span>
+          <div className="lanes-grid">
+            {renderLaneSection(1)}
+            {renderLaneSection(2)}
+            {renderLaneSection(3)}
           </div>
-          <div className="task-card">
-            {laneLists.closed.map((t) => renderRow(t))}
-          </div>
+
+          {laneLists.closed.length > 0 && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
+                <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
+                  已结束
+                  <span className="lane-count">
+                    {doneClosed} 闭环 · {droppedClosed} 放弃
+                  </span>
+                </h3>
+                <span className="sub">点复选框可恢复为进行中</span>
+              </div>
+              <div className="task-card">
+                {laneLists.closed.map((t) => renderRow(t))}
+              </div>
+            </>
+          )}
         </>
+      ) : (
+        <div data-testid="schedule-view">
+          {groups.length === 0 ? (
+            <div className="task-card" style={{ padding: 'var(--sp-5)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
+              没有带期限的待办或目标——在添加时填期限，或到目标页给目标设期限，就会出现在这里。
+            </div>
+          ) : (
+            groups.map((g) => (
+              <div key={g.key} className="sched-group" data-sched-key={g.key}>
+                <div className={`sched-head${g.tone === 'over' ? ' over' : g.tone === 'today' ? ' today' : ''}`}>
+                  {g.label}
+                  <span className="lane-count">{g.entries.length}</span>
+                </div>
+                <div className="task-card">
+                  {g.entries.map(renderScheduleEntry)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       <div className="stats-line">

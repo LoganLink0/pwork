@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { useTasks } from '../store/tasks'
+import { useGoals } from '../store/goals'
+import { todayLocal } from '../engine/datetime'
 
 /**
  * 待办状态机集成（PRD §4.5.1）：
@@ -85,5 +87,41 @@ describe('待办状态机（W3/W5）', () => {
     await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：放弃流程任务' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：放弃流程任务' })).toBeInTheDocument())
     confirmSpy.mockRestore()
+  })
+
+  it('按日期视图：到期分组呈现（今天/无期限），勾选即完成，目标按期限汇入（2026-10-24）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const t = useTasks.getState()
+    await t.load()
+    await useGoals.getState().load()
+    await t.create({ title: '今天到期的事', due: todayLocal(), origin: { kind: 'manual', refId: null } })
+    await t.create({ title: '没有期限的事', origin: { kind: 'manual', refId: null } })
+    await useGoals.getState().create({ title: '下月达成目标', due: todayLocal(new Date(Date.now() + 7 * 86_400_000)) })
+    await gotoTasks(user)
+
+    // 切到按日期
+    await user.click(screen.getByTestId('view-schedule'))
+    expect(await screen.findByTestId('schedule-view')).toBeInTheDocument()
+    // 今天组含到期待办，无期限组沉底
+    expect(screen.getByText('今天')).toBeInTheDocument()
+    expect(screen.getByText('无期限')).toBeInTheDocument()
+    expect(screen.getByText('今天到期的事')).toBeInTheDocument()
+    expect(screen.getByText('没有期限的事')).toBeInTheDocument()
+    // 目标行带徽章与剩余天数
+    expect(screen.getByTestId('sched-goal')).toHaveTextContent('下月达成目标')
+    expect(screen.getByTestId('sched-goal')).toHaveTextContent('7 天后到期')
+
+    // 勾选即完成，从时间线消失
+    await user.click(screen.getByRole('checkbox', { name: '完成：今天到期的事' }))
+    await waitFor(() => {
+      expect(useTasks.getState().tasks.find((x) => x.title === '今天到期的事')?.status).toBe('done')
+    })
+    await waitFor(() => expect(screen.queryByText('今天到期的事')).toBeNull())
+
+    // 切回按分诊视图恢复车道布局，选择被记忆
+    await user.click(screen.getByRole('button', { name: '按分诊' }))
+    expect(screen.queryByTestId('schedule-view')).toBeNull()
+    expect(localStorage.getItem('pwork-tasks-view')).toBe('lanes')
   })
 })

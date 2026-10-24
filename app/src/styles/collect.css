@@ -528,6 +528,27 @@
   background: var(--surface);
   overflow: hidden;
 }
+
+/* 时间视图分组（按日期）：分组头三态——逾期红 / 今天橙 / 普通灰 */
+.sched-group {
+  margin-bottom: var(--sp-4);
+}
+.sched-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0 0 var(--sp-2);
+}
+.sched-head.today {
+  color: var(--accent-text);
+}
+.sched-head.over {
+  color: var(--danger);
+}
+
 .task-row {
   display: flex;
   align-items: flex-start;
