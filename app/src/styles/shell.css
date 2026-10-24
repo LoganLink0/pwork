@@ -966,8 +966,10 @@ a.mcard .m-link:hover {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* 相对 .content 滚动区（Topbar 固定、content 是滚动容器）：
+     76px 曾按窗口坐标误写，flex+滚动容器组合下会把导航推离自然位置 22px（2026-10-24 用户报告） */
   position: sticky;
-  top: 76px;
+  top: 16px;
 }
 .settings-nav-item {
   display: flex;

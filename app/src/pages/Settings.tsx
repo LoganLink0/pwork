@@ -283,10 +283,10 @@ export function Settings() {
           )}
           <div className="set-row">
             <label>全量备份</label>
-            <button type="button" className="btn-primary" onClick={() => void doExport()}>
+            <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void doExport()}>
               全量导出
             </button>
-              <label className="btn-ghost" style={{ cursor: 'pointer' }} title="可导入本应用的备份文件，也兼容 FUPAN 旧版导出">
+              <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="可导入本应用的备份文件，也兼容 FUPAN 旧版导出">
                 导入
                 <input
                   type="file"
@@ -299,7 +299,7 @@ export function Settings() {
                   }}
                 />
               </label>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {lastBackup ? `上次导出：${fmtLocal(lastBackup)}` : '还没有导出过'}
             </span>
           </div>
@@ -815,21 +815,19 @@ export function Settings() {
               <div className="set-row">
                 <label>模型</label>
                 {pinnedModel ? (
-                  <>
-                    <span className="val tnum">{pinnedModel}</span>
-                    <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                      网关已固定模型（gateway.env 的 PWORK_LLM_MODEL）——下方字段不生效，换模型改网关配置
-                    </span>
-                  </>
-                ) : null}
-                <input
-                  className="input"
-                  value={ai.model}
-                  placeholder={pinnedModel ? '（已被网关固定模型覆盖）' : '模型名'}
-                  disabled={Boolean(pinnedModel)}
-                  onChange={(e) => saveAi({ ...ai, model: e.target.value })}
-                  aria-label="模型"
-                />
+                  <span className="val">
+                    <b className="tnum">{pinnedModel}</b>
+                    　<span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>由网关固定（gateway.env 的 PWORK_LLM_MODEL）——换模型改网关配置后重启</span>
+                  </span>
+                ) : (
+                  <input
+                    className="input"
+                    value={ai.model}
+                    placeholder="模型名"
+                    onChange={(e) => saveAi({ ...ai, model: e.target.value })}
+                    aria-label="模型"
+                  />
+                )}
               </div>
             </>
           )}
@@ -841,19 +839,19 @@ export function Settings() {
 
       <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
         <h2>关于</h2>
-        <div className="desc">本地优先的四模块个人操作系统 · 数据只属于你</div>
+        <div className="desc">本地优先的个人工作台 · 数据只属于你</div>
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v1.0 · 四模块全量可用（输入 / 处理 / 输出 / 回路）</span>
+            <span className="val">v1.0.0</span>
           </div>
           <div className="set-row">
-            <label>进度</label>
-            <span className="val">速记、信息日报、任务/目标、报告导出、文章草稿、调研分析、复盘均已上线；数据视频为远期规划</span>
+            <label>数据存放</label>
+            <span className="val">全部数据存本机（浏览器 IndexedDB，桌面版在应用数据目录）——换机迁移用「数据」页的全量导出与导入</span>
           </div>
           <div className="set-row">
-            <label>帮助</label>
-            <span className="val">快捷键、术语表、配置指南都在 <a href="#/help">帮助页</a></span>
+            <label>AI 数据边界</label>
+            <span className="val">只有你主动触发的 AI 调用会把对应内容发往你配置的服务商，其余数据一律不出本机（详见「AI」页底部的说明）</span>
           </div>
         </div>
       </div>

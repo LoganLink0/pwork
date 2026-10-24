@@ -135,7 +135,7 @@ describe('工作台壳（W1）', () => {
     // 切到排错分类后内容出现
     await user.click(screen.getByRole('button', { name: '排错' }))
     expect(await screen.findByRole('heading', { name: '排错' })).toBeInTheDocument()
-    expect(screen.getByText(/rsshub.app 公共实例在大陆网络不可达/)).toBeInTheDocument()
+    expect(screen.getByText(/一键导入按主题精选的推荐信源包/)).toBeInTheDocument()
 
     // ? 快捷键（非输入态）跳转帮助页
     await user.click(sidebar().getByRole('link', { name: '今日' }))

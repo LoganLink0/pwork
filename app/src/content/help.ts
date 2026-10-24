@@ -110,7 +110,7 @@ export interface FaqEntry {
 export const FAQ: FaqEntry[] = [
   {
     q: '抓取全部失败？',
-    a: '实测（2026-08-31）：rsshub.app 公共实例在大陆网络不可达，别直接用它。优先添加原生 RSS（少数派、HNRSS、Solidot 等实测可用），可直接导入 tools/示例信源.json。抓取链会自动走 rss2json 服务端转接；仍失败的看信源表「健康」列的错误信息，连败 3 次会自动停用。',
+    a: '优先添加原生 RSS（少数派、HNRSS、Solidot 等实测可用），信源页可一键导入按主题精选的推荐信源包。抓取链会自动走转接服务；仍失败的看信源表「健康」列的错误信息，连败 3 次会自动停用。',
     link: { label: '去信源管理', to: '/input/sources' },
   },
   {
@@ -137,11 +137,6 @@ export const FAQ: FaqEntry[] = [
     q: '外部系统的数据怎么进报告？',
     a: '三个办法，按方便程度选：① 在周报导出页进「外部数据」直接粘贴；② 导入 CSV/JSON 文件（首行表头自动转成"键: 值"）；③ 有程序的话向 Worker 的 /api/ingest 推送（见 worker/README）。数据块保存后，报告和 PPT 自动多出"外部数据"章节。',
     link: { label: '去外部数据（周报数据源）', to: '/input/blocks' },
-  },
-  {
-    q: '为什么还有"占位"的功能？',
-    a: '四大模块已全部上线，文章草稿也已实装。剩余占位只有一个：数据视频（O5，远期）——未上线的功能以占位页说明，不做假功能、不留死链接。',
-    link: { label: '看路线图', to: '/process' },
   },
 ]
 
