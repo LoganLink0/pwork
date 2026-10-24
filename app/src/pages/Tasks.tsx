@@ -224,7 +224,7 @@ export function Tasks() {
                 <span className="meta-spacer" />
                 <button
                   type="button"
-                  className="mini-btn"
+                  className="mini-btn danger"
                   title="从列表移除（软删除，导出备份中仍可找回）"
                   onClick={() => {
                     if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
@@ -249,13 +249,14 @@ export function Tasks() {
                   <option value={3}>三类 · 可以绕开我</option>
                 </select>
                 <OriginBadge task={t} />
-                <span className="meta-spacer" />
+                {/* 操作三组分置：信息组（编辑·推迟）贴内容 ｜ 处置组（放弃·删除）靠右，删除染危险色 */}
                 <button type="button" className="mini-btn" title="改标题或期限" onClick={() => startEdit(t)}>
                   编辑
                 </button>
                 <button type="button" className="mini-btn" title="期限顺延 7 天" onClick={() => void postpone(t.id, 7)}>
                   推迟
                 </button>
+                <span className="meta-spacer" />
                 <button
                   type="button"
                   className="mini-btn"
@@ -268,7 +269,7 @@ export function Tasks() {
                 </button>
                 <button
                   type="button"
-                  className="mini-btn"
+                  className="mini-btn danger"
                   title="从列表移除（软删除，导出备份中仍可找回）"
                   onClick={() => {
                     if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)

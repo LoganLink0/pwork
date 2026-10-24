@@ -148,4 +148,25 @@ describe('待办状态机（W3/W5）', () => {
     // 行内期限徽章随之为「今天 · 具体日期」
     await waitFor(() => expect(screen.getByText(/今天 · \d+月\d+日/)).toBeInTheDocument())
   })
+
+  it('操作区分组与危险色断言（2026-10-24 VISUALMASTER：四语义一形态的漂移修正）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const t = useTasks.getState()
+    await t.load()
+    await t.create({ title: '分组断言任务', origin: { kind: 'manual', refId: null } })
+    await gotoTasks(user)
+
+    const row = screen.getByText('分组断言任务').closest<HTMLElement>('[data-testid="task-row"]')!
+    const del = within(row).getByRole('button', { name: '删除' })
+    expect(del).toHaveClass('danger')
+    // 普通操作不染危险色
+    expect(within(row).getByRole('button', { name: '编辑' })).not.toHaveClass('danger')
+    expect(within(row).getByRole('button', { name: '推迟' })).not.toHaveClass('danger')
+    expect(within(row).getByRole('button', { name: '放弃' })).not.toHaveClass('danger')
+    // 分组：处置组（放弃/删除）在 meta-spacer 之后（DOM 序断言：放弃位于 spacer 之后的所有按钮之前）
+    const meta = row.querySelector('.task-row-meta')!
+    const order = Array.from(meta.children).map((c) => c.textContent?.trim() || 'spacer')
+    expect(order.indexOf('放弃')).toBeGreaterThan(order.indexOf('spacer') >= 0 ? order.lastIndexOf('spacer', order.indexOf('放弃')) : -1)
+  })
 })

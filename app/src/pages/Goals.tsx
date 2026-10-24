@@ -162,7 +162,7 @@ export function Goals() {
                   进度：{g.progressNote}
                 </span>
               )}
-              <span className="meta-spacer" />
+              {/* 信息组（编辑·记进度）贴内容 ｜ 处置组（放弃）靠右——与待办行分组一致 */}
               <button
                 type="button"
                 className="mini-btn"
@@ -185,6 +185,7 @@ export function Goals() {
               >
                 记进度
               </button>
+              <span className="meta-spacer" />
               <button
                 type="button"
                 className="mini-btn"

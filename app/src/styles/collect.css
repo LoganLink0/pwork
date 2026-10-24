@@ -171,6 +171,11 @@
   transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
     transform var(--dur-1) var(--ease);
 }
+/* 危险操作（删除类）：色必载义——销毁性操作与普通操作视觉区分，先例=设置回收站彻底删除 */
+.mini-btn.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line-strong));
+}
 .mini-btn:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent-text);
