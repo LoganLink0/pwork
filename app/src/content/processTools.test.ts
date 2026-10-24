@@ -3,8 +3,8 @@ import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, getTool, toolRoute } from
 
 /** 工具注册表完整性：新工具必须先注册（名称/分类/引擎/状态齐全且无冲突） */
 describe('processTools 注册表', () => {
-  it('分类齐全且按用户定义的顺序（文字→音频→图片→视频→专题）', () => {
-    expect(CATEGORY_ORDER).toEqual(['text', 'audio', 'image', 'video', 'topic'])
+  it('分类齐全且按用户定义的顺序（文字→音频→图片→视频；专题已删，2026-10-25）', () => {
+    expect(CATEGORY_ORDER).toEqual(['text', 'audio', 'image', 'video'])
     for (const cat of CATEGORY_ORDER) {
       expect(CATEGORY_META[cat].name).toBeTruthy()
       expect(PROCESS_TOOLS.some((t) => t.category === cat)).toBe(true)

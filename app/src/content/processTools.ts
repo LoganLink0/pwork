@@ -1,11 +1,10 @@
 /**
  * 处理模块工具注册表（IT Tools 模式）：四模态分类，按用户定义的
- * "信息易理解程度"排序——文字 → 音频 → 图片 → 视频；另有「专题」承载
- * 围绕具体场景的成套能力（2026-10-13 案例模块并入：简历辅导）。
+ * "信息易理解程度"排序——文字 → 音频 → 图片 → 视频。
  * 每个工具标注引擎：local-*（零成本离线）与 byok（需多模态 Key，立占位待点亮）。
  */
 
-export type ToolCategory = 'text' | 'audio' | 'image' | 'video' | 'topic'
+export type ToolCategory = 'text' | 'audio' | 'image' | 'video'
 export type ToolEngine =
   | 'local-webspeech-tts'
   | 'local-webspeech-asr'
@@ -34,14 +33,13 @@ export interface ProcessTool {
   route?: string
 }
 
-export const CATEGORY_ORDER: ToolCategory[] = ['text', 'audio', 'image', 'video', 'topic']
+export const CATEGORY_ORDER: ToolCategory[] = ['text', 'audio', 'image', 'video']
 
 export const CATEGORY_META: Record<ToolCategory, { name: string; icon: string; mark: string; desc: string }> = {
   text: { name: '文字', icon: 'fileText', mark: 'var(--cat-insight)', desc: '最抽象，最轻；一切加工的起点' },
   audio: { name: '音频', icon: 'headphones', mark: 'var(--cat-need)', desc: '随听随记，解放双眼' },
   image: { name: '图片', icon: 'image', mark: 'var(--cat-good)', desc: '直观可见，便于分享' },
   video: { name: '视频', icon: 'film', mark: 'var(--cat-action)', desc: '信息最丰富，也最重' },
-  topic: { name: '专题', icon: 'folder', mark: 'var(--accent)', desc: '围绕一个具体场景的成套能力' },
 }
 
 export const ENGINE_LABEL: Record<ToolEngine, string> = {
@@ -187,17 +185,6 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     status: 'ready',
     externalUrl: 'https://www.remove.bg/zh',
     note: '外部工具，免费额度有限',
-  },
-  // ── 专题（成套场景能力） ──
-  {
-    id: 'resume-coach',
-    category: 'topic',
-    name: '简历辅导',
-    desc: '八步流程走完一个简历辅导案例：自检包 → 岗位解码 → 匹配诊断 → 交付（独立应用，这里是入口）',
-    engine: 'app',
-    status: 'ready',
-    route: '/cases',
-    note: '独立运行的应用，与工作台通过案例文件互通',
   },
 ]
 
