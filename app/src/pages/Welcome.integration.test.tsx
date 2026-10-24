@@ -15,7 +15,7 @@ describe('首访引导', () => {
     expect(await screen.findByRole('heading', { name: '欢迎使用 PWORK' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '① 快速上手' })).toBeInTheDocument()
     expect(screen.getByText(/Cloudflare 注册三句话/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '导入 5 个示例信源' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '导入推荐信源包' })).toBeInTheDocument()
   })
 
   it('点「我明白了」→ 回首页，且不再重复引导', async () => {

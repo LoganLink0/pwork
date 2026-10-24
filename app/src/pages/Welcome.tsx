@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { QUICK_START } from '../content/help'
-import { SAMPLE_SOURCES } from '../content/collect'
-import { importSources } from '../db/collect'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
 
 /**
- * 首访引导页（/welcome）：首次打开自动进入一次；帮助页可重进。
+ * 首访引导页（/welcome）：首次打开自动进入一次；地址栏 #/welcome 可随时重进。
  * 回答新用户的三个问题：这是什么怎么用 / 信源怎么来 / 要上云怎么弄（含 Cloudflare 注册与一键脚本）。
  * 2026-10-12 起采集偏好（兴趣域/屏蔽词）也可在这里直接设好，不必再去设置页。
  */
@@ -16,7 +14,7 @@ export function Welcome() {
   const [cloud, setCloud] = useState(() => loadCloudConfig())
   const [msg, setMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
-  const { config, setConfig } = useCollect()
+  const { config, setConfig, importRecommended } = useCollect()
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
 
@@ -26,8 +24,8 @@ export function Welcome() {
   }
 
   const importSamples = async () => {
-    const r = await importSources(SAMPLE_SOURCES)
-    setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点立即抓取试试` : '示例信源已存在（按地址去重）')
+    const r = await importRecommended()
+    setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点立即抓取试试` : '推荐信源都已导入过（按地址去重）')
   }
 
   const addInterest = () => {
@@ -70,7 +68,7 @@ export function Welcome() {
     <section className="settings">
       <div className="page-head">
         <h1>欢迎使用 PWORK</h1>
-        <span className="sub">本地优先的四模块个人操作系统 · 数据只属于你</span>
+        <span className="sub">本地优先的个人工作台 · 数据只属于你</span>
       </div>
 
       <div className="set-card">
@@ -89,18 +87,18 @@ export function Welcome() {
           <div className="set-row" style={{ paddingTop: 'var(--sp-3)' }}>
             <label></label>
             <button type="button" className="btn-primary" onClick={finish}>我明白了，开始使用 →</button>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>随时可从 帮助页 回到这里</span>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>想再看一遍引导：地址栏输入 <code>#/welcome</code>；日常问题按 <code>?</code> 开帮助</span>
           </div>
         </div>
       </div>
 
       <div className="set-card">
         <h2>② 信源初始化（推荐）</h2>
-        <div className="desc">5 个实测可用的原生 RSS（阮一峰 / 少数派 / Hacker News / Solidot / GitHub Blog）</div>
+        <div className="desc">13 个按主题精选、实测可达的信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策），与信源页的推荐包同源</div>
         <div className="set-body">
           <div className="set-row">
             <label>一键导入</label>
-            <button type="button" className="btn-primary" onClick={() => void importSamples()}>导入 5 个示例信源</button>
+            <button type="button" className="btn-primary" onClick={() => void importSamples()}>导入推荐信源包</button>
             <Link to="/input/digest" className="btn-ghost">去信息日报抓取 →</Link>
           </div>
           {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}

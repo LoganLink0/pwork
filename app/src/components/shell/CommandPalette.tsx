@@ -105,7 +105,6 @@ function PaletteDialog() {
       ),
       { to: '/settings', icon: 'settings', label: '设置', sub: '页面' },
       { to: '/help', icon: 'helpCircle', label: '帮助', sub: '页面' },
-      { to: '/design', icon: 'layout', label: '设计系统样例', sub: '开发' },
     ]
     const pages: PaletteItem[] = pageEntries
       .filter((p) => match(p.label))

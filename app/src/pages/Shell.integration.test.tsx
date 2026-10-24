@@ -140,12 +140,13 @@ describe('工作台壳（W1）', () => {
     expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
   })
 
-  it('设计系统样例页渲染（W1 验收项）', async () => {
-    const user = userEvent.setup()
+  it('设计系统样例页路由直达渲染（开发参考页，2026-10-24 起无公开入口）', async () => {
+    window.location.hash = '#/design'
     render(<App />)
-    await user.click(sidebar().getByRole('link', { name: /设计系统样例/ }))
     expect(await screen.findByText(/色彩令牌/)).toBeInTheDocument()
     expect(screen.getByText('字号阶梯（8 级）', { exact: false })).toBeInTheDocument()
     expect(screen.getByText('模块标记', { exact: false })).toBeInTheDocument()
+    // 公开入口已撤：侧边栏与命令面板不再出现
+    expect(within(screen.getByLabelText('主导航')).queryByRole('link', { name: /设计系统样例/ })).not.toBeInTheDocument()
   })
 })
