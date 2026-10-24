@@ -664,15 +664,17 @@
 .meta-spacer {
   flex: 1;
 }
-/* 行内操作两组：容器组在 wrap 布局下整组换行不散架；处置组恒贴右缘（spacer 在 wrap 中会塌陷漂移） */
+/* 行内操作分行排布：meta 区窄（三列布局下仅 ~280px）时任何横向挤压都会乱——
+   信息组与处置组各占一行独占整宽，任何视口下顺序恒定、无空洞 */
 .task-row-meta .ops-left,
 .task-row-meta .ops-right {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--sp-2);
+  flex-basis: 100%;
 }
 .task-row-meta .ops-right {
-  margin-left: auto;
+  justify-content: flex-end;
 }
 /* 分类下拉：手动调整入口；选定后以手动为准（taskLane 手动优先） */
 .lane-select {

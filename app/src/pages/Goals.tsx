@@ -162,38 +162,41 @@ export function Goals() {
                   进度：{g.progressNote}
                 </span>
               )}
-              {/* 信息组（编辑·记进度）贴内容 ｜ 处置组（搁置）靠右——与待办行分组一致 */}
-              <button
-                type="button"
-                className="mini-btn"
-                title="改标题或期限"
-                onClick={() => {
-                  setEditingGoalId(g.id)
-                  setEditDraft({ title: g.title, due: g.due ?? '' })
-                }}
-              >
-                编辑
-              </button>
-              <button
-                type="button"
-                className="mini-btn"
-                title="记录当前进展，自动带上日期，周复盘时随目标带出"
-                onClick={() => {
-                  setProgressFor(g.id)
-                  setProgressDraft(g.progressNote ?? '')
-                }}
-              >
-                记进度
-              </button>
-              <span className="meta-spacer" />
-              <button
-                type="button"
-                className="mini-btn"
-                title="这个目标不追了——留底可恢复"
-                onClick={() => void setStatus(g.id, 'dropped')}
-              >
-                搁置
-              </button>
+              {/* 信息组与处置组各占一行（与待办行同构） */}
+              <span className="ops-left">
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="改标题或期限"
+                  onClick={() => {
+                    setEditingGoalId(g.id)
+                    setEditDraft({ title: g.title, due: g.due ?? '' })
+                  }}
+                >
+                  编辑
+                </button>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="记录当前进展，自动带上日期，周复盘时随目标带出"
+                  onClick={() => {
+                    setProgressFor(g.id)
+                    setProgressDraft(g.progressNote ?? '')
+                  }}
+                >
+                  记进度
+                </button>
+              </span>
+              <span className="ops-right">
+                <button
+                  type="button"
+                  className="mini-btn"
+                  title="这个目标不追了——留底可恢复"
+                  onClick={() => void setStatus(g.id, 'dropped')}
+                >
+                  搁置
+                </button>
+              </span>
             </div>
           )}
           {!closed && progressFor === g.id && (
