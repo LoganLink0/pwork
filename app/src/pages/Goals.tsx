@@ -5,7 +5,7 @@ import type { Goal } from '../types/models'
 
 /**
  * 目标页：期限（Time-bound）+ 时间条 + 进度轨迹 + 状态流转。
- * 状态流转与待办同一套规则：复选框是唯一状态开关（勾选＝达成，再点＝恢复）；「不做」留底可恢复。
+ * 状态流转与待办同一套规则：复选框是唯一状态开关（勾选＝达成，再点＝恢复）；搁置留底可恢复。
  * 时间条回答三个问题：要多久（创建→期限的整条）、现在怎样（已走过部分）、还有多久（剩 N 天）。
  */
 
@@ -139,7 +139,7 @@ export function Goals() {
             </div>
             {closed ? (
               <span className={`status-badge${g.status === 'done' ? ' okb' : ' offb'}`}>
-                {g.status === 'done' ? '已达成' : '已不做'}
+                {g.status === 'done' ? '已达成' : '已搁置'}
               </span>
             ) : (
               <span className={`t-due${badge.over ? ' over' : ''}`}>{badge.text}</span>
@@ -162,7 +162,7 @@ export function Goals() {
                   进度：{g.progressNote}
                 </span>
               )}
-              {/* 信息组（编辑·记进度）贴内容 ｜ 处置组（不做）靠右——与待办行分组一致 */}
+              {/* 信息组（编辑·记进度）贴内容 ｜ 处置组（搁置）靠右——与待办行分组一致 */}
               <button
                 type="button"
                 className="mini-btn"
@@ -192,7 +192,7 @@ export function Goals() {
                 title="这个目标不追了——留底可恢复"
                 onClick={() => void setStatus(g.id, 'dropped')}
               >
-                不做
+                搁置
               </button>
             </div>
           )}
@@ -299,7 +299,7 @@ export function Goals() {
                 <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
                   已关闭
                   <span className="lane-count">
-                    {doneClosed} 达成 · {droppedClosed} 不做
+                    {doneClosed} 达成 · {droppedClosed} 搁置
                   </span>
                 </h3>
                 <span className="sub">点复选框可恢复为进行中</span>

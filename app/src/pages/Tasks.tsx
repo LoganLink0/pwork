@@ -139,9 +139,9 @@ export function Tasks() {
 
   /**
    * 状态流转矩阵（待办/目标同一套规则）：
-   *  - 复选框是唯一状态开关：进行中 → 勾选闭环；已结束（含「不做」）→ 再点恢复为进行中
+   *  - 复选框是唯一状态开关：进行中 → 勾选闭环；已结束（含搁置）→ 再点恢复为进行中
    *  - 分类下拉：手动选择后以手动为准，自动分诊不再覆盖
-   *  - 「不做」= 这条不做了但留底（可恢复）；删除只在已结束区（软删除，备份可找回）
+   *  - 搁置 = 这条不做了但留底（可恢复）；删除只在已结束区（软删除，备份可找回）
    */
   const renderRow = (t: TaskItem) => {
     const closed = t.status === 'done' || t.status === 'dropped'
@@ -209,7 +209,7 @@ export function Tasks() {
             </div>
             {closed ? (
               <span className={`status-badge${t.status === 'done' ? ' okb' : ' offb'}`}>
-                {t.status === 'done' ? '已闭环' : '已不做'}
+                {t.status === 'done' ? '已闭环' : '已搁置'}
               </span>
             ) : (
               <span className={`t-due${d.over ? ' over' : d.soon ? ' soon' : ''}`} title={t.due ? `期限 ${t.due}` : undefined}>
@@ -227,7 +227,7 @@ export function Tasks() {
                   className="mini-btn danger"
                   title="从列表移除（软删除，导出备份中仍可找回）"
                   onClick={() => {
-                    if (window.confirm(`删除「${t.title}」？（软删除，导出备份中仍可找回）`)) void remove(t.id)
+                    if (window.confirm('从列表移除这条待办？（可从备份找回）')) void remove(t.id)
                   }}
                 >
                   删除
@@ -250,7 +250,7 @@ export function Tasks() {
                 </select>
                 <OriginBadge task={t} />
                 {/* 两组容器替代 spacer 分组：wrap 布局下 spacer 会塌陷漂移，容器组则整组换行、处置组恒贴右缘。
-                    「不做」合并了原放弃+删除：留底进已结束区（可恢复），彻底清除只在已结束区 */}
+                    「搁置」合并了原放弃+删除：留底进已结束区（可恢复），彻底清除只在已结束区 */}
                 <span className="ops-left">
                   <button type="button" className="mini-btn" title="改标题或期限" onClick={() => startEdit(t)}>
                     编辑
@@ -263,10 +263,10 @@ export function Tasks() {
                   <button
                     type="button"
                     className="mini-btn"
-                    title="这条不做了——移入「已结束」留底，随时可恢复"
+                    title="这条待办不做了——移入「已结束」留底，随时可恢复"
                     onClick={() => void setStatus(t.id, 'dropped')}
                   >
-                    不做
+                    搁置
                   </button>
                 </span>
               </>
@@ -301,7 +301,7 @@ export function Tasks() {
   const doneClosed = laneLists.closed.filter((t) => t.status === 'done').length
   const droppedClosed = laneLists.closed.length - doneClosed
 
-  /** 时间视图条目行：待办可勾选完成；目标带徽章跳目标页。改期/不做回分诊视图操作 */
+  /** 时间视图条目行：待办可勾选完成；目标带徽章跳目标页。改期/搁置回分诊视图操作 */
   const renderScheduleEntry = (e: ScheduleEntry) => {
     if (e.kind === 'goal') {
       const diff = Math.round(
@@ -364,7 +364,7 @@ export function Tasks() {
     <section>
       <div className="page-head">
         <h1>待办</h1>
-        <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「不做」留底，彻底清除在已结束区</span>
+        <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「搁置」留底，彻底清除在已结束区</span>
         <div className="right">
           <button type="button" className="btn-ghost" disabled={scanBusy} onClick={() => void runScan()} data-testid="scan-todos">
             {scanBusy ? '扫描中…' : '从项目扫描待办'}
@@ -403,7 +403,7 @@ export function Tasks() {
           </button>
         </div>
         {view === 'schedule' && (
-          <span className="sub" style={{ margin: 0 }}>到期待办与目标按日排布 · 勾选即完成 · 改期与「不做」请切回按分诊</span>
+          <span className="sub" style={{ margin: 0 }}>到期待办与目标按日排布 · 勾选即完成 · 改期与搁置请切回按分诊</span>
         )}
       </div>
 
@@ -421,7 +421,7 @@ export function Tasks() {
                 <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
                   已结束
                   <span className="lane-count">
-                    {doneClosed} 闭环 · {droppedClosed} 不做
+                    {doneClosed} 闭环 · {droppedClosed} 搁置
                   </span>
                 </h3>
                 <span className="sub">点复选框可恢复为进行中</span>

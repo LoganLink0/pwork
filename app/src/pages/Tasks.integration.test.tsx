@@ -9,7 +9,7 @@ import { todayLocal } from '../engine/datetime'
 /**
  * 待办状态机集成（PRD §4.5.1）：
  * 复选框是唯一状态开关（勾选=闭环，再点=恢复）；分类下拉手动优先；
- * 「不做」=留底可恢复；已结束区计数与徽章区分闭环/不做。
+ * 「搁置」=留底可恢复；已结束区计数与徽章区分闭环/搁置。
  */
 
 async function gotoTasks(user: ReturnType<typeof userEvent.setup>) {
@@ -57,41 +57,41 @@ describe('待办状态机（W3/W5）', () => {
     // 勾选闭环
     await user.click(screen.getByRole('checkbox', { name: '完成：闭环流程任务' }))
     await waitFor(() => expect(screen.getByText('已闭环')).toBeInTheDocument())
-    expect(screen.getByText(/1 闭环 · 0 不做/)).toBeInTheDocument()
+    expect(screen.getByText(/1 闭环 · 0 搁置/)).toBeInTheDocument()
 
     // 再点恢复
     await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：闭环流程任务' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：闭环流程任务' })).toBeInTheDocument())
-    expect(screen.queryByText(/1 闭环 · 0 不做/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 闭环 · 0 搁置/)).not.toBeInTheDocument()
   })
 
-  it('「不做」一键留底（无确认框）→ 已不做徽章 → 复选框恢复（2026-10-24 合并放弃+删除）', async () => {
+  it('「搁置」一键留底（无确认框）→ 已搁置徽章 → 复选框恢复（2026-10-24 合并放弃+删除）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const s = useTasks.getState()
     await s.load()
-    await s.create({ title: '不做流程任务' })
+    await s.create({ title: '搁置流程任务' })
     await gotoTasks(user)
 
     // 一键流转，不弹确认（与完成勾选同级的轻操作；彻底清除在已结束区）
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    await user.click(screen.getByRole('button', { name: '不做' }))
-    await waitFor(() => expect(screen.getByText('已不做')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: '搁置' }))
+    await waitFor(() => expect(screen.getByText('已搁置')).toBeInTheDocument())
     expect(confirmSpy).not.toHaveBeenCalled()
-    expect(screen.getByText(/0 闭环 · 1 不做/)).toBeInTheDocument()
+    expect(screen.getByText(/0 闭环 · 1 搁置/)).toBeInTheDocument()
 
-    // 不做不算闭环
+    // 搁置不算闭环
     expect(screen.getByText(/总闭环率/)).toHaveTextContent('0%')
 
     // 已结束区提供彻底清除（红色删除）
-    const closedRow = screen.getByText('已不做').closest<HTMLElement>('[data-testid="task-row"]')!
+    const closedRow = screen.getByText('已搁置').closest<HTMLElement>('[data-testid="task-row"]')!
     const delBtn = within(closedRow).getByRole('button', { name: '删除' })
     expect(delBtn).toHaveClass('danger')
     confirmSpy.mockRestore()
 
     // 复选框恢复
-    await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：不做流程任务' }))
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：不做流程任务' })).toBeInTheDocument())
+    await user.click(screen.getByRole('checkbox', { name: '恢复为进行中：搁置流程任务' }))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: '完成：搁置流程任务' })).toBeInTheDocument())
   })
 
   it('按日期视图：到期分组呈现（今天/无期限），勾选即完成，目标按期限汇入（2026-10-24）', async () => {
@@ -154,7 +154,7 @@ describe('待办状态机（W3/W5）', () => {
     await waitFor(() => expect(screen.getByText(/今天 · \d+月\d+日/)).toBeInTheDocument())
   })
 
-  it('操作区分组断言：活跃行=信息组（编辑·推迟）+处置组（不做），删除只在已结束区且染红（2026-10-24）', async () => {
+  it('操作区分组断言：活跃行=信息组（编辑·推迟）+处置组（搁置），删除只在已结束区且染红（2026-10-24）', async () => {
     const user = userEvent.setup()
     render(<App />)
     const t = useTasks.getState()
@@ -163,7 +163,7 @@ describe('待办状态机（W3/W5）', () => {
     await gotoTasks(user)
 
     const row = screen.getByText('分组断言任务').closest<HTMLElement>('[data-testid="task-row"]')!
-    // 活跃行没有删除按钮（合并进「不做」，彻底清除只在已结束区）
+    // 活跃行没有删除按钮（合并进「搁置」，彻底清除只在已结束区）
     expect(within(row).queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
     // 信息组与处置组为兄弟容器，处置组在后（DOM 序）且组内各自聚合
     const meta = row.querySelector<HTMLElement>('.task-row-meta')!
@@ -171,7 +171,7 @@ describe('待办状态机（W3/W5）', () => {
     const right = meta.querySelector<HTMLElement>('.ops-right')!
     expect(within(left).getByRole('button', { name: '编辑' })).toBeInTheDocument()
     expect(within(left).getByRole('button', { name: '推迟' })).toBeInTheDocument()
-    expect(within(right).getByRole('button', { name: '不做' })).toBeInTheDocument()
+    expect(within(right).getByRole('button', { name: '搁置' })).toBeInTheDocument()
     expect(Array.from(meta.children).indexOf(right)).toBeGreaterThan(Array.from(meta.children).indexOf(left))
   })
 })
