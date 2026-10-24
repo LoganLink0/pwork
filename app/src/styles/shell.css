@@ -1718,6 +1718,12 @@ a.mcard .m-link:hover {
   margin-right: auto;
 }
 
+/* 连记回执：本次浮层会话已存的条数 */
+.qn-foot .qn-saved {
+  font-size: var(--fs-xs);
+  color: var(--ok);
+}
+
 /* ============ 设计系统样例页 ============ */
 .ds-section {
   margin-bottom: var(--sp-6);

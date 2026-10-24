@@ -25,7 +25,8 @@ function loadDraft(): Draft {
 /**
  * 全局速记浮层（PRD §3.4 F1）：捕获 ≤3 次交互（N → 输入 → Esc）。
  * 关闭卸载、打开重挂；草稿在关闭时写 localStorage，重开恢复。
- * 「转待办」：先落速记再以速记为源建任务（origin.note 溯源）。
+ * 连续捕获（2026-10-24）：Ctrl+Enter 存了继续（清正文留标签，浮层不关）——连发场景每条省一次唤起；
+ * 「保存」按钮与「转待办」存完关闭；Esc 任何时候收工。
  */
 export function QuickNote() {
   const open = useUi((s) => s.quickOpen)
@@ -42,6 +43,7 @@ function QuickNoteDialog() {
   const [body, setBody] = useState(draft0.body)
   const [tags, setTags] = useState(draft0.tags)
   const [saving, setSaving] = useState(false)
+  const [savedCount, setSavedCount] = useState(0)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -53,38 +55,43 @@ function QuickNoteDialog() {
     else localStorage.removeItem(DRAFT_KEY)
   }
 
-  const save = async () => {
+  const tagsOf = () =>
+    tags
+      .split(/[\s,，#]+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+
+  /** 存一条；continueMode=true 清正文留标签继续记（回执计数），否则收工关闭 */
+  const save = async (continueMode: boolean) => {
     if (!body.trim() || saving) return
     setSaving(true)
     try {
-      await createNote({
-        body,
-        tags: tags
-          .split(/[\s,，#]+/)
-          .map((t) => t.trim())
-          .filter(Boolean),
-        source: 'quick',
-      })
-      setBody('')
-      setTags('')
-      localStorage.removeItem(DRAFT_KEY)
-      close()
+      await createNote({ body, tags: tagsOf(), source: 'quick' })
+      if (continueMode) {
+        setBody('')
+        setSavedCount((n) => n + 1)
+        // 已落库的内容不再是草稿；下一条输入中途 Esc 会按最新 body 重新存草稿
+        localStorage.removeItem(DRAFT_KEY)
+        requestAnimationFrame(() => taRef.current?.focus())
+      } else {
+        setBody('')
+        setTags('')
+        localStorage.removeItem(DRAFT_KEY)
+        close()
+      }
     } finally {
       setSaving(false)
     }
   }
 
-  /** 转待办：先落速记，再以速记为源建任务（origin.note 溯源） */
+  /** 转待办：先落速记，再以速记为源建任务（origin.note 溯源）；单条决策，存完关闭 */
   const saveAsTask = async () => {
     if (!body.trim() || saving) return
     setSaving(true)
     try {
       const note = await createNote({
         body,
-        tags: tags
-          .split(/[\s,，#]+/)
-          .map((t) => t.trim())
-          .filter(Boolean),
+        tags: tagsOf(),
         source: 'quick',
       })
       await createTask({ title: note.title || body, origin: { kind: 'note', refId: note.id } }).then(async (t) => {
@@ -114,10 +121,10 @@ function QuickNoteDialog() {
               saveDraft()
               close()
             }
-            // Ctrl/Cmd + Enter 快速保存
+            // Ctrl/Cmd + Enter：存了继续（连记场景每条省一次唤起）；Esc 任何时候收工
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
               e.preventDefault()
-              void save()
+              void save(true)
             }
           }}
           aria-label="速记内容"
@@ -130,11 +137,16 @@ function QuickNoteDialog() {
             onChange={(e) => setTags(e.target.value)}
             aria-label="标签"
           />
-          <span className="hint">Esc 存草稿 · Ctrl↵ 保存</span>
+          {savedCount > 0 && (
+            <span className="qn-saved tnum" data-testid="qn-saved" role="status">
+              已存 {savedCount} 条
+            </span>
+          )}
+          <span className="hint">Ctrl↵ 存了继续 · Esc 收工</span>
           <button type="button" className="btn-ghost" disabled={!body.trim() || saving} onClick={() => void saveAsTask()}>
             转待办
           </button>
-          <button type="button" className="btn-primary" onClick={() => void save()} disabled={!body.trim()}>
+          <button type="button" className="btn-primary" onClick={() => void save(false)} disabled={!body.trim()}>
             保存
           </button>
         </div>

@@ -105,6 +105,36 @@ describe('工作台壳（W1）', () => {
     await user.keyboard('{Escape}')
   })
 
+  it('速记浮层：Ctrl+Enter 连记——存了继续（浮层不关、回执计数、标签沿用），按钮保存收尾关闭（2026-10-24）', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard('n')
+    const ta = await screen.findByLabelText('速记内容')
+
+    // 第一条：先设标签再回正文输入框，Ctrl+Enter 存了继续
+    await user.type(screen.getByLabelText('标签'), '会议')
+    await user.click(ta)
+    await user.type(ta, '连记第一条')
+    await user.keyboard('{Control>}{Enter}{/Control}')
+    await waitFor(() => expect(useNotes.getState().notes.length).toBeGreaterThanOrEqual(1))
+    // 浮层未关、正文清空、标签沿用、回执出现
+    expect(screen.getByLabelText('速记内容')).toHaveValue('')
+    expect(screen.getByLabelText('标签')).toHaveValue('会议')
+    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已存 1 条')
+
+    // 第二条：标签沿用没动，直接写直接存
+    await user.type(screen.getByLabelText('速记内容'), '连记第二条')
+    await user.keyboard('{Control>}{Enter}{/Control}')
+    await waitFor(() => expect(useNotes.getState().notes.filter((n) => n.body.startsWith('连记')).length).toBe(2))
+    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已存 2 条')
+
+    // 「保存」按钮：存完关闭
+    await user.type(screen.getByLabelText('速记内容'), '最后一条用按钮')
+    await user.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(screen.queryByLabelText('速记内容')).toBeNull())
+    expect(useNotes.getState().notes.filter((n) => n.body === '最后一条用按钮')).toHaveLength(1)
+  })
+
   it('设置页：默认进数据分类且导出入口在；主题切换走顶栏（2026-10-24 外观卡删除）', async () => {
     const user = userEvent.setup()
     render(<App />)
