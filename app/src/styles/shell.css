@@ -630,6 +630,10 @@ a.mcard .m-link:hover {
   gap: var(--sp-5);
   align-items: start;
 }
+/* grid 子项默认 min-width:auto 不收缩：速记长标题（nowrap 省略号）曾把单栏轨道撑出 29px 横滚 */
+.notes-wrap > div {
+  min-width: 0;
+}
 
 .note-list {
   background: var(--surface);

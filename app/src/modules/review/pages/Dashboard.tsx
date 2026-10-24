@@ -85,7 +85,7 @@ export function Dashboard() {
     if (!reviews?.length) return
     const byMonth = new Map<string, typeof reviews>()
     for (const r of [...reviews].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      const key = a.createdAt.slice(0, 7)
+      const key = r.createdAt.slice(0, 7)
       const arr = byMonth.get(key) ?? []
       arr.push(r)
       byMonth.set(key, arr)
