@@ -5,6 +5,8 @@ import { Topbar } from './components/shell/Topbar'
 import { BottomNav } from './components/shell/BottomNav'
 import { CommandPalette } from './components/shell/CommandPalette'
 import { QuickNote } from './components/shell/QuickNote'
+import { WheelMenu } from './components/shell/WheelMenu'
+import { isDesktopApp } from './engine/platform'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
 import { Home } from './pages/Home'
 import { useNotes } from './store/notes'
@@ -290,9 +292,10 @@ export default function App() {
             </div>
           </div>
         </div>
-        <BottomNav />
-        <CommandPalette />
-        <QuickNote />
+      <BottomNav />
+      <CommandPalette />
+      <QuickNote />
+      {isDesktopApp() && <WheelMenu />}
       </RoutedBoundary>
     </HashRouter>
   )

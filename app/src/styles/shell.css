@@ -1735,6 +1735,89 @@ a.mcard .m-link:hover {
   .quick-row video { width: 100%; max-height: 170px; }
 }
 
+/* ============ 工具轮盘（桌面版 Ctrl+Alt+Q 全局呼出；格位设置页可编辑） ============ */
+.wheel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: overlay-in var(--dur-1) var(--ease) both;
+}
+.wheel-wrap {
+  outline: none;
+}
+.wheel-ring {
+  position: relative;
+  width: 360px;
+  height: 360px;
+}
+.wheel-slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(132px) rotate(calc(-1 * var(--i) * (360deg / var(--n))));
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease), color var(--dur-1) var(--ease), transform var(--dur-2) var(--ease);
+  animation: wheel-in var(--dur-2) var(--ease) both;
+  animation-delay: calc(var(--i) * 20ms);
+}
+.wheel-slot:hover,
+.wheel-slot.on {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.wheel-slot.on {
+  transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(138px) rotate(calc(-1 * var(--i) * (360deg / var(--n)))) scale(1.06);
+}
+.wheel-slot span {
+  max-width: 78px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wheel-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  pointer-events: none;
+}
+.wheel-center .t {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+.wheel-center .k {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+@keyframes wheel-in {
+  from { opacity: 0; scale: 0.6; }
+  to { opacity: 1; scale: 1; }
+}
+
 /* ============ 设计系统样例页 ============ */
 .ds-section {
   margin-bottom: var(--sp-6);

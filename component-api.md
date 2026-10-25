@@ -13,6 +13,7 @@
 | `SettingsNav` | 设置页/帮助页共用的左栏分类导航（桌面竖排、<768px 横滚带渐隐提示）；props：`tabs/active/onSelect/ariaLabel`，tab 的 icon 为 Icon 键名 |
 | `CommandPalette` | Ctrl+K 或 `/` 唤起；纯本地检索（快速动作+页面+速记+全库，searchAll 同源）；有查询词时 Enter 落在首个匹配（AI 问答已暂停，TODO 记录重启前置） |
 | `QuickNote` | `useUi().openQuick()` 打开；Esc 与点遮罩均存草稿（localStorage DRAFT_KEY）；Ctrl+Enter 保存；转待办回写 note.links.taskIds |
+| `WheelMenu` | 桌面版专属（App 内 `isDesktopApp()` 条件挂载）：Rust 侧 Ctrl+Alt+Q 全局键 emit `wheel-toggle` → ui store `wheelOpen` 开关；环形格位读 `content/wheel.ts` 的 loadWheelSlots（localStorage `pwork-wheel-slots`，坏数据回默认，上限 8 格）；四类动作 route/quick/fetch/url；`WheelSettingsCard`（设置 tab=wheel）负责格位编辑 |
 | `ErrorBoundary` / `ErrorBar` | 渲染崩溃兜底 + 即时错误条；错误入口统一走 `recordError`，勿直接操作 useErrorBar |
 
 ### 采集件 components/collect/
@@ -68,4 +69,5 @@
 ## 桌面壳 API（src-tauri）
 
 - `gateway.rs`：`start(data_dir)` 随应用启动；端点 `/health`、`POST */chat/completions`、`/usage`；Key 加载顺序 AppData/gateway.env → .env.local → .env → 环境变量。
+- `lib.rs`：tauri-plugin-global-shortcut 注册 Ctrl+Alt+Q（常量 WHEEL_KEY/WHEEL_LABEL，键位自定义随下版本快捷键体系）→ 还原窗口 + emit `wheel-toggle`。
 - 前端环境探测：`engine/platform.ts` 的 `isDesktopApp()`（`__TAURI_INTERNALS__` 标记）。

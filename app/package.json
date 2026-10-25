@@ -17,6 +17,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@tauri-apps/api": "^2.12.4",
     "dexie": "^4.4.5",
     "docx": "^9.7.1",
     "dompurify": "3.4.17",

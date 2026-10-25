@@ -24,7 +24,7 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 
 ## 回归清单（每次收尾必过，按序）
 
-1. `npx vitest run` → 392 全绿
+1. `npx vitest run` → 398 全绿
 2. `npx tsc -b` → 0 错
 3. `npm run lint` → 24/0（基线不变）
 4. 涉及桌面版：`npx tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
