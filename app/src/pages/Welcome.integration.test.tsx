@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import App from '../App'
 
 /**
- * 首访引导（/welcome，2026-10-25 重构为全屏遮罩分步式）：
- * 首次打开自动进入；四步（认识工作台/信源/偏好/上云）；走完或跳过才进入主界面。
+ * 首访引导（/welcome，2026-10-25 重构为全屏遮罩分步式；10-26 增第 4 步 AI 功能卡）：
+ * 首次打开自动进入；五步（认识工作台/信源/偏好/AI/上云）；走完或跳过才进入主界面。
  */
 describe('首访引导（全屏遮罩分步式）', () => {
   beforeEach(() => {
@@ -29,7 +29,7 @@ describe('首访引导（全屏遮罩分步式）', () => {
     expect(screen.getByRole('button', { name: '跳过引导' })).toBeInTheDocument()
   })
 
-  it('四步走完：信源/偏好/上云逐步可达，最后一步「开始使用」进入主界面且不再打扰', async () => {
+  it('五步走完：信源/偏好/AI/上云逐步可达，最后一步「开始使用」进入主界面且不再打扰', async () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('heading', { name: '欢迎使用 PWORK' })
@@ -44,7 +44,14 @@ describe('首访引导（全屏遮罩分步式）', () => {
     await user.click(screen.getByRole('button', { name: '下一步' }))
     expect(await screen.findByRole('heading', { name: '采集偏好' })).toBeInTheDocument()
 
-    // 第 4 步：上云（Cloudflare 指引与回填输入框）
+    // 第 4 步：AI 功能（未配置态给出两端配置写法与"只在本机"承诺）
+    await user.click(screen.getByRole('button', { name: '下一步' }))
+    expect(await screen.findByRole('heading', { name: 'AI 功能（可选）' })).toBeInTheDocument()
+    expect(screen.getByText(/不配也完全能用/)).toBeInTheDocument()
+    expect(screen.getByText(/Key 只存在你自己电脑的这个文件里/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /打开 设置 → AI/ })).toBeInTheDocument()
+
+    // 第 5 步：上云（Cloudflare 指引与回填输入框）
     await user.click(screen.getByRole('button', { name: '下一步' }))
     expect(await screen.findByText(/Cloudflare 注册三句话/)).toBeInTheDocument()
 

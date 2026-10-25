@@ -5,14 +5,15 @@ import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync
 import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
+import { llmConfigured } from '../modules/review/engine/coach'
 
 /**
  * 首访引导（/welcome）：全屏遮罩分步式（成熟实现的主流形态——遮罩覆盖主界面、
  * 3-5 步、可跳过、走完才进入软件；2026-10-25 用户第一性纠偏，替换原"应用内普通页面"）。
- * 四步回答新用户的四个问题：这是什么怎么用 / 信源怎么来 / 关注什么 / 要不要上云。
+ * 五步回答新用户的五个问题：这是什么怎么用 / 信源怎么来 / 关注什么 / AI 配不配 / 要不要上云。
  * 第 1 步四模块能力卡（各带实拍演示视频）；后续步骤操作真实生效（目录导入信源、改偏好、配置云端）。
  */
-const STEPS = ['认识工作台', '信源初始化', '采集偏好', '可选：上云'] as const
+const STEPS = ['认识工作台', '信源初始化', '采集偏好', 'AI 功能（可选）', '可选：上云'] as const
 
 export function Welcome() {
   const navigate = useNavigate()
@@ -23,6 +24,7 @@ export function Welcome() {
   const { config, setConfig } = useCollect()
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
+  const aiReady = llmConfigured()
 
   /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
   const finish = (to = '/') => {
@@ -182,6 +184,47 @@ export function Welcome() {
         {step === 3 && (
           <div className="set-card">
             <h2>{STEPS[3]}</h2>
+            <div className="desc">不配也完全能用——信息筛选走本地规则、报告走内置模板。配上自己的 Key 后，多出 AI 复盘教练、AI 写大纲、联网调研这些增强</div>
+            <div className="set-body">
+              {aiReady ? (
+                <div className="notice">✅ AI 已配置，无需操作。想确认状态就去 设置 → AI 页点「测试网关」。</div>
+              ) : (
+                <>
+                  <div className="notice">
+                    <b>Key 怎么拿</b>：到大模型服务商官网注册获取（如 DeepSeek 开放平台、智谱开放平台），一把 Key 网关全用。
+                  </div>
+                  <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                    <label>桌面版</label>
+                    <span className="val" style={{ color: 'var(--ink-soft)' }}>
+                      打开文件夹 <code>%APPDATA%\com.pwork.workbench\</code>（资源管理器地址栏粘贴回车），新建文本文件 <code>gateway.env</code>，写入一行 <code>PWORK_LLM_API_KEY=你的Key</code>，重启应用。
+                    </span>
+                  </div>
+                  <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                    <label>浏览器版</label>
+                    <span className="val" style={{ color: 'var(--ink-soft)' }}>
+                      在应用目录把 <code>tools/.env.example</code> 复制为 <code>.env.local</code>，填同样内容，再运行 <code>npm run gateway</code>。
+                    </span>
+                  </div>
+                  <div className="set-row">
+                    <label>放心之处</label>
+                    <span className="val" style={{ color: 'var(--ink-soft)' }}>
+                      Key 只存在你自己电脑的这个文件里：不上传、不进备份、界面永不显示。配好后在 设置 → AI 页点「测试网关」确认。
+                    </span>
+                  </div>
+                </>
+              )}
+              <div className="set-row">
+                <label>现在去配</label>
+                <button type="button" className="btn-ghost" onClick={() => finish('/settings?tab=ai')}>打开 设置 → AI →</button>
+                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>也可以走完引导，以后随时在设置里配</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="set-card">
+            <h2>{STEPS[4]}</h2>
             <div className="desc">不弄也完全能用——本地抓取照常工作；想 7×24 自动抓取再往下走（免费档 ¥0/月）</div>
             <div className="set-body">
               <div className="notice">
