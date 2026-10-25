@@ -17,11 +17,16 @@ pub fn run() {
           if event.state != ShortcutState::Pressed {
             return;
           }
-          // 窗口可能最小化/失焦：先还原再通知前端切换轮盘
+          // 明确语义：最小化时第一次按 = 只唤起窗口（WebView 刚恢复，事件可能丢，不指望弹轮盘）；
+          // 窗口已可见（含失焦）= 唤起焦点并切换轮盘。用户体感：最小化按一次唤起、再按弹轮盘
           if let Some(w) = app.get_webview_window("main") {
+            let minimized = w.is_minimized().unwrap_or(false);
             let _ = w.show();
             let _ = w.unminimize();
             let _ = w.set_focus();
+            if minimized {
+              return;
+            }
           }
           let _ = app.emit("wheel-toggle", ());
         })

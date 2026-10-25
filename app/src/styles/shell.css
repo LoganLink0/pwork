@@ -1626,7 +1626,8 @@ a.mcard .m-link:hover {
   animation: overlay-in var(--dur-1) var(--ease) both;
 }
 .welcome-stage {
-  max-width: 760px;
+  /* 视口 90% 以上利用率（1366 屏约 1257px / 1920 屏约 1720px）：四模块演示视频要看得清操作内容 */
+  width: min(1720px, 92vw);
   margin: 0 auto;
   padding: var(--sp-7) var(--sp-5) var(--sp-6);
   display: flex;
@@ -1686,7 +1687,9 @@ a.mcard .m-link:hover {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 190px;
+  /* 与演示视频同比例（960×600）：完整呈现不裁切；高度随视口封顶，防止两行卡超出矮屏 */
+  aspect-ratio: 16 / 10;
+  max-height: 34vh;
   object-fit: cover;
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
