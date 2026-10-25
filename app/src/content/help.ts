@@ -5,15 +5,15 @@
 
 /**
  * 四模块能力卡（首访引导第 1 步与帮助-快速上手共用）：
- * 每个模块一张演示动图（app/public/demo/，浏览器自动化实拍应用真实界面合成）。
- * 文案描述模块能力本身；gif 展示真实操作路径。
+ * 每个模块一段演示视频（app/public/demo/*.webm，应用真实操作录制、循环播放）。
+ * 文案描述模块能力本身；视频展示真实操作路径。
  */
 export interface ModuleIntro {
   key: string
   name: string
   tagline: string
   desc: string
-  gif: string
+  video: string
   to: string
   action: string
 }
@@ -24,7 +24,7 @@ export const MODULES: ModuleIntro[] = [
     name: '输入',
     tagline: '记下来',
     desc: '速记浮层随时唤起（N），想到什么写什么，一条速记可直接转待办；信源订阅原生 RSS，日报页一键抓取，外部信息自动进库。',
-    gif: '/demo/demo-input.gif',
+    video: '/demo/demo-input.webm',
     to: '/input/notes',
     action: '去速记',
   },
@@ -33,7 +33,7 @@ export const MODULES: ModuleIntro[] = [
     name: '处理',
     tagline: '加工',
     desc: 'Ctrl K 一次搜遍全库（速记、条目、待办、复盘全找齐）；信息条目投票筛选，越用越合口味；工具箱收纳格式转换等常用小工具。',
-    gif: '/demo/demo-process.gif',
+    video: '/demo/demo-process.webm',
     to: '/process',
     action: '去工具箱',
   },
@@ -42,7 +42,7 @@ export const MODULES: ModuleIntro[] = [
     name: '输出',
     tagline: '成稿',
     desc: '任务、目标、洞察、外部数据一键汇成周报月报，可下载 Markdown/HTML、导出 PPT 与朗读音频；PPT 撰写从一堆材料直接产出可编辑的 .pptx。',
-    gif: '/demo/demo-output.gif',
+    video: '/demo/demo-output.webm',
     to: '/output/report',
     action: '去报告',
   },
@@ -51,7 +51,7 @@ export const MODULES: ModuleIntro[] = [
     name: '回路',
     tagline: '复盘',
     desc: '3 分钟快答复盘产出行动项，自动进任务库；勾选完成即闭环，下周复盘自动带出上轮行动——产出变成下一轮的输入。',
-    gif: '/demo/demo-loop.gif',
+    video: '/demo/demo-loop.webm',
     to: '/review/new',
     action: '新建复盘',
   },

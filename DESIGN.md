@@ -64,6 +64,6 @@
 - 表单卡：`set-card > h2 + .desc + .set-body`，行 `set-row`（label 130px 定宽）。
 - 输入焦点：描边变 accent + 3px 15% 外发光（box-shadow，非 outline 改形）。
 - 状态徽章/边线遵循模块标记三用途；空态卡用 quiet（虚线+降底+无阴影），让有数据的卡主导第一眼。
-- 演示动图卡（首访引导与帮助-快速上手共用模式）：图 `object-fit:cover` 封顶高（卡式 190px / 行式 150px）+ 底描边，说明句 fs-sm 次要色、卡名加粗主色；引导用 2×2 网格（`.welcome-mods`，≤700px 单列），帮助用左图右文行式（`.quick-row`）。
+- 演示视频卡（首访引导与帮助-快速上手共用模式）：`<video autoplay loop muted playsinline>`，`object-fit:cover` 封顶高（卡式 190px / 行式 150px）+ 底描边，说明句 fs-sm 次要色、卡名加粗主色；引导用 2×2 网格（`.welcome-mods`，≤700px 单列），帮助用左视频右文行式（`.quick-row`）。产物为 webm（真实操作录屏，960×600@8fps）。
 - 错误呈现三层：ErrorBar（即时红条）/ ErrorBoundary 崩溃页（不白屏）/ 设置页日志卡——色都用 `--danger`。
 - 每个新页面上线前对照本文件 + `/design` 样例页核一遍（复盘 7.2 预防条）。

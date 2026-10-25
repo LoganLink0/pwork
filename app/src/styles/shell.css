@@ -1782,7 +1782,7 @@ a.mcard .m-link:hover {
   margin-top: var(--sp-2);
 }
 
-/* 认识工作台：四模块能力卡（2×2，各带应用实拍动图） */
+/* 认识工作台：四模块能力卡（2×2，各带应用实拍演示视频，循环静音播放） */
 .welcome-mods {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1796,7 +1796,7 @@ a.mcard .m-link:hover {
   background: var(--surface);
   overflow: hidden;
 }
-.welcome-mod img {
+.welcome-mod video {
   display: block;
   width: 100%;
   height: auto;
@@ -1833,7 +1833,7 @@ a.mcard .m-link:hover {
 .quick-row:last-of-type {
   border-bottom: none;
 }
-.quick-row img {
+.quick-row video {
   width: 220px;
   flex: none;
   height: auto;
@@ -1846,7 +1846,7 @@ a.mcard .m-link:hover {
 @media (max-width: 700px) {
   .welcome-mods { grid-template-columns: 1fr; }
   .quick-row { flex-wrap: wrap; }
-  .quick-row img { width: 100%; max-height: 170px; }
+  .quick-row video { width: 100%; max-height: 170px; }
 }
 
 /* ============ 设计系统样例页 ============ */

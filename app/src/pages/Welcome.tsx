@@ -10,7 +10,7 @@ import { KbdText } from '../components/shell/KbdText'
  * 首访引导（/welcome）：全屏遮罩分步式（成熟实现的主流形态——遮罩覆盖主界面、
  * 3-5 步、可跳过、走完才进入软件；2026-10-25 用户第一性纠偏，替换原"应用内普通页面"）。
  * 四步回答新用户的四个问题：这是什么怎么用 / 信源怎么来 / 关注什么 / 要不要上云。
- * 第 1 步四模块能力卡（各带实拍动图）；后续步骤操作真实生效（目录导入信源、改偏好、配置云端）。
+ * 第 1 步四模块能力卡（各带实拍演示视频）；后续步骤操作真实生效（目录导入信源、改偏好、配置云端）。
  */
 const STEPS = ['认识工作台', '信源初始化', '采集偏好', '可选：上云'] as const
 
@@ -96,7 +96,7 @@ export function Welcome() {
               <div className="welcome-mods">
                 {MODULES.map((m) => (
                   <div className="welcome-mod" key={m.key}>
-                    <img src={m.gif} alt={`${m.name}模块操作演示`} loading="lazy" />
+                    <video src={m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
                     <div className="welcome-mod-body">
                       <b>{m.name} · {m.tagline}</b>
                       <span><KbdText text={m.desc} /></span>

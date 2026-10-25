@@ -120,8 +120,8 @@ export function ReportGenerator() {
           <div className="set-row">
             <label>周期</label>
             <div className="radio">
-              <button type="button" className={mode === 'weekly' ? 'on' : ''} onClick={() => setMode('weekly')}>周报（近 7 天）</button>
-              <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报（近 30 天）</button>
+              <button type="button" className={mode === 'weekly' ? 'on' : ''} data-testid="report-mode-weekly" onClick={() => setMode('weekly')}>周报（近 7 天）</button>
+              <button type="button" className={mode === 'monthly' ? 'on' : ''} data-testid="report-mode-monthly" onClick={() => setMode('monthly')}>月报（近 30 天）</button>
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               数据截至 {todayLocal()} · 数据自动取自各模块
@@ -178,8 +178,8 @@ export function ReportGenerator() {
         <div className="set-body">
           <div className="set-row">
             <div className="radio">
-              <button type="button" className={format === 'md' ? 'on' : ''} onClick={() => setFormat('md')}>Markdown</button>
-              <button type="button" className={format === 'html' ? 'on' : ''} onClick={() => setFormat('html')}>HTML</button>
+              <button type="button" className={format === 'md' ? 'on' : ''} data-testid="report-format-md" onClick={() => setFormat('md')}>Markdown</button>
+              <button type="button" className={format === 'html' ? 'on' : ''} data-testid="report-format-html" onClick={() => setFormat('html')}>HTML</button>
             </div>
             <button type="button" className="btn-ghost" onClick={() => download('md')} disabled={!data}>下载 .md</button>
             <button type="button" className="btn-ghost" onClick={() => download('html')} disabled={!data}>下载 .html</button>

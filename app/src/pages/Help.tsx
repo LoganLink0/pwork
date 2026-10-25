@@ -39,11 +39,11 @@ export function Help() {
         <div className="settings-content">
       <div className="set-card" data-tab="quick" style={{ display: tab === 'quick' ? undefined : 'none' }}>
         <h2>快速上手</h2>
-        <div className="desc">四个模块各管一段：输入记下来 → 处理加工 → 输出成稿 → 回路复盘——动图为应用真实操作录制</div>
+        <div className="desc">四个模块各管一段：输入记下来 → 处理加工 → 输出成稿 → 回路复盘——视频为应用真实操作录制</div>
         <div className="set-body">
           {MODULES.map((m) => (
             <div className="quick-row" key={m.key}>
-              <img src={m.gif} alt={`${m.name}模块操作演示`} loading="lazy" />
+              <video src={m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
               <span className="val" style={{ flex: 1, minWidth: 0 }}>
                 <b>{m.name} · {m.tagline}</b>
                 <br />
