@@ -405,7 +405,7 @@ export function Tasks() {
           onChange={(e) => setDraftDue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
-        <span className="qa-hint">↵ 添加</span>
+        <span className="qa-hint"><kbd>↵</kbd> 添加</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)' }}>

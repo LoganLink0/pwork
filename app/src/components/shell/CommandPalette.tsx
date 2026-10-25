@@ -220,9 +220,9 @@ function PaletteDialog() {
           })}
         </div>
         <div className="p-foot">
-          <span>↑↓ 选择</span>
-          <span>↵ 跳转</span>
-          <span>Esc 关闭</span>
+          <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+          <span><kbd>↵</kbd> 跳转</span>
+          <span><kbd>Esc</kbd> 关闭</span>
         </div>
       </div>
     </div>

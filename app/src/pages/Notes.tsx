@@ -100,7 +100,7 @@ export function Notes() {
           <div className="note-list" data-testid="note-list">
             {list.length === 0 && (
               <div style={{ padding: 'var(--sp-5)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-                {showTrash ? '回收站是空的' : query || tag ? '没有匹配的速记' : '第一条速记会在这里。按 N 随时开始。'}
+                {showTrash ? '回收站是空的' : query || tag ? '没有匹配的速记' : <>第一条速记会在这里。按 <kbd>N</kbd> 随时开始。</>}
               </div>
             )}
             {showTrash ? (

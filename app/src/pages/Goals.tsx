@@ -282,7 +282,7 @@ export function Goals() {
           onChange={(e) => setDraftDue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
-        <span className="qa-hint">↵ 添加</span>
+        <span className="qa-hint"><kbd>↵</kbd> 添加</span>
       </div>
 
       {active.length === 0 && closed.length === 0 ? (

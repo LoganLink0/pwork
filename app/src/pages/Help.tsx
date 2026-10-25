@@ -51,18 +51,25 @@ export function Help() {
               </Link>
             </div>
           ))}
+          <div className="set-row">
+            <label></label>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              新手引导还有信源初始化、采集偏好与上云步骤：<Link to="/welcome">重新查看完整引导 →</Link>
+            </span>
+          </div>
         </div>
       </div>
 
 
       <div className="set-card" data-tab="shortcuts" style={{ display: tab === 'shortcuts' ? undefined : 'none' }}>
         <h2>快捷键</h2>
-        <div className="desc">键盘可达性是日常快节奏场景的生命线</div>
         <div className="set-body">
           {SHORTCUTS.map((s) => (
             <div className="set-row" key={s.keys}>
-              <label>
-                <kbd style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '0 6px', fontSize: 'var(--fs-xs)', background: 'var(--surface-2)' }}>{s.keys}</kbd>
+              <label style={{ display: 'flex', gap: 4 }}>
+                {s.keys.split(' 或 ').map((k) => (
+                  <kbd key={k}>{k}</kbd>
+                ))}
               </label>
               <span className="val">{s.desc}</span>
             </div>

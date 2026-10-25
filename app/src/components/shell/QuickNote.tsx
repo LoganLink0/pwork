@@ -142,7 +142,7 @@ function QuickNoteDialog() {
               已保存 {savedCount} 条
             </span>
           )}
-          <span className="hint">Ctrl↵ 保存并继续 · Esc 关闭</span>
+          <span className="hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd> 保存并继续 · <kbd>Esc</kbd> 关闭</span>
           <button type="button" className="btn-ghost" disabled={!body.trim() || saving} onClick={() => void saveAsTask()}>
             转待办
           </button>

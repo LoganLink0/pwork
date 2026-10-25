@@ -40,6 +40,11 @@ kbd {
   background: var(--surface-2);
 }
 
+/* 行内 code 同样继承正文字族：等宽字体让页面英文出现第二种字形（单字族原则） */
+code {
+  font-family: inherit;
+}
+
 h1,
 h2,
 h3,

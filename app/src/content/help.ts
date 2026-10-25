@@ -15,7 +15,7 @@ export const QUICK_START: QuickStep[] = [
   {
     step: '1',
     title: '随手捕获',
-    desc: '按 N 唤起速记浮层，想到什么写什么；顺手「转待办」直接进任务库。',
+    desc: '速记浮层随时唤起（快捷键 N），想到什么写什么；顺手「转待办」直接进任务库。',
     action: '去速记',
     to: '/input/notes',
   },
@@ -62,11 +62,11 @@ export interface Shortcut {
 }
 
 export const SHORTCUTS: Shortcut[] = [
-  { keys: 'N', desc: '速记浮层（任何页面；浮层内 Esc 存草稿、Ctrl+↵ 保存）' },
-  { keys: 'Ctrl K 或 /', desc: '命令面板：搜索页面、速记与全库，执行快速动作' },
-  { keys: '?', desc: '打开本帮助页' },
-  { keys: '← →', desc: '复盘向导内切步（回路模块）' },
-  { keys: 'Esc', desc: '关闭浮层 / 命令面板' },
+  { keys: 'N', desc: '速记浮层' },
+  { keys: 'Ctrl K 或 /', desc: '命令面板' },
+  { keys: '?', desc: '帮助页' },
+  { keys: '← →', desc: '复盘向导切步' },
+  { keys: 'Esc', desc: '关闭浮层与面板' },
 ]
 
 export interface GlossaryEntry {

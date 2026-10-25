@@ -87,7 +87,7 @@ export function Welcome() {
           <div className="set-row" style={{ paddingTop: 'var(--sp-3)' }}>
             <label></label>
             <button type="button" className="btn-primary" onClick={finish}>我明白了，开始使用 →</button>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>想再看一遍引导：地址栏输入 <code>#/welcome</code>；日常问题按 <code>?</code> 开帮助</span>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>日常问题按 <kbd>?</kbd> 开帮助；想重看本引导：帮助页 → 快速上手 → 「重新查看完整引导」</span>
           </div>
         </div>
       </div>
@@ -159,7 +159,7 @@ export function Welcome() {
               />
             </div>
           </div>
-          <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「多推」投票会自动调整信源分级，攒够后 AI 还会归纳你的兴趣词表。</div>
+          <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「多推」投票会自动调整信源分级。</div>
         </div>
       </div>
 
@@ -173,7 +173,7 @@ export function Welcome() {
           <div className="set-row" style={{ alignItems: 'flex-start', paddingTop: 'var(--sp-3)' }}>
             <label>一键部署</label>
             <span className="val" style={{ color: 'var(--ink-soft)' }}>
-              双击 <code>worker\部署向导.cmd</code>（在 PWORK 文件夹里）。脚本会中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
+              双击项目源码 worker 目录里的 <code>部署向导.cmd</code>（注意：在源码目录，桌面版安装目录里没有）。脚本会中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
             </span>
           </div>
           <div className="set-row">
