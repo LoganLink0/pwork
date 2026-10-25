@@ -147,7 +147,7 @@ fn cors_headers(origin: &str) -> Vec<Header> {
 }
 
 fn usage_summary(cfg: &GatewayConfig) -> Value {
-    let empty = json!({ "calls": 0, "tokens": 0, "byModel": {}, "since": null, "until": null });
+    let empty = json!({ "calls": 0, "tokens": 0, "byModel": {}, "byPurpose": {}, "since": null, "until": null });
     let Ok(text) = fs::read_to_string(&cfg.usage_log) else {
         return empty;
     };
@@ -155,6 +155,7 @@ fn usage_summary(cfg: &GatewayConfig) -> Value {
     let mut calls = 0u64;
     let mut tokens = 0u64;
     let mut by_model: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+    let mut by_purpose: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
     let mut since: Option<String> = None;
     let mut until: Option<String> = None;
     for line in text.lines().filter(|l| !l.is_empty()) {
@@ -169,15 +170,17 @@ fn usage_summary(cfg: &GatewayConfig) -> Value {
         tokens += tok;
         let model = row.get("model").and_then(|v| v.as_str()).unwrap_or("unknown");
         *by_model.entry(model.to_string()).or_insert(0) += tok;
+        let purpose = row.get("purpose").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).unwrap_or("未标记");
+        *by_purpose.entry(purpose.to_string()).or_insert(0) += tok;
         if since.is_none() {
             since = Some(t.to_string());
         }
         until = Some(t.to_string());
     }
-    json!({ "calls": calls, "tokens": tokens, "byModel": by_model, "since": since, "until": until })
+    json!({ "calls": calls, "tokens": tokens, "byModel": by_model, "byPurpose": by_purpose, "since": since, "until": until })
 }
 
-fn log_usage(cfg: &GatewayConfig, req_body: &str, resp_text: &str, lock: &Mutex<()>) {
+fn log_usage(cfg: &GatewayConfig, req_body: &str, resp_text: &str, lock: &Mutex<()>, purpose: Option<&str>) {
     let _g = lock.lock().unwrap();
     let Ok(req) = serde_json::from_str::<Value>(req_body) else { return };
     let Ok(resp) = serde_json::from_str::<Value>(resp_text) else { return };
@@ -186,6 +189,7 @@ fn log_usage(cfg: &GatewayConfig, req_body: &str, resp_text: &str, lock: &Mutex<
     let line = json!({
         "t": chrono::Utc::now().to_rfc3339(),
         "model": model,
+        "purpose": purpose.unwrap_or(""),
         "tokens": usage.get("total_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
         "prompt": usage.get("prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
         "completion": usage.get("completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
@@ -308,7 +312,7 @@ pub fn start(data_dir: PathBuf) {
                                 Ok(up) => {
                                     let status = up.status();
                                     let text = up.into_string().unwrap_or_default();
-                                    log_usage(&cfg, &up_body, &text, &usage_lock);
+                                    log_usage(&cfg, &up_body, &text, &usage_lock, None);
                                     if status != 200 {
                                         let msg = serde_json::from_str::<Value>(&text)
                                             .ok()
@@ -435,19 +439,20 @@ pub fn start(data_dir: PathBuf) {
                         (503, json!({ "error": "网关未配置 PWORK_LLM_API_KEY——把 Key 放到应用数据目录的 gateway.env（PWORK_LLM_API_KEY=…）后重启应用" }))
                     }
                     Ok(body) => {
+                        // 提取并剥离 purpose（前端场景标记，只用于记账，不转发上游）；
                         // 模型固定：设了 PWORK_LLM_MODEL 就替换请求体里的 model（与 Node 版一致）
-                        let out_body = if cfg.chat_model.is_empty() {
-                            body.to_string()
-                        } else {
-                            match serde_json::from_str::<Value>(body) {
-                                Ok(mut v) => {
-                                    if let Some(obj) = v.as_object_mut() {
+                        let mut purpose: Option<String> = None;
+                        let out_body = match serde_json::from_str::<Value>(body) {
+                            Ok(mut v) => {
+                                if let Some(obj) = v.as_object_mut() {
+                                    purpose = obj.remove("purpose").and_then(|p| p.as_str().map(String::from));
+                                    if !cfg.chat_model.is_empty() {
                                         obj.insert("model".to_string(), json!(cfg.chat_model));
                                     }
-                                    v.to_string()
                                 }
-                                Err(_) => body.to_string(),
+                                v.to_string()
                             }
+                            Err(_) => body.to_string(),
                         };
                         match ureq::post(&normalize_upstream(&cfg.chat_url))
                             .set("content-type", "application/json")
@@ -457,7 +462,7 @@ pub fn start(data_dir: PathBuf) {
                             Ok(up) => {
                                 let status = up.status();
                                 let text = up.into_string().unwrap_or_default();
-                                log_usage(&cfg, body, &text, &usage_lock);
+                                log_usage(&cfg, &out_body, &text, &usage_lock, purpose.as_deref());
                                 // 上游 JSON 原样透传（status + body，与 Node 版行为一致）
                                 match serde_json::from_str::<Value>(&text) {
                                     Ok(v) => (status, v),

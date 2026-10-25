@@ -183,7 +183,7 @@ export class LlmCoach implements CoachAdapter {
       .filter(Boolean)
       .join('\n')
     try {
-      const text = await chatCompletion(this.llm(), DEEP_SYSTEM, user)
+      const text = await chatCompletion(this.llm(), DEEP_SYSTEM, user, { purpose: 'review-coach' })
       const out = parseStringArray(text, 3)
       if (out.length > 0) return out
       return this.fallback.askDeepQuestions(ctx)
@@ -194,7 +194,7 @@ export class LlmCoach implements CoachAdapter {
 
   async reframe(text: string, kind: DebiasKind): Promise<string> {
     try {
-      const out = await chatCompletion(this.llm(), REFRAME_SYSTEM, `输入："${text}"`)
+      const out = await chatCompletion(this.llm(), REFRAME_SYSTEM, `输入："${text}"`, { purpose: 'review-reframe' })
       const cleaned = out.trim().replace(/^["“]|["”]$/g, '')
       if (cleaned.length > 0 && cleaned.length <= 80) return cleaned
       return this.fallback.reframe(text, kind)

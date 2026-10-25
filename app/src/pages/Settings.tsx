@@ -177,7 +177,7 @@ export function Settings() {
     setAiTesting(true)
     setAiTestMsg('')
     try {
-      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 512, timeoutMs: 15000 })
+      const reply = await chatCompletion(llmConfigFrom(ai), '你是连通性测试器。', '回复 ok 即可。', { maxTokens: 512, timeoutMs: 15000, purpose: 'connectivity-test' })
       setAiTestMsg(`连通正常（回复：${reply.trim().slice(0, 20)}）`)
       setAiTestOk(true)
     } catch (e) {
@@ -734,13 +734,31 @@ export function Settings() {
                         try {
                           const base = (ai.gatewayUrl || 'http://127.0.0.1:8788').replace(/\/+$/, '')
                           const r = await fetch(`${base}/usage`)
-                          const j = (await r.json()) as { calls?: number; tokens?: number; byModel?: Record<string, number>; since?: string | null }
+                          const j = (await r.json()) as { calls?: number; tokens?: number; byModel?: Record<string, number>; byPurpose?: Record<string, number>; since?: string | null }
                           const models = Object.entries(j.byModel ?? {})
                             .map(([m, t]) => `${m}：${t.toLocaleString()} tokens`)
                             .join('；')
+                          // 按场景（调用点带的 purpose 标记；旧记录无标记归"未标记"）
+                          const PURPOSE_LABEL: Record<string, string> = {
+                            'research-ask': '调研问答',
+                            'research-web': '联网调研',
+                            'research-framework': '调研框架',
+                            'article-draft': '文章草稿',
+                            'article-analysis': '成稿分析',
+                            'ppt-outline': 'PPT 大纲',
+                            'report-summary': '周报摘要',
+                            'review-coach': '复盘教练',
+                            'review-reframe': '复盘改写',
+                            'interest-profile': '兴趣归纳',
+                            'connectivity-test': '连通测试',
+                          }
+                          const purposes = Object.entries(j.byPurpose ?? {})
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([p, t]) => `${PURPOSE_LABEL[p] ?? p} ${t.toLocaleString()}`)
+                            .join('；')
                           setUsageMsg(
                             j.calls
-                              ? `近 30 天经网关 ${j.calls} 次调用，共 ${(j.tokens ?? 0).toLocaleString()} tokens。${models}`
+                              ? `近 30 天经网关 ${j.calls} 次调用，共 ${(j.tokens ?? 0).toLocaleString()} tokens。${models}${purposes ? `。按场景：${purposes}` : ''}`
                               : '还没有经网关调用的记录（直连模式的用量不在此统计）',
                           )
                         } catch {

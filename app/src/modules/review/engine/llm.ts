@@ -17,12 +17,14 @@ export async function chatCompletion(
   cfg: LlmConfig,
   system: string,
   user: string,
-  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number } = {},
+  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number; purpose?: string } = {},
 ): Promise<string> {
-  const { temperature = 0.6, maxTokens = 300, timeoutMs = 20000 } = opts
+  const { temperature = 0.6, maxTokens = 300, timeoutMs = 20000, purpose } = opts
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
+    // 场景标记只在网关模式随请求发送（网关剥离后记账，不转发上游）；直连上游不发，避免严格实现拒收未知字段
+    const extra = purpose && cfg.apiKey === 'pwork-gateway' ? { purpose } : {}
     const res = await fetch(`${cfg.baseURL.replace(/\/+$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -38,6 +40,7 @@ export async function chatCompletion(
         temperature,
         max_tokens: maxTokens,
         stream: false,
+        ...extra,
       }),
       signal: ctrl.signal,
     })

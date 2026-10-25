@@ -166,7 +166,7 @@ export function ResearchPage() {
             buildFrameworkUserPrompt(useType, t),
             // 深度思考型模型的思考先吃 maxTokens 预算——3000 时 JSON 经常没写完就断流
             //（2026-10-21 用户踩中"AI 没有返回 JSON"），给足 8000；超时仍落回模板
-            { maxTokens: 16384, timeoutMs: 120000 },
+            { maxTokens: 16384, timeoutMs: 120000, purpose: 'research-framework' },
           )
           next = normalizeAiFramework(parseAiJson(text), useType, t)
           break

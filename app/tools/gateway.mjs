@@ -180,14 +180,28 @@ const server = http.createServer(async (req, res) => {
     req.on('data', (c) => (body += c))
     req.on('end', async () => {
       try {
-        const outBody = CHAT_MODEL ? JSON.stringify({ ...JSON.parse(body), model: CHAT_MODEL }) : body
+        // 提取并剥离 purpose（前端场景标记，只用于记账，不转发上游）；模型固定时替换 model
+        let purpose = null
+        let parsed = null
+        try {
+          parsed = JSON.parse(body)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            purpose = typeof parsed.purpose === 'string' ? parsed.purpose : null
+            delete parsed.purpose
+          }
+        } catch {
+          /* 非 JSON 原样透传，上游会拒 */
+        }
+        const outBody = parsed
+          ? JSON.stringify(CHAT_MODEL ? { ...parsed, model: CHAT_MODEL } : parsed)
+          : body
         const upstream = await fetch(normalizeUpstream(CHAT_URL), {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${CHAT_KEY}` },
           body: outBody,
         })
         const text = await upstream.text()
-        logUsage(outBody, text)
+        logUsage(outBody, text, purpose)
         res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end(text)
       } catch (e) {
@@ -206,8 +220,8 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: 'not found' })
 })
 
-/** 记账：请求体里的 model + 响应里的 usage 落一行 JSONL；滚动上限 2MB（保留最近约 5000 条） */
-function logUsage(reqBody, respText) {
+/** 记账：请求体里的 model + 场景标记 + 响应里的 usage 落一行 JSONL；滚动上限 2MB（保留最近约 5000 条） */
+function logUsage(reqBody, respText, purpose = null) {
   try {
     const model = JSON.parse(reqBody)?.model ?? 'unknown'
     const usage = JSON.parse(respText)?.usage
@@ -216,6 +230,7 @@ function logUsage(reqBody, respText) {
       JSON.stringify({
         t: new Date().toISOString(),
         model,
+        purpose: purpose ?? '',
         tokens: usage.total_tokens ?? 0,
         prompt: usage.prompt_tokens ?? 0,
         completion: usage.completion_tokens ?? 0,
@@ -230,21 +245,27 @@ function logUsage(reqBody, respText) {
   }
 }
 
-/** 汇总：总次数/总 tokens、按模型分布、覆盖时间窗 */
+/** 汇总：总次数/总 tokens、按模型与按场景分布、覆盖时间窗 */
 function usageSummary() {
   try {
-    if (!existsSync(USAGE_LOG)) return { calls: 0, tokens: 0, byModel: {}, since: null, until: null }
+    if (!existsSync(USAGE_LOG)) return { calls: 0, tokens: 0, byModel: {}, byPurpose: {}, since: null, until: null }
     const rows = readFileSync(USAGE_LOG, 'utf-8')
       .split('\n')
       .filter(Boolean)
       .map((l) => JSON.parse(l))
       .filter((r) => Date.now() - new Date(r.t).getTime() < 30 * 86400_000) // 近 30 天
     const byModel = {}
-    for (const r of rows) byModel[r.model] = (byModel[r.model] ?? 0) + (r.tokens ?? 0)
+    const byPurpose = {}
+    for (const r of rows) {
+      byModel[r.model] = (byModel[r.model] ?? 0) + (r.tokens ?? 0)
+      const p = r.purpose || '未标记'
+      byPurpose[p] = (byPurpose[p] ?? 0) + (r.tokens ?? 0)
+    }
     return {
       calls: rows.length,
       tokens: rows.reduce((s, r) => s + (r.tokens ?? 0), 0),
       byModel,
+      byPurpose,
       since: rows[0]?.t ?? null,
       until: rows.at(-1)?.t ?? null,
     }

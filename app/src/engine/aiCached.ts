@@ -22,7 +22,7 @@ export async function chatCompletionCached(call: CachedAiCall): Promise<{ text: 
   const key = aiCacheKey(call.purpose, call.inputKey, call.system, cfg.model)
   const hit = await getCachedAi(key)
   if (hit !== null) return { text: hit, cached: true }
-  const text = await chatCompletion(llmConfigFrom(cfg), call.system, call.user, { maxTokens: call.maxTokens, timeoutMs: 90000 })
+  const text = await chatCompletion(llmConfigFrom(cfg), call.system, call.user, { maxTokens: call.maxTokens, timeoutMs: 90000, purpose: call.purpose })
   await putCachedAi(key, call.purpose, text, cfg.model)
   return { text, cached: false }
 }

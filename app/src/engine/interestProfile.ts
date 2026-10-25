@@ -65,7 +65,7 @@ export async function refreshInterestProfile(): Promise<{ ok: true; words: numbe
   const dislikes = useCollect.getState().config.dislikes
   const system = '你是兴趣画像归纳器。从用户明确标为"多推"（希望多看到这类）的信息标题中，归纳这位用户关注什么的词表。只输出 JSON，不要多余文字。'
   const user = `用户标为"多推"的标题（最近 ${titles.length} 条）：\n${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}${underSection}\n\n用户的屏蔽词（归纳时要避开）：${dislikes.join('、') || '无'}\n\n归纳 15–30 个兴趣关键词：中文为主，保留必要的英文专有名词；写"用户关注什么"（如 独立开发、增长打法），不要写"这些文章讲了什么"。输出：{"interests": ["词1", "词2"]}`
-  const reply = await chatCompletion(llmConfigFrom(ai), system, user, { maxTokens: 2000, timeoutMs: 60_000 })
+  const reply = await chatCompletion(llmConfigFrom(ai), system, user, { maxTokens: 2000, timeoutMs: 60_000, purpose: 'interest-profile' })
   const interests = parseInterests(reply)
   if (interests.length === 0) throw new Error('归纳结果为空')
   useCollect.getState().setConfig({ interests })
