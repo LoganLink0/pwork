@@ -299,14 +299,6 @@ export interface Item {
   schemaVersion: number
 }
 
-/** 评分四维权重（04 §4.1：随星级反馈人工调参，不训练模型） */
-export interface ScoreWeights {
-  source: number
-  novelty: number
-  relevance: number
-  utility: number
-}
-
 /** 采集配置 —— 兴趣域是评分的锚点（04 §4.2），存 localStorage（非凭据，随备份导出） */
 export interface CollectConfig {
   interests: string[]
@@ -314,8 +306,6 @@ export interface CollectConfig {
   context: string
   /** 每日 Top N 硬顶：产品设计不是用户设置（04 §8） */
   topN: number
-  /** 评分权重；可选字段——2026-10-04 前的存量配置与旧备份没有它，读取侧走默认（铁律 2） */
-  weights?: ScoreWeights
   /** RSS 转接服务地址（浏览器直连被 CORS 拦的信源走它）；空/缺省 = 公共 rss2json */
   relayBase?: string
 }

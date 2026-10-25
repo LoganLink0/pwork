@@ -37,8 +37,7 @@
 ### 抓取与评分
 
 - `fetchFeed(url, timeoutMs=10_000, relayBase='')` → `ParseResult{ok,items,error}`：三级通路（直连→rsshub 镜像→转接）；**resp.text() 单独超时防护**，返回错误永不抛异常。
-- `prefilter({title,summary,config})` → `{pass,reason?}`；`scoreByRules({source,title,summary,domainCountToday,config})` → `{score,reason≤30字,tags}`（权重取 `config.weights` 并归一化）。
-- `normalizeWeights(w?)` → 总和为 1；`DEFAULT_WEIGHTS` = 30/25/25/20。
+- `prefilter({title,summary,config})` → `{pass,reason?}`；`scoreByRules({source,title,summary,domainCountToday,config})` → `{score,reason≤30字,tags}`（四维权重为 rules.ts 内固定常量 30/25/25/20——2026-10-26 起 config.weights 字段已退役，旧数据携带即忽略）。
 - `runCollect(sources, config)` → `RunSummary{results[], totalNew, totalDiscarded, digestIds, elapsedMs}`（并发≤5；编排层不再炸穿，见 store 层）。
 
 ### 错误系统

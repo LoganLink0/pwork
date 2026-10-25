@@ -3,7 +3,6 @@
  */
 
 import type { CollectConfig } from '../types/models'
-import { DEFAULT_WEIGHTS } from '../engine/rules'
 
 export const DEFAULT_COLLECT_CONFIG: CollectConfig = {
   interests: ['AI 应用', '独立开发', '前端工程化'],
@@ -11,7 +10,6 @@ export const DEFAULT_COLLECT_CONFIG: CollectConfig = {
   // 通用默认（随安装包分发给任何人，不得含任何个人表述）——用户自己的上下文在设置页改
   context: '我关注可以直接借鉴的产品、工程与增长实践',
   topN: 10,
-  weights: { ...DEFAULT_WEIGHTS },
 }
 
 const CONFIG_KEY = 'pwork-collect-config'
@@ -26,8 +24,7 @@ export function loadCollectConfig(): CollectConfig {
       dislikes: Array.isArray(parsed.dislikes) ? parsed.dislikes : [...DEFAULT_COLLECT_CONFIG.dislikes],
       context: typeof parsed.context === 'string' ? parsed.context : DEFAULT_COLLECT_CONFIG.context,
       topN: parsed.topN ?? DEFAULT_COLLECT_CONFIG.topN,
-      // 存量配置没有 weights（2026-10-04 前的 localStorage 与旧备份）——回默认（铁律 2）
-      weights: parsed.weights ? { ...DEFAULT_WEIGHTS, ...parsed.weights } : { ...DEFAULT_WEIGHTS },
+      // 旧配置/旧备份可能带已退役的 weights 字段：读取时忽略（评分权重固定，见 rules.ts）
       relayBase: typeof parsed.relayBase === 'string' ? parsed.relayBase : '',
     }
   } catch {

@@ -2,33 +2,18 @@
  * 规则引擎：预筛（零成本砍量）+ 规则评分（C1 的降级链模式，04 §4/§5）。
  * 纯函数；所有判定可解释——每条评分必须附 ≤30 字理由（04 §5 红线）。
  */
-import type { CollectConfig, ScoreBreakdown, ScoreWeights, Source } from '../types/models'
+import type { CollectConfig, ScoreBreakdown, Source } from '../types/models'
 
 /** 工具性启发词（utility 维度的近似；C2 由 AI 判定） */
 const UTILITY_WORDS = ['开源', '发布', '教程', '实践', '工具', '方法论', '案例', '复盘', '免费', 'api', '模板']
 
-/** 默认评分权重（04 §4.1）；存量配置缺 weights 字段时用它（铁律 2 读取防御） */
-export const DEFAULT_WEIGHTS: ScoreWeights = { source: 0.3, novelty: 0.25, relevance: 0.25, utility: 0.2 }
-
-/**
- * 权重归一化：负数/非数视为 0，按比例缩放到总和 1；全零回退默认。
- * 用户在设置页填的是百分比直觉值（如 40/20/20/20），引擎侧统一按比例折算。
- */
-export function normalizeWeights(w: Partial<ScoreWeights> | undefined): ScoreWeights {
-  const raw = {
-    source: Number.isFinite(w?.source) ? Math.max(0, w!.source!) : 0,
-    novelty: Number.isFinite(w?.novelty) ? Math.max(0, w!.novelty!) : 0,
-    relevance: Number.isFinite(w?.relevance) ? Math.max(0, w!.relevance!) : 0,
-    utility: Number.isFinite(w?.utility) ? Math.max(0, w!.utility!) : 0,
-  }
-  const sum = raw.source + raw.novelty + raw.relevance + raw.utility
-  if (sum <= 0) return { ...DEFAULT_WEIGHTS }
-  return {
-    source: raw.source / sum,
-    novelty: raw.novelty / sum,
-    relevance: raw.relevance / sum,
-    utility: raw.utility / sum,
-  }
+/** 四维固定权重（04 §4.1 公式）。2026-10-20 起不可配置：信源分级已由投票自动调整，
+ *  权重再可调等于一个看不见的隐藏参数在暗中生效；2026-10-26 配置字段整体退役 */
+const W: Readonly<{ source: number; novelty: number; relevance: number; utility: number }> = {
+  source: 0.3,
+  novelty: 0.25,
+  relevance: 0.25,
+  utility: 0.2,
 }
 
 export interface PrefilterInput {
@@ -69,12 +54,9 @@ export function hitInterests(text: string, interests: string[]): string[] {
   return interests.filter((i) => i.trim() && lower.includes(i.trim().toLowerCase()))
 }
 
-/** 规则评分（与 04 §4.1 同公式，四维均为规则近似；aiBy='rules'）
- * 2026-10-20 起零参数：权重固定默认值——设置页已无权重入口，存量 config.weights
- *（旧版手调/一键采纳留下的）一律忽略，否则等于一个看不见的隐藏参数还在暗中生效。 */
+/** 规则评分（与 04 §4.1 同公式，四维均为规则近似；aiBy='rules'）。权重固定（见顶部 W 说明） */
 export function scoreByRules(input: ScoreInput): { score: ScoreBreakdown; reason: string; tags: string[] } {
   const text = `${input.title} ${input.summary}`
-  const W = normalizeWeights(DEFAULT_WEIGHTS)
 
   // source：信源权重（机器给定，无需 AI）
   const source = clamp01(input.source.weight)
