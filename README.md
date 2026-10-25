@@ -1,14 +1,14 @@
 # PWORK · 个人工作台
 
-> 面向接收者的安装与上手说明见 [发布说明.md](./发布说明.md)；当前正式版本 **1.0.0**。
+> 面向接收者的安装与上手说明见 [发布说明.md](./发布说明.md)；当前正式版本 **1.1.1**。
 
 > **一句话定位**：本地优先的四模块个人操作系统——输入 → 处理 → 输出 → **回路**，数据只属于你。
-> 建立日期：2026-08-30 ｜ 状态：W0–W5 全部交付，日常使用与迭代中（277 测试）；简历辅导已拆出为独立项目 RESUME（见下）
+> 建立日期：2026-08-30 ｜ 状态：W0–W5 全部交付，日常使用与迭代中（398 项自动化测试）；简历辅导已拆出为独立项目 RESUME（见下）
 
 ## 快速开始（30 秒）
 
-1. **使用**：双击 [PWORK-Launcher.exe](./PWORK-Launcher.exe)（或 `app` 目录下 `npm run dev`）→ 浏览器自动打开；首次进入按引导操作，首页可一键导入 13 个按主题精选、实测可用的推荐信源（AI/云计算/架构/数据治理/PM/政策）
-2. **简历辅导（独立应用）**：已迁出为独立项目（`E:\AIPROJECT-GLM\RESUME`，独立 git 仓库），项目目录内双击 `ResumeCoach-Launcher.exe` 或 `npm install`（首次）+ `npm run dev` → `http://127.0.0.1:5274`；也可从 PWORK 的 处理 → 工具箱 → 专题 进入（内含启动指引）。交接说明见该项目的 `交接文档.md` 与 `AGENTS.md`
+1. **使用**：双击 [PWORK-Launcher.exe](./PWORK-Launcher.exe)（或 `app` 目录下 `npm run dev`）→ 浏览器自动打开；首访引导五步（含四模块演示视频），信源按 11 个领域共 48 个实测可用源勾选导入
+2. **简历辅导（独立应用）**：已迁出为独立项目（`E:\AIPROJECT-GLM\RESUME`，独立 git 仓库），项目目录内双击 `ResumeCoach-Launcher.exe` 或 `npm install`（首次）+ `npm run dev` → `http://127.0.0.1:5274`；也可从 PWORK 首页的「案例」入口进入（内含启动指引）。交接说明见该项目的 `交接文档.md` 与 `AGENTS.md`
 3. **可选上云**（7×24 自动抓取 + AI 筛选，免费档 ¥0/月）：双击 `worker\部署向导.cmd`，按中文提示走完（含 Cloudflare 注册引导），再把输出的地址和 Token 填回工作台
 4. 前置软件仅 Node.js ≥ 20；所有命令都在**本机终端**于对应目录内执行（详见 [app/README](./app/README.md)、[worker/README](./worker/README.md)（简历辅导的说明在其项目内 README））
 5. **可选更安全的 AI Key**：网关随 `npm run dev` / `npm run serve` 自动启动（也可手动 `npm run gateway`）；Key 只存本机 app/.env.local（浏览器接触不到），设 `PWORK_LLM_MODEL` 可固定模型——换厂商不用改应用内任何配置；联网搜索默认复用同一把 Key

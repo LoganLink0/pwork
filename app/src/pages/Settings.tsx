@@ -832,7 +832,7 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v1.1.0</span>
+            <span className="val">v1.1.1</span>
           </div>
           <div className="set-row">
             <label>数据存放</label>
