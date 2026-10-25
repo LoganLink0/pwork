@@ -1626,13 +1626,13 @@ a.mcard .m-link:hover {
   animation: overlay-in var(--dur-1) var(--ease) both;
 }
 .welcome-stage {
-  /* 视口 90% 以上利用率（1366 屏约 1257px / 1920 屏约 1720px）：四模块演示视频要看得清操作内容 */
-  width: min(1720px, 92vw);
+  /* 宽度吃满视口（96%），高度方向自适应一屏：第一步四卡单行排布，不需要滚动就能点到按钮 */
+  width: min(1840px, 96vw);
   margin: 0 auto;
-  padding: var(--sp-7) var(--sp-5) var(--sp-6);
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
   min-height: 100%;
 }
 .welcome-head h1 {
@@ -1669,10 +1669,10 @@ a.mcard .m-link:hover {
   margin-top: var(--sp-2);
 }
 
-/* 认识工作台：四模块能力卡（2×2，各带应用实拍演示视频，循环静音播放） */
+/* 认识工作台：四模块能力卡（宽屏单行四卡——宽度利用率最大且一屏不滚动；各带实拍演示视频，循环静音播放） */
 .welcome-mods {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-3);
 }
 .welcome-mod {
@@ -1687,9 +1687,8 @@ a.mcard .m-link:hover {
   display: block;
   width: 100%;
   height: auto;
-  /* 与演示视频同比例（960×600）：完整呈现不裁切；高度随视口封顶，防止两行卡超出矮屏 */
+  /* 与演示视频同比例（960×600）：完整呈现不裁切 */
   aspect-ratio: 16 / 10;
-  max-height: 34vh;
   object-fit: cover;
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
@@ -1731,6 +1730,10 @@ a.mcard .m-link:hover {
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface-2);
+}
+@media (max-width: 1000px) {
+  /* 中屏：单行放不下四个可读视频，回 2×2（此宽度下高度足够） */
+  .welcome-mods { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 700px) {
   .welcome-mods { grid-template-columns: 1fr; }

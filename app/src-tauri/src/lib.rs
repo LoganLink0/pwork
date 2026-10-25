@@ -1,5 +1,6 @@
 mod gateway;
 
+use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -17,14 +18,28 @@ pub fn run() {
           if event.state != ShortcutState::Pressed {
             return;
           }
-          // 明确语义：最小化时第一次按 = 只唤起窗口（WebView 刚恢复，事件可能丢，不指望弹轮盘）；
-          // 窗口已可见（含失焦）= 唤起焦点并切换轮盘。用户体感：最小化按一次唤起、再按弹轮盘
+          // 单键直达：最小化时先唤起窗口，等 WebView 真正恢复后再发轮盘事件
+          //（恢复间隙内立即发的事件会丢）；窗口已可见则立即发
           if let Some(w) = app.get_webview_window("main") {
             let minimized = w.is_minimized().unwrap_or(false);
             let _ = w.show();
             let _ = w.unminimize();
             let _ = w.set_focus();
             if minimized {
+              let app = app.clone();
+              thread::spawn(move || {
+                for _ in 0..20 {
+                  thread::sleep(std::time::Duration::from_millis(100));
+                  let restored = app
+                    .get_webview_window("main")
+                    .map(|w| !w.is_minimized().unwrap_or(true))
+                    .unwrap_or(true);
+                  if restored {
+                    break;
+                  }
+                }
+                let _ = app.emit("wheel-toggle", ());
+              });
               return;
             }
           }
