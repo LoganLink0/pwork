@@ -875,7 +875,7 @@ a.mcard .m-link:hover {
 }
 
 .placeholder .p-ico {
-  font-size: 40px;
+  font-size: var(--fs-hero);
   color: var(--ink-faint);
 }
 

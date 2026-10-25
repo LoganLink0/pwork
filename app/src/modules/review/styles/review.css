@@ -284,7 +284,7 @@
 }
 
 .review-root .tabbar .nav-icon {
-  font-size: 19px;
+  font-size: var(--fs-lg);
   line-height: 1;
 }
 
@@ -427,14 +427,16 @@
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
   margin-bottom: var(--sp-2);
 }
 
-.review-root .input:focus-visible {
-  outline: 2px solid var(--accent-deep);
-  outline-offset: 0;
+.review-root .input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  background: var(--surface);
 }
 
 .review-root .input:disabled {
