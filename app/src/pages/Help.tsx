@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, QUICK_START, SHORTCUTS } from '../content/help'
 import { SettingsNav } from '../components/shell/SettingsNav'
+import { KbdText } from '../components/shell/KbdText'
 
 const HELP_TABS = [
   { id: 'quick', label: '快速上手', icon: 'quick' },
@@ -44,7 +45,7 @@ export function Help() {
             <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
               <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
               <span className="val" style={{ flex: 1, minWidth: 0 }}>
-                <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}>{s.desc}</span>
+                <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}><KbdText text={s.desc} /></span>
               </span>
               <Link to={s.to} className="btn-ghost" style={{ flex: 'none' }}>
                 {s.action} →

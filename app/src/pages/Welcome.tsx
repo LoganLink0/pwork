@@ -3,14 +3,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { QUICK_START } from '../content/help'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
+import { KbdText } from '../components/shell/KbdText'
 
 /**
- * 首访引导页（/welcome）：首次打开自动进入一次；地址栏 #/welcome 可随时重进。
- * 回答新用户的三个问题：这是什么怎么用 / 信源怎么来 / 要上云怎么弄（含 Cloudflare 注册与一键脚本）。
- * 2026-10-12 起采集偏好（兴趣域/屏蔽词）也可在这里直接设好，不必再去设置页。
+ * 首访引导（/welcome）：全屏遮罩分步式（成熟实现的主流形态——遮罩覆盖主界面、
+ * 3-5 步、可跳过、走完才进入软件；2026-10-25 用户第一性纠偏，替换原"应用内普通页面"）。
+ * 四步回答新用户的四个问题：这是什么怎么用 / 信源怎么来 / 关注什么 / 要不要上云。
+ * 每步内容沿用原四卡（操作真实生效：导入信源、改偏好、配置云端）。
  */
+const STEPS = ['认识工作台', '信源初始化', '采集偏好', '可选：上云'] as const
+
 export function Welcome() {
   const navigate = useNavigate()
+  const [step, setStep] = useState(0)
   const [cloud, setCloud] = useState(() => loadCloudConfig())
   const [msg, setMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
@@ -18,6 +23,7 @@ export function Welcome() {
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
 
+  /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面 */
   const finish = () => {
     localStorage.setItem('pwork-welcomed', '1')
     navigate('/')
@@ -52,7 +58,7 @@ export function Welcome() {
       })
       setMsg(resp.ok ? '连接成功！点「保存并同步」完成接入' : `端点可达但返回 HTTP ${resp.status}`)
     } catch {
-      setMsg('连不上：确认已运行 worker\\部署向导.cmd 完成部署、地址拼写正确')
+      setMsg('连不上：确认已完成部署、地址拼写正确')
     } finally {
       setTesting(false)
     }
@@ -64,149 +70,187 @@ export function Welcome() {
     setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在 设置 → 云端同步 管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
   }
 
+  const last = step === STEPS.length - 1
+
   return (
-    <section className="settings">
-      <div className="page-head">
-        <h1>欢迎使用 PWORK</h1>
-        <span className="sub">本地优先的个人工作台 · 数据只属于你</span>
-      </div>
-
-      <div className="set-card">
-        <h2>① 快速上手</h2>
-        <div className="desc">每一步几十秒。整个工作台是一个闭环：输入（记下来）→ 处理（加工）→ 输出（成稿）→ 回路（复盘，产出又回到待办）</div>
-        <div className="set-body">
-          {QUICK_START.map((s) => (
-            <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
-              <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
-              <span className="val" style={{ flex: 1, minWidth: 0 }}>
-                <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}>{s.desc}</span>
-              </span>
-              <Link to={s.to} className="btn-ghost" style={{ flex: 'none' }}>{s.action} →</Link>
-            </div>
-          ))}
-          <div className="set-row" style={{ paddingTop: 'var(--sp-3)' }}>
-            <label></label>
-            <button type="button" className="btn-primary" onClick={finish}>我明白了，开始使用 →</button>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>日常问题按 <kbd>?</kbd> 开帮助；想重看本引导：帮助页 → 快速上手 → 「重新查看完整引导」</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="set-card">
-        <h2>② 信源初始化（推荐）</h2>
-        <div className="desc">13 个按主题精选、实测可达的信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策），与信源页的推荐包同源</div>
-        <div className="set-body">
-          <div className="set-row">
-            <label>一键导入</label>
-            <button type="button" className="btn-primary" onClick={() => void importSamples()}>导入推荐信源包</button>
-            <Link to="/input/digest" className="btn-ghost">去信息日报抓取 →</Link>
-          </div>
-          {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}
-        </div>
-      </div>
-
-      <div className="set-card">
-        <h2>③ 采集偏好</h2>
-        <div className="desc">告诉系统你关注什么、讨厌什么——评分排序靠它；预置的是通用默认值，改成你自己的才有效</div>
-        <div className="set-body">
-          <div className="set-row">
-            <label>兴趣域</label>
-            <div className="chips" style={{ flex: 1 }}>
-              {config.interests.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="chip on"
-                  title="点击移除"
-                  onClick={() => setConfig({ interests: config.interests.filter((x) => x !== t) })}
-                >
-                  {t} ×
-                </button>
-              ))}
-              <input
-                className="input"
-                style={{ maxWidth: 140 }}
-                placeholder="添加后回车"
-                value={interestDraft}
-                onChange={(e) => setInterestDraft(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addInterest()}
-                aria-label="添加兴趣域"
+    <div className="welcome-veil" role="dialog" aria-label="新手引导">
+      <div className="welcome-stage">
+        <header className="welcome-head">
+          <h1>欢迎使用 PWORK</h1>
+          <span className="sub">本地优先的个人工作台 · 数据只属于你</span>
+          <div className="welcome-dots" aria-label={`第 ${step + 1} 步，共 ${STEPS.length} 步`}>
+            {STEPS.map((s, i) => (
+              <button
+                key={s}
+                type="button"
+                className={`welcome-dot${i === step ? ' on' : i < step ? ' done' : ''}`}
+                onClick={() => setStep(i)}
+                aria-label={`第 ${i + 1} 步：${s}`}
+                title={s}
               />
-            </div>
+            ))}
           </div>
-          <div className="set-row">
-            <label>屏蔽词</label>
-            <div className="chips" style={{ flex: 1 }}>
-              {config.dislikes.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="chip on"
-                  title="点击移除"
-                  onClick={() => setConfig({ dislikes: config.dislikes.filter((x) => x !== t) })}
-                >
-                  {t} ×
-                </button>
-              ))}
-              <input
-                className="input"
-                style={{ maxWidth: 140 }}
-                placeholder="命中即筛除"
-                value={dislikeDraft}
-                onChange={(e) => setDislikeDraft(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addDislike()}
-                aria-label="添加屏蔽词"
-              />
-            </div>
-          </div>
-          <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「多推」投票会自动调整信源分级。</div>
-        </div>
-      </div>
+        </header>
 
-      <div className="set-card">
-        <h2>④ 可选：上云引导（定时抓取 + AI 筛选）</h2>
-        <div className="desc">不弄也完全能用——本地抓取照常工作；想 7×24 自动抓取再往下走（免费档 ¥0/月）</div>
-        <div className="set-body">
-          <div className="notice">
-            <b>Cloudflare 注册三句话</b>：① 打开 <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/sign-up</a>，用一个邮箱注册；② 选择免费计划，<b>无需信用卡</b>；③ 就这些——后面的登录授权会在你运行部署脚本时自动弹出浏览器完成。
+        {step === 0 && (
+          <div className="set-card">
+            <h2>{STEPS[0]}</h2>
+            <div className="desc">整个工作台是一个闭环：输入（记下来）→ 处理（加工）→ 输出（成稿）→ 回路（复盘，产出又回到待办）</div>
+            <div className="set-body">
+              {QUICK_START.map((s) => (
+                <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
+                  <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
+                  <span className="val" style={{ flex: 1, minWidth: 0 }}>
+                    <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}><KbdText text={s.desc} /></span>
+                  </span>
+                </div>
+              ))}
+              <div className="notice">下面每一步几十秒；随时可以跳过，里面的功能都在应用里等着你。</div>
+            </div>
           </div>
-          <div className="set-row" style={{ alignItems: 'flex-start', paddingTop: 'var(--sp-3)' }}>
-            <label>一键部署</label>
-            <span className="val" style={{ color: 'var(--ink-soft)' }}>
-              双击项目源码 worker 目录里的 <code>部署向导.cmd</code>（注意：在源码目录，桌面版安装目录里没有）。脚本会中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
-            </span>
+        )}
+
+        {step === 1 && (
+          <div className="set-card">
+            <h2>{STEPS[1]}</h2>
+            <div className="desc">13 个按主题精选、实测可达的信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策）</div>
+            <div className="set-body">
+              <div className="set-row">
+                <label>一键导入</label>
+                <button type="button" className="btn-primary" onClick={() => void importSamples()}>导入推荐信源包</button>
+                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>导入后在「信息日报」点立即抓取就能看到内容</span>
+              </div>
+              {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}
+            </div>
           </div>
-          <div className="set-row">
-            <label>部署后回填</label>
-            <input
-              className="input"
-              placeholder="https://pwork-collect.xxx.workers.dev"
-              value={cloud.endpoint}
-              onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
-              aria-label="云端端点"
-            />
-            <input
-              className="input"
-              type="password"
-              style={{ maxWidth: 180 }}
-              placeholder="Token"
-              value={cloud.token}
-              onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
-              aria-label="云端 Token"
-            />
-            <button type="button" className="btn-ghost" disabled={testing} onClick={() => void testCloud()}>
-              {testing ? '测试中…' : '测试连接'}
-            </button>
-            <button type="button" className="btn-primary" onClick={() => void saveAndSync()}>保存并同步</button>
+        )}
+
+        {step === 2 && (
+          <div className="set-card">
+            <h2>{STEPS[2]}</h2>
+            <div className="desc">告诉系统你关注什么、讨厌什么——评分排序靠它；预置的是通用默认值，改成你自己的才有效</div>
+            <div className="set-body">
+              <div className="set-row">
+                <label>兴趣域</label>
+                <div className="chips" style={{ flex: 1 }}>
+                  {config.interests.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="chip on"
+                      title="点击移除"
+                      onClick={() => setConfig({ interests: config.interests.filter((x) => x !== t) })}
+                    >
+                      {t} ×
+                    </button>
+                  ))}
+                  <input
+                    className="input"
+                    style={{ maxWidth: 140 }}
+                    placeholder="添加后回车"
+                    value={interestDraft}
+                    onChange={(e) => setInterestDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addInterest()}
+                    aria-label="添加兴趣域"
+                  />
+                </div>
+              </div>
+              <div className="set-row">
+                <label>屏蔽词</label>
+                <div className="chips" style={{ flex: 1 }}>
+                  {config.dislikes.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="chip on"
+                      title="点击移除"
+                      onClick={() => setConfig({ dislikes: config.dislikes.filter((x) => x !== t) })}
+                    >
+                      {t} ×
+                    </button>
+                  ))}
+                  <input
+                    className="input"
+                    style={{ maxWidth: 140 }}
+                    placeholder="命中即筛除"
+                    value={dislikeDraft}
+                    onChange={(e) => setDislikeDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addDislike()}
+                    aria-label="添加屏蔽词"
+                  />
+                </div>
+              </div>
+              <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「多推」投票会自动调整信源分级。</div>
+            </div>
           </div>
-          <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
-            <label></label>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              遇到问题看 <Link to="/help">帮助页排错区</Link>；也可以跳过，以后在 设置 → 云端同步 随时配置。
-            </span>
+        )}
+
+        {step === 3 && (
+          <div className="set-card">
+            <h2>{STEPS[3]}</h2>
+            <div className="desc">不弄也完全能用——本地抓取照常工作；想 7×24 自动抓取再往下走（免费档 ¥0/月）</div>
+            <div className="set-body">
+              <div className="notice">
+                <b>Cloudflare 注册三句话</b>：① 打开 <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/sign-up</a>，用一个邮箱注册；② 选择免费计划，<b>无需信用卡</b>；③ 就这些——后面的登录授权会在你运行部署脚本时自动弹出浏览器完成。
+              </div>
+              <div className="set-row" style={{ alignItems: 'flex-start', paddingTop: 'var(--sp-3)' }}>
+                <label>一键部署</label>
+                <span className="val" style={{ color: 'var(--ink-soft)' }}>
+                  双击项目源码 worker 目录里的 <code>部署向导.cmd</code>（注意：在源码目录，桌面版安装目录里没有）。脚本会中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
+                </span>
+              </div>
+              <div className="set-row">
+                <label>部署后回填</label>
+                <input
+                  className="input"
+                  placeholder="https://pwork-collect.xxx.workers.dev"
+                  value={cloud.endpoint}
+                  onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
+                  aria-label="云端端点"
+                />
+                <input
+                  className="input"
+                  type="password"
+                  style={{ maxWidth: 180 }}
+                  placeholder="Token"
+                  value={cloud.token}
+                  onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
+                  aria-label="云端 Token"
+                />
+                <button type="button" className="btn-ghost" disabled={testing} onClick={() => void testCloud()}>
+                  {testing ? '测试中…' : '测试连接'}
+                </button>
+                <button type="button" className="btn-primary" onClick={() => void saveAndSync()}>保存并同步</button>
+              </div>
+              {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}
+              <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
+                <label></label>
+                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                  遇到问题看 <Link to="/help">帮助页排错区</Link>；也可以先跳过，以后在 设置 → 云端同步 随时配置。
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        <footer className="welcome-foot">
+          <button type="button" className="text-btn" onClick={finish}>跳过引导</button>
+          <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
+            {step > 0 && (
+              <button type="button" className="btn-ghost" onClick={() => setStep((s) => s - 1)}>上一步</button>
+            )}
+            {last ? (
+              <button type="button" className="btn-primary" onClick={finish}>开始使用 →</button>
+            ) : (
+              <button type="button" className="btn-primary" onClick={() => setStep((s) => s + 1)}>下一步</button>
+            )}
+          </div>
+        </footer>
+
+        <p className="welcome-tail">
+          日常问题按 <kbd>?</kbd> 开帮助；想重看本引导：帮助页 → 快速上手 → 「重新查看完整引导」
+        </p>
       </div>
-    </section>
+    </div>
   )
 }

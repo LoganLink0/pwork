@@ -1682,8 +1682,8 @@ a.mcard .m-link:hover {
 }
 
 .qn-modal {
-  width: 560px;
-  max-width: 92vw;
+  width: 730px;
+  max-width: 94vw;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -1728,6 +1728,64 @@ a.mcard .m-link:hover {
 .qn-foot .qn-saved {
   font-size: var(--fs-xs);
   color: var(--ok);
+}
+
+/* ============ 首访引导：全屏遮罩分步式（走完/跳过才进入主界面） ============ */
+.welcome-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--bg);
+  overflow-y: auto;
+  animation: overlay-in var(--dur-1) var(--ease) both;
+}
+.welcome-stage {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--sp-7) var(--sp-5) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-height: 100%;
+}
+.welcome-head h1 {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-hero);
+  letter-spacing: -0.02em;
+}
+.welcome-dots {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.welcome-dot {
+  width: 28px;
+  height: 6px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease);
+}
+.welcome-dot.done {
+  background: var(--accent);
+  opacity: 0.55;
+}
+.welcome-dot.on {
+  background: var(--accent);
+}
+.welcome-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-2);
+}
+.welcome-tail {
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  margin: var(--sp-2) 0 0;
 }
 
 /* ============ 设计系统样例页 ============ */
