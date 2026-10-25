@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { QUICK_START } from '../content/help'
+import { useNavigate } from 'react-router-dom'
+import { MODULES } from '../content/help'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
+import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
 
 /**
  * 首访引导（/welcome）：全屏遮罩分步式（成熟实现的主流形态——遮罩覆盖主界面、
  * 3-5 步、可跳过、走完才进入软件；2026-10-25 用户第一性纠偏，替换原"应用内普通页面"）。
  * 四步回答新用户的四个问题：这是什么怎么用 / 信源怎么来 / 关注什么 / 要不要上云。
- * 每步内容沿用原四卡（操作真实生效：导入信源、改偏好、配置云端）。
+ * 第 1 步四模块能力卡（各带实拍动图）；后续步骤操作真实生效（目录导入信源、改偏好、配置云端）。
  */
 const STEPS = ['认识工作台', '信源初始化', '采集偏好', '可选：上云'] as const
 
@@ -19,19 +20,14 @@ export function Welcome() {
   const [cloud, setCloud] = useState(() => loadCloudConfig())
   const [msg, setMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
-  const { config, setConfig, importRecommended } = useCollect()
+  const { config, setConfig } = useCollect()
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
 
-  /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面 */
-  const finish = () => {
+  /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
+  const finish = (to = '/') => {
     localStorage.setItem('pwork-welcomed', '1')
-    navigate('/')
-  }
-
-  const importSamples = async () => {
-    const r = await importRecommended()
-    setMsg(r.imported > 0 ? `已导入 ${r.imported} 个实测可用的信源，去「信息日报」点立即抓取试试` : '推荐信源都已导入过（按地址去重）')
+    navigate(to)
   }
 
   const addInterest = () => {
@@ -97,15 +93,18 @@ export function Welcome() {
             <h2>{STEPS[0]}</h2>
             <div className="desc">整个工作台是一个闭环：输入（记下来）→ 处理（加工）→ 输出（成稿）→ 回路（复盘，产出又回到待办）</div>
             <div className="set-body">
-              {QUICK_START.map((s) => (
-                <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
-                  <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
-                  <span className="val" style={{ flex: 1, minWidth: 0 }}>
-                    <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}><KbdText text={s.desc} /></span>
-                  </span>
-                </div>
-              ))}
-              <div className="notice">下面每一步几十秒；随时可以跳过，里面的功能都在应用里等着你。</div>
+              <div className="welcome-mods">
+                {MODULES.map((m) => (
+                  <div className="welcome-mod" key={m.key}>
+                    <img src={m.gif} alt={`${m.name}模块操作演示`} loading="lazy" />
+                    <div className="welcome-mod-body">
+                      <b>{m.name} · {m.tagline}</b>
+                      <span><KbdText text={m.desc} /></span>
+                      <button type="button" className="text-btn" onClick={() => finish(m.to)}>{m.action} →</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -113,13 +112,9 @@ export function Welcome() {
         {step === 1 && (
           <div className="set-card">
             <h2>{STEPS[1]}</h2>
-            <div className="desc">13 个按主题精选、实测可达的信源（AI / 云计算 / 架构 / 数据治理 / PM / 政策）</div>
+            <div className="desc">按领域挑选要订阅的信源，全部实测可达；不选也可以，以后在信源页随时添加</div>
             <div className="set-body">
-              <div className="set-row">
-                <label>一键导入</label>
-                <button type="button" className="btn-primary" onClick={() => void importSamples()}>导入推荐信源包</button>
-                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>导入后在「信息日报」点立即抓取就能看到内容</span>
-              </div>
+              <SourceCatalog onDone={setMsg} />
               {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}
             </div>
           </div>
@@ -180,7 +175,6 @@ export function Welcome() {
                   />
                 </div>
               </div>
-              <div className="notice">改动立即保存，从下一次抓取开始生效；以后随时在 设置 → 采集偏好 再调整。你的「多推」投票会自动调整信源分级。</div>
             </div>
           </div>
         )}
@@ -223,33 +217,23 @@ export function Welcome() {
                 <button type="button" className="btn-primary" onClick={() => void saveAndSync()}>保存并同步</button>
               </div>
               {msg && <div className="run-banner" style={{ marginTop: 'var(--sp-2)' }} role="status">{msg}</div>}
-              <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
-                <label></label>
-                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-                  遇到问题看 <Link to="/help">帮助页排错区</Link>；也可以先跳过，以后在 设置 → 云端同步 随时配置。
-                </span>
-              </div>
             </div>
           </div>
         )}
 
         <footer className="welcome-foot">
-          <button type="button" className="text-btn" onClick={finish}>跳过引导</button>
+          <button type="button" className="text-btn" onClick={() => finish()}>跳过引导</button>
           <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
             {step > 0 && (
               <button type="button" className="btn-ghost" onClick={() => setStep((s) => s - 1)}>上一步</button>
             )}
             {last ? (
-              <button type="button" className="btn-primary" onClick={finish}>开始使用 →</button>
+              <button type="button" className="btn-primary" onClick={() => finish()}>开始使用 →</button>
             ) : (
               <button type="button" className="btn-primary" onClick={() => setStep((s) => s + 1)}>下一步</button>
             )}
           </div>
         </footer>
-
-        <p className="welcome-tail">
-          日常问题按 <kbd>?</kbd> 开帮助；想重看本引导：帮助页 → 快速上手 → 「重新查看完整引导」
-        </p>
       </div>
     </div>
   )

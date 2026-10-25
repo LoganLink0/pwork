@@ -1781,11 +1781,72 @@ a.mcard .m-link:hover {
   justify-content: space-between;
   margin-top: var(--sp-2);
 }
-.welcome-tail {
-  text-align: center;
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-  margin: var(--sp-2) 0 0;
+
+/* 认识工作台：四模块能力卡（2×2，各带应用实拍动图） */
+.welcome-mods {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-3);
+}
+.welcome-mod {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.welcome-mod img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 190px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.welcome-mod-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+.welcome-mod-body b {
+  color: var(--ink);
+}
+.welcome-mod-body .text-btn {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+/* 帮助-快速上手：模块行（动图缩略 + 能力说明 + 直达） */
+.quick-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.quick-row:last-of-type {
+  border-bottom: none;
+}
+.quick-row img {
+  width: 220px;
+  flex: none;
+  height: auto;
+  max-height: 150px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+@media (max-width: 700px) {
+  .welcome-mods { grid-template-columns: 1fr; }
+  .quick-row { flex-wrap: wrap; }
+  .quick-row img { width: 100%; max-height: 170px; }
 }
 
 /* ============ 设计系统样例页 ============ */

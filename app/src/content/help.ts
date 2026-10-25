@@ -3,56 +3,57 @@
  * 与 06 PRD 名词表、04 红线、05 路线图同源——改文档时记得同步这里。
  */
 
-export interface QuickStep {
-  step: string
-  title: string
+/**
+ * 四模块能力卡（首访引导第 1 步与帮助-快速上手共用）：
+ * 每个模块一张演示动图（app/public/demo/，浏览器自动化实拍应用真实界面合成）。
+ * 文案描述模块能力本身；gif 展示真实操作路径。
+ */
+export interface ModuleIntro {
+  key: string
+  name: string
+  tagline: string
   desc: string
-  action: string
+  gif: string
   to: string
+  action: string
 }
 
-export const QUICK_START: QuickStep[] = [
+export const MODULES: ModuleIntro[] = [
   {
-    step: '1',
-    title: '随手捕获',
-    desc: '速记浮层随时唤起（快捷键 N），想到什么写什么；顺手「转待办」直接进任务库。',
-    action: '去速记',
+    key: 'input',
+    name: '输入',
+    tagline: '记下来',
+    desc: '速记浮层随时唤起（N），想到什么写什么，一条速记可直接转待办；信源订阅原生 RSS，日报页一键抓取，外部信息自动进库。',
+    gif: '/demo/demo-input.gif',
     to: '/input/notes',
+    action: '去速记',
   },
   {
-    step: '2',
-    title: '每日两分钟',
-    desc: '信源页添加原生 RSS（或一键导入推荐信源包），日报页「立即抓取」；看到条目随手投票，系统会越选越合你口味。',
-    action: '去信源管理',
-    to: '/input/sources',
+    key: 'process',
+    name: '处理',
+    tagline: '加工',
+    desc: 'Ctrl K 一次搜遍全库（速记、条目、待办、复盘全找齐）；信息条目投票筛选，越用越合口味；工具箱收纳格式转换等常用小工具。',
+    gif: '/demo/demo-process.gif',
+    to: '/process',
+    action: '去工具箱',
   },
   {
-    step: '3',
-    title: '每周复盘',
-    desc: '做一次 3 分钟快答复盘，行动项自动落任务库——勾选闭环，下周复盘自动带出。',
-    action: '新建复盘',
-    to: '/review/new',
-  },
-  {
-    step: '4',
-    title: '带上外部数据',
-    desc: '把别的系统里的数据带进周报：在周报导出页进「外部数据」粘贴或导入 CSV/JSON，有 API 的话直接推送。',
-    action: '去外部数据',
-    to: '/input/blocks',
-  },
-  {
-    step: '5',
-    title: '一键成稿',
-    desc: '「周报导出为 HTML/PPT」把任务、目标、洞察、外部数据汇成周报月报——可下载 Markdown/HTML、导出 PPT、导出朗读音频。',
-    action: '去报告',
+    key: 'output',
+    name: '输出',
+    tagline: '成稿',
+    desc: '任务、目标、洞察、外部数据一键汇成周报月报，可下载 Markdown/HTML、导出 PPT 与朗读音频；PPT 撰写从一堆材料直接产出可编辑的 .pptx。',
+    gif: '/demo/demo-output.gif',
     to: '/output/report',
+    action: '去报告',
   },
   {
-    step: '6',
-    title: '接进 Obsidian（可选）',
-    desc: '用 Obsidian 记笔记的人专属：日报一键下载成 vault 格式的 md，周报一键发送进 Obsidian 新建笔记。不用 Obsidian 就跳过这步。',
-    action: '去信息日报',
-    to: '/input/digest',
+    key: 'loop',
+    name: '回路',
+    tagline: '复盘',
+    desc: '3 分钟快答复盘产出行动项，自动进任务库；勾选完成即闭环，下周复盘自动带出上轮行动——产出变成下一轮的输入。',
+    gif: '/demo/demo-loop.gif',
+    to: '/review/new',
+    action: '新建复盘',
   },
 ]
 

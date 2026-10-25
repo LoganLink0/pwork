@@ -13,12 +13,19 @@ describe('首访引导（全屏遮罩分步式）', () => {
     window.location.hash = ''
   })
 
-  it('未完成引导时打开首页 → 自动进入全屏遮罩，第 1 步为认识工作台，主界面不可见', async () => {
+  it('未完成引导时打开首页 → 自动进入全屏遮罩，第 1 步为认识工作台（四模块卡带动图），主界面不可见', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: '欢迎使用 PWORK' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '认识工作台' })).toBeInTheDocument()
     // 全屏遮罩挂载（fixed inset-0 覆盖主界面；jsdom 无布局，由遮罩类存在保证）
     expect(document.querySelector('.welcome-veil')).toBeInTheDocument()
+    // 四模块能力卡（输入/处理/输出/回路），各带实拍动图
+    const mods = document.querySelectorAll('.welcome-mod')
+    expect(mods.length).toBe(4)
+    expect(screen.getByAltText('输入模块操作演示')).toHaveAttribute('src', '/demo/demo-input.gif')
+    expect(screen.getByAltText('处理模块操作演示')).toHaveAttribute('src', '/demo/demo-process.gif')
+    expect(screen.getByAltText('输出模块操作演示')).toHaveAttribute('src', '/demo/demo-output.gif')
+    expect(screen.getByAltText('回路模块操作演示')).toHaveAttribute('src', '/demo/demo-loop.gif')
     // 步骤导航四点与前进按钮
     expect(screen.getByRole('button', { name: '下一步' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '跳过引导' })).toBeInTheDocument()
@@ -29,10 +36,11 @@ describe('首访引导（全屏遮罩分步式）', () => {
     render(<App />)
     await screen.findByRole('heading', { name: '欢迎使用 PWORK' })
 
-    // 第 2 步：信源初始化（导入按钮真实可用）
+    // 第 2 步：信源初始化（分领域目录，勾选导入真实可用）
     await user.click(screen.getByRole('button', { name: '下一步' }))
     expect(await screen.findByRole('heading', { name: '信源初始化' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '导入推荐信源包' })).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: '信源领域' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /导入所选 \d+ 个/ })).toBeInTheDocument()
 
     // 第 3 步：采集偏好
     await user.click(screen.getByRole('button', { name: '下一步' }))

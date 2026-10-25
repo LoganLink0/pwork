@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useCollect } from '../store/collect'
 import { Icon } from '../components/shell/icons'
 import { DOMAINS, TIER_LABEL, TIER_WEIGHT } from '../content/collect'
+import { SourceCatalog } from '../components/collect/SourceCatalog'
 import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
 import { exportSourcesJson } from '../db/collect'
@@ -28,12 +29,13 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
-  const { sources, items, items7d, addSource, editSource, toggleActive, removeSource, importSample, importJson, fetch: fetchState, importRecommended } = useCollect()
+  const { sources, items, items7d, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
   // 信源信用可见性：各源近 60 天投票统计（升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = voteStatsBySource(items)
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const [catalogOpen, setCatalogOpen] = useState(false)
 
   const autoStopped = fetchState.summary?.results.filter((r) => r.autoStopped) ?? []
   const inactiveFail = sources.filter((s) => !s.active && s.health.failStreak >= 3)
@@ -70,19 +72,11 @@ export function Sources() {
         <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 手动抓取，不自动定时</span>
         <div className="right">
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>导出 JSON</button>
-          <button
-            type="button"
-            className="btn-ghost"
-            title="13 个按主题精选的信源（AI/云计算/架构/数据治理/PM/政策），全部实测可达，按地址去重"
-            onClick={() => {
-              setMsg(null)
-              void importRecommended().then((r) => {
-                setMsg(`推荐信源包：新导入 ${r.imported} 个，跳过 ${r.skipped} 个（已存在）`)
-              })
-            }}
-          >
-            导入推荐信源包
-          </button>
+          {sources.length > 0 && (
+            <button type="button" className="btn-ghost" onClick={() => setCatalogOpen((v) => !v)}>
+              {catalogOpen ? '收起目录' : '从目录挑选'}
+            </button>
+          )}
           <label className="btn-ghost" style={{ cursor: 'pointer' }}>
             导入 JSON
             <input
@@ -136,6 +130,13 @@ export function Sources() {
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
 
+      {catalogOpen && sources.length > 0 && (
+        <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
+          <h2>信源目录</h2>
+          <SourceCatalog onDone={setMsg} />
+        </div>
+      )}
+
       {form !== null && (
         <div className="src-form" data-testid="src-form">
           <div className="form-grid">
@@ -176,16 +177,19 @@ export function Sources() {
       )}
 
       {sources.length === 0 ? (
-        <div className="empty">
-          <div className="e-ico" aria-hidden><Icon name="rss" size={32} /></div>
-          <p>还没有信源。建议先添加 5–10 个用两周，再决定哪些值得长期订阅。</p>
-          <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
-            <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加第一个信源</button>
-            <button type="button" className="btn-ghost" onClick={() => { void importSample().then((r) => setMsg(`已导入示例 ${r.imported} 个（原生 RSS，已实测可经转接抓取）`)) }}>
-              导入 5 个示例源
-            </button>
+        <>
+          <div className="empty">
+            <div className="e-ico" aria-hidden><Icon name="rss" size={32} /></div>
+            <p>还没有信源。从下面的目录挑几个开始，用两周再决定哪些值得长期订阅。</p>
+            <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
+              <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 手动添加信源</button>
+            </div>
           </div>
-        </div>
+          <div className="set-card">
+            <h2>信源目录</h2>
+            <SourceCatalog onDone={setMsg} />
+          </div>
+        </>
       ) : (
         <table className="src-table" data-testid="src-table">
           <thead>

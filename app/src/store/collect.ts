@@ -20,7 +20,6 @@ import {
   DEFAULT_COLLECT_CONFIG,
   loadCollectConfig,
   saveCollectConfig,
-  SAMPLE_SOURCES,
   RECOMMENDED_SOURCES,
 } from '../content/collect'
 import { exportBundle as exportNotesBundle } from '../db/repo'
@@ -57,7 +56,6 @@ interface CollectState {
   editSource: (id: string, patch: Partial<SourceInput> & { active?: boolean }) => Promise<void>
   toggleActive: (id: string, active: boolean) => Promise<void>
   removeSource: (id: string) => Promise<void>
-  importSample: () => Promise<{ imported: number; skipped: number }>
   importRecommended: () => Promise<{ imported: number; skipped: number }>
   importJson: (text: string) => Promise<{ imported: number; skipped: number }>
   setVote: (itemId: string, vote: 'want' | 'meh' | 'no' | null) => Promise<void>
@@ -149,12 +147,6 @@ export const useCollect = create<CollectState>((set, get) => ({
   removeSource: async (id) => {
     await deleteSource(id)
     set({ sources: await listAllSources() })
-  },
-
-  importSample: async () => {
-    const r = await importSources(SAMPLE_SOURCES)
-    set({ sources: await listAllSources() })
-    return r
   },
 
   importRecommended: async () => {

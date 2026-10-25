@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, QUICK_START, SHORTCUTS } from '../content/help'
+import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, SHORTCUTS } from '../content/help'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { KbdText } from '../components/shell/KbdText'
 
@@ -39,16 +39,18 @@ export function Help() {
         <div className="settings-content">
       <div className="set-card" data-tab="quick" style={{ display: tab === 'quick' ? undefined : 'none' }}>
         <h2>快速上手</h2>
-        <div className="desc">每一阶段产品都完整可用——按下面的顺序，十分钟走通一次闭环</div>
+        <div className="desc">四个模块各管一段：输入记下来 → 处理加工 → 输出成稿 → 回路复盘——动图为应用真实操作录制</div>
         <div className="set-body">
-          {QUICK_START.map((s) => (
-            <div className="set-row" key={s.step} style={{ alignItems: 'flex-start' }}>
-              <label style={{ width: 24, textAlign: 'center', fontWeight: 700, color: 'var(--accent-text)' }}>{s.step}</label>
+          {MODULES.map((m) => (
+            <div className="quick-row" key={m.key}>
+              <img src={m.gif} alt={`${m.name}模块操作演示`} loading="lazy" />
               <span className="val" style={{ flex: 1, minWidth: 0 }}>
-                <b>{s.title}</b>　<span style={{ color: 'var(--ink-soft)' }}><KbdText text={s.desc} /></span>
+                <b>{m.name} · {m.tagline}</b>
+                <br />
+                <span style={{ color: 'var(--ink-soft)' }}><KbdText text={m.desc} /></span>
               </span>
-              <Link to={s.to} className="btn-ghost" style={{ flex: 'none' }}>
-                {s.action} →
+              <Link to={m.to} className="btn-ghost" style={{ flex: 'none', alignSelf: 'center' }}>
+                {m.action} →
               </Link>
             </div>
           ))}

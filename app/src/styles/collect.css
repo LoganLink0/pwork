@@ -803,6 +803,52 @@ a.origin:hover {
 .chips > input.input {
   margin-left: auto;
 }
+/* ---------- 信源挑选目录（引导/信源页共用） ---------- */
+.src-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.src-catalog-domains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.src-catalog-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.src-catalog-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  cursor: pointer;
+}
+.src-catalog-item .name {
+  font-size: var(--fs-sm);
+}
+.src-catalog-item .cat {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+.src-catalog-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.src-catalog-foot .sub {
+  margin: 0;
+  flex: 1;
+}
+
 /* ---------- 目标：时间条 / 期限输入 / 进度轨迹 ---------- */
 /* 时间条：整条 = 创建→期限（"要多久"），填充 = 已走过（"现在怎样"），剩多少看右端距离 */
 .goal-timeline {

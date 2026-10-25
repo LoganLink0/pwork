@@ -15,9 +15,14 @@
 | `QuickNote` | `useUi().openQuick()` 打开；Esc 与点遮罩均存草稿（localStorage DRAFT_KEY）；Ctrl+Enter 保存；转待办回写 note.links.taskIds |
 | `ErrorBoundary` / `ErrorBar` | 渲染崩溃兜底 + 即时错误条；错误入口统一走 `recordError`，勿直接操作 useErrorBar |
 
-### 采集件 components/collect/ItemCard.tsx
+### 采集件 components/collect/
 
-props：`item` + 回调 `onVote/onNotes/onKeep/onCycleOt/onDelete/onConvert` + 可选 `tier/showStage/converted`。投票三态（want/meh/no，点同值取消）；分层徽章（必看/可看/可略，按同日排名由 engine/itemTier 计算）；机会/威胁/趋势标记走 Icon 键（target/alert/trending）。
+- `ItemCard`：props `item` + 回调 `onVote/onNotes/onKeep/onCycleOt/onDelete/onConvert` + 可选 `tier/showStage/converted`。投票三态（want/meh/no，点同值取消）；分层徽章（必看/可看/可略，按同日排名由 engine/itemTier 计算）；机会/威胁/趋势标记走 Icon 键（target/alert/trending）。
+- `SourceCatalog`：props `onDone?(msg)`。分领域页签（role=tablist，页签带「已选/总数」计数）+ 勾选列表（260px 滚动）+ 「导入所选 N 个」；导入走 `importSources`（按地址去重，重复导入幂等）。数据源 `content/collect.ts` 的 `SOURCE_CATALOG`（10 领域，tier 1 默认预选）；首访引导第 2 步与信源页共用。
+
+### 首访引导 pages/Welcome.tsx
+
+全屏遮罩分步式（`welcome-veil`，四步 STEPS，进度点可直达）；`finish(to?)` 写 `pwork-welcomed` 标记并跳转——走完/跳过/卡内直达链接共用。第 1 步四模块能力卡渲染 `content/help.ts` 的 `MODULES`（输入/处理/输出/回路，各带 `app/public/demo/` 实拍动图，与帮助页快速上手同数据）。
 
 ### 速记编辑器 pages/NoteEditor.tsx
 
@@ -25,7 +30,7 @@ props：`item` + 回调 `onVote/onNotes/onKeep/onCycleOt/onDelete/onConvert` + �
 
 ### 通用样式组件（class 约定，非 React 组件）
 
-表单卡 `set-card>h2+.desc+.set-body`、行 `set-row`、输入 `.input`、分段 `.seg-item`（未选中 hover 描边着色）、徽章 `.chip/.mini-btn/.text-btn`、横幅 `.run-banner(.warn)`、统计条 `.stat-bar/.stat-fill`、日志列表 `.errlog-item`、速记时间线分组 `.note-day>.note-day-head`、Markdown 阅读态 `.md-body`。定义都在 shell.css/collect.css；新类名先跑 `npm run audit:classes`。
+表单卡 `set-card>h2+.desc+.set-body`、行 `set-row`、输入 `.input`、分段 `.seg-item`（未选中 hover 描边着色）、徽章 `.chip/.mini-btn/.text-btn`、横幅 `.run-banner(.warn)`、统计条 `.stat-bar/.stat-fill`、日志列表 `.errlog-item`、速记时间线分组 `.note-day>.note-day-head`、Markdown 阅读态 `.md-body`、四模块动图卡 `.welcome-mods`(2×2)/`.quick-row`(行式)、信源目录 `.src-catalog` 系列。定义都在 shell.css/collect.css；新类名先跑 `npm run audit:classes`。
 
 ## engine 纯函数（全部零 React；测试同名文件）
 

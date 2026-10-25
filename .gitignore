@@ -18,6 +18,9 @@ app/.env
 # Mimosa 扫描工作目录
 .mimosa/
 
+# 会话中间产物（GIF 帧序列、候选源实测脚本等）
+.tmp-*/
+
 # Tauri 桌面壳：Rust 构建产物与生成目录
 app/src-tauri/target/
 app/src-tauri/gen/
