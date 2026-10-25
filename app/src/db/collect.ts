@@ -46,10 +46,6 @@ export async function createSource(input: SourceInput): Promise<Source> {
   return source
 }
 
-export async function getSource(id: string): Promise<Source | undefined> {
-  return db.sources.get(id)
-}
-
 /** 按 URL 查重（导入去重用） */
 export async function findSourceByUrl(url: string): Promise<Source | undefined> {
   return db.sources.where('url').equals(url.trim()).first()
@@ -166,7 +162,8 @@ export async function putItem(item: Item): Promise<void> {
 }
 
 export async function getItem(id: string): Promise<Item | undefined> {
-  return db.items.get(id)
+  const raw = await db.items.get(id)
+  return raw ? normalizeItem(raw) : undefined
 }
 
 export async function findItemByFingerprint(fp: string): Promise<Item | undefined> {
@@ -179,6 +176,7 @@ export async function listRecentItems(days = 30): Promise<Item[]> {
   const all = await db.items.where('fetchedAt').above(since).toArray()
   return all
     .filter((i) => !i.deletedAt)
+    .map(normalizeItem)
     .sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt))
 }
 
@@ -276,14 +274,16 @@ export async function markKept(ids: string[]): Promise<void> {
  * TTL 物理清理（铁律 3：只清"已过 TTL 且无标注"的 raw/discarded 层）。
  * 打开应用时后台跑一次。返回清理条数。
  */
+export const DELETE_GRACE_DAYS = 14
+
 export async function cleanupExpired(now = new Date()): Promise<number> {
-  const nowIso = now.toISOString()
+  const nowMs = now.getTime()
   const all = await db.items.toArray()
   const doomed = all.filter((i) => {
-    // 已软删除的条目：任意 stage，删除满 TTL 即物理移除（14 天后悔期）
-    if (i.deletedAt) return nowIso > i.deletedAt
+    // 已软删除的条目：任意 stage，删除满 14 天后悔期才物理移除（页面文案与备份口径都按 14 天承诺）
+    if (i.deletedAt) return nowMs > new Date(i.deletedAt).getTime() + DELETE_GRACE_DAYS * 86_400_000
     if (i.stage !== 'raw' && i.stage !== 'discarded') return false
-    if (!i.expiresAt || i.expiresAt >= nowIso) return false
+    if (!i.expiresAt || i.expiresAt >= now.toISOString()) return false
     const a = i.annotation
     // 投票是校准燃料（信源信用/AI 画像都靠它）：有投票的条目不过期清理
     if (a && (a.keepForever || a.vote !== null || a.notes)) return false
@@ -293,10 +293,16 @@ export async function cleanupExpired(now = new Date()): Promise<number> {
   return doomed.length
 }
 
-/** 备份导出用：Curated 条目（scored/kept 且未删除；raw/discarded 不备份，04 §3.4） */
+/** 备份导出用：Curated 条目 + 带标注（投票/批注/保留）的其他条目——有标注即豁免 TTL 清理，必须随全量备份走（铁律 3） */
 export async function curatedItems(): Promise<Item[]> {
   const all = await db.items.toArray()
-  return all.filter((i) => !i.deletedAt && (i.stage === 'scored' || i.stage === 'kept')).map(normalizeItem)
+  const kept = all.filter((i) => {
+    if (i.deletedAt) return false
+    if (i.stage === 'scored' || i.stage === 'kept') return true
+    const a = i.annotation
+    return !!(a && (a.keepForever || a.vote !== null || a.notes))
+  })
+  return kept.map(normalizeItem)
 }
 
 /** 统计：各源近 7 天产出（信源管理页"日均"列） */
@@ -305,6 +311,8 @@ export async function itemsPerSource7d(): Promise<Record<string, number>> {
   const rows = await db.items.where('fetchedAt').above(since).toArray()
   const count: Record<string, number> = {}
   for (const r of rows) {
+    // 只数仍存在的条目：软删除的不算（页面向用户展示"近 7 天"应为可见条目数）
+    if (r.deletedAt) continue
     count[r.sourceId] = (count[r.sourceId] ?? 0) + 1
   }
   return count

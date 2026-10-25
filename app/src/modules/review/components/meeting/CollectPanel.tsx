@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { MEETING } from '../../content/copy'
 import { Icon } from '../../../../components/shell/icons'
 import { useDraft } from '../../store/draft'
+import { defaultMeeting } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
 import type { Delta } from '../../types/models'
 
@@ -17,8 +18,6 @@ interface PileCard {
  */
 export function CollectPanel() {
   const draft = useDraft((s) => s.draft)
-  const updateClap = useDraft((s) => s.updateClap)
-  const updateMeeting = useDraft((s) => s.updateMeeting)
   const [side, setSide] = useState<'good' | 'need'>('need')
   const [author, setAuthor] = useState('')
   const [text, setText] = useState('')
@@ -43,11 +42,17 @@ export function CollectPanel() {
       note: p.author,
       text: p.text,
     }))
-    await updateClap((clap) => ({
-      ...clap,
-      comparison: { ...clap.comparison, gaps: [...clap.comparison.gaps, ...newGaps] },
-    }))
-    await updateMeeting((m) => ({ ...m, collected: true }))
+    // gaps 与 collected 一次写回同一份记录：两步分写时中途失败会让重试把同一批卡追加两遍
+    const d = useDraft.getState().draft
+    if (!d) return
+    await useDraft.getState().update({
+      ...d,
+      clap: {
+        ...d.clap,
+        comparison: { ...d.clap.comparison, gaps: [...d.clap.comparison.gaps, ...newGaps] },
+      },
+      meeting: { ...(d.meeting ?? defaultMeeting()), collected: true },
+    })
     setPile([])
   }
 

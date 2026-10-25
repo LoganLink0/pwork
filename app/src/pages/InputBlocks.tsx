@@ -106,11 +106,13 @@ export function InputBlocks() {
                   className="btn-ghost"
                   disabled={!editing.title.trim()}
                   onClick={() => {
-                    void save(editing).then(() => {
-                      setEditing(null)
-                      setImportMsg('')
-                      void load()
-                    })
+                    void save(editing)
+                      .then(() => {
+                        setEditing(null)
+                        setImportMsg('')
+                        void load()
+                      })
+                      .catch((e: unknown) => setImportMsg(`保存失败：${e instanceof Error ? e.message : String(e)}`))
                   }}
                 >
                   保存

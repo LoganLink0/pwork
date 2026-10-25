@@ -55,11 +55,9 @@ export async function gatherSignals(now = new Date()): Promise<Signal[]> {
     db.reviews.orderBy('createdAt').reverse().limit(1).toArray(),
     db.insights.toArray(),
   ])
-  const today = todayLocal(now)
   const openTasks = tasks
     .filter((t) => t.deletedAt === null && t.status === 'todo')
     .map((t) => ({ title: t.title, due: t.due }))
-  void today
   const patternCounts: Record<string, number> = {}
   for (const i of insights) {
     if (!i.patternGroup) continue

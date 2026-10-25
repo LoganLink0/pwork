@@ -207,6 +207,7 @@ export class LlmCoach implements CoachAdapter {
 /* ------------------------------ 工厂 ------------------------------ */
 
 export function getCoach(cfg = loadCoachConfig()): CoachAdapter {
-  if (cfg.mode === 'llm' && cfg.apiKey.trim() !== '') return new LlmCoach(cfg)
+  // 网关模式下 Key 在网关进程（浏览器侧 apiKey 为空），viaGateway 即已配置——不能只看 apiKey 把网关用户挡在门外
+  if (cfg.mode === 'llm' && (cfg.apiKey.trim() !== '' || cfg.viaGateway)) return new LlmCoach(cfg)
   return new RuleBasedCoach()
 }

@@ -144,11 +144,13 @@ function parseRss2Json(text: string): ParseResult {
     for (const it of data.items) {
       if (!it.title || !it.link) continue
       const clean = (it.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      // 非法 pubDate 防护（与 XML 路径 dateOf 同口径）：一条坏日期只丢时间戳，不毒整批
+      const pd = it.pubDate ? new Date(it.pubDate) : null
       items.push({
         title: it.title.trim(),
         url: it.link.trim(),
         summary: clean.length > MAX_SUMMARY ? `${clean.slice(0, MAX_SUMMARY)}…` : clean,
-        publishedAt: it.pubDate ? new Date(it.pubDate).toISOString() : null,
+        publishedAt: pd && !Number.isNaN(pd.getTime()) ? pd.toISOString() : null,
       })
     }
     return items.length ? { ok: true, items, error: null } : { ok: false, items: [], error: '转接结果为空' }

@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, BoundarySt
             <button type="button" className="btn-primary" onClick={() => window.location.reload()}>
               刷新页面
             </button>
-            <Link to="/settings" className="btn-ghost">去设置 · 查看错误日志</Link>
+            <a href="#/settings?tab=errors" className="btn-ghost">去设置 · 查看错误日志</a>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function ErrorBar() {
       <span className="error-bar-text">
         <b>{entry.where}</b>：{entry.message}
       </span>
-      <Link to="/settings" className="error-bar-link" onClick={dismiss}>
+      <Link to="/settings?tab=errors" className="error-bar-link" onClick={dismiss}>
         查看日志
       </Link>
       <button type="button" className="error-bar-close" aria-label="关闭错误提示" onClick={dismiss}>

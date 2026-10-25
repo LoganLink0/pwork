@@ -22,7 +22,23 @@ function tilt(seed: string): string {
 export function StickyCard({ kind, title, tagline, milestone, onClick }: StickyCardProps) {
   const style = { '--tilt': tilt(title) } as CSSProperties
   return (
-    <div className={`sticky sticky--${kind}`} style={style} onClick={onClick} role={onClick ? 'button' : undefined}>
+    <div
+      className={`sticky sticky--${kind}`}
+      style={style}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
+    >
       <div className="sticky-title">{title}</div>
       {tagline && <div className="sticky-tagline">{tagline}</div>}
       {milestone && <span className="sticky-mile">{milestone} 开放</span>}

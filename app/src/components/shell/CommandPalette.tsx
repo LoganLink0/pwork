@@ -103,6 +103,8 @@ function PaletteDialog() {
       ...MODULE_NAV.flatMap((m) =>
         (m.children ?? []).map((c) => ({ to: c.to, icon: c.icon, label: c.label, sub: m.label })),
       ),
+      // 外部数据在导航树无位次（入口在周报导出页），面板里补上直达
+      { to: '/input/blocks', icon: 'blocks', label: '外部数据', sub: '周报数据源' },
       { to: '/settings', icon: 'settings', label: '设置', sub: '页面' },
       { to: '/help', icon: 'helpCircle', label: '帮助', sub: '页面' },
     ]

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGoals } from '../store/goals'
-import { todayLocal } from '../engine/datetime'
+import { todayLocal, localDateOf } from '../engine/datetime'
 import type { Goal } from '../types/models'
 
 /**
@@ -34,7 +34,8 @@ function dueBadge(g: Goal, today: string): { text: string; over: boolean } {
 /** 时间条：创建→期限 的已走过比例；无期限不显示 */
 function timelinePct(g: Goal, today: string): { pct: number; over: boolean } | null {
   if (!g.due) return null
-  const startDay = g.createdAt.slice(0, 10)
+  // 本地日起算（裸 UTC slice 在东八区凌晨创建的目标会把起算日算到昨天）
+  const startDay = localDateOf(g.createdAt)
   const total = Math.max(1, diffDays(startDay, g.due))
   const elapsed = Math.min(total, Math.max(0, diffDays(startDay, today)))
   return { pct: Math.round((elapsed / total) * 100), over: diffDays(today, g.due) < 0 }
@@ -219,10 +220,15 @@ export function Goals() {
                 onChange={(e) => setProgressDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && progressDraft.trim()) {
+                    // 阻断冒泡：卡容器监听 Enter 进编辑态，提交进度后不应顺带打开编辑
+                    e.stopPropagation()
                     void updateProgress(g.id, progressDraft.trim())
                     setProgressFor(null)
                   }
-                  if (e.key === 'Escape') setProgressFor(null)
+                  if (e.key === 'Escape') {
+                    e.stopPropagation()
+                    setProgressFor(null)
+                  }
                 }}
               />
               <button

@@ -866,25 +866,6 @@ a.origin:hover {
 .goal-timeline-fill[data-over] {
   background: var(--danger);
 }
-/* 期限输入：原生日期控件，紧凑融入行内 */
-.goal-due {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-}
-.goal-due input {
-  height: 22px;
-  font-size: var(--fs-xs);
-  color: var(--ink-soft);
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  padding: 0 4px;
-  color-scheme: light dark;
-}
 /* 进度轨迹：原样 details，展开看每次带日期的记录 */
 .goal-progress {
   font-size: var(--fs-xs);

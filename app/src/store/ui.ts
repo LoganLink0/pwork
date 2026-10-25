@@ -8,7 +8,6 @@ interface UiState {
   theme: ThemePref
   openPalette: () => void
   closePalette: () => void
-  togglePalette: () => void
   openQuick: () => void
   closeQuick: () => void
   setTheme: (pref: ThemePref) => void
@@ -24,7 +23,6 @@ export const useUi = create<UiState>((set) => ({
   theme: loadTheme(),
   openPalette: () => set({ paletteOpen: true }),
   closePalette: () => set({ paletteOpen: false }),
-  togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
   openQuick: () => set({ quickOpen: true }),
   closeQuick: () => set({ quickOpen: false }),
   setTheme: (pref) => {

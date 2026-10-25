@@ -8,7 +8,7 @@
  * 档位：每天按分数降序，第 1–2 条 必看（must），第 3–8 条 可看（may），
  * 其余 可略（skip）。已筛除（discarded）不参与排名，由卡片按状态单独标。
  */
-import { todayLocal } from './datetime'
+import { todayLocal, localDateOf } from './datetime'
 import type { Item } from '../types/models'
 
 export type ItemTier = 'must' | 'may' | 'skip'
@@ -18,7 +18,8 @@ export function itemTiers(items: Item[]): Map<string, ItemTier> {
   const byDay = new Map<string, Item[]>()
   for (const i of items) {
     if (i.deletedAt || i.stage === 'discarded') continue
-    const day = (i.fetchedAt ?? '').slice(0, 10) || todayLocal()
+    // 本地日口径，与日报 digestFor 一致（裸 UTC slice 在东八区凌晨会把条目排进昨天，复盘 3.31 同族问题）
+    const day = (i.fetchedAt ? localDateOf(i.fetchedAt) : '') || todayLocal()
     const list = byDay.get(day)
     if (list) list.push(i)
     else byDay.set(day, [i])

@@ -61,4 +61,9 @@ describe('fileToBlockContent 分派', () => {
     expect(fileToBlockContent('w.csv', 'h\nv').content).toBe('h: v')
     expect(fileToBlockContent('notes.txt', '甲\n乙').content).toBe('甲\n乙')
   })
+  it('.tsv 按 tab 分隔解析（不能按逗号拆成整行）', () => {
+    const r = fileToBlockContent('w.tsv', '日期\t线索\t金额\n9-01\t23\t86万')
+    expect(r.note).toContain('TSV')
+    expect(r.content).toBe('日期: 9-01，线索: 23，金额: 86万')
+  })
 })

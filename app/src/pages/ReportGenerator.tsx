@@ -28,8 +28,19 @@ export function ReportGenerator() {
   const [obsidianMsg, setObsidianMsg] = useState('')
   const snapshotsRef = useRef<ReportSnapshot[]>([])
 
+  const gatherSeq = useRef(0)
+  /** 切周期：摘要/错误属于特定周期，切换时在入口一并清掉（不在 effect 里 setState） */
+  const switchMode = (m: ReportMode) => {
+    if (m === mode) return
+    setAiSummary('')
+    setAiError('')
+    setAiState('idle')
+    setMode(m)
+  }
   useEffect(() => {
+    const seq = ++gatherSeq.current
     void gatherReportData(mode).then(async (d) => {
+      if (seq !== gatherSeq.current) return // 快速切换周期时只认最后一次
       setData(d)
       // 每次生成报告即落一行当日快照（趋势与环比的数据源）
       await saveSnapshot(d)
@@ -39,7 +50,7 @@ export function ReportGenerator() {
   }, [mode])
 
   const md = useMemo(() => (data ? reportToMarkdown(data) : ''), [data])
-  const html = useMemo(() => (data ? reportToHtml(data) : ''), [data])
+  const html = useMemo(() => (data ? reportToHtml(data, aiSummary) : ''), [data, aiSummary])
   const title = data ? reportTitle(data) : '报告'
   const mdWithAi = aiSummary ? `${md}\n\n> 🤖 AI 摘要：${aiSummary}\n` : md
 
@@ -89,7 +100,10 @@ export function ReportGenerator() {
 
   const printPdf = () => {
     const w = window.open('', '_blank')
-    if (!w) return
+    if (!w) {
+      window.alert('打印窗口被浏览器拦截了——请允许本站弹窗后重试')
+      return
+    }
     w.document.write(html.replace('</style>', '@media print { body { padding: 0 } } @page { size: A4; margin: 14mm }</style>'))
     w.document.close()
     w.focus()
@@ -108,7 +122,7 @@ export function ReportGenerator() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>周报导出为 HTML/PPT</h1>
+        <h1>{mode === 'weekly' ? '周报' : '月报'}导出为 HTML/PPT</h1>
         <span className="sub">素材自动汇总（任务/目标/洞察/外部数据）→ 一键成稿：Markdown / HTML / PPT</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
@@ -120,8 +134,8 @@ export function ReportGenerator() {
           <div className="set-row">
             <label>周期</label>
             <div className="radio">
-              <button type="button" className={mode === 'weekly' ? 'on' : ''} data-testid="report-mode-weekly" onClick={() => setMode('weekly')}>周报（近 7 天）</button>
-              <button type="button" className={mode === 'monthly' ? 'on' : ''} data-testid="report-mode-monthly" onClick={() => setMode('monthly')}>月报（近 30 天）</button>
+              <button type="button" className={mode === 'weekly' ? 'on' : ''} data-testid="report-mode-weekly" onClick={() => switchMode('weekly')}>周报（近 7 天）</button>
+              <button type="button" className={mode === 'monthly' ? 'on' : ''} data-testid="report-mode-monthly" onClick={() => switchMode('monthly')}>月报（近 30 天）</button>
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               数据截至 {todayLocal()} · 数据自动取自各模块

@@ -3,6 +3,7 @@ import { attachTaskToNote } from '../../db/repo'
 import { useNotes } from '../../store/notes'
 import { useTasks } from '../../store/tasks'
 import { useUi } from '../../store/ui'
+import { recordError } from '../../engine/errorLog'
 
 const DRAFT_KEY = 'pwork-quicknote-draft'
 
@@ -61,7 +62,7 @@ function QuickNoteDialog() {
       .map((t) => t.trim())
       .filter(Boolean)
 
-  /** 存一条；continueMode=true 清正文留标签继续记（回执计数），否则收工关闭 */
+  /** 存一条；continueMode=true 清正文留标签继续记（回执计数），否则收工关闭。失败不清输入（错误条已弹，用户内容不能丢） */
   const save = async (continueMode: boolean) => {
     if (!body.trim() || saving) return
     setSaving(true)
@@ -79,12 +80,15 @@ function QuickNoteDialog() {
         localStorage.removeItem(DRAFT_KEY)
         close()
       }
+    } catch (e) {
+      // 保留 body/tags 供重试或手动复制；失败要被看见（错误条弹出）
+      recordError({ where: '速记浮层保存', kind: 'app', message: e instanceof Error ? e.message : String(e) })
     } finally {
       setSaving(false)
     }
   }
 
-  /** 转待办：先落速记，再以速记为源建任务（origin.note 溯源）；单条决策，存完关闭 */
+  /** 转待办：先落速记，再以速记为源建任务（origin.note 溯源）；单条决策，存完关闭。任一环失败保留输入 */
   const saveAsTask = async () => {
     if (!body.trim() || saving) return
     setSaving(true)
@@ -102,6 +106,9 @@ function QuickNoteDialog() {
       setTags('')
       localStorage.removeItem(DRAFT_KEY)
       close()
+    } catch (e) {
+      // 同上：失败不清输入，错误入库并弹条
+      recordError({ where: '速记转待办', kind: 'app', message: e instanceof Error ? e.message : String(e) })
     } finally {
       setSaving(false)
     }

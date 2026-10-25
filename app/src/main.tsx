@@ -17,12 +17,13 @@ installErrorCapture()
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
-// PWA Service Worker：离线可用、安装到主屏
-registerSW({
+// PWA Service Worker：离线可用、安装到主屏。
+// prompt 模式：新版本就绪后顶栏出更新按钮——必须把 registerSW 返回的激活函数传进去，
+// 只 location.reload() 不会激活 waiting 状态的 SW，刷新后仍由旧 SW 供页
+const updateSW = registerSW({
   immediate: true,
-  // 新版本就绪后不自动刷新（prompt 模式）：顶栏出更新按钮，用户点了再 reload
   onNeedRefresh() {
-    useUi.getState().setUpdateReady(true)
+    useUi.getState().setUpdateReady(true, () => updateSW())
   },
 })
 

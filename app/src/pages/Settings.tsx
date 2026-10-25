@@ -189,8 +189,8 @@ export function Settings() {
   const doImport = async (file: File) => {
     try {
       const r = await importBundle(await file.text())
-      // 各域重新加载（导入可能影响所有模块）
-      await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load()])
+      // 各域重新加载（导入可能影响所有模块；与设备同步同口径含目标库）
+      await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
       const detail = Object.entries(r.counts).map(([k, v]) => `${k} ${v}`).join(' · ')
       setImportMsg(`导入成功（${r.format}）：${detail || '无变化'}`)
     } catch (e) {
@@ -544,7 +544,7 @@ export function Settings() {
                   type="password"
                   placeholder="wrangler.toml 中的 TOKEN（只存 localStorage）"
                   value={cloud.token}
-                  onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
+                  onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
                   aria-label="访问 Token"
                 />
               </div>
@@ -557,7 +557,7 @@ export function Settings() {
                   className="input"
                   value={cloud.accountId}
                   placeholder="32 位串（dash 首页右侧 / worker\wrangler.toml 附近）"
-                  onChange={(e) => setCloud({ ...cloud, accountId: e.target.value })}
+                  onChange={(e) => { const next = { ...cloud, accountId: e.target.value }; setCloud(next); saveCloud(next) }}
                   aria-label="账户 ID"
                 />
               </div>
@@ -567,7 +567,7 @@ export function Settings() {
                   className="input"
                   value={cloud.databaseId}
                   placeholder="worker\wrangler.toml 里 database_id"
-                  onChange={(e) => setCloud({ ...cloud, databaseId: e.target.value })}
+                  onChange={(e) => { const next = { ...cloud, databaseId: e.target.value }; setCloud(next); saveCloud(next) }}
                   aria-label="数据库 ID"
                 />
               </div>
@@ -578,7 +578,7 @@ export function Settings() {
                   type="password"
                   placeholder="只存 localStorage"
                   value={cloud.token}
-                  onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
+                  onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
                   aria-label="D1 API Token"
                 />
               </div>
@@ -810,7 +810,7 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v1.0.0</span>
+            <span className="val">v1.1.0</span>
           </div>
           <div className="set-row">
             <label>数据存放</label>

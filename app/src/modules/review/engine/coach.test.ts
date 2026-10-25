@@ -101,6 +101,14 @@ describe('本地网关模式（Key 在网关进程，浏览器侧无 Key）', ()
     expect(llmConfigured()).toBe(true)
   })
 
+  it('getCoach：网关模式（apiKey 空 + viaGateway）也走 LLM 适配器——推荐配置路径不能被工厂挡在门外', () => {
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true, gatewayUrl: 'http://127.0.0.1:8788' }))
+    expect(getCoach(loadCoachConfig()).id).toBe('llm')
+
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', apiKey: '', viaGateway: false }))
+    expect(getCoach(loadCoachConfig()).id).toBe('rule')
+  })
+
   it('llmConfigFrom：网关模式用 sentinel Key + 网关 /v1 地址，直连用原样配置', () => {
     localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', viaGateway: true, gatewayUrl: 'http://127.0.0.1:8788', model: 'deepseek-chat' }))
     const g = llmConfigFrom(loadCoachConfig())

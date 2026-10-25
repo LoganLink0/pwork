@@ -52,12 +52,14 @@ export async function extractMaterial(file: File): Promise<string> {
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default
     const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
     let out = ''
-    for (let i = 1; i <= Math.min(doc.numPages, 60); i++) {
+    const maxPages = Math.min(doc.numPages, 60)
+    for (let i = 1; i <= maxPages; i++) {
       const page = await doc.getPage(i)
       const tc = await page.getTextContent()
       out += tc.items.map((it) => ('str' in it ? it.str : '')).join(' ') + '\n'
     }
     await doc.cleanup()
+    if (doc.numPages > maxPages) out += `\n（这份 PDF 共 ${doc.numPages} 页，已读取前 ${maxPages} 页。）`
     return out
   }
   // .txt / .md / 其他文本形态
@@ -128,69 +130,6 @@ export function parseOutline(text: string): WriterOutline {
 }
 
 /* ------------------------------ 内置模板（无 AI 时的手填兜底） ------------------------------ */
-
-export type WriterTemplateId = 'business-analysis' | 'company-profile' | 'resume-tailoring'
-
-export interface WriterTemplate {
-  id: WriterTemplateId
-  name: string
-  /** 默认受众（可被用户覆盖） */
-  audience: 'internal' | 'external'
-  /** 追加到 AI 提示词的模板视角说明 */
-  guide: string
-  skeleton: (topic: string, audience: 'internal' | 'external') => WriterOutline
-}
-
-/** 撰写模板：同一份材料，换模板 = 换一个分析视角（一个处理模块做多个事情） */
-export const WRITER_TEMPLATES: WriterTemplate[] = [
-  {
-    id: 'business-analysis',
-    name: '业务分析报告',
-    audience: 'internal',
-    guide: '按业务分析报告的视角组织：概况、业务与产品、关键数据、行业与竞争、风险与问题、结论建议。',
-    skeleton: (topic, audience) => defaultTemplate(topic, audience),
-  },
-  {
-    id: 'company-profile',
-    name: '企业调研速览',
-    audience: 'internal',
-    guide:
-      '按售前调研视角组织：说清对方是做什么的、商业逻辑（靠什么赚钱）、业务痛点在哪、行业地位与趋势，最后落到合作或切入建议。',
-    skeleton: (topic, audience) => ({
-      title: `${topic} · 企业调研速览`,
-      slides: [
-        { layout: 'cover' as const, title: `${topic} · 企业调研速览`, sub: [audience === 'internal' ? '内部售前参考' : '对外交流', new Date().toLocaleDateString('zh-CN')] },
-        { layout: 'bullets' as const, title: '一、公司与主体信息', bullets: ['（待填：成立 / 注册资本 / 所在地）', '（待填：经营状态与范围）'] },
-        { layout: 'bullets' as const, title: '二、业务线与商业逻辑', bullets: ['（待填：主要业务线）', '（待填：靠什么赚钱）'] },
-        { layout: 'bullets' as const, title: '三、业务痛点', bullets: ['（待填：行业共性痛点）', '（待填：这家公司表现出的具体痛点）'] },
-        { layout: 'bullets' as const, title: '四、行业地位与趋势', bullets: ['（待填：所处位置）', '（待填：趋势判断）'] },
-        { layout: 'bullets' as const, title: audience === 'internal' ? '五、内部判断' : '五、合作建议', bullets: ['（待填）'] },
-      ],
-    }),
-  },
-  {
-    id: 'resume-tailoring',
-    name: '简历定制建议',
-    audience: 'external',
-    guide:
-      '这份分析用于帮助求职者定制简历：先解读目标公司与岗位真正看重什么（关键词、能力、经历类型），再对照材料中的现有简历逐条给出修改建议（哪段经历前置、补什么关键词、删什么）；给客户看的措辞要正式、可直接采用。',
-    skeleton: (topic, audience) => ({
-      title: `${topic} · 简历定制建议`,
-      slides: [
-        { layout: 'cover' as const, title: `${topic} · 简历定制建议`, sub: [audience === 'internal' ? '内部工作稿' : '求职定制方案', new Date().toLocaleDateString('zh-CN')] },
-        { layout: 'bullets' as const, title: '一、目标公司与岗位解读', bullets: ['（待填：公司做什么、怎么赚钱）', '（待填：这个岗位为什么招人）'] },
-        { layout: 'bullets' as const, title: '二、雇主看重什么', bullets: ['（待填：关键词与能力要求）', '（待填：行业语言）'] },
-        { layout: 'bullets' as const, title: '三、现简历对照结论', bullets: ['（待填：匹配点）', '（待填：差距点）'] },
-        { layout: 'bullets' as const, title: '四、修改建议（逐条）', bullets: ['（待填：哪段经历前置）', '（待填：补什么关键词）', '（待填：删什么）'] },
-        { layout: 'bullets' as const, title: '五、面试预判', bullets: ['（待填：可能被问到的公司与行业问题）'] },
-      ],
-    }),
-  },
-]
-
-export function getWriterTemplate(id: string): WriterTemplate {
-  return WRITER_TEMPLATES.find((t) => t.id === id) ?? WRITER_TEMPLATES[0]!
-}
 
 export function defaultTemplate(topic: string, audience: 'internal' | 'external'): WriterOutline {
   const f = (s: string) => `（待填：${s}）`

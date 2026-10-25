@@ -84,4 +84,19 @@ describe('reportToHtml（自包含 HTML）', () => {
     expect(html).not.toContain('<b>注入</b>')
     expect(html).toContain('任务闭环率')
   })
+  it('条目外链只放行 http(s)：javascript: 与含引号的 URL 不进 href', () => {
+    const html = reportToHtml(mkData({ topItems: [
+      { title: '正常', url: 'https://a.com/x', score: 70, sourceName: '源甲', otFlag: null },
+      { title: '脚本', url: 'javascript:alert(1)', score: 69, sourceName: '源乙', otFlag: null },
+      { title: '断引号', url: 'https://a.com/x" onmouseover="alert(1)', score: 68, sourceName: '源丙', otFlag: null },
+    ] }))
+    expect(html).toContain('href="https://a.com/x"')
+    expect(html).not.toContain('href="javascript:')
+    expect(html).not.toContain('onmouseover')
+  })
+  it('AI 摘要参数：提供时渲染在统计卡下方', () => {
+    const html = reportToHtml(mkData({}), '本周节奏稳定，注意逾期项。')
+    expect(html).toContain('AI 摘要')
+    expect(html).toContain('本周节奏稳定')
+  })
 })

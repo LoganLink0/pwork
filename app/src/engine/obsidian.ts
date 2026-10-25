@@ -11,6 +11,13 @@ const OT_MARK: Record<NonNullable<Item['otFlag']>, string> = {
   trend: '📈趋势',
 }
 
+/** YAML 列表项：源名含逗号/方括号会破坏 frontmatter 结构，包引号防拆 */
+const yamlStr = (s: string) => `"${s.replace(/"/g, '\\"')}"`
+
+/** md 链接文本与 URL 的最小转义：中括号拆链接、圆括号拆地址 */
+const mdText = (s: string) => s.replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+const mdUrl = (s: string) => s.replace(/[()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
+
 /** 生成 vault 日报 md（`信息日报/YYYY-MM-DD.md`） */
 export function obsidianDaily(itemList: Item[], dateLocal: string): string {
   const sources = [...new Set(itemList.map((i) => i.sourceName))]
@@ -18,7 +25,7 @@ export function obsidianDaily(itemList: Item[], dateLocal: string): string {
     '---',
     `date: ${dateLocal}`,
     `count: ${itemList.length}`,
-    `sources: [${sources.join(', ')}]`,
+    `sources: [${sources.map(yamlStr).join(', ')}]`,
     '---',
     '',
   ]
@@ -28,7 +35,8 @@ export function obsidianDaily(itemList: Item[], dateLocal: string): string {
   }
   itemList.forEach((it, i) => {
     const ot = it.otFlag ? ` ｜ ${OT_MARK[it.otFlag]}` : ''
-    lines.push(`### ${i + 1}. [${it.title}](${it.url})`)
+    const url = /^https?:\/\//i.test(it.url) ? it.url : ''
+    lines.push(url ? `### ${i + 1}. [${mdText(it.title)}](${mdUrl(url)})` : `### ${i + 1}. ${mdText(it.title)}`)
     lines.push(`来源：${it.sourceName} ｜ ${it.tags.map((t) => `#${t}`).join(' ')}${ot}`)
     if (it.summary) lines.push(it.summary)
     lines.push(`> 我的想法：`)

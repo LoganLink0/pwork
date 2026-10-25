@@ -108,7 +108,7 @@ export function Notes() {
                 <div key={n.id} style={{ position: 'relative' }}>
                   <Link
                     to={`/input/notes/${n.id}`}
-                    className={`note-item${n.id === activeId && !showTrash ? ' on' : ''}`}
+                    className={`note-item${n.id === activeId ? ' on' : ''}`}
                   >
                     <div className="n-time">{relTime(n.updatedAt)}{n.source === 'quick' ? ' · 速记浮层' : ''}</div>
                     <div className="n-title">{n.title || '（无标题）'}</div>

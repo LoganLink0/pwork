@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { STATS_VIEW } from '../content/copy'
 import { insightTimeline, monthlyTrend, scenarioDistribution, topPatterns } from '../engine/stats'
 import { actionStats, listAllActions, listInsights, listReviews, type ActionStats } from '../db/repo'
@@ -71,7 +70,9 @@ export function StatsView() {
   const timeline = insightTimeline(insights, windowMonths)
   const maxScenario = Math.max(1, ...scenarios.map((s) => s.count))
   const total = reviews?.length ?? 0
-  const validityRate = insights.length ? insights.filter((i) => i.verified).length / insights.length : null
+  // 有效率只统计回访过的洞察卡（演绎卡归档即记 verified，从未回访的样本不算"回访验证"）
+  const revisited = insights.filter((i) => i.revisit.length > 0)
+  const validityRate = revisited.length ? revisited.filter((i) => i.verified).length / revisited.length : null
   const durations = closeDurationBuckets(actions, reviews ?? [])
   const maxDuration = Math.max(1, ...durations.map((d) => d.count))
 
@@ -282,9 +283,6 @@ export function StatsView() {
             />
           ))}
         </div>
-        <p className="coach-say" style={{ marginTop: 'var(--sp-3)' }}>
-          <Link to="/settings">{STATS_VIEW.reportCta}</Link>
-        </p>
       </section>
     </div>
   )

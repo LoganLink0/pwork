@@ -10,13 +10,21 @@ type StageFilter = 'all' | 'must' | 'kept' | 'discarded'
 
 /** 条目库页（PRD §4.4）：分层/状态筛选 + 搜索 + 展开详情与标注 */
 export function Items() {
-  const { items, setVote, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
+  const { items, loaded, setVote, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
   const [stage, setStage] = useState<StageFilter>('all')
   const [query, setQuery] = useState('')
   const [otOnly, setOtOnly] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const createTask = useTasks((s) => s.create)
   const [converted, setConverted] = useState<Set<string>>(new Set())
+  // 挂载时定一次"今天"基准（30 天窗口用；render 期读时钟违反纯函数约束）
+  const [mountedAt] = useState(() => Date.now())
+
+  // store 载 60 天（信源多推率与页面口径共用），本页展示近 30 天
+  const recent = useMemo(() => {
+    const since = new Date(mountedAt - 30 * 86_400_000).toISOString()
+    return items.filter((i) => i.fetchedAt >= since)
+  }, [items, mountedAt])
 
   // 分层按同日排名得出（必看=当天前 2 名）：徽章与「必看」筛选共用
   const tiers = useMemo(() => itemTiers(items), [items])
@@ -28,7 +36,7 @@ export function Items() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return items.filter((i) => {
+    return recent.filter((i) => {
       if (stage === 'must' && tiers.get(i.id) !== 'must') return false
       if (stage === 'kept' && i.stage !== 'kept') return false
       if (stage === 'discarded' && i.stage !== 'discarded') return false
@@ -36,19 +44,19 @@ export function Items() {
       if (q && !(i.title.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q) || i.sourceName.toLowerCase().includes(q))) return false
       return true
     })
-  }, [items, stage, tiers, query, otOnly])
+  }, [recent, stage, tiers, query, otOnly])
 
   const counts = useMemo(() => {
     let must = 0
     let kept = 0
     let discarded = 0
-    for (const i of items) {
+    for (const i of recent) {
       if (tiers.get(i.id) === 'must') must += 1
       if (i.stage === 'kept') kept += 1
       if (i.stage === 'discarded') discarded += 1
     }
-    return { all: items.length, must, kept, discarded }
-  }, [items, tiers])
+    return { all: recent.length, must, kept, discarded }
+  }, [recent, tiers])
 
   const stageChips: { key: StageFilter; label: string }[] = [
     { key: 'all', label: `全部 ${counts.all}` },
@@ -59,7 +67,7 @@ export function Items() {
 
   // 筛除原因聚合（控制论"系统辨识"落地）：只在本视图有数据时出现——
   // 哪类原因最多、哪个屏蔽词杀得最狠、哪个源独占垃圾产量，调源/调词有依据
-  const rejects = useMemo(() => rejectionStats(items), [items])
+  const rejects = useMemo(() => rejectionStats(recent), [recent])
 
   return (
     <section>
@@ -100,7 +108,7 @@ export function Items() {
       {filtered.length === 0 ? (
         <div className="empty">
           <div className="e-ico" aria-hidden>🗂</div>
-          <p>{items.length === 0 ? '还没有条目。去信息日报抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
+          <p>{!loaded ? '正在读取条目…' : recent.length === 0 ? '还没有条目。去信息日报抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
         </div>
       ) : (
         filtered.map((item: Item) => (

@@ -19,14 +19,18 @@ export interface CreateTaskInput {
   origin?: { kind: TaskOriginKind; refId?: string | null }
 }
 
+const ORIGIN_KINDS: readonly TaskOriginKind[] = ['review', 'note', 'item', 'manual', 'todo-file'] as const
+
 function normalizeTask(raw: TaskItem): TaskItem {
+  const kind = (raw.origin?.kind ?? 'manual') as TaskOriginKind
   return {
     ...raw,
     status: raw.status ?? 'todo',
     lane: raw.lane ?? undefined,
     due: raw.due ?? undefined,
     ifThen: raw.ifThen ?? undefined,
-    origin: raw.origin ?? { kind: 'manual', refId: null },
+    // 旧备份可能带已退役的来源类型（如投标），归一为手动，防运行时死分支
+    origin: raw.origin && ORIGIN_KINDS.includes(kind) ? raw.origin : { kind: 'manual', refId: null },
     closedAt: raw.closedAt ?? null,
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? TASK_SCHEMA_VERSION,
@@ -123,29 +127,44 @@ export async function setTaskLane(id: string, lane: TaskLane): Promise<void> {
   await db.tasks.put({ ...normalizeTask(raw), lane, updatedAt: new Date().toISOString() })
 }
 
-/** 编辑待办（标题/期限；期限空串=清除）。行内编辑入口的后端（2026-10-24） */
+/** 编辑待办（标题/期限；期限空串=清除）。行内编辑入口的后端（2026-10-24）。
+ *  复盘行动项生成的任务（origin.refId=行动项 id）：标题/期限同步回写行动项，防双份漂移 */
 export async function updateTaskFields(id: string, patch: { title?: string; due?: string }): Promise<void> {
   const raw = await db.tasks.get(id)
   if (!raw) return
-  await db.tasks.put({
+  const next = {
     ...normalizeTask(raw),
     title: patch.title !== undefined ? patch.title.trim() || raw.title : raw.title,
     due: patch.due !== undefined ? patch.due || undefined : raw.due,
     updatedAt: new Date().toISOString(),
-  })
+  }
+  await db.tasks.put(next)
+  await syncActionFromTask(next)
 }
 
-/** 推迟：due 顺延 N 天（无期限则设为今天+N） */
+/** 推迟：due 顺延 N 天（无期限则设为今天+N）；行动项生成的任务同步回写 */
 export async function postponeTask(id: string, days = 7): Promise<void> {
   const raw = await db.tasks.get(id)
   if (!raw) return
   const base = raw.due && raw.due > todayLocal() ? new Date(raw.due + 'T12:00:00') : new Date()
   base.setDate(base.getDate() + days)
-  await db.tasks.put({
+  const next = {
     ...normalizeTask(raw),
     due: todayLocal(base),
     updatedAt: new Date().toISOString(),
-  })
+  }
+  await db.tasks.put(next)
+  await syncActionFromTask(next)
+}
+
+/** 任务侧 → 行动项侧的标题/期限回写（状态同步已有 setTaskStatus 负责，这里补齐另外两个字段） */
+async function syncActionFromTask(task: TaskItem): Promise<void> {
+  if (task.origin.kind !== 'review' || !task.origin.refId) return
+  const patch: { text?: string; due?: string | undefined } = {}
+  if (task.title) patch.text = task.title
+  if (task.due !== undefined) patch.due = task.due
+  if (Object.keys(patch).length === 0) return
+  await db.actions.update(task.origin.refId, patch)
 }
 
 /** 首页/侧边栏统计：今天到期（含逾期）、本周 */
@@ -158,7 +177,7 @@ export async function dueStats(now = new Date()): Promise<{ today: number; week:
     today: open.filter((t) => (t.due ?? '9999') <= today).length,
     week: open.filter((t) => (t.due ?? '9999') > today && (t.due ?? '9999') <= week).length,
     open: open.length,
-    done: all.filter((t) => t.status === 'done').length,
+    done: all.filter((t) => t.deletedAt === null && t.status === 'done').length,
     total: all.filter((t) => t.deletedAt === null).length,
   }
 }

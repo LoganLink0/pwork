@@ -21,7 +21,7 @@ export interface ItemCardProps {
   onNotes: (text: string) => void
   onKeep: () => void
   onCycleOt: () => void
-  /** 转行动卡 → 任务库（W3 起可用；不传则按钮禁用） */
+  /** 转待办 → 任务库（不传则按钮禁用） */
   onConvert?: () => void
   /** 已转待办状态（按钮显示"已转待办"） */
   converted?: boolean
@@ -66,7 +66,11 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
       )}
       <div className="d-main">
         <div className="d-title">
-          <a href={item.url} target="_blank" rel="noreferrer noopener">{item.title}</a>
+          {/^https?:\/\//i.test(item.url) ? (
+            <a href={item.url} target="_blank" rel="noreferrer noopener">{item.title}</a>
+          ) : (
+            <span title="这条的来源地址不安全，已不提供链接">{item.title}</span>
+          )}
           <span className="ext" aria-hidden>↗</span>
         </div>
         {item.summary && <div className="d-summary">{item.summary}</div>}
@@ -97,8 +101,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           <div className="item-expand">
             <div className="why">筛选理由：{item.scoreReason || '—'}（依据信源分级、新鲜度、兴趣词命中）</div>
             <div className="kv">
-              {fmtLocal(item.fetchedAt)} 抓取{item.publishedAt ? ` · 发布 ${fmtLocal(item.publishedAt)}` : ''}<br />
-              fingerprint {item.fingerprint}
+              {fmtLocal(item.fetchedAt)} 抓取{item.publishedAt ? ` · 发布 ${fmtLocal(item.publishedAt)}` : ''}
             </div>
             <textarea
               value={draftNotes ?? a.notes}
@@ -164,8 +167,8 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
             ✗ 少推
           </button>
         </div>
-        <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert}>
-          {converted ? '已转待办 ✓' : '转行动卡'}
+        <button type="button" className="mini-btn" disabled={!onConvert} onClick={onConvert} title={onConvert ? '以这条条目为源创建一条待办' : undefined}>
+          {converted ? '已转待办 ✓' : '转待办'}
         </button>
         {onDelete && (
           <button

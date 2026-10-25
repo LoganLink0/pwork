@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCollect } from '../store/collect'
 import { Icon } from '../components/shell/icons'
 import { DOMAINS, TIER_LABEL, TIER_WEIGHT } from '../content/collect'
@@ -29,10 +29,10 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
-  const { sources, items, items7d, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState } = useCollect()
+  const { sources, items, items7d, loaded, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
-  // 信源信用可见性：各源近 60 天投票统计（升降由引擎在打开应用时自动做，这里只展示依据）
-  const credit = voteStatsBySource(items)
+  // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
+  const credit = useMemo(() => voteStatsBySource(items), [items])
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [catalogOpen, setCatalogOpen] = useState(false)
@@ -57,11 +57,24 @@ export function Sources() {
   }
 
   const doImport = async (file: File) => {
+    let text: string
     try {
-      const r = await importJson(await file.text())
-      setMsg(`导入 ${r.imported} 个源，跳过 ${r.skipped} 个（缺字段或 URL 重复）`)
+      text = await file.text()
+    } catch {
+      setMsg('导入失败：文件读取失败')
+      return
+    }
+    try {
+      JSON.parse(text)
     } catch {
       setMsg('导入失败：不是合法的 JSON 数组')
+      return
+    }
+    try {
+      const r = await importJson(text)
+      setMsg(`导入 ${r.imported} 个源，跳过 ${r.skipped} 个（缺字段或 URL 重复）`)
+    } catch (e) {
+      setMsg(`导入失败：${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
@@ -125,7 +138,7 @@ export function Sources() {
       {(autoStopped.length > 0 || inactiveFail.length > 0) && (
         <div className="run-banner" role="alert">
           <span className="warn"><Icon name="alert" size={13} /> {inactiveFail.length} 个源连续失败 ≥3 次已自动停用</span>
-          （死源静默污染数据是最常见死法）：{inactiveFail.map((s) => s.name).join('、')}。请在编辑里检查地址或重新启用。
+          ：{inactiveFail.map((s) => s.name).join('、')}。请在编辑里检查地址或重新启用。
         </div>
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
@@ -180,7 +193,7 @@ export function Sources() {
         <>
           <div className="empty">
             <div className="e-ico" aria-hidden><Icon name="rss" size={32} /></div>
-            <p>还没有信源。从下面的目录挑几个开始，用两周再决定哪些值得长期订阅。</p>
+            <p>{!loaded ? '正在读取信源…' : '还没有信源。从下面的目录挑几个开始，用两周再决定哪些值得长期订阅。'}</p>
             <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
               <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 手动添加信源</button>
             </div>

@@ -86,7 +86,7 @@ export const useCollect = create<CollectState>((set, get) => ({
   load: async () => {
     // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默
     track(maintenance(), '采集例行清理 maintenance')
-    const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
+    const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(60), itemsPerSource7d()])
     set({ sources, items, items7d, loaded: true })
     // 页面跨天长开：digestDate 在开页时求值一次会卡在昨天——未手动选过日期就自动翻到今天
     const today = todayLocal()

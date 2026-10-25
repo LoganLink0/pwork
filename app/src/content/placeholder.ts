@@ -13,17 +13,6 @@ export interface PlaceholderContent {
 }
 
 export const PLACEHOLDER: Record<string, PlaceholderContent> = {
-  draft: {
-    icon: 'pen',
-    title: '文章草稿',
-    lead: '将要解决：速记与洞察聚合 → 博客文章骨架 + AI 润色。',
-    will: [
-      ['为什么现在没有', '文章形态等真实写作场景出现后定义（处理模块的工具刚起步）。'],
-      ['现在能做什么', '速记先攒素材，AI 大纲（输出 → PPT 撰写）可以帮你把散落想法先汇总起来。'],
-    ],
-    goLabel: '去处理',
-    goTo: '/process',
-  },
   video: {
     icon: 'video',
     title: '数据视频（远期规划）',

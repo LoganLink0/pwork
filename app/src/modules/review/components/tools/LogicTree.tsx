@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { newId } from '../../db/repo'
 import { addChild, addSibling, countTreeNodes, removeNodeById, updateNodeText } from '../../engine/tree'
 import { useDraft } from '../../store/draft'
-import { emptySwot, type ToolTreeNode } from '../../types/models'
+import { type ToolTreeNode } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
 
 function TreeItem({ node, depth, ops }: { node: ToolTreeNode; depth: number; ops: ReturnType<typeof useTreeOps> }) {
@@ -91,6 +91,3 @@ export function LogicTree() {
     </div>
   )
 }
-
-// 引用避免未使用告警（emptySwot 由 SwotGrid 使用）
-void emptySwot

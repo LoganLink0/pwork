@@ -184,8 +184,13 @@ export function Wizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId, resumeId, quick, noteParam])
 
-  // 归档后不再展示表单（防止向已归档档案继续写入）
+  // 归档后不再展示表单（防止向已归档档案继续写入）；resume 到已归档草稿直接进只读档案页
   const draftReady = draft !== null && (resumeId ? draft.id === resumeId : draft.templateId === templateId)
+  const draftStatus = draft?.status
+  useEffect(() => {
+    if (resumeId && draftStatus === 'archived') navigate(`/review/archive/${resumeId}`, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在 resume 载入到已归档草稿时触发一次
+  }, [resumeId, draftStatus])
   const stepNodes = draftReady ? (
     <>
       {step === 0 && <StepComparison quick={quick} />}
@@ -202,9 +207,19 @@ export function Wizard() {
 
   const modeSwitchable = template?.quick && draft && draftReady && clapIsEmpty(draft)
 
-  // 会议模板必须走会议室（路由守卫）
+  // 会议模板必须走会议室（路由守卫）；无效模板直接告知而非永远"正在铺开白板"
   if (template && template.mode === 'meeting') {
     return <Navigate to={`/review/meeting?template=${templateId}`} replace />
+  }
+  if (!template) {
+    return (
+      <div className="container">
+        <div className="empty">
+          <p>没有找到这个复盘场景（链接可能已过期）。从「新建复盘」重新选一个场景开始。</p>
+          <Link to="/review/new" className="btn-ghost">去新建复盘</Link>
+        </div>
+      </div>
+    )
   }
 
   async function abandonDraft() {

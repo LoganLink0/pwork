@@ -16,7 +16,6 @@ const ORIGIN_LABEL: Record<TaskOriginKind, string> = {
   note: '来源:速记',
   item: '来源:信息',
   manual: '来源:手动',
-  bid: '来源:投标',
   'todo-file': '来源:项目',
 }
 
@@ -43,8 +42,13 @@ function dueLabel(due: string | undefined, today: string): { text: string; over:
 function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
   const kind = task.origin?.kind ?? 'manual'
   const label = ORIGIN_LABEL[kind]
-  if (kind === 'manual' || !task.origin?.refId) {
-    return <span className="origin" data-k={kind}>{label}</span>
+  // todo-file 的 refId 是文件路径（无处可跳）；手动来源没有 refId
+  if (kind === 'manual' || kind === 'todo-file' || !task.origin?.refId) {
+    return (
+      <span className="origin" data-k={kind} title={kind === 'todo-file' ? '来自项目里的 TODO.md（从项目扫描待办）' : undefined}>
+        {label}
+      </span>
+    )
   }
   const to =
     kind === 'review' ? `/review/archive/${task.origin.refId}` : kind === 'note' ? `/input/notes/${task.origin.refId}` : '/input/items'

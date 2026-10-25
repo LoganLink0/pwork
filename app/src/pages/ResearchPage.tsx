@@ -38,6 +38,7 @@ import { chatCompletion } from '../modules/review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
 import { gatewaySearchConfigured, gatewayWebSearch } from '../engine/webSearch'
 import { downloadFile } from '../db/repo'
+import { listBlocks } from '../db/blocksRepo'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 import { toast } from '../engine/toast'
 
@@ -188,24 +189,31 @@ export function ResearchPage() {
     setFwBusy(false)
   }
 
-  /** 开始（或继续）任务：同名任务复用不重建；建完立即生成框架 */
+  /** 开始（或继续）任务：同名任务复用不重建；建完立即生成框架。已存在且框架定制过时先确认（避免覆盖 AI 定制角度） */
   const startTask = async () => {
     const t = target.trim()
     if (!t) return
     const existing = profiles.find((p) => p.name === t)
+    if (existing) {
+      const oldFw = loadFramework(existing.id)
+      if (oldFw?.generatedBy === 'ai' && !window.confirm(`「${t}」已有 AI 定制的调研框架，重新开始会用内置模板覆盖角度（发现流水保留）。继续？`)) return
+    }
     const p = existing ?? (await saveProfile({ name: t, kind: typeName(type) }))
     setProfileId(p.id)
     await generateFramework(p.id)
   }
 
-  /** 往发现流水追加一段（带分隔标题），落库并刷新 */
+  /** 往发现流水追加一段（带分隔标题），落库并刷新。
+   *  追加基准取库内当前内容：一键调研循环期间组件状态是过期闭包，以库为真相才不会相互覆盖 */
   const appendFinding = async (sectionTitle: string, body: string) => {
     if (!profileId) return
     const stamp = new Date().toLocaleDateString()
-    const prev = findingsValue
+    const all = await listBlocks()
+    const blk = all.find((b) => b.profileId === profileId && b.title === FINDINGS_TITLE)
+    const prev = blk?.content ?? ''
     const merged = `${prev ? prev.trimEnd() + '\n\n' : ''}## ${sectionTitle}（${stamp}）\n${body.trim()}`
     setFindingDraft(merged)
-    await saveBlock({ id: findingsBlock?.id, title: FINDINGS_TITLE, content: merged, profileId, usage: 'internal' })
+    await saveBlock({ id: blk?.id, title: FINDINGS_TITLE, content: merged, profileId, usage: 'internal' })
     await loadBlocks()
   }
 
@@ -231,9 +239,9 @@ export function ResearchPage() {
     }
   }
 
-  /** 联网调研单个角度：搜该角度问题 → 带来源喂给模型 → 答案与来源链接追加进发现 */
-  const researchOnline = async (heading: string) => {
-    if (!fw || webBusy) return
+  /** 联网调研单个角度：搜该角度问题 → 带来源喂给模型 → 答案与来源链接追加进发现。返回是否成功（供一键计数） */
+  const researchOnline = async (heading: string): Promise<boolean> => {
+    if (!fw || webBusy) return false
     const section = fw.sections.find((s) => s.heading === heading)!
     const plain = heading.replace(/^[一二三四五六七八九十]+、/, '')
     setWebBusy(heading)
@@ -251,7 +259,7 @@ export function ResearchPage() {
       const hits = lists.flat().filter((h) => (seen.has(h.link) ? false : (seen.add(h.link), true))).slice(0, 8)
       if (hits.length === 0) {
         setMsg('联网检索没有返回结果——换个关键词或用「复制提示词」手动查')
-        return
+        return false
       }
       const ctx = hits.map((h, i) => `[${i + 1}] ${h.title}（${h.link}）\n${h.content}`).join('\n\n')
       const inputKey = ['research-web', fw.target, heading, queries.join('|'), hits.map((h) => h.link).join(',')].join('|')
@@ -274,8 +282,10 @@ export function ResearchPage() {
       })
       await appendFinding(`${heading} · 联网调研`, `${text.trim()}\n来源：\n${hits.map((h, i) => `[${i + 1}] ${h.title} — ${h.link}`).join('\n')}`)
       setMsg(`联网调研完成：检索 ${queries.length} 次，引用 ${hits.length} 个来源`)
+      return true
     } catch (e) {
       setMsg(`联网调研失败：${e instanceof Error ? e.message : String(e)}`)
+      return false
     } finally {
       setWebBusy(null)
     }
@@ -292,23 +302,23 @@ export function ResearchPage() {
     await saveBlock({ id: findingsBlock?.id, title: FINDINGS_TITLE, content, profileId, usage: 'internal' })
   }
 
-  /** 一键调研全部角度（2026-10-21 用户拍板"不要逐节去问"）：顺序跑完，单节失败不中断 */
+  /** 一键调研全部角度（2026-10-21 用户拍板"不要逐节去问"）：顺序跑完，单节失败不中断，可中途停止 */
   const [allProgress, setAllProgress] = useState<{ done: number; total: number } | null>(null)
+  const allStopRef = useRef(false)
   const researchAllOnline = async () => {
     if (!fw || webBusy !== null || allProgress) return
+    allStopRef.current = false
     setAllProgress({ done: 0, total: fw.sections.length })
     let ok = 0
     for (let i = 0; i < fw.sections.length; i++) {
-      try {
-        await researchOnline(fw.sections[i]!.heading)
-        ok += 1
-      } catch {
-        /* 单节失败继续；researchOnline 内部已 toast 原因 */
-      }
+      if (allStopRef.current) break
+      // 返回值即成败（researchOnline 内部把"没结果"与失败都归为 false 并已 toast 原因）
+      if (await researchOnline(fw.sections[i]!.heading)) ok += 1
       setAllProgress({ done: i + 1, total: fw.sections.length })
     }
+    const stopped = allStopRef.current
     setAllProgress(null)
-    setMsg(`一键调研完成：${ok}/${fw.sections.length} 个角度成功，结果已追加进发现`)
+    setMsg(stopped ? `已停止：完成 ${ok} 个角度，结果已追加进发现` : `一键调研完成：${ok}/${fw.sections.length} 个角度成功，结果已追加进发现`)
   }
 
   const onFile = async (file: File) => {
@@ -316,9 +326,11 @@ export function ResearchPage() {
     try {
       const lower = file.name.toLowerCase()
       let content = ''
+      let note = ''
       if (/\.(csv|json|tsv)$/.test(lower)) {
         const r = fileToBlockContent(file.name, await file.text())
         content = r.content
+        note = r.note
       } else {
         content = (await extractMaterial(file)).trim()
         if (!content) {
@@ -327,7 +339,7 @@ export function ResearchPage() {
         }
       }
       await saveBlock({ title: file.name.replace(/\.[^.]+$/, ''), content, profileId, usage: 'internal' })
-      setMsg('补充材料已加入')
+      setMsg(`补充材料已加入${note ? `（${note}）` : ''}`)
     } catch (e) {
       setMsg(`导入失败：${e instanceof Error ? e.message : '文件解析出错'}`)
     }
@@ -335,15 +347,21 @@ export function ResearchPage() {
 
   const generateAnalysis = async () => {
     if (aiBusy || articleMaterials.length === 0) return
+    // 出稿前先把编辑框里未失焦的发现落库（textarea 只在 onBlur 保存，此刻 store 可能还没刷新）
+    await saveFinding(findingsValue)
+    const blocksNow = await listBlocks()
+    const materials: ArticleMaterial[] = blocksNow
+      .filter((b) => b.profileId === profileId)
+      .map((b) => ({ id: b.id, kind: 'note' as const, title: b.title, body: b.content, createdAt: b.updatedAt, sourceLabel: '调研发现' }))
     setAiBusy(true)
     setAiError('')
     try {
-      const inputKey = ['research', view.id, audience, profileId ?? 'all', ...articleMaterials.map((m) => `${m.id}:${m.body.length}`)].join('|')
+      const inputKey = ['research', view.id, audience, profileId ?? 'all', ...materials.map((m) => `${m.id}:${m.body.length}`)].join('|')
       const { text } = await chatCompletionCached({
         purpose: 'article-analysis',
         inputKey,
         system: ARTICLE_SYSTEM_PROMPT,
-        user: buildArticleUserPrompt({ materials: articleMaterials, view, scopeLabel: fw?.target }),
+        user: buildArticleUserPrompt({ materials, view, scopeLabel: fw?.target }),
         maxTokens: 32768,
       })
       setDraft(parseArticle(text))
@@ -357,7 +375,7 @@ export function ResearchPage() {
   const doExport = (kind: 'md' | 'docx') => {
     if (!draft) return
     if (kind === 'md') downloadFile(`${draft.title}.md`, articleToMarkdown(draft), 'text/markdown')
-    else void exportArticleDocx(draft)
+    else void exportArticleDocx(draft).catch((e: unknown) => setMsg(`Word 导出失败：${e instanceof Error ? e.message : String(e)}`))
   }
 
   const removeTask = async () => {
@@ -367,6 +385,7 @@ export function ResearchPage() {
     // 调研发现若走那条路会泄进周报外部数据——必须显式删（2026-10-13 自查发现）
     for (const b of taskBlocks) await removeBlock(b.id)
     await removeProfile(profile.id)
+    localStorage.removeItem(`pwork-research-fw:${profile.id}`)
     setProfileId(null)
     setFw(null)
   }
@@ -455,6 +474,11 @@ export function ResearchPage() {
                       title="按下面的角度自动跑完联网搜索与作答，结果追加进「发现」——不用逐个点"
                     >
                       {allProgress ? `一键调研中（${allProgress.done}/${allProgress.total}）…` : `一键调研（全部 ${fw.sections.length} 个角度）`}
+                    </button>
+                  )}
+                  {allProgress && (
+                    <button type="button" className="btn-ghost" onClick={() => { allStopRef.current = true }} title="跑完当前这个角度后停止，已完成的结果保留">
+                      停止
                     </button>
                   )}
                   <button type="button" className={coachReady && searchReady ? 'btn-ghost' : 'btn-primary'} onClick={() => void copyFullPrompt()} data-testid="copy-full-prompt">

@@ -1271,6 +1271,11 @@
   font-size: var(--fs-sm);
 }
 
+/* 向导步骤名（Wizard/MeetingRoom 的 C/L/A/P 标签）：加粗区分步骤导航 */
+.step-name {
+  font-weight: 600;
+}
+
 /* 引导句全站归 fs-sm（此前无规则、继承正文 16px——独立应用迁入遗留，2026-10-24 字号收敛） */
 .review-root .coach-say {
   color: var(--ink-soft);

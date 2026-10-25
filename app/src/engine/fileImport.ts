@@ -1,65 +1,22 @@
 /**
- * 文件导入（外部数据 · 阶段二）：CSV/JSON → 数据块内容。
- * 零新依赖：CSV 按 RFC4180 子集手写解析（引号/转义引号/字段内逗号换行/CRLF）。
+ * 文件导入（外部数据 · 阶段二）：CSV/TSV/JSON → 数据块内容。
+ * CSV/TSV 用 papaparse 解析（RFC4180 完整实现，含引号/转义/字段内换行；TSV 走 tab 分隔）。
  * 落点原则：文件进来变成数据块（输入第三通道），报告/PPT 自动引用——不硬塞进为网页设计的条目库。
  */
+import Papa from 'papaparse'
 
 /** 单行最多保留的字符数（超长截断，报告可读性优先） */
 const MAX_LINE_CHARS = 400
 /** 数据块最多保留的行数（数据块是片段不是全库导入） */
 const MAX_LINES = 120
 
-/** RFC4180 子集解析：双引号包裹、"" 转义、字段内逗号/换行、\r\n 与 \n */
-export function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let field = ''
-  let inQuotes = false
-  let i = 0
-  const s = text.replace(/^\uFEFF/, '') // 去 BOM
-  while (i < s.length) {
-    const ch = s[i]!
-    if (inQuotes) {
-      if (ch === '"') {
-        if (s[i + 1] === '"') {
-          field += '"'
-          i += 2
-          continue
-        }
-        inQuotes = false
-        i += 1
-        continue
-      }
-      field += ch
-      i += 1
-      continue
-    }
-    if (ch === '"') {
-      inQuotes = true
-      i += 1
-      continue
-    }
-    if (ch === ',') {
-      row.push(field)
-      field = ''
-      i += 1
-      continue
-    }
-    if (ch === '\n' || ch === '\r') {
-      if (ch === '\r' && s[i + 1] === '\n') i += 1
-      row.push(field)
-      field = ''
-      if (row.length > 1 || row[0] !== '') rows.push(row)
-      row = []
-      i += 1
-      continue
-    }
-    field += ch
-    i += 1
-  }
-  row.push(field)
-  if (row.length > 1 || row[0] !== '') rows.push(row)
-  return rows
+/** CSV/TSV 解析：返回非全空行（Papa 处理引号/CRLF/BOM） */
+export function parseCsv(text: string, delimiter: ',' | '\t' = ','): string[][] {
+  const r = Papa.parse<string[]>(text.replace(/^\uFEFF/, ''), {
+    delimiter,
+    skipEmptyLines: 'greedy',
+  })
+  return (r.data ?? []).map((row) => row.map((c) => String(c ?? '')))
 }
 
 function clip(line: string): string {
@@ -76,9 +33,9 @@ function rowToLine(cells: string[], headers: string[] | null): string {
   return clip(parts.filter(Boolean).join('，'))
 }
 
-/** CSV → 数据块内容：首行作表头，每行数据转 "表头: 值，表头: 值"；无表头（全空）退化为原样行 */
-export function csvToBlockContent(text: string): { content: string; totalRows: number; truncated: boolean } {
-  const rows = parseCsv(text).filter((r) => r.some((c) => c.trim() !== ''))
+/** CSV/TSV → 数据块内容：首行作表头，每行数据转 "表头: 值，表头: 值"；无表头（全空）退化为原样行 */
+export function csvToBlockContent(text: string, delimiter: ',' | '\t' = ','): { content: string; totalRows: number; truncated: boolean } {
+  const rows = parseCsv(text, delimiter).filter((r) => r.some((c) => c.trim() !== ''))
   if (rows.length === 0) return { content: '', totalRows: 0, truncated: false }
   const headers = rows[0]!.every((h) => h.trim() === '') ? null : rows[0]!.map((h) => h.trim())
   const dataRows = headers ? rows.slice(1) : rows
@@ -122,9 +79,13 @@ export function fileToBlockContent(filename: string, text: string): { content: s
     const r = jsonToBlockContent(text)
     return { ...r, note: `已解析 JSON：${r.totalRows} 行${r.truncated ? '（截断）' : ''}` }
   }
-  if (lower.endsWith('.csv') || lower.endsWith('.tsv')) {
+  if (lower.endsWith('.csv')) {
     const r = csvToBlockContent(text)
     return { ...r, note: `已解析 CSV：${r.totalRows} 行${r.truncated ? '（截断）' : ''}` }
+  }
+  if (lower.endsWith('.tsv')) {
+    const r = csvToBlockContent(text, '\t')
+    return { ...r, note: `已解析 TSV：${r.totalRows} 行${r.truncated ? '（截断）' : ''}` }
   }
   const lines = text
     .split('\n')

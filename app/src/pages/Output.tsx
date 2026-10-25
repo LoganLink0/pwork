@@ -4,7 +4,6 @@ import { useTasks } from '../store/tasks'
 import { useCollect } from '../store/collect'
 import { useGoals } from '../store/goals'
 import { useNotes } from '../store/notes'
-import { searchAll } from '../engine/searchAll'
 
 interface Tool { to: string; icon: string; name: string; desc: string; status: string }
 
@@ -58,7 +57,6 @@ export function Output() {
   const goals = useGoals((s) => s.goals)
   const items = useCollect((s) => s.items)
   const notes = useNotes((s) => s.notes)
-  void searchAll
   const materialReady = stats.total > 0 || goals.filter((g) => g.status === 'active').length > 0 || items.length > 0 || notes.length > 0
 
   return (
@@ -88,7 +86,7 @@ export function Output() {
                 <div className="m-sub">{g.desc}</div>
                 <div className="m-links">
                   {g.tools.map((t) => (
-                    <Link key={t.to} to={t.to} className="m-link" title={t.desc} style={t.status === '远期规划' ? { opacity: 0.55 } : undefined}>
+                    <Link key={t.to} to={t.to} className="m-link" title={t.desc} style={t.status === '远期' ? { opacity: 0.55 } : undefined}>
                       <span>
                         <span className="m-ico-inline" aria-hidden><Icon name={t.icon} size={14} /></span>
                         {t.name}

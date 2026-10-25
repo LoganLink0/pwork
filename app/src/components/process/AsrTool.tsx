@@ -118,7 +118,17 @@ export function AsrTool() {
         <button type="button" className="btn-ghost" disabled={!fullText} onClick={() => void saveAsNote()}>
           存为速记
         </button>
-        <button type="button" className="btn-ghost" disabled={!fullText} onClick={() => void navigator.clipboard.writeText(fullText).then(() => setSavedMsg('已复制到剪贴板'))}>
+        <button
+          type="button"
+          className="btn-ghost"
+          disabled={!fullText}
+          onClick={() =>
+            void navigator.clipboard
+              .writeText(fullText)
+              .then(() => setSavedMsg('已复制到剪贴板'))
+              .catch(() => setSavedMsg('复制失败：浏览器未授权剪贴板'))
+          }
+        >
           复制
         </button>
         {savedMsg && <span className="val" style={{ color: 'var(--ok)', fontSize: 'var(--fs-xs)' }}>{savedMsg}</span>}

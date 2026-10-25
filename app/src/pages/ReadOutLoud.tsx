@@ -36,7 +36,9 @@ export function ReadOutLoud() {
     const u = new SpeechSynthesisUtterance(speakText)
     u.lang = 'zh-CN'
     u.rate = 1
+    // 合成失败也要复位按钮（否则 speaking 永远卡在 true）
     u.onend = () => setSpeaking(false)
+    u.onerror = () => setSpeaking(false)
     window.speechSynthesis.speak(u)
     setSpeaking(true)
   }
@@ -49,8 +51,8 @@ export function ReadOutLoud() {
   return (
     <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
       <div className="page-head">
-        <h1>周报导出为朗读音频</h1>
-        <span className="sub">报告正文 → 浏览器本地语音（通勤场景"听你的周报"）</span>
+        <h1>{MODE_LABEL[mode]}导出为朗读音频</h1>
+        <span className="sub">报告正文 → 浏览器本地语音（通勤场景"听你的{MODE_LABEL[mode]}"）</span>
         <div className="right">
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
         </div>

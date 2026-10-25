@@ -215,22 +215,6 @@ textarea {
   animation: page-in var(--dur-3) var(--ease) both;
 }
 
-/* ---------- 无障碍跳转 ---------- */
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  background: var(--accent-deep);
-  color: #fff;
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: 0 0 var(--r-sm) 0;
-}
-
-.skip-link:focus {
-  left: 0;
-}
-
 /* ---------- 存储降级横幅 ---------- */
 .storage-banner {
   position: sticky;

@@ -39,6 +39,16 @@ export function StepComparison({ quick, showGaps = true }: { quick: boolean; sho
     void updateClap((clap) => ({ ...clap, comparison: fn(clap.comparison) }))
   }
 
+  /** 删目标/结果：comparison 的 gaps 索引级联，同时联动 logic.causes 的 gapRef（同一份 clap 一次写回） */
+  function setCompWithCauses(
+    fn: (c: ClapSections['comparison'], causes: ClapSections['logic']['causes']) => { comp: ClapSections['comparison']; causes: ClapSections['logic']['causes'] },
+  ) {
+    void updateClap((clap) => {
+      const { comp, causes } = fn(clap.comparison, clap.logic.causes)
+      return { ...clap, comparison: comp, logic: { ...clap.logic, causes } }
+    })
+  }
+
   function updateGoal(i: number, patch: Partial<GoalItem>) {
     setComp((comp) => {
       const goals = padded(comp.goals, i, emptyGoal)
@@ -166,9 +176,9 @@ export function StepComparison({ quick, showGaps = true }: { quick: boolean; sho
               <button
                 className="btn-small"
                 onClick={() =>
-                  setComp((c) => {
-                    const { goals, gaps } = removeGoalAt(c.goals, c.gaps, i)
-                    return { ...c, goals, gaps }
+                  setCompWithCauses((c, causes) => {
+                    const r = removeGoalAt(c.goals, c.gaps, causes, i)
+                    return { comp: { ...c, goals: r.goals, gaps: r.gaps }, causes: r.causes }
                   })
                 }
               >
@@ -213,9 +223,9 @@ export function StepComparison({ quick, showGaps = true }: { quick: boolean; sho
               <button
                 className="btn-small"
                 onClick={() =>
-                  setComp((c) => {
-                    const { results, gaps } = removeResultAt(c.results, c.gaps, i)
-                    return { ...c, results, gaps }
+                  setCompWithCauses((c, causes) => {
+                    const r = removeResultAt(c.results, c.gaps, causes, i)
+                    return { comp: { ...c, results: r.results, gaps: r.gaps }, causes: r.causes }
                   })
                 }
               >

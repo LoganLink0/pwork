@@ -18,13 +18,30 @@ import { ArticleEditor } from '../components/writer/ArticleEditor'
 
 const coachReady = llmConfigured
 
+/** 文件名清洗：标题里的路径分隔符等会让 Windows 下载异常 */
+const safeName = (s: string) => s.replace(/[\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 60) || '未命名'
+
+/** 工作草稿（localStorage）：AI 整理出的骨架与逐节修改离开页面不丢，下次进入恢复 */
+const DRAFT_KEY = 'pwork-article-draft'
+
+function loadDraft(): ArticleDraft | null {
+  try {
+    const v = localStorage.getItem(DRAFT_KEY)
+    if (!v) return null
+    const d = JSON.parse(v) as ArticleDraft
+    return typeof d.title === 'string' && Array.isArray(d.sections) ? d : null
+  } catch {
+    return null
+  }
+}
+
 /** 文章草稿（输出 O4 实装）：速记与洞察按周期聚合 → AI 整理骨架（人逐节修改）→ 导出 Markdown */
 export function ArticleDraftPage() {
   const [days, setDays] = useState(7)
   const [materials, setMaterials] = useState<ArticleMaterial[]>([])
   const [loaded, setLoaded] = useState(false)
 
-  const [draft, setDraft] = useState<ArticleDraft | null>(null)
+  const [draft, setDraft] = useState<ArticleDraft | null>(() => loadDraft())
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
   const [exportMsg, setExportMsg] = useState('')
@@ -32,11 +49,26 @@ export function ArticleDraftPage() {
   const [docxMsg, setDocxMsg] = useState('')
 
   useEffect(() => {
-    void gatherArticleMaterials(days).then((m) => {
-      setMaterials(m)
-      setLoaded(true)
-    })
+    void gatherArticleMaterials(days)
+      .then((m) => {
+        setMaterials(m)
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
   }, [days])
+
+  // 草稿防抖落盘
+  useEffect(() => {
+    if (!draft) return
+    const t = window.setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      } catch {
+        /* 超配额时放弃草稿保存，功能不受影响 */
+      }
+    }, 800)
+    return () => window.clearTimeout(t)
+  }, [draft])
 
   const noteCount = materials.filter((m) => m.kind === 'note').length
   const insightCount = materials.filter((m) => m.kind === 'insight').length
@@ -66,8 +98,8 @@ export function ArticleDraftPage() {
 
   const doExport = () => {
     if (!draft) return
-    downloadFile(`${draft.title}.md`, articleToMarkdown(draft), 'text/markdown')
-    setExportMsg(`✅ 已下载 ${draft.title}.md`)
+    downloadFile(`${safeName(draft.title)}.md`, articleToMarkdown(draft), 'text/markdown')
+    setExportMsg(`✅ 已下载 ${safeName(draft.title)}.md`)
   }
 
 
@@ -183,8 +215,12 @@ export function ArticleDraftPage() {
               disabled={!draft}
               onClick={async () => {
                 if (!draft) return
-                const name = await exportArticleDocx(draft)
-                setDocxMsg(`✅ 已下载 ${name}`)
+                try {
+                  const name = await exportArticleDocx(draft)
+                  setDocxMsg(`✅ 已下载 ${name}`)
+                } catch (e) {
+                  setDocxMsg(`Word 导出失败：${e instanceof Error ? e.message : String(e)}`)
+                }
               }}
             >
               ⬇ 下载 Word（.docx）

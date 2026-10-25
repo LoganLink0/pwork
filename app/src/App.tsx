@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect } from 'react'
-import { HashRouter, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
+import { Suspense, lazy, useEffect, type ReactNode } from 'react'
+import { HashRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './components/shell/Sidebar'
 import { Topbar } from './components/shell/Topbar'
 import { BottomNav } from './components/shell/BottomNav'
@@ -116,6 +116,12 @@ function pullCloudIncremental() {
   })
 }
 
+/** 边界包装：随路由重置错误态（崩溃后点链接可恢复），并把壳层（侧栏/顶栏/浮层）一起纳入保护 */
+function RoutedBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation()
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>
+}
+
 export default function App() {
   const load = useNotes((s) => s.load)
   const loadCollect = useCollect((s) => s.load)
@@ -126,7 +132,16 @@ export default function App() {
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
-    track(runAutoBackupIfDue(), '自动备份')
+    // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
+    track(
+      runAutoBackupIfDue().then((r) => {
+        if (r.downloaded) {
+          const where = r.location === 'dir' ? '备份文件夹' : r.location === 'disk' ? 'AppData 备份目录' : '下载文件夹'
+          toast('ok', `自动备份完成（${where}${r.fileName ? `：${r.fileName}` : ''}）`)
+        }
+      }),
+      '自动备份',
+    )
     // 打开应用自动同步云端（2026-10-12 用户拍板，04 设计"无定时，打开时同步"的补课）：
     // 已配置才拉；失败只入错误日志不弹条（云端偶发不可达不该每次打开都红条），成功拉到新条目则刷新采集库
     if (!autoSyncRan) {
@@ -214,19 +229,19 @@ export default function App() {
 
   return (
     <HashRouter>
-      <FirstRunRedirect />
-      <GlobalShortcuts />
-      <div className="app">
-        <Sidebar />
-        <div className="main">
-          <ErrorBar />
-          <Toaster />
-          <Topbar />
-          <div className="content">
-            <div className="content-inner">
-              <ErrorBoundary>
-              <Suspense fallback={<PageFallback />}>
-                <Routes>
+      <RoutedBoundary>
+        <FirstRunRedirect />
+        <GlobalShortcuts />
+        <div className="app">
+          <Sidebar />
+          <div className="main">
+            <ErrorBar />
+            <Toaster />
+            <Topbar />
+            <div className="content">
+              <div className="content-inner">
+                <Suspense fallback={<PageFallback />}>
+                  <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/tasks" element={<Tasks />} />
                   <Route path="/goals" element={<Goals />} />
@@ -271,14 +286,14 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
-              </ErrorBoundary>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <BottomNav />
-      <CommandPalette />
-      <QuickNote />
+        <BottomNav />
+        <CommandPalette />
+        <QuickNote />
+      </RoutedBoundary>
     </HashRouter>
   )
 }

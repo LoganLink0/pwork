@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DASHBOARD_STATS, DETAIL, GREETING, SCENARIO_LABEL } from '../content/copy'
 import { isDue } from '../engine/revisit'
-import { fmtLocal, todayLocal } from '../engine/datetime'
+import { fmtLocal, monthLocal, todayLocal } from '../engine/datetime'
 import { reviewToMarkdown } from '../engine/markdown'
 import { downloadFile } from '../../../db/repo'
 import { actionStats, closeAction, listInsights, listOpenActions, listReviews, updateAction, type ActionStats } from '../db/repo'
@@ -85,7 +85,7 @@ export function Dashboard() {
     if (!reviews?.length) return
     const byMonth = new Map<string, typeof reviews>()
     for (const r of [...reviews].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      const key = r.createdAt.slice(0, 7)
+      const key = monthLocal(new Date(r.createdAt))
       const arr = byMonth.get(key) ?? []
       arr.push(r)
       byMonth.set(key, arr)

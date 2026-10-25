@@ -248,7 +248,12 @@ async function syncViaD1(config: CloudConfig, since: string): Promise<SyncResult
     [since],
   )
   const { newCount, skipCount } = await mergeItems(rows.map(d1RowToLocal))
-  const serverTime = new Date().toISOString()
+  // 水位用本批结果的最大 fetched_at（本地时钟与云端时钟漂移时，本地 now 可能越过未拉取的条目导致永久漏拉）
+  const maxFetched = rows.reduce((m, r) => {
+    const v = (r as { fetched_at?: string }).fetched_at ?? ''
+    return v > m ? v : m
+  }, '')
+  const serverTime = maxFetched || new Date().toISOString()
   return { ok: true, newCount, skipCount, serverTime, error: null }
 }
 
@@ -259,6 +264,7 @@ async function pushViaD1(config: CloudConfig): Promise<PushResult> {
   const sources = await listActiveSources()
   let imported = 0
   let skipped = 0
+  let firstError: string | null = null
   for (const s of sources) {
     try {
       const rows = await d1Query(config, 'SELECT id FROM sources WHERE url = ?', [s.url])
@@ -274,11 +280,12 @@ async function pushViaD1(config: CloudConfig): Promise<PushResult> {
       )
       imported++
     } catch (e) {
+      // 写入失败（限流/约束冲突等）不能伪装成"跳过"：记下首个错误让调用方看到
       skipped++
-      void e
+      if (!firstError) firstError = e instanceof Error ? e.message : String(e)
     }
   }
-  return { ok: true, imported, skipped, error: null }
+  return { ok: true, imported, skipped, error: firstError ? `部分推送失败（已推 ${imported} 个）：${firstError}` : null }
 }
 
 /* ------------------------------ 统一入口 ------------------------------ */
@@ -388,13 +395,14 @@ export async function syncIngestBlocks(): Promise<IngestPullResult> {
   let pulled = 0
   let newest = since
   for (const row of rows) {
+    // 水位按本批所有行推进（含坏行）：坏行若不推进水位，每次同步都会被重新拉取
+    if (row.created_at > newest) newest = row.created_at
     if (!row.id || !row.title || !row.content) continue
     const dup = await db.blocks.where('extId').equals(row.id).first()
     if (dup) continue
     const source = row.source && row.source !== 'api' ? `${row.source} · ${row.title}` : row.title
     await saveBlock({ title: source, content: row.content, extId: row.id })
     pulled++
-    if (row.created_at > newest) newest = row.created_at
   }
   if (newest) localStorage.setItem(INGEST_SINCE_KEY, newest)
   return { ok: true, pulled, error: null }

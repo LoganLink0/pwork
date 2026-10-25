@@ -14,7 +14,7 @@ import {
   type ReviewType,
   type ScenarioKey,
 } from '../types/models'
-import { addInsight, getReview, newId, saveReview, upsertActions } from '../db/repo'
+import { addInsight, getReview, listReviews, newId, saveReview, upsertActions } from '../db/repo'
 import { attachReviewToNote } from '../../../db/repo'
 import { generateSummary } from '../engine/summary'
 import { hashTheme } from '../engine/theme'
@@ -53,21 +53,37 @@ export const useDraft = create<DraftState>((set, get) => ({
 
   startDraft: async (opts) => {
     const now = new Date().toISOString()
-    const draft: ReviewRecord = {
-      id: newId('rev'),
-      type: opts.type,
-      scenario: opts.scenario,
-      templateId: opts.templateId,
-      title: opts.title,
-      createdAt: now,
-      updatedAt: now,
-      status: 'in-progress',
-      quick: opts.quick,
-      clap: emptyClap(),
-      noteIds: opts.noteIds?.length ? opts.noteIds : undefined,
-      meeting: opts.type === 'team' ? defaultMeeting() : undefined,
-      summary: [],
-    }
+    // 复用仍未动笔的空草稿（切快慢版/换模板都会另起新档——空档复用一条，避免仪表盘越积越多）
+    const emptySnap = JSON.stringify(emptyClap())
+    const existing = (await listReviews()).find(
+      (r) => r.status === 'in-progress' && JSON.stringify(r.clap) === emptySnap,
+    )
+    const draft: ReviewRecord = existing
+      ? {
+          ...existing,
+          type: opts.type,
+          scenario: opts.scenario,
+          templateId: opts.templateId,
+          title: opts.title,
+          quick: opts.quick,
+          noteIds: opts.noteIds?.length ? opts.noteIds : undefined,
+          updatedAt: now,
+        }
+      : {
+          id: newId('rev'),
+          type: opts.type,
+          scenario: opts.scenario,
+          templateId: opts.templateId,
+          title: opts.title,
+          createdAt: now,
+          updatedAt: now,
+          status: 'in-progress',
+          quick: opts.quick,
+          clap: emptyClap(),
+          noteIds: opts.noteIds?.length ? opts.noteIds : undefined,
+          meeting: opts.type === 'team' ? defaultMeeting() : undefined,
+          summary: [],
+        }
     set({ draft, step: 0 })
     await saveReview(draft)
     // 反向回写 note.links.reviewIds（铁律 4：ID 引用双向可溯源）
@@ -111,6 +127,8 @@ export const useDraft = create<DraftState>((set, get) => ({
   archive: async () => {
     const current = get().draft
     if (!current) return null
+    // 已归档的复盘不可再次归档：重复执行会把行动项/任务/洞察卡全部翻倍
+    if (current.status === 'archived') return current.id
     const next: ReviewRecord = {
       ...current,
       status: 'archived',

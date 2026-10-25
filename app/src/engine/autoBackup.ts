@@ -43,8 +43,10 @@ export function saveAutoBackup(cfg: AutoBackupConfig): void {
 /** 是否到期（纯函数，注入 now 便于测试——复盘 2.7：注入参数体内禁读系统时钟） */
 export function autoBackupDue(cfg: AutoBackupConfig, now: Date): boolean {
   if (!cfg.enabled) return false
-  if (!cfg.lastAt) return true
-  return now.getTime() - new Date(cfg.lastAt).getTime() >= cfg.everyDays * 86_400_000
+  // lastAt 为损坏字符串时 new Date() 得 NaN、比较恒 false（备份永久停摆且无提示）——视为从未备份
+  const last = cfg.lastAt ? new Date(cfg.lastAt).getTime() : Number.NaN
+  if (Number.isNaN(last)) return true
+  return now.getTime() - last >= cfg.everyDays * 86_400_000
 }
 
 export function backupFileName(now: Date): string {

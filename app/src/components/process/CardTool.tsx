@@ -62,7 +62,8 @@ export function CardTool() {
 
     if (prevUrl.current) URL.revokeObjectURL(prevUrl.current)
     const u = canvas.toDataURL('image/png')
-    prevUrl.current = u
+    // data: URL 不需要 revoke；prevUrl 只用于清掉可能的旧 object URL，置空即可
+    prevUrl.current = null
     canvasRef.current = canvas
     setUrl(u)
   }
@@ -90,7 +91,8 @@ export function CardTool() {
         </button>
         {url && (
           <a href={url} download={`pwork-card-${todayLocal()}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>
-                      </a>
+            下载 PNG
+          </a>
         )}
       </div>
       {url && <img src={url} alt="卡片预览" style={{ maxWidth: 420, borderRadius: 'var(--r-md)', border: '1px solid var(--line)', alignSelf: 'center' }} />}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cleanupExpired,
   createSource,
+  curatedItems,
   deleteSource,
   digestDates,
   digestFor,
@@ -161,6 +162,30 @@ describe('TTL 清理（铁律 3：只清过 TTL 且无标注的 raw/discarded）
     for (const i of [voted, forever, notExpired, scored]) {
       expect(await findItemByFingerprint(i.fingerprint)).toBeTruthy()
     }
+  })
+
+  it('软删除条目满 14 天后悔期才物理清理；删除当天/第 13 天不清理', async () => {
+    const now = new Date()
+    const justDeleted = mkItem({ stage: 'scored', deletedAt: now.toISOString() })
+    const day13 = mkItem({ stage: 'scored', deletedAt: new Date(now.getTime() - 13 * 86_400_000).toISOString() })
+    const day15 = mkItem({ stage: 'scored', deletedAt: new Date(now.getTime() - 15 * 86_400_000).toISOString() })
+    for (const i of [justDeleted, day13, day15]) await putItem(i)
+
+    const n = await cleanupExpired(now)
+    expect(n).toBe(1)
+    expect(await findItemByFingerprint(justDeleted.fingerprint)).toBeTruthy()
+    expect(await findItemByFingerprint(day13.fingerprint)).toBeTruthy()
+    expect(await findItemByFingerprint(day15.fingerprint)).toBeUndefined()
+  })
+
+  it('带标注的 raw 条目随备份导出（curatedItems 与 TTL 豁免口径一致）', async () => {
+    const rawAnnotated = mkItem({ stage: 'raw', annotation: { notes: '', vote: 'want', keepForever: false, linkedReviewId: null } })
+    const rawPlain = mkItem({ stage: 'raw' })
+    await putItem(rawAnnotated)
+    await putItem(rawPlain)
+    const curated = await curatedItems()
+    expect(curated.some((i) => i.id === rawAnnotated.id)).toBe(true)
+    expect(curated.some((i) => i.id === rawPlain.id)).toBe(false)
   })
 })
 

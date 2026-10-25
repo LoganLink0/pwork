@@ -3,6 +3,7 @@
  * 原则：只统计、不评判——数字呈现，解释权在用户。
  */
 import { SCENARIO_LABEL } from '../content/copy'
+import { monthLocal } from '../../../engine/datetime'
 import type { Delta, InsightRecord, ReviewRecord, ScenarioKey } from '../types/models'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -31,7 +32,8 @@ export function monthlyTrend(reviews: ReviewRecord[], insights: InsightRecord[],
   const index = new Map(buckets.map((b, i) => [b.month, i]))
 
   for (const r of reviews) {
-    const i = index.get(r.createdAt.slice(0, 7))
+    // 本地月口径（东八区月初凌晨创建的复盘按裸 UTC slice 会归入上月）
+    const i = index.get(monthLocal(new Date(r.createdAt)))
     if (i === undefined) continue
     buckets[i].reviews++
     for (const gap of r.clap.comparison.gaps) {
@@ -42,7 +44,7 @@ export function monthlyTrend(reviews: ReviewRecord[], insights: InsightRecord[],
   for (const ins of insights) {
     // 兼容 M2 之前的旧数据：洞察卡可能没有 createdAt（跳过统计）
     if (!ins.createdAt) continue
-    const i = index.get(ins.createdAt.slice(0, 7))
+    const i = index.get(monthLocal(new Date(ins.createdAt)))
     if (i !== undefined) buckets[i].insights++
   }
   return buckets

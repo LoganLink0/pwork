@@ -65,14 +65,19 @@ export function reportToMarkdown(d: ReportData): string {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+/** 条目外链只放行干净的 http(s) URL（url 来自外部 RSS）：协议白名单 + 拒绝含空格/引号（断属性用字符）；其余降级为纯文本 */
+function safeHref(url: string): string | null {
+  return /^https?:\/\/[^\s"'<>]*$/i.test(url) ? url : null
 }
 
 function stat(v: string, label: string): string {
   return `<div class="stat"><div class="num">${esc(v)}</div><div class="lbl">${esc(label)}</div></div>`
 }
 
-export function reportToHtml(d: ReportData): string {
+export function reportToHtml(d: ReportData, aiSummary = ''): string {
   const title = reportTitle(d)
   const taskItems = d.tasks.closed.slice(0, 8).map((t) => `<li>✅ ${esc(t.title)}</li>`).join('')
   const goalItems = d.goals.active
@@ -80,11 +85,16 @@ export function reportToHtml(d: ReportData): string {
     .join('')
   const insightItems = d.insights.map((i) => `<li>💡 ${esc(i.text)}</li>`).join('')
   const itemItems = d.topItems
-    .map((i) => `<li><a href="${esc(i.url)}">${esc(i.title)}</a>（评分 ${i.score} · ${esc(i.sourceName)}）</li>`)
+    .map((i) => {
+      const href = safeHref(i.url)
+      const body = href ? `<a href="${esc(href)}" rel="noreferrer noopener">${esc(i.title)}</a>` : esc(i.title)
+      return `<li>${body}（评分 ${i.score} · ${esc(i.sourceName)}）</li>`
+    })
     .join('')
   const signalHtml = d.signals.length
     ? `<div class="notice">⚡ ${d.signals.map((s) => esc(s.message)).join('；')}</div>`
     : ''
+  const aiHtml = aiSummary.trim() ? `<div class="notice">🤖 AI 摘要：${esc(aiSummary.trim())}</div>` : ''
   const blockHtml = d.blocks
     .map(
       (b) => `<h3>${esc(b.title)}</h3>
@@ -130,6 +140,7 @@ export function reportToHtml(d: ReportData): string {
     ${stat(String(d.goals.active.length), '进行中目标')}
     ${stat(String(d.insights.length), '新增洞察')}
   </div>
+  ${aiHtml}
   <div class="card">
     <h2>任务</h2>
     <ul>${taskItems || '<li>（本期没有任务记录）</li>'}</ul>

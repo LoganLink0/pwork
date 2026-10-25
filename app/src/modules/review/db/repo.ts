@@ -27,12 +27,27 @@ export async function listReviews(): Promise<ReviewRecord[]> {
 }
 
 export async function deleteReview(id: string): Promise<void> {
-  await db.transaction('rw', db.reviews, db.actions, db.insights, async () => {
+  await db.transaction('rw', db.reviews, db.actions, db.insights, db.notes, db.tasks, async () => {
     await db.reviews.delete(id)
     const actions = await db.actions.where('reviewId').equals(id).toArray()
     await db.actions.bulkDelete(actions.map((a) => a.id))
     const insights = await db.insights.where('reviewId').equals(id).toArray()
     await db.insights.bulkDelete(insights.map((i) => i.id))
+    // 挂载过这份复盘的速记：剥离 reviewIds 引用（防悬空链接跳到不存在的档案）
+    const allNotes = await db.notes.toArray()
+    for (const n of allNotes) {
+      if (n.links.reviewIds?.includes(id)) {
+        await db.notes.put({ ...n, links: { ...n.links, reviewIds: n.links.reviewIds.filter((r) => r !== id) } })
+      }
+    }
+    // 从被删行动项生成的任务：断开溯源（任务本身保留，退化为普通待办）
+    const actionIds = new Set(actions.map((a) => a.id))
+    const allTasks = await db.tasks.toArray()
+    for (const t of allTasks) {
+      if (t.origin.kind === 'review' && t.origin.refId && actionIds.has(t.origin.refId)) {
+        await db.tasks.put({ ...t, origin: { kind: 'manual', refId: null }, updatedAt: new Date().toISOString() })
+      }
+    }
   })
 }
 
@@ -103,9 +118,19 @@ export async function deleteInsight(id: string): Promise<void> {
   await db.insights.delete(id)
 }
 
-/** 编辑行动项（改期/改内容），保留与复盘的溯源关系 */
+/** 编辑行动项（改期/改内容），保留与复盘的溯源关系。
+ *  改标题/期限时同步回写其生成的任务（a.taskId），两侧互不漂移 */
 export async function updateAction(id: string, patch: Partial<ActionItem>): Promise<void> {
   await db.actions.update(id, patch)
+  if (patch.text === undefined && patch.due === undefined) return
+  const a = await db.actions.get(id)
+  if (!a?.taskId) return
+  const task = await db.tasks.get(a.taskId)
+  if (!task) return
+  const next = { ...task, updatedAt: new Date().toISOString() }
+  if (patch.text !== undefined && patch.text.trim()) next.title = patch.text
+  if (patch.due !== undefined) next.due = patch.due || undefined
+  await db.tasks.put(next)
 }
 
 /** 某份复盘产生的全部行动项（详情页"下落"展示用） */

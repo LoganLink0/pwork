@@ -38,6 +38,19 @@ async function merge<T extends { id: string; updatedAt?: string }>(
   return n
 }
 
+/** 旧备份的信源可能缺 health/deletedAt 等后加字段（铁律 2 读取防御） */
+function normalizeSource(raw: Source): Source {
+  return {
+    ...raw,
+    kind: raw.kind ?? 'rss',
+    checkEvery: raw.checkEvery ?? 'daily',
+    active: raw.active ?? true,
+    health: raw.health ?? { failStreak: 0, lastOkAt: null, lastError: null },
+    deletedAt: raw.deletedAt ?? null,
+    schemaVersion: raw.schemaVersion ?? 1,
+  }
+}
+
 export async function importBundle(text: string): Promise<ImportResult> {
   const data = JSON.parse(text) as Record<string, unknown>
   const entities = (data.entities ?? null) as Record<string, unknown> | null
@@ -54,7 +67,7 @@ export async function importBundle(text: string): Promise<ImportResult> {
 
   // ①/② PWORK 包裹
   if (Array.isArray(entities.notes)) counts.notes = await merge<Note>(db.notes, (entities.notes as Note[]).map(normalizeNote))
-  if (Array.isArray(entities.sources)) counts.sources = await merge<Source>(db.sources, entities.sources as Source[])
+  if (Array.isArray(entities.sources)) counts.sources = await merge<Source>(db.sources, (entities.sources as Source[]).map(normalizeSource))
   if (Array.isArray(entities.items)) counts.items = await merge<Item>(db.items, (entities.items as Item[]).map(normalizeItem))
   if (Array.isArray(entities.tasks)) counts.tasks = await merge<TaskItem>(db.tasks, (entities.tasks as TaskItem[]).map(normalizeTask))
   if (Array.isArray(entities.reviews)) counts.reviews = await merge<ReviewRecord>(db.reviews, entities.reviews as ReviewRecord[])

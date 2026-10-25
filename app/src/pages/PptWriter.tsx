@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   defaultTemplate,
@@ -17,25 +17,67 @@ import { llmConfigured } from '../modules/review/engine/coach'
 
 const coachReady = llmConfigured
 
+/** 工作草稿（localStorage）：材料/主题/大纲离开页面不丢，下次进入恢复 */
+const DRAFT_KEY = 'pwork-pptwriter-draft'
+
+interface PptDraft {
+  materials: WriterMaterial[]
+  topic: string
+  audience: 'internal' | 'external'
+  pageTarget: number
+  outline: WriterOutline | null
+}
+
+function loadDraft(): Partial<PptDraft> {
+  try {
+    const v = localStorage.getItem(DRAFT_KEY)
+    if (!v) return {}
+    const parsed = JSON.parse(v) as Partial<PptDraft>
+    return {
+      materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+      topic: typeof parsed.topic === 'string' ? parsed.topic : '',
+      audience: parsed.audience === 'external' ? 'external' : 'internal',
+      pageTarget: typeof parsed.pageTarget === 'number' ? parsed.pageTarget : 12,
+      outline: parsed.outline ?? null,
+    }
+  } catch {
+    return {}
+  }
+}
+
 /** PPT 撰写（输出）：从零起草一份 PPT——主题 + 材料 → AI 大纲（逐页审核修改）→ 可编辑 .pptx。
  *  带调研的成稿走 输出 → 调研分析（框架与提示词驱动）；这里管从零自由成稿。 */
 export function PptWriter() {
-  const [materials, setMaterials] = useState<WriterMaterial[]>([])
+  // 惰性恢复一次草稿（首渲染解析，之后全走 state）
+  const [restored] = useState(loadDraft)
+  const [materials, setMaterials] = useState<WriterMaterial[]>(restored.materials ?? [])
   const [pasteName, setPasteName] = useState('')
   const [pasteText, setPasteText] = useState('')
   const [extracting, setExtracting] = useState(false)
   const [extractErr, setExtractErr] = useState('')
 
-  const [topic, setTopic] = useState('')
-  const [audience, setAudience] = useState<'internal' | 'external'>('internal')
-  const [pageTarget, setPageTarget] = useState(12)
+  const [topic, setTopic] = useState(restored.topic ?? '')
+  const [audience, setAudience] = useState<'internal' | 'external'>(restored.audience ?? 'internal')
+  const [pageTarget, setPageTarget] = useState(restored.pageTarget ?? 12)
 
-  const [outline, setOutline] = useState<WriterOutline | null>(null)
+  const [outline, setOutline] = useState<WriterOutline | null>(restored.outline ?? null)
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
   const [exportBusy, setExportBusy] = useState(false)
   const [exportMsg, setExportMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // 草稿防抖落盘：材料/主题/大纲变化 800ms 后保存
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ materials, topic, audience, pageTarget, outline }))
+      } catch {
+        /* 超配额（材料过大）时放弃草稿保存，功能不受影响 */
+      }
+    }, 800)
+    return () => window.clearTimeout(t)
+  }, [materials, topic, audience, pageTarget, outline])
 
   const totalChars = materials.reduce((n, m) => n + m.text.length, 0)
 
@@ -369,7 +411,15 @@ export function PptWriter() {
               ))}
               <div className="set-row">
                 <button type="button" className="btn-ghost" onClick={addSlide}>＋ 加一页</button>
-                <button type="button" className="btn-ghost" onClick={() => setOutline(null)}>丢弃大纲</button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    if (window.confirm('丢弃当前大纲？逐页修改的内容将无法找回（材料与主题保留）。')) setOutline(null)
+                  }}
+                >
+                  丢弃大纲
+                </button>
               </div>
             </div>
           )}

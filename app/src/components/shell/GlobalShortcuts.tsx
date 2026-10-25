@@ -14,6 +14,8 @@ export function GlobalShortcuts() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 首访引导（全屏遮罩）期间不响应全局快捷键：浮层会开在遮罩底下看不见，击键全进隐藏输入框
+      if (document.querySelector('.welcome-veil')) return
       const el = document.activeElement
       const typing =
         el instanceof HTMLElement &&

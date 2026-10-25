@@ -32,12 +32,14 @@ export function NoteEditor() {
   const [notFound, setNotFound] = useState(false)
   const createTask = useTasks((s) => s.create)
   const [taskCreated, setTaskCreated] = useState(false)
+  const [taskBusy, setTaskBusy] = useState(false)
   const [mode, setMode] = useState<'edit' | 'read'>('edit')
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   // noteRef 供卸载时的 flush 使用（Hook 全部先于早退 return —— 开发复盘 1.1）
-  const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false })
-  stateRef.current = { noteId: note?.id ?? '', title, body, tagsText, dirty: stateRef.current.dirty }
+  // hydrated 记录"从库读回的值"：只有当前值 ≠ 读回值才算用户改动（只打开不改字不写库、不改 updatedAt）
+  const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false, hydrated: '' })
+  stateRef.current = { ...stateRef.current, noteId: note?.id ?? '', title, body, tagsText }
 
   useEffect(() => {
     if (isNew) {
@@ -48,23 +50,36 @@ export function NoteEditor() {
       setSavedAt(null)
       setLoading(false)
       setNotFound(false)
+      setTaskCreated(false)
+      stateRef.current.hydrated = ''
+      stateRef.current.dirty = false
       return
     }
     let alive = true
     setLoading(true)
-    void getNote(id).then((n) => {
-      if (!alive) return
-      if (!n) {
+    setTaskCreated(false)
+    void getNote(id)
+      .then((n) => {
+        if (!alive) return
+        if (!n) {
+          setNotFound(true)
+        } else {
+          setNote(n)
+          setTitle(n.title)
+          setBody(n.body)
+          setTagsText(n.tags.join(' '))
+          setSavedAt(n.updatedAt)
+          // 读回值快照：字段变化后 flush 前比对，一致则视为未修改
+          stateRef.current.hydrated = JSON.stringify([n.title, n.body, n.tags.join(' ')])
+          stateRef.current.dirty = false
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!alive) return
+        setLoading(false)
         setNotFound(true)
-      } else {
-        setNote(n)
-        setTitle(n.title)
-        setBody(n.body)
-        setTagsText(n.tags.join(' '))
-        setSavedAt(n.updatedAt)
-      }
-      setLoading(false)
-    })
+      })
     return () => {
       alive = false
     }
@@ -73,7 +88,9 @@ export function NoteEditor() {
   // 自动保存：防抖落库；卸载时 flush 未保存的修改
   useEffect(() => {
     if (!note) return
-    stateRef.current.dirty = true
+    const s = stateRef.current
+    if (!s.dirty && s.hydrated !== '' && JSON.stringify([s.title, s.body, s.tagsText]) === s.hydrated) return
+    s.dirty = true
     const t = window.setTimeout(() => void flush(), SAVE_DEBOUNCE_MS)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 任意字段变化都触发同一防抖
@@ -123,6 +140,7 @@ export function NoteEditor() {
     const created = await createNote({ title, body, tags: parseTags(tagsText), source: 'manual' })
     stateRef.current.noteId = created.id
     stateRef.current.dirty = false
+    stateRef.current.hydrated = JSON.stringify([title, body, tagsText])
     setNote(created)
     setSavedAt(created.updatedAt)
     navigate(`/input/notes/${created.id}`, { replace: true })
@@ -233,15 +251,18 @@ export function NoteEditor() {
         <button
           type="button"
           className="btn-ghost"
-          disabled={!note || taskCreated}
+          disabled={!note || taskCreated || taskBusy}
           title={taskCreated ? '已在待办库创建，可去 待办 页查看（来源:速记 可溯源）' : '以这条速记为源创建一条待办'}
           onClick={() => {
-            if (!note || taskCreated) return
+            if (!note || taskCreated || taskBusy) return
+            setTaskBusy(true)
             const title = note.title || note.body.split('\n')[0].trim().slice(0, 60)
-            void createTask({ title, origin: { kind: 'note', refId: note.id } }).then(async (t) => {
-              await attachTaskToNote(note.id, t.id)
-              setTaskCreated(true)
-            })
+            void createTask({ title, origin: { kind: 'note', refId: note.id } })
+              .then(async (t) => {
+                await attachTaskToNote(note.id, t.id)
+                setTaskCreated(true)
+              })
+              .catch(() => setTaskBusy(false))
           }}
         >
           {taskCreated ? '✅ 已入待办' : '转待办'}

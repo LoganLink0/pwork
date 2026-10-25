@@ -36,7 +36,7 @@ describe('obsidianDaily（04 §6.2 vault 日报格式）', () => {
     expect(md).toContain('---')
     expect(md).toContain('date: 2026-08-31')
     expect(md).toContain('count: 1')
-    expect(md).toContain('sources: [少数派]')
+    expect(md).toContain('sources: ["少数派"]')
     expect(md).toContain('### 1. [AI 应用开源工具发布](https://sspai.com/1)')
     expect(md).toContain('来源：少数派 ｜ #AI 应用 ｜ 🎯机会')
     expect(md).toContain('> 我的想法：')
@@ -50,7 +50,7 @@ describe('obsidianDaily（04 §6.2 vault 日报格式）', () => {
 
   it('多来源去重列于 sources', () => {
     const md = obsidianDaily([mkItem(), mkItem({ id: 'b', sourceName: 'Hacker News', otFlag: null })], '2026-08-31')
-    expect(md).toContain('sources: [少数派, Hacker News]')
+    expect(md).toContain('sources: ["少数派", "Hacker News"]')
     expect(md).toContain('### 2. ')
   })
 })
