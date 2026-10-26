@@ -8,6 +8,94 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 const WHEEL_KEY: Code = Code::KeyQ;
 const WHEEL_LABEL: &str = "Ctrl+Alt+Q";
 
+/// 引导页/设置页写入网关 Key：合并进 gateway.env（保留用户手写的其它行），并热更新运行中的网关——
+/// 无需重启应用，写完即可发起连接测试
+#[tauri::command]
+fn save_gateway_key(
+    state: tauri::State<gateway::SharedConfig>,
+    app: tauri::AppHandle,
+    key: String,
+    base_url: String,
+    model: String,
+) -> Result<(), String> {
+    let key = key.trim().to_string();
+    let base_url = base_url.trim().to_string();
+    let model = model.trim().to_string();
+    if key.is_empty() {
+        return Err("Key 不能为空".into());
+    }
+    // env 文件一行一个值：换行可注入额外的键值行，必须拒绝（Key 本体常见 base64/连字符，等号合法）
+    if key.contains(['\n', '\r', '\0']) || key.starts_with('#') {
+        return Err("Key 含换行或注释符，不是合法的值".into());
+    }
+    for v in [&base_url, &model] {
+        if v.contains(['\n', '\r', '\0', '"']) {
+            return Err("上游地址/模型名含非法字符".into());
+        }
+    }
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let _ = std::fs::create_dir_all(&data_dir);
+    let file = data_dir.join("gateway.env");
+    let mut lines: Vec<String> = std::fs::read_to_string(&file)
+        .unwrap_or_default()
+        .lines()
+        .map(|l| l.trim_end().to_string())
+        .collect();
+    // 三个键整组重写：先删同名的旧行（含用户手写的重复行），值非空再追加；注释行不含「键=」形态不受影响
+    for (name, val) in [
+        ("PWORK_LLM_API_KEY", key),
+        ("PWORK_LLM_BASE_URL", base_url),
+        ("PWORK_LLM_MODEL", model),
+    ] {
+        lines.retain(|l| l.split('=').next().map(|k| k.trim() != name).unwrap_or(true));
+        if !val.is_empty() {
+            lines.push(format!("{name}={val}"));
+        }
+    }
+    std::fs::write(&file, format!("{}\n", lines.join("\n"))).map_err(|e| e.to_string())?;
+    // 热更新：重新从盘上加载（与启动时同一路径），后续请求立即用新 Key
+    *state.lock().unwrap() = gateway::GatewayConfig::load(&data_dir);
+    Ok(())
+}
+
+/// 引导页「一键部署」：在源码 worker 目录新开控制台窗口运行部署向导脚本（桌面版专属）。
+/// 接受源码根目录或 worker 目录两种填法。
+#[tauri::command]
+fn open_deploy_wizard(dir: String) -> Result<(), String> {
+    let dir = dir.trim().to_string();
+    if dir.is_empty() {
+        return Err("先填写源码目录".into());
+    }
+    let root = std::path::PathBuf::from(&dir);
+    if !root.is_dir() {
+        return Err(format!("目录不存在：{dir}"));
+    }
+    let worker_dir = if root.join("部署向导.cmd").is_file() {
+        root
+    } else if root.join("worker").join("部署向导.cmd").is_file() {
+        root.join("worker")
+    } else {
+        return Err("这个目录里没找到 部署向导.cmd——请填 PWORK 源码根目录或 worker 目录".into());
+    };
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NEW_CONSOLE 开独立窗口跑向导；/k 让窗口在脚本结束后保留（向导输出的端点/Token 要抄）
+        std::process::Command::new("cmd")
+            .args(["/k", "call 部署向导.cmd"])
+            .current_dir(&worker_dir)
+            .creation_flags(0x0010_0000)
+            .spawn()
+            .map_err(|e| format!("部署窗口启动失败：{e}"))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = worker_dir;
+        Err("仅支持 Windows".into())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -67,7 +155,8 @@ pub fn run() {
       // 8788 也可能是恶意进程冒名占位，用户应能察觉（安全审计 F12）
       let data_dir = app.path().app_data_dir()?;
       let _ = std::fs::create_dir_all(&data_dir);
-      gateway::start(data_dir, app.handle().clone());
+      let shared_gw = gateway::start(data_dir, app.handle().clone());
+      app.manage(shared_gw);
 
       // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走 Ctrl+K 面板）
       let mods = Modifiers::CONTROL | Modifiers::ALT;
@@ -75,6 +164,7 @@ pub fn run() {
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }

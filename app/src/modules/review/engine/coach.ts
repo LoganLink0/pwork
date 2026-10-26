@@ -25,7 +25,7 @@ export interface CoachAdapter {
 
 /* ------------------------------ 配置 ------------------------------ */
 
-export type CoachProvider = 'deepseek' | 'moonshot' | 'openai' | 'custom'
+export type CoachProvider = 'deepseek' | 'zhipu' | 'moonshot' | 'openai' | 'custom'
 
 export interface CoachConfig {
   mode: 'rule' | 'llm'
@@ -40,9 +40,19 @@ export interface CoachConfig {
 
 export const PROVIDER_PRESETS: Partial<Record<CoachProvider, { name: string; baseURL: string; model: string }>> = {
   deepseek: { name: 'DeepSeek', baseURL: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  zhipu: { name: '智谱', baseURL: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
   moonshot: { name: 'Moonshot Kimi', baseURL: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
   openai: { name: 'OpenAI', baseURL: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
 }
+
+/** 常用大模型厂商直达信息（2026-10-25 官方页面逐一查证）：引导页与设置页配置 AI 用——
+ *  keyPage 是各自开放平台「获取 API Key」页面的直达地址，baseURL/model 是网关侧默认接入参数 */
+export const AI_VENDORS: { id: CoachProvider; name: string; keyPage: string }[] = [
+  { id: 'deepseek', name: 'DeepSeek', keyPage: 'https://platform.deepseek.com/api_keys' },
+  { id: 'zhipu', name: '智谱', keyPage: 'https://open.bigmodel.cn/usercenter/apikeys' },
+  { id: 'moonshot', name: 'Moonshot Kimi', keyPage: 'https://platform.kimi.com/console/api-keys' },
+  { id: 'openai', name: 'OpenAI', keyPage: 'https://platform.openai.com/api-keys' },
+]
 
 const KEY = 'fupan-coach'
 
@@ -96,6 +106,25 @@ export async function probeGateway(url: string = DEFAULT_GATEWAY_URL): Promise<G
     return { online: false, chatConfigured: false }
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/** 网关连接测试：经网关发一条最小对话——Key 有效性以一次真实上游调用为准（通/不通都有明确结论）。
+ *  成功返回 {ok:true}；失败返回上游/网关的具体错误消息，供界面通知 */
+export async function testGatewayChat(url: string = DEFAULT_GATEWAY_URL, model = 'deepseek-chat'): Promise<{ ok: boolean; error?: string }> {
+  const base = url.replace(/\/+$/, '')
+  try {
+    const r = await fetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: '连接测试' }], max_tokens: 4, purpose: '连接测试' }),
+    })
+    if (r.ok) return { ok: true }
+    const j = (await r.json().catch(() => null)) as { error?: string | { message?: string } } | null
+    const err = typeof j?.error === 'string' ? j.error : j?.error?.message
+    return { ok: false, error: err ?? `HTTP ${r.status}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
 

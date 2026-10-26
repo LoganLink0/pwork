@@ -58,6 +58,7 @@ interface CollectState {
   removeSource: (id: string) => Promise<void>
   importRecommended: () => Promise<{ imported: number; skipped: number }>
   importJson: (text: string) => Promise<{ imported: number; skipped: number }>
+  importCatalog: (list: SourceInput[]) => Promise<{ imported: number; skipped: number }>
   setVote: (itemId: string, vote: 'want' | 'meh' | 'no' | null) => Promise<void>
   setNotes: (itemId: string, notes: string) => Promise<void>
   toggleKeep: (itemId: string) => Promise<void>
@@ -158,6 +159,14 @@ export const useCollect = create<CollectState>((set, get) => ({
   importJson: async (text) => {
     const list = JSON.parse(text) as { name?: string; url?: string; domain?: string; tier?: number }[]
     const r = await importSources(Array.isArray(list) ? list : [])
+    set({ sources: await listAllSources() })
+    return r
+  },
+
+  // 目录导入（引导页/信源页的 SourceCatalog 用）：写库后刷新 store——
+  // 2026-10-26 修复：组件曾直接调 db 层绕过 store，导入成功后信源页计数与列表不刷新
+  importCatalog: async (list) => {
+    const r = await importSources(list)
     set({ sources: await listAllSources() })
     return r
   },

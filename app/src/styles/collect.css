@@ -839,6 +839,24 @@ a.origin:hover {
   font-size: var(--fs-xs);
   color: var(--ink-faint);
 }
+/* 已导入徽标：紧贴名称右侧（不是顶到行尾），绿色与主题域灰标区分 */
+.src-catalog-item .cat.imported {
+  margin-left: var(--sp-1);
+  color: var(--ok);
+}
+.src-catalog-item .cat.imported + .cat {
+  margin-left: auto;
+}
+/* 引导页里目录吃满卡片余空：列表随卡撑高（信源页维持 260px 上限） */
+.welcome-stage .src-catalog {
+  flex: 1;
+  min-height: 0;
+}
+.welcome-stage .src-catalog-list {
+  flex: 1;
+  min-height: 220px;
+  max-height: none;
+}
 .src-catalog-foot {
   display: flex;
   align-items: center;

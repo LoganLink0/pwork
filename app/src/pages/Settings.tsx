@@ -7,8 +7,9 @@ import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
-import { loadCoachConfig, saveCoachConfig, llmConfigFrom, type CoachConfig } from '../modules/review/engine/coach'
+import { loadCoachConfig, saveCoachConfig, llmConfigFrom, AI_VENDORS, PROVIDER_PRESETS, type CoachConfig, type CoachProvider } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
+import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
 import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
 import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
@@ -163,6 +164,23 @@ export function Settings() {
   const [aiTestOk, setAiTestOk] = useState(false)
   const [usageBusy, setUsageBusy] = useState(false)
   const [usageMsg, setUsageMsg] = useState('')
+  // 网关 Key 直配（与引导页同款，2026-10-26）：选厂商 → 填 Key → 保存即测试（写 gateway.env/.env.local 并热更新）
+  const [gwVendor, setGwVendor] = useState<CoachProvider>(() => loadCoachConfig().provider)
+  const [gwKey, setGwKey] = useState('')
+  const [gwKeyBusy, setGwKeyBusy] = useState(false)
+  const [gwKeyMsg, setGwKeyMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const saveGatewayKey = async () => {
+    setGwKeyBusy(true)
+    setGwKeyMsg(null)
+    const r = await saveGatewayKeyAndTest(gwVendor, gwKey, ai.gatewayUrl || 'http://127.0.0.1:8788')
+    if (r.ok) {
+      saveAi({ ...ai, mode: 'llm', provider: r.vendor ?? gwVendor, baseURL: r.baseURL ?? '', apiKey: '', model: r.model ?? '', viaGateway: true })
+      setPinnedModel(r.model ?? null)
+      setGwKey('')
+    }
+    setGwKeyMsg({ ok: r.ok, text: r.message })
+    setGwKeyBusy(false)
+  }
   /** 网关侧固定的模型（PWORK_LLM_MODEL）：设了则浏览器端的模型字段不生效，明示避免困惑 */
   const [pinnedModel, setPinnedModel] = useState<string | null>(null)
   useEffect(() => {
@@ -685,7 +703,7 @@ export function Settings() {
                   <button type="button" className={!ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: false })}>浏览器直连</button>
                 </div>
                 <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  {ai.viaGateway ? 'Key 只存本机 .env.local，浏览器接触不到' : 'Key 明文存 localStorage，仅限本机个人使用'}
+                  {ai.viaGateway ? 'Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器接触不到' : 'Key 明文存 localStorage，仅限本机个人使用'}
                 </span>
               </div>
               {ai.viaGateway ? (
@@ -710,7 +728,7 @@ export function Settings() {
                           const r = await fetch(`${base}/health`)
                           const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean }
                           setAiTestOk(Boolean(j.ok && j.chatConfigured))
-                          setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但 .env.local 还没配置 PWORK_LLM_API_KEY')
+                          setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效')
                         } catch {
                           setAiTestOk(false)
                           setAiTestMsg(isDesktopApp() ? '无法连接网关——重启应用后再试' : '无法连接网关——先在 app 目录运行 npm run gateway')
@@ -776,12 +794,45 @@ export function Settings() {
                     </button>
                     {usageMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{usageMsg}</span>}
                   </div>
-                  <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
-                    {isDesktopApp() ? (
-                      <>网关随应用自动启动。Key 配置：在 <b>%APPDATA%/com.pwork.workbench/</b> 新建 <b>gateway.env</b>，写入一行 <b>PWORK_LLM_API_KEY=你的Key</b>（可选 <b>PWORK_LLM_BASE_URL=服务商地址</b>），重启应用生效。</>
-                    ) : (
-                      <>启动：app 目录运行 <b>npm run gateway</b>（仅绑定 127.0.0.1）。Key 配置：复制 <b>app/tools/.env.example</b> 为 <b>app/.env.local</b>，填写 PWORK_LLM_API_KEY 后重启网关。</>
-                    )}
+                  <div className="set-row" style={{ alignItems: 'flex-start' }}>
+                    <label>配置 Key</label>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                      <div className="ai-vendors">
+                        {AI_VENDORS.map((v) => (
+                          <div key={v.id} className={`ai-vendor${gwVendor === v.id ? ' on' : ''}`}>
+                            <button type="button" className="ai-vendor-pick" aria-pressed={gwVendor === v.id} onClick={() => setGwVendor(v.id)}>
+                              <b>{v.name}</b>
+                              <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
+                            </button>
+                            <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                        <input
+                          className="input"
+                          type="password"
+                          style={{ maxWidth: 420 }}
+                          placeholder={`粘贴${PROVIDER_PRESETS[gwVendor]?.name ?? ''}的 API Key`}
+                          value={gwKey}
+                          onChange={(e) => setGwKey(e.target.value)}
+                          aria-label="网关 API Key"
+                        />
+                        <button type="button" className="btn-primary" disabled={gwKeyBusy} onClick={() => void saveGatewayKey()}>
+                          {gwKeyBusy ? '测试中…' : '保存并测试'}
+                        </button>
+                      </div>
+                      {gwKeyMsg && (
+                        <div className={`notice${gwKeyMsg.ok ? ' notice-ok' : ' notice-warn'}`} role="status" data-testid="gw-key-msg">
+                          {gwKeyMsg.text}
+                        </div>
+                      )}
+                      <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                        {isDesktopApp()
+                          ? 'Key 写入本机应用数据目录的 gateway.env，立即生效无需重启；换厂商直接选卡重填。'
+                          : 'Key 写入本机源码 app 目录的 .env.local（网关需在运行），立即生效无需重启。'}
+                      </span>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -808,7 +859,7 @@ export function Settings() {
                 {pinnedModel ? (
                   <span className="val">
                     <b className="tnum">{pinnedModel}</b>
-                    　<span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>由网关固定（gateway.env 的 PWORK_LLM_MODEL）——换模型改网关配置后重启</span>
+                    　<span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>由网关固定（保存厂商选择时自动更新，立即生效）</span>
                   </span>
                 ) : (
                   <input
@@ -823,7 +874,7 @@ export function Settings() {
             </>
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            <b>外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机 .env.local，浏览器不接触。拔掉 AI，规则评分兜底，产品完整可用。
+            <b>外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，规则评分兜底，产品完整可用。
           </div>
         </div>
       </div>
@@ -836,7 +887,7 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v1.1.4</span>
+            <span className="val">v1.1.5</span>
           </div>
           <div className="set-row">
             <label>数据存放</label>

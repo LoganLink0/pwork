@@ -18,6 +18,7 @@ use serde_json::{json, Value};
 use tauri::Emitter;
 use tiny_http::{Header, Method, Response, Server};
 
+#[derive(Clone)]
 pub struct GatewayConfig {
     pub port: u16,
     pub chat_url: String,
@@ -28,6 +29,9 @@ pub struct GatewayConfig {
     pub search_key: String,
     pub usage_log: PathBuf,
 }
+
+/// 运行中网关的共享配置：save_gateway_key 命令写入后热更新（无需重启应用），请求线程每次取快照
+pub type SharedConfig = std::sync::Arc<Mutex<GatewayConfig>>;
 
 /// 解析 .env 形式的文件（KEY=VALUE，支持行注释与成对引号）
 fn parse_env_file(path: &PathBuf, out: &mut Vec<(String, String)>) {
@@ -245,23 +249,31 @@ fn log_usage(cfg: &GatewayConfig, req_body: &str, resp_text: &str, lock: &Mutex<
 
 /// 启动内嵌网关（独立线程，随应用退出而终止）。端口被占（比如开发时 Node 版在跑）时静默让位，
 /// 并向前端发 gateway-conflict 事件——占用者也可能是在冒名（安全审计 F12），用户应能察觉。
-pub fn start(data_dir: PathBuf, app: tauri::AppHandle) {
+/// 返回共享配置句柄：save_gateway_key 写入 gateway.env 后热更新，无需重启应用。
+pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
+    let shared: SharedConfig = Mutex::new(GatewayConfig::load(&data_dir)).into();
+    let state = shared.clone();
     thread::spawn(move || {
-        let cfg = GatewayConfig::load(&data_dir);
-        let addr = format!("127.0.0.1:{}", cfg.port);
+        let port = state.lock().unwrap().port;
+        let addr = format!("127.0.0.1:{port}");
         let Ok(server) = Server::http(&addr) else {
-            log::info!("[PWORK 网关] 端口 {} 已被占用（可能是开发版网关在跑），内嵌网关不启动", cfg.port);
+            log::info!("[PWORK 网关] 端口 {port} 已被占用（可能是开发版网关在跑），内嵌网关不启动");
             let _ = app.emit("gateway-conflict", ());
             return;
         };
-        log::info!(
-            "[PWORK 网关] http://127.0.0.1:{} ｜ 上游：{} ｜ Key：{}",
-            cfg.port,
-            normalize_upstream(&cfg.chat_url),
-            if cfg.chat_key.is_empty() { "未配置（/health 可用，对话返回 503）" } else { "已配置" }
-        );
+        {
+            let cfg = state.lock().unwrap();
+            log::info!(
+                "[PWORK 网关] http://127.0.0.1:{} ｜ 上游：{} ｜ Key：{}",
+                cfg.port,
+                normalize_upstream(&cfg.chat_url),
+                if cfg.chat_key.is_empty() { "未配置（/health 可用，对话返回 503）" } else { "已配置" }
+            );
+        }
         let usage_lock = Mutex::new(());
         for mut req in server.incoming_requests() {
+            // 每个请求取配置快照：save_gateway_key 的热更新立即对后续请求生效
+            let cfg = state.lock().unwrap().clone();
             let method = req.method().clone();
             let url = req.url().to_string();
             let origin = req
@@ -573,4 +585,5 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) {
             let _ = req.respond(r);
         }
     });
+    shared
 }

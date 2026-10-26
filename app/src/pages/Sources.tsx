@@ -146,7 +146,9 @@ export function Sources() {
       {catalogOpen && sources.length > 0 && (
         <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
           <h2>信源目录</h2>
-          <SourceCatalog onDone={setMsg} />
+          <div className="set-body">
+            <SourceCatalog onDone={setMsg} />
+          </div>
         </div>
       )}
 
@@ -200,7 +202,9 @@ export function Sources() {
           </div>
           <div className="set-card">
             <h2>信源目录</h2>
-            <SourceCatalog onDone={setMsg} />
+            <div className="set-body">
+              <SourceCatalog onDone={setMsg} />
+            </div>
           </div>
         </>
       ) : (

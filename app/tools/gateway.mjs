@@ -34,21 +34,46 @@ function loadEnv() {
 
 const env = loadEnv()
 const PORT = Number(env.PWORK_GATEWAY_PORT || 8788)
-const CHAT_URL = env.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
-const CHAT_KEY = env.PWORK_LLM_API_KEY || ''
+const USAGE_LOG = resolve(process.cwd(), 'gateway-usage.log')
+// 以下均为 let：POST /key 写入新配置后热更新（applyEnv），无需重启网关进程
+let CHAT_URL = env.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
+let CHAT_KEY = env.PWORK_LLM_API_KEY || ''
 // 模型固定（2026-10-19）：设了就以网关为准替换请求体里的 model——上游/模型是运维侧的事，
 // 浏览器里存的旧模型名（如换了厂商后的 glm-*）不该让用户手改。不设则原样透传。
-const CHAT_MODEL = env.PWORK_LLM_MODEL || ''
+let CHAT_MODEL = env.PWORK_LLM_MODEL || ''
 // 联网搜索（2026-10-19 起支持 DeepSeek 自研 Search API，默认跟随 LLM 上游——同一把 Key 的世界）：
 // 上游是 DeepSeek → POST /v1/tools/search {query,count}；是智谱 → tools 端点 web-search-pro。
 // 显式 PWORK_SEARCH_API_KEY/BASE_URL 优先；计费 DeepSeek ¥0.005/次（仅成功非空计费）/智谱 ¥0.03/次。
-const SEARCH_URL_DEFAULT = CHAT_URL.includes('bigmodel')
-  ? 'https://open.bigmodel.cn/api/paas/v4/tools'
-  : 'https://api.deepseek.com/v1/tools/search'
-const SEARCH_URL = env.PWORK_SEARCH_BASE_URL || SEARCH_URL_DEFAULT
-const SEARCH_MODEL = env.PWORK_SEARCH_MODEL || 'web-search-pro'
-const SEARCH_KEY = env.PWORK_SEARCH_API_KEY || CHAT_KEY
-const USAGE_LOG = resolve(process.cwd(), 'gateway-usage.log')
+let SEARCH_URL = env.PWORK_SEARCH_BASE_URL || defaultSearchUrl(CHAT_URL)
+let SEARCH_MODEL = env.PWORK_SEARCH_MODEL || 'web-search-pro'
+let SEARCH_KEY = env.PWORK_SEARCH_API_KEY || CHAT_KEY
+
+function defaultSearchUrl(chatUrl) {
+  return chatUrl.includes('bigmodel')
+    ? 'https://open.bigmodel.cn/api/paas/v4/tools'
+    : 'https://api.deepseek.com/v1/tools/search'
+}
+
+/** 配置热更新：/key 写盘后重算全部派生变量（与启动时同一套取值逻辑） */
+function applyEnv() {
+  const fresh = loadEnv()
+  CHAT_URL = fresh.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
+  CHAT_KEY = fresh.PWORK_LLM_API_KEY || ''
+  CHAT_MODEL = fresh.PWORK_LLM_MODEL || ''
+  SEARCH_URL = fresh.PWORK_SEARCH_BASE_URL || defaultSearchUrl(CHAT_URL)
+  SEARCH_MODEL = fresh.PWORK_SEARCH_MODEL || 'web-search-pro'
+  SEARCH_KEY = fresh.PWORK_SEARCH_API_KEY || CHAT_KEY
+}
+
+/** 合并写入 .env.local：同名键整组重写（先删旧行再追加新值），其它行与注释保留 */
+function mergeEnvFile(path, sets) {
+  const keys = Object.keys(sets)
+  const lines = (existsSync(path) ? readFileSync(path, 'utf8') : '').split(/\r?\n/)
+  const kept = lines.filter((l) => l.trim() === '' || l.trim().startsWith('#') || !keys.some((k) => l.trimStart().startsWith(`${k}=`)))
+  const out = kept.filter((l) => l.trim() !== '')
+  for (const [k, v] of Object.entries(sets)) if (v) out.push(`${k}=${v}`)
+  writeFileSync(path, `${out.join('\n')}\n`)
+}
 
 const json = (res, status, obj) => {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
@@ -118,6 +143,34 @@ const server = http.createServer(async (req, res) => {
       searchConfigured: Boolean(SEARCH_KEY),
       model: CHAT_MODEL || null,
       upstream: CHAT_URL.replace(/\/chat\/completions$/, ''),
+    })
+    return
+  }
+
+  // 配置写入（2026-10-26 引导页/设置页直配 Key）：合并写 .env.local 并热更新内存——写完即可连接测试。
+  // 暴露面与既有端点同级（本机回环来源限定，三道闸之后才到这里）；请求体里过的 Key 不落日志
+  if (path === '/key' && req.method === 'POST') {
+    readBody(req, res, async (body) => {
+      try {
+        const { key, baseUrl = '', model = '' } = JSON.parse(body || '{}')
+        if (typeof key !== 'string' || !key.trim()) {
+          json(res, 400, { ok: false, error: 'Key 不能为空' })
+          return
+        }
+        if (/[\n\r\0]/.test(key) || /[\n\r\0]/.test(baseUrl) || /[\n\r\0]/.test(model)) {
+          json(res, 400, { ok: false, error: 'Key/上游地址/模型名含换行等非法字符' })
+          return
+        }
+        mergeEnvFile(resolve(process.cwd(), '.env.local'), {
+          PWORK_LLM_API_KEY: key.trim(),
+          PWORK_LLM_BASE_URL: String(baseUrl).trim(),
+          PWORK_LLM_MODEL: String(model).trim(),
+        })
+        applyEnv()
+        json(res, 200, { ok: true })
+      } catch (e) {
+        json(res, 500, { ok: false, error: `配置写入失败：${e instanceof Error ? e.message : String(e)}` })
+      }
     })
     return
   }
