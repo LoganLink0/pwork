@@ -1,0 +1,36 @@
+name: Deploy site to GitHub Pages
+
+# 介绍页（site/ 目录，纯静态单页）部署到 GitHub Pages：
+# site/ 有改动并推到 master 时自动发布；也支持手动触发（Actions 页面 → Run workflow）。
+# enablement: true 会在首次运行时自动开通仓库的 Pages（源=GitHub Actions），无需网页设置。
+on:
+  push:
+    branches: [master]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
