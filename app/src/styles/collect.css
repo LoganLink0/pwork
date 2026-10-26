@@ -820,9 +820,10 @@ a.origin:hover {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: var(--sp-2) var(--sp-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
+  display: grid;
+  /* 宽容器（引导右栏/信源页）自动双列摊薄纵向长度，窄容器退单列 */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-1) var(--sp-4);
 }
 .src-catalog-item {
   display: flex;
@@ -858,16 +859,6 @@ a.origin:hover {
   /* 辅助信息降一号（2026-10-26 用户反馈：与按钮、正文同字号显得同级不规范） */
   font-size: var(--fs-xs);
   color: var(--ink-faint);
-}
-/* 引导页里目录优先伸长吃余空（封顶 46vh 防小屏溢出），超出部分交给正文区的均匀分布 */
-.welcome-stage .src-catalog {
-  flex: 1;
-  min-height: 0;
-}
-.welcome-stage .src-catalog-list {
-  flex: 1;
-  min-height: 180px;
-  max-height: 46vh;
 }
 
 /* ---------- 目标：时间条 / 期限输入 / 进度轨迹 ---------- */

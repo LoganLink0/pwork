@@ -1616,7 +1616,11 @@ a.mcard .m-link:hover {
   color: var(--ok);
 }
 
-/* ============ 首访引导：全屏遮罩分步式（走完/跳过才进入主界面） ============ */
+/* ============ 首访引导：宽卡左右分栏（2026-10-26 第三次返工，VISUALMASTER 纪律） ============
+   intent: 布局=左右分栏宽卡；主次：页面利用率优先，密度靠分栏摊薄。
+   骨架：顶部一行（品牌 + 带步骤名的 stepper，步骤标记在卡外）；
+   宽卡内左栏读区（步骤名大标题+导语+提示，低密度、浅底）+ 右栏做区（操作组块）；
+   翻页按钮在卡底。窄屏 (<900px) 两栏堆叠。 */
 .welcome-veil {
   position: fixed;
   inset: 0;
@@ -1626,83 +1630,246 @@ a.mcard .m-link:hover {
   animation: overlay-in var(--dur-1) var(--ease) both;
 }
 .welcome-stage {
-  /* 宽度吃满视口（96%），高度方向自适应一屏：第一步四卡单行排布，不需要滚动就能点到按钮。
-     余空消化（2026-10-26 两次用户返工定稿）：步骤卡吃满头尾之间的高度，卡内各行用
-     space-evenly 均匀分布——空白被均分进每个行间距，任何窗口高度都不出现空白堆 */
+  /* height 100%（veil 是 fixed 定高容器）：卡片经 flex 拿到确定高度预算，
+     超高内容在左右栏内滚——五步任何窗口高度整页零滚动 */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
+}
+.welcome-top {
   width: min(1840px, 96vw);
-  margin: 0 auto;
-  padding: var(--sp-6) var(--sp-4) var(--sp-5);
+  flex: none;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--sp-4);
-  min-height: 100%;
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
 }
-.welcome-stage > .set-card {
-  flex: 1;
-  min-height: 0;
+.welcome-brand {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+/* stepper：带步骤名的进度条——当前步高亮、已过步可点回跳 */
+.welcome-steps {
   display: flex;
-  flex-direction: column;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
 }
-/* 标题区固定在卡顶；正文区拿走剩余高度并均匀分布各行（gap 是下限，视口越高行距越宽） */
-.welcome-stage .set-card h2 {
-  font-size: var(--fs-xl);
-  padding: var(--sp-5) var(--sp-5) var(--sp-2);
-}
-.welcome-stage .set-card .desc {
-  margin-top: 0;
-  margin-bottom: var(--sp-3);
-}
-.welcome-stage > .set-card > .set-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-5) var(--sp-5);
-}
-.welcome-foot {
+.welcome-step {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-.welcome-head h1 {
-  margin: 0 0 var(--sp-1);
-  font-size: var(--fs-hero);
-  letter-spacing: -0.02em;
-}
-.welcome-dots {
-  display: flex;
   gap: var(--sp-2);
-  margin-top: var(--sp-3);
-}
-.welcome-dot {
-  width: 28px;
-  height: 6px;
-  border-radius: 999px;
   border: none;
-  padding: 0;
-  background: var(--line-strong);
+  background: none;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: 999px;
   cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
-.welcome-dot.done {
-  background: var(--accent);
-  opacity: 0.55;
-}
-.welcome-dot.on {
-  background: var(--accent);
-}
-.welcome-foot {
-  display: flex;
+.welcome-step .no {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-size: var(--fs-xs);
+  line-height: 1;
+}
+.welcome-step:hover {
+  color: var(--ink-soft);
+  background: var(--surface-2);
+}
+.welcome-step.done {
+  color: var(--ink-soft);
+}
+.welcome-step.done .no {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.welcome-step.on {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--surface-2);
+}
+.welcome-step.on .no {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
-/* AI 卡厂商选择（2026-10-26）：四家常用大模型厂商卡片——选中态高亮，右下角直达拿 Key 页 */
+.welcome-card {
+  flex: 1;
+  min-height: 0;
+  width: min(1840px, 96vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.welcome-card-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+/* 左栏读区：浅底+右边线与做区分隔；标题三层（引题/大标题/说明）+ 提示列表，纵向居中。
+   safe center：内容超出栏高时安全退回顶部对齐——普通 center 溢出会裁掉顶部且滚不回来 */
+.welcome-left {
+  flex: none;
+  /* 占卡宽约四分之一（2026-10-26 用户拍板：20% 多即可，把宽度让给右侧内容）；
+     clamp 夹紧防极端窄/宽屏失衡 */
+  width: clamp(280px, 25%, 360px);
+  padding: var(--sp-5) var(--sp-4);
+  background: var(--surface-2);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  justify-content: safe center;
+  gap: var(--sp-3);
+  overflow-y: auto;
+}
+.left-kicker {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent-text);
+}
+.welcome-left h2 {
+  margin: 0;
+  font-size: var(--fs-hero);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.left-desc {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.8;
+  color: var(--ink-soft);
+}
+.left-tips {
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+/* 提示条目：主题色短横做标记（视觉锚点），与说明文字拉开层级 */
+.left-tips li {
+  position: relative;
+  padding-left: var(--sp-4);
+}
+.left-tips li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+/* 右栏做区：操作组块纵向舒展（safe center：溢出时安全退回顶部对齐） */
+.welcome-right {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-6) var(--sp-6) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  justify-content: safe center;
+  gap: var(--sp-6);
+  overflow-y: auto;
+}
+.welcome-card-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-6);
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* 组块：组标题（含行内说明）+ 紧凑内容——亲密性的基本单位 */
+.wgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.wgroup-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+.wgroup-title .sub {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.wgroup .caption {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.key-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.key-row .input {
+  min-width: 200px;
+}
+/* 行内文字链接按钮（caption 里的「设置 → AI」等） */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 引导卡内的胶囊添加框：紧跟胶囊流式排布（覆盖信源页「锚定右缘」的全局规则——
+   那条规则把输入框钉死行尾，标签/胶囊/输入框被撕成三段，亲密性全毁） */
+.welcome-card .chips {
+  flex-wrap: wrap;
+}
+.welcome-card .chips > input.input {
+  margin-left: 0;
+  width: 160px;
+  flex: none;
+}
+
+/* AI 卡厂商选择：四厂商一排（右栏宽足够），选中态描边+浅底+✓，直达拿 Key 页 */
 .ai-vendors {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--sp-2);
 }
 .ai-vendor {
@@ -1716,6 +1883,7 @@ a.mcard .m-link:hover {
 }
 .ai-vendor.on {
   border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .ai-vendor-pick {
@@ -1735,6 +1903,11 @@ a.mcard .m-link:hover {
   color: var(--ink-faint);
   font-size: var(--fs-xs);
 }
+.ai-vendor-check {
+  color: var(--ok);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
 .ai-vendor > a {
   font-size: var(--fs-xs);
   color: var(--accent-text);
@@ -1752,11 +1925,15 @@ a.mcard .m-link:hover {
   border-left-color: var(--danger);
 }
 
-/* 认识工作台：四模块能力卡（宽屏单行四卡——宽度利用率最大且一屏不滚动；各带实拍演示视频，循环静音播放） */
+/* 认识工作台：四模块卡 2×2（卡内文字限两行——视频本身就是演示，长说明截断）。
+   网格宽度按可用高度反推（450 = 顶行/卡脚/栏边距/两行卡文字实测预算），
+   任何窗口高度完整可见零滚动；超宽屏（≥1500px）改横排吃满右栏 */
 .welcome-mods {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--sp-3);
+  width: min(100%, calc((100vh - 450px) * 1.6));
+  margin: 0 auto;
 }
 .welcome-mod {
   display: flex;
@@ -1788,9 +1965,52 @@ a.mcard .m-link:hover {
 .welcome-mod-body b {
   color: var(--ink);
 }
+.welcome-mod-body .mod-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
 .welcome-mod-body .text-btn {
   align-self: flex-start;
   margin-top: auto;
+}
+@media (min-width: 1500px) {
+  /* 超宽屏：横排大视频（左视频右文字），高度上限 30vh，文字保底 220px 宽 */
+  .welcome-mods {
+    width: 100%;
+  }
+  .welcome-mod {
+    flex-direction: row;
+  }
+  .welcome-mod video {
+    flex: none;
+    align-self: center;
+    width: auto;
+    height: 30vh;
+    max-width: calc(100% - 220px);
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+  }
+  .welcome-mod-body .mod-desc {
+    -webkit-line-clamp: 4;
+  }
+}
+
+/* 引导分栏的窄屏退化：<900px 左右栏堆叠（读区在上、做区在下），stepper 可换行 */
+@media (max-width: 900px) {
+  .welcome-card-main { flex-direction: column; }
+  .welcome-left {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  }
+  .welcome-left h2 { font-size: var(--fs-xl); }
+  .welcome-right { padding: var(--sp-5) var(--sp-5) var(--sp-3); justify-content: flex-start; }
+  .welcome-top { flex-direction: column; align-items: flex-start; }
 }
 
 /* 帮助-快速上手：模块行（动图缩略 + 能力说明 + 直达） */
@@ -1815,7 +2035,7 @@ a.mcard .m-link:hover {
   background: var(--surface-2);
 }
 @media (max-width: 1000px) {
-  /* 中屏：单行放不下四个可读视频，回 2×2（此宽度下高度足够） */
+  /* 中屏：右栏变窄，视频 2×2 保持（窄屏媒体查询里另有堆叠规则） */
   .welcome-mods { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 700px) {

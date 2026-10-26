@@ -44,10 +44,10 @@ describe('首访引导（全屏遮罩分步式）', () => {
     await user.click(screen.getByRole('button', { name: '下一步' }))
     expect(await screen.findByRole('heading', { name: '采集偏好' })).toBeInTheDocument()
 
-    // 第 4 步：AI 功能（厂商直达 + 直接填 Key + 保存即测试；浏览器环境显示 .env.local 承诺）
+    // 第 4 步：AI 功能（左栏读区 + 右栏厂商/Key 操作组块）
     await user.click(screen.getByRole('button', { name: '下一步' }))
     expect(await screen.findByRole('heading', { name: 'AI 功能（可选）' })).toBeInTheDocument()
-    expect(screen.getByText(/不配也完全能用/)).toBeInTheDocument()
+    expect(screen.getByText(/配不配都行/)).toBeInTheDocument()
     // 四家常用厂商卡，各带官网「拿 Key」直达链接；点击切换所选厂商
     expect(document.querySelectorAll('.ai-vendor').length).toBe(4)
     expect(screen.getAllByRole('link', { name: /拿 Key/ }).length).toBe(4)
@@ -56,12 +56,12 @@ describe('首访引导（全屏遮罩分步式）', () => {
     // 空 Key 直接点测试 → 显性提示（不静默失败）
     await user.click(screen.getByRole('button', { name: '保存并测试' }))
     expect(await screen.findByTestId('ai-test-msg')).toHaveTextContent('先粘贴 API Key')
-    expect(screen.getByText(/Key 只写进你电脑源码目录的 \.env\.local 文件/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /打开 设置 → AI/ })).toBeInTheDocument()
+    expect(screen.getByText(/Key 写进本机 \.env\.local，立即生效/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '设置 → AI' })).toBeInTheDocument()
 
-    // 第 5 步：上云（Cloudflare 指引与回填输入框）
+    // 第 5 步：上云（左栏含注册指引，右栏部署与回填）
     await user.click(screen.getByRole('button', { name: '下一步' }))
-    expect(await screen.findByText(/Cloudflare 注册三句话/)).toBeInTheDocument()
+    expect(await screen.findByText(/可选的进阶/)).toBeInTheDocument()
 
     // 走完进入主界面，标记写入
     await user.click(screen.getByRole('button', { name: '开始使用 →' }))

@@ -30,15 +30,29 @@ async function ask(question) {
   }
 }
 
-/** 运行命令（继承控制台输出，交互命令可用）；返回是否成功 */
-function run(cmd, args) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: true, cwd: ROOT })
+/** 运行命令（继承控制台输出，交互命令可用）；返回是否成功。
+ *  入参为单条命令字符串（不传参数数组——args+shell:true 触发 Node DEP0190 废弃警告，
+ *  警告混进中文提示里刷屏，2026-10-26 实测用户被日志墙淹没） */
+function run(cmdline) {
+  const r = spawnSync(cmdline, { stdio: 'inherit', shell: true, cwd: ROOT })
   return r.status === 0
 }
 
 /** 运行并捕获输出（解析用） */
-function runCapture(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: 'utf8', shell: true, cwd: ROOT })
+function runCapture(cmdline) {
+  const r = spawnSync(cmdline, { encoding: 'utf8', shell: true, cwd: ROOT })
+  return { ok: r.status === 0, out: `${r.stdout ?? ''}${r.stderr ?? ''}` }
+}
+
+/** 登录专用：捕获输出（不透传 wrangler 日志墙），结果由调用方摘要呈现 */
+function runLogin() {
+  const r = spawnSync('npx wrangler login', {
+    stdio: ['inherit', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    shell: true,
+    cwd: ROOT,
+    timeout: 180_000,
+  })
   return { ok: r.status === 0, out: `${r.stdout ?? ''}${r.stderr ?? ''}` }
 }
 
@@ -60,12 +74,12 @@ export function patchToml(key, value) {
 
 /** 建 D1（已存在时自动从 d1 list 取回 id） */
 async function ensureDatabase() {
-  const created = runCapture('npx', ['wrangler', 'd1', 'create', DB_NAME])
+  const created = runCapture(`npx wrangler d1 create ${DB_NAME}`)
   let id = parseDatabaseId(created.out)
   if (id) return id
   if (/already exists/i.test(created.out)) {
     log('  数据库已存在，取回其 id...')
-    const list = runCapture('npx', ['wrangler', 'd1', 'list', '--json'])
+    const list = runCapture('npx wrangler d1 list --json')
     try {
       const rows = JSON.parse(list.out.trim().slice(list.out.trim().search(/\[/)))
       const row = rows.find((r) => r.name === DB_NAME)
@@ -101,29 +115,44 @@ async function main() {
   log('\n[1/6] 安装依赖（首次约 1 分钟）...')
   if (DRY) {
     log('  [dry] 跳过真实安装')
-  } else if (!run('npm', ['install', '--no-fund', '--no-audit'])) {
+  } else if (!run('npm install --no-fund --no-audit')) {
     die('npm install 失败，请检查网络后重试。')
     await ask('按回车退出...')
     return
   }
 
-  // [2/6] 登录
+  // [2/6] 登录（输出治理 2026-10-26：不透传 wrangler 日志——OAuth 网址只在失败兜底时折叠成
+  // 一行给出；超时/失败给具体原因与下一步，不再让英文堆栈淹没中文提示）
   log('\n[2/6] Cloudflare 账号')
   log('  还没有账号？先用邮箱注册（免费计划，无需信用卡）：')
   log('  https://dash.cloudflare.com/sign-up')
   await ask('注册/登录准备好后，按回车打开浏览器授权登录...')
-  log('  正在打开浏览器授权...')
+  log('  正在打开浏览器授权（在浏览器里点「Allow」即完成）...')
   if (DRY) {
     log('  [dry] 跳过真实登录')
-  } else if (!run('npx', ['wrangler', 'login'])) {
-    die('登录失败/未完成授权。请重跑本向导。')
-    await ask('按回车退出...')
-    return
+  } else {
+    const login = runLogin()
+    if (login.ok) {
+      log('  [OK] 已登录')
+    } else {
+      const url = login.out.match(/https:\/\/dash\.cloudflare\.com\/oauth2\/auth\S+/)?.[0]
+      const timedOut = /timed? ?out|超时/i.test(login.out)
+      line()
+      if (url) {
+        log('  浏览器没弹出来的话，手动复制这一行到浏览器打开：')
+        log(`  ${url}`)
+      }
+      if (timedOut) {
+        die('授权超时（3 分钟内没在浏览器完成登录）。常见原因：①浏览器没自动弹出——用上面的网址手动打开后再试；②网络访问 Cloudflare 不稳定——换个网络或稍后重跑本向导。')
+      } else {
+        const last = login.out.trim().split(/\r?\n/).filter(Boolean).at(-1) ?? ''
+        die(`登录未完成：${last.slice(0, 160) || 'wrangler 未返回原因'}。重跑本向导再试一次即可。`)
+      }
+      line()
+      await ask('按回车退出...')
+      return
+    }
   }
-  log('  [OK] 已登录')
-  log('  （浏览器若打开了 workers.dev 的"授权成功"页并显示超时——忽略即可，')
-  log('    那是装饰页；终端上一行的 Successfully logged in 才是真实结果。workers.dev')
-  log('    域名在大陆网络常不可达，你的登录凭证走的是本机回调，不受影响。）')
 
   // [3/6] 数据库
   log(`\n[3/6] 创建数据库 D1（${DB_NAME}）...`)
@@ -143,7 +172,7 @@ async function main() {
   log('\n[4/6] 初始化数据表...')
   if (DRY) {
     log('  [dry] 跳过远程建表')
-  } else if (!run('npx', ['wrangler', 'd1', 'execute', DB_NAME, '--remote', '--file=./schema.sql'])) {
+  } else if (!run(`npx wrangler d1 execute ${DB_NAME} --remote --file=./schema.sql`)) {
     die('建表失败，请检查上方错误（常见：网络抖动，重跑即可）。')
     await ask('按回车退出...')
     return
@@ -158,7 +187,7 @@ async function main() {
     log('  [dry] 演示设置 secret')
   } else {
     // Token 走 secret，不写 wrangler.toml——toml 被 git 跟踪，写进去等于凭据进仓库（转公开即泄露）
-    const r = spawnSync('npx', ['wrangler', 'secret', 'put', 'TOKEN'], {
+    const r = spawnSync('npx wrangler secret put TOKEN', {
       input: token + '\n', shell: true, cwd: ROOT, encoding: 'utf8',
     })
     if (r.status !== 0) {
@@ -174,8 +203,9 @@ async function main() {
   if (DRY) {
     log('  [dry] 跳过真实部署')
   } else {
-    const deployed = runCapture('npx', ['wrangler', 'deploy'])
-    console.log(deployed.out)
+    const deployed = runCapture('npx wrangler deploy')
+    // 只保留有内容的行（空行与进度动画残迹不进终端）
+    console.log(deployed.out.split(/\r?\n/).filter((l) => l.trim()).join('\n'))
     if (!deployed.ok) {
       die('部署失败，请把上方错误信息复制出来排查（常见：网络。重跑本向导即可，已完成的步骤会自动跳过）。')
       await ask('按回车退出...')
