@@ -116,7 +116,7 @@ export function Sidebar() {
       <div className="spacer" />
       <a
         className="gh-btn"
-        href="https://github.com/israelberne/pwork"
+        href="https://github.com/LoganLink0/pwork"
         target="_blank"
         rel="noreferrer noopener"
       >
