@@ -20,7 +20,8 @@ describe('信源目录导入', () => {
     const tier1 = SOURCE_CATALOG.flatMap((g) => g.sources).filter((e) => e.tier === 1)
     expect(tier1.length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: new RegExp(`导入所选 ${tier1.length} 个`) }))
+    const btn1 = await screen.findByRole('button', { name: new RegExp(`导入所选 ${tier1.length} 个`) })
+    await user.click(btn1)
 
     // store 刷新（修复点：此前停在空数组，信源页显示「0 个活跃 / 共 0」）
     await waitFor(() => expect(useCollect.getState().sources.length).toBe(tier1.length))
@@ -29,8 +30,10 @@ describe('信源目录导入', () => {
     expect(document.querySelectorAll('.cat.imported').length).toBe(firstDomainTier1.length)
     expect(msgs[0]).toMatch(/^已导入 \d+ 个信源/)
 
-    // 再次导入：按地址去重不产生重复行，onDone 回报都已导入过
-    await user.click(screen.getByRole('button', { name: /导入所选/ }))
+    // 再次导入：等按钮从「导入中…」复位后点击，按地址去重不产生重复行，onDone 回报都已导入过
+    const btn2 = await screen.findByRole('button', { name: /导入所选/ })
+    await waitFor(() => expect(btn2).toBeEnabled())
+    await user.click(btn2)
     await waitFor(() => expect(msgs[1]).toMatch(/都已导入过/))
     expect(useCollect.getState().sources.length).toBe(tier1.length)
   })

@@ -807,7 +807,7 @@ a.origin:hover {
 .src-catalog {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
 }
 .src-catalog-domains {
   display: flex;
@@ -815,7 +815,7 @@ a.origin:hover {
   gap: var(--sp-1);
 }
 .src-catalog-list {
-  max-height: 260px;
+  max-height: 42vh;
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -828,7 +828,7 @@ a.origin:hover {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-1) 0;
+  padding: var(--sp-2) 0;
   cursor: pointer;
 }
 .src-catalog-item .name {
@@ -847,16 +847,6 @@ a.origin:hover {
 .src-catalog-item .cat.imported + .cat {
   margin-left: auto;
 }
-/* 引导页里目录吃满卡片余空：列表随卡撑高（信源页维持 260px 上限） */
-.welcome-stage .src-catalog {
-  flex: 1;
-  min-height: 0;
-}
-.welcome-stage .src-catalog-list {
-  flex: 1;
-  min-height: 220px;
-  max-height: none;
-}
 .src-catalog-foot {
   display: flex;
   align-items: center;
@@ -865,6 +855,9 @@ a.origin:hover {
 .src-catalog-foot .sub {
   margin: 0;
   flex: 1;
+  /* 辅助信息降一号（2026-10-26 用户反馈：与按钮、正文同字号显得同级不规范） */
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
 }
 
 /* ---------- 目标：时间条 / 期限输入 / 进度轨迹 ---------- */

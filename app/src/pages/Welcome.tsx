@@ -60,7 +60,7 @@ export function Welcome() {
     }
   }, [gwMode, gwUrl])
 
-  // ── 一键部署（第 5 步，桌面版）：源码目录记忆 + 新窗口跑部署向导 ──
+  // ── 一键部署（第 5 步，桌面版）：文件夹选择框选源码目录 + 新窗口跑部署向导 ──
   const [deployDir, setDeployDir] = useState(() => localStorage.getItem('pwork-deploy-src') ?? '')
   const [deploying, setDeploying] = useState(false)
 
@@ -108,17 +108,30 @@ export function Welcome() {
     setAiBusy(false)
   }
 
-  /** 一键部署（桌面版）：新控制台窗口跑源码 worker 目录的部署向导，路径记住下次直接用 */
-  const startDeploy = async () => {
-    if (!deployDir.trim()) {
-      setMsg('先填写 PWORK 源码目录（源码根目录或 worker 目录都可以）')
-      return
+  /** 一键部署（桌面版）：弹文件夹选择框选 PWORK 源码目录——普通用户不该手粘路径；取消选择则不动 */
+  const pickAndDeploy = async () => {
+    setDeploying(true)
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const picked = await open({ directory: true, multiple: false, title: '选择 PWORK 源码文件夹' })
+      if (typeof picked !== 'string' || !picked.trim()) return
+      setDeployDir(picked)
+      localStorage.setItem('pwork-deploy-src', picked)
+      await runDeploy(picked)
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDeploying(false)
     }
+  }
+
+  /** 在新窗口跑部署向导（pickAndDeploy 选完调用；也供「用上次的文件夹」直达） */
+  const runDeploy = async (dir: string = deployDir) => {
+    if (!dir.trim()) return
     setDeploying(true)
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_deploy_wizard', { dir: deployDir.trim() })
-      localStorage.setItem('pwork-deploy-src', deployDir.trim())
+      await invoke('open_deploy_wizard', { dir: dir.trim() })
       setMsg('部署窗口已在新窗口打开——跟着向导走完（约 10 分钟），结束时它打印的端点地址和 Token 填到下面')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
@@ -356,25 +369,28 @@ export function Welcome() {
               </div>
               {desktop ? (
                 <>
-                  <div className="set-row" style={{ alignItems: 'flex-start', paddingTop: 'var(--sp-3)' }}>
+                  <div className="set-row" style={{ paddingTop: 'var(--sp-3)' }}>
                     <label>一键部署</label>
-                    <div style={{ display: 'flex', gap: 'var(--sp-2)', flex: 1, minWidth: 0, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <input
-                        className="input"
-                        placeholder="PWORK 源码目录（如 E:\AIPROJECT-GLM\PWORK）"
-                        value={deployDir}
-                        onChange={(e) => setDeployDir(e.target.value)}
-                        aria-label="源码目录"
-                      />
-                      <button type="button" className="btn-primary" disabled={deploying} onClick={() => void startDeploy()}>
-                        {deploying ? '启动中…' : '开始一键部署'}
-                      </button>
-                    </div>
+                    <button type="button" className="btn-primary" disabled={deploying} onClick={() => void pickAndDeploy()}>
+                      {deploying ? '启动中…' : '选择文件夹，开始部署'}
+                    </button>
+                    <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                      弹出选择框后，选中 PWORK 源码文件夹即可
+                    </span>
                   </div>
+                  {deployDir && (
+                    <div className="set-row">
+                      <label></label>
+                      <button type="button" className="btn-ghost" disabled={deploying} onClick={() => void runDeploy()}>
+                        用上次的文件夹直接部署
+                      </button>
+                      <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>{deployDir}</span>
+                    </div>
+                  )}
                   <div className="set-row">
                     <label>怎么走</label>
                     <span className="val" style={{ color: 'var(--ink-soft)' }}>
-                      点按钮会在<b>新窗口</b>运行源码 worker 目录里的部署向导，中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>，回到这里填到下面。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
+                      选完文件夹会在<b>新窗口</b>运行部署向导，中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>，回到这里填到下面。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
                     </span>
                   </div>
                 </>

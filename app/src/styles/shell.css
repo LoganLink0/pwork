@@ -1626,29 +1626,35 @@ a.mcard .m-link:hover {
   animation: overlay-in var(--dur-1) var(--ease) both;
 }
 .welcome-stage {
-  /* 宽度吃满视口（96%），高度方向自适应一屏：第一步四卡单行排布，不需要滚动就能点到按钮 */
+  /* 宽度吃满视口（96%），高度方向自适应一屏：第一步四卡单行排布，不需要滚动就能点到按钮。
+     下方余空交给元素间距消化（2026-10-26 用户拍板：不撑满卡片，拉大间距） */
   width: min(1840px, 96vw);
   margin: 0 auto;
-  padding: var(--sp-5) var(--sp-4) var(--sp-4);
+  padding: var(--sp-6) var(--sp-4) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-5);
   min-height: 100%;
 }
-/* 步骤卡纵向撑满头尾之间的全部余空（2026-10-26 用户反馈：卡片只占自然高度，
-   页脚下方堆积 1/3 屏空白）；卡内内容仍从顶部排，空白被卡边框收编 */
-.welcome-stage > .set-card {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+/* 引导内间距全面放大（消化纵向余空）：标题区、行距、页脚留白 */
+.welcome-stage .set-card h2 {
+  font-size: var(--fs-xl);
+  padding: var(--sp-5) var(--sp-5) var(--sp-2);
 }
-.welcome-stage > .set-card > .set-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+.welcome-stage .set-card .desc {
+  margin-top: 0;
+  margin-bottom: var(--sp-4);
+}
+.welcome-stage .set-body {
+  padding: var(--sp-2) var(--sp-5) var(--sp-6);
+}
+.welcome-stage .set-row {
+  padding: var(--sp-3) 0;
+}
+.welcome-foot {
+  /* 贴底：内容不足一屏时余空留在卡与页脚之间（间距已放大），页脚稳定在屏幕底部 */
+  margin-top: auto;
+  padding-top: var(--sp-4);
 }
 .welcome-head h1 {
   margin: 0 0 var(--sp-1);
@@ -1681,7 +1687,6 @@ a.mcard .m-link:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--sp-2);
 }
 
 /* AI 卡厂商选择（2026-10-26）：四家常用大模型厂商卡片——选中态高亮，右下角直达拿 Key 页 */
