@@ -1627,34 +1627,44 @@ a.mcard .m-link:hover {
 }
 .welcome-stage {
   /* 宽度吃满视口（96%），高度方向自适应一屏：第一步四卡单行排布，不需要滚动就能点到按钮。
-     下方余空交给元素间距消化（2026-10-26 用户拍板：不撑满卡片，拉大间距） */
+     余空消化（2026-10-26 两次用户返工定稿）：步骤卡吃满头尾之间的高度，卡内各行用
+     space-evenly 均匀分布——空白被均分进每个行间距，任何窗口高度都不出现空白堆 */
   width: min(1840px, 96vw);
   margin: 0 auto;
   padding: var(--sp-6) var(--sp-4) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
+  gap: var(--sp-4);
   min-height: 100%;
 }
-/* 引导内间距全面放大（消化纵向余空）：标题区、行距、页脚留白 */
+.welcome-stage > .set-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* 标题区固定在卡顶；正文区拿走剩余高度并均匀分布各行（gap 是下限，视口越高行距越宽） */
 .welcome-stage .set-card h2 {
   font-size: var(--fs-xl);
   padding: var(--sp-5) var(--sp-5) var(--sp-2);
 }
 .welcome-stage .set-card .desc {
   margin-top: 0;
-  margin-bottom: var(--sp-4);
+  margin-bottom: var(--sp-3);
 }
-.welcome-stage .set-body {
-  padding: var(--sp-2) var(--sp-5) var(--sp-6);
-}
-.welcome-stage .set-row {
-  padding: var(--sp-3) 0;
+.welcome-stage > .set-card > .set-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-5) var(--sp-5);
 }
 .welcome-foot {
-  /* 贴底：内容不足一屏时余空留在卡与页脚之间（间距已放大），页脚稳定在屏幕底部 */
-  margin-top: auto;
-  padding-top: var(--sp-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .welcome-head h1 {
   margin: 0 0 var(--sp-1);

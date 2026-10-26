@@ -11,21 +11,33 @@ import { applyTheme, loadTheme } from './engine/appearance.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
 import { useUi } from './store/ui.ts'
 import { installErrorCapture, track } from './engine/errorLog.ts'
+import { isDesktopApp } from './engine/platform.ts'
 
 // 错误捕获最先安装：之后任何未捕获错误都会记录 + 顶出错误条
 installErrorCapture()
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
-// PWA Service Worker：离线可用、安装到主屏。
+
+// PWA Service Worker：网页版离线可用、安装到主屏。
 // prompt 模式：新版本就绪后顶栏出更新按钮——必须把 registerSW 返回的激活函数传进去，
-// 只 location.reload() 不会激活 waiting 状态的 SW，刷新后仍由旧 SW 供页
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    useUi.getState().setUpdateReady(true, () => updateSW())
-  },
-})
+// 只 location.reload() 不会激活 waiting 状态的 SW，刷新后仍由旧 SW 供页。
+// 桌面版不注册并注销历史注册：桌面资源内嵌在应用里，SW 缓存会在升级后拦截请求供出旧界面
+// （2026-10-26 实测：1.1.6 升级后用户看到的仍是 1.1.5 的界面，根因即此），桌面完全不需要它
+if (isDesktopApp()) {
+  if ('serviceWorker' in navigator) {
+    void navigator.serviceWorker.getRegistrations().then((rs) => {
+      for (const r of rs) void r.unregister()
+    })
+  }
+} else {
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      useUi.getState().setUpdateReady(true, () => void updateSW())
+    },
+  })
+}
 
 // IndexedDB 探针：不可用则降级内存模式，并挂横幅；失败入错误日志
 track(

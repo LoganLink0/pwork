@@ -60,8 +60,7 @@ export function Welcome() {
     }
   }, [gwMode, gwUrl])
 
-  // ── 一键部署（第 5 步，桌面版）：文件夹选择框选源码目录 + 新窗口跑部署向导 ──
-  const [deployDir, setDeployDir] = useState(() => localStorage.getItem('pwork-deploy-src') ?? '')
+  // ── 一键部署（第 5 步，桌面版）：部署源码随应用打进安装目录，一键直跑 ──
   const [deploying, setDeploying] = useState(false)
 
   /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
@@ -108,30 +107,12 @@ export function Welcome() {
     setAiBusy(false)
   }
 
-  /** 一键部署（桌面版）：弹文件夹选择框选 PWORK 源码目录——普通用户不该手粘路径；取消选择则不动 */
-  const pickAndDeploy = async () => {
-    setDeploying(true)
-    try {
-      const { open } = await import('@tauri-apps/plugin-dialog')
-      const picked = await open({ directory: true, multiple: false, title: '选择 PWORK 源码文件夹' })
-      if (typeof picked !== 'string' || !picked.trim()) return
-      setDeployDir(picked)
-      localStorage.setItem('pwork-deploy-src', picked)
-      await runDeploy(picked)
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e))
-    } finally {
-      setDeploying(false)
-    }
-  }
-
-  /** 在新窗口跑部署向导（pickAndDeploy 选完调用；也供「用上次的文件夹」直达） */
-  const runDeploy = async (dir: string = deployDir) => {
-    if (!dir.trim()) return
+  /** 一键部署：部署源码随应用打进安装目录，新窗口直接跑向导——无需选择任何位置 */
+  const runDeploy = async () => {
     setDeploying(true)
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_deploy_wizard', { dir: dir.trim() })
+      await invoke('open_deploy_wizard')
       setMsg('部署窗口已在新窗口打开——跟着向导走完（约 10 分钟），结束时它打印的端点地址和 Token 填到下面')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
@@ -369,28 +350,19 @@ export function Welcome() {
               </div>
               {desktop ? (
                 <>
-                  <div className="set-row" style={{ paddingTop: 'var(--sp-3)' }}>
+                  <div className="set-row">
                     <label>一键部署</label>
-                    <button type="button" className="btn-primary" disabled={deploying} onClick={() => void pickAndDeploy()}>
-                      {deploying ? '启动中…' : '选择文件夹，开始部署'}
+                    <button type="button" className="btn-primary" disabled={deploying} onClick={() => void runDeploy()}>
+                      {deploying ? '启动中…' : '一键部署'}
                     </button>
                     <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-                      弹出选择框后，选中 PWORK 源码文件夹即可
+                      在 PWORK 安装目录下直接开始一键部署，无需选择位置
                     </span>
                   </div>
-                  {deployDir && (
-                    <div className="set-row">
-                      <label></label>
-                      <button type="button" className="btn-ghost" disabled={deploying} onClick={() => void runDeploy()}>
-                        用上次的文件夹直接部署
-                      </button>
-                      <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>{deployDir}</span>
-                    </div>
-                  )}
                   <div className="set-row">
                     <label>怎么走</label>
                     <span className="val" style={{ color: 'var(--ink-soft)' }}>
-                      选完文件夹会在<b>新窗口</b>运行部署向导，中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>，回到这里填到下面。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
+                      点按钮会在<b>新窗口</b>运行部署向导（需要的源码已随应用装在你电脑上），中文逐步引导：装依赖 → 登录/注册 → 建库写配置 → 部署，全程约 10 分钟。结束时它会打印你的<b>专属端点地址</b>和让你设置的 <b>Token</b>，回到这里填到下面。大陆网络建议部署完成后在 设置 → 云端同步 切到 <b>D1 直连模式</b>（绕过 workers.dev 阻断，页面内有 Token 创建指引）。
                     </span>
                   </div>
                 </>

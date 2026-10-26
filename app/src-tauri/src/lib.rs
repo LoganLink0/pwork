@@ -58,25 +58,18 @@ fn save_gateway_key(
     Ok(())
 }
 
-/// 引导页「一键部署」：在源码 worker 目录新开控制台窗口运行部署向导脚本（桌面版专属）。
-/// 接受源码根目录或 worker 目录两种填法。
+/// 引导页「一键部署」（桌面版）：在安装目录自带的 worker 资源里新开控制台窗口运行部署向导——
+/// 部署源码随应用打包（bundle.resources），用户无需选择任何位置。
 #[tauri::command]
-fn open_deploy_wizard(dir: String) -> Result<(), String> {
-    let dir = dir.trim().to_string();
-    if dir.is_empty() {
-        return Err("先填写源码目录".into());
+fn open_deploy_wizard(app: tauri::AppHandle) -> Result<(), String> {
+    let worker_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("定位安装目录失败：{e}"))?
+        .join("worker");
+    if !worker_dir.join("部署向导.cmd").is_file() {
+        return Err("安装目录里没找到部署向导——请重新安装应用（安装包损坏或被安全软件删改）".into());
     }
-    let root = std::path::PathBuf::from(&dir);
-    if !root.is_dir() {
-        return Err(format!("目录不存在：{dir}"));
-    }
-    let worker_dir = if root.join("部署向导.cmd").is_file() {
-        root
-    } else if root.join("worker").join("部署向导.cmd").is_file() {
-        root.join("worker")
-    } else {
-        return Err("这个目录里没找到 部署向导.cmd——请填 PWORK 源码根目录或 worker 目录".into());
-    };
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -100,7 +93,6 @@ fn open_deploy_wizard(dir: String) -> Result<(), String> {
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_fs::init())
-    .plugin(tauri_plugin_dialog::init())
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
         .with_handler(|app, _shortcut, event| {

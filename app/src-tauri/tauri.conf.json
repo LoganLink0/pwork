@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "PWORK",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "identifier": "com.pwork.workbench",
   "build": {
     "frontendDist": "../dist",
@@ -36,6 +36,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "../../worker/src": "worker/src",
+      "../../worker/scripts": "worker/scripts",
+      "../../worker/package.json": "worker/package.json",
+      "../../worker/package-lock.json": "worker/package-lock.json",
+      "../../worker/wrangler.toml": "worker/wrangler.toml",
+      "../../worker/schema.sql": "worker/schema.sql",
+      "../../worker/seed-sources.sql": "worker/seed-sources.sql",
+      "../../worker/tsconfig.json": "worker/tsconfig.json",
+      "../../worker/部署向导.cmd": "worker/部署向导.cmd"
+    },
     "windows": {
       "webviewInstallMode": {
         "type": "offlineInstaller"

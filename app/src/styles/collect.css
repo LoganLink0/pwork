@@ -859,6 +859,16 @@ a.origin:hover {
   font-size: var(--fs-xs);
   color: var(--ink-faint);
 }
+/* 引导页里目录优先伸长吃余空（封顶 46vh 防小屏溢出），超出部分交给正文区的均匀分布 */
+.welcome-stage .src-catalog {
+  flex: 1;
+  min-height: 0;
+}
+.welcome-stage .src-catalog-list {
+  flex: 1;
+  min-height: 180px;
+  max-height: 46vh;
+}
 
 /* ---------- 目标：时间条 / 期限输入 / 进度轨迹 ---------- */
 /* 时间条：整条 = 创建→期限（"要多久"），填充 = 已走过（"现在怎样"），剩多少看右端距离 */
