@@ -107,7 +107,7 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     desc: 'mp3 / wav 等音频互转、压缩体积，本地处理不上传',
     engine: 'local-ffmpeg',
     status: 'ready',
-    note: '建议单文件 ≤100MB；首次使用需联网加载本地引擎（约 30MB，一次即可）',
+    note: '建议单文件 ≤100MB；引擎已内置在应用里，全程离线可用',
   },
   {
     id: 'asr-high',
@@ -146,7 +146,7 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     desc: '从截图、照片里提取文字（中英文），识别结果可存为速记',
     engine: 'local-tesseract',
     status: 'ready',
-    note: '首次使用需联网加载引擎与中文语言包（约 15MB，一次即可）；印刷体效果好，手写体较弱',
+    note: '引擎与中文语言包已内置，全程离线可用；印刷体效果好，手写体较弱',
   },
   {
     id: 'image-process',

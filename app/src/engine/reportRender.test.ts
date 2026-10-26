@@ -47,6 +47,27 @@ describe('reportToMarkdown（输出 O1）', () => {
   it('月报标题正确', () => {
     expect(reportTitle({ ...mkData(), mode: 'monthly' })).toContain('月报')
   })
+
+  it('条目标题的中括号被转义，链接劫持注入不成立', () => {
+    const md = reportToMarkdown(mkData({ topItems: [
+      { title: 'AI 周刊](https://evil.com', url: 'https://e.com/1', score: 80, sourceName: '阮一峰', otFlag: null },
+    ] }))
+    expect(md).toContain('AI 周刊\\](https://evil.com')
+    expect(md).not.toMatch(/\[AI 周刊\]\(https:\/\/evil\.com\)/)
+  })
+
+  it('条目 url 只放行 http(s)：javascript: 与含引号的 URL 降级为纯文本', () => {
+    const md = reportToMarkdown(mkData({ topItems: [
+      { title: '正常', url: 'https://a.com/x', score: 70, sourceName: '源甲', otFlag: null },
+      { title: '脚本', url: 'javascript:alert(1)', score: 69, sourceName: '源乙', otFlag: null },
+      { title: '断引号', url: 'https://a.com/x" onmouseover="alert(1)', score: 68, sourceName: '源丙', otFlag: null },
+      { title: '圆括号', url: 'https://a.com/(x)', score: 67, sourceName: '源丁', otFlag: null },
+    ] }))
+    expect(md).toContain('[正常](https://a.com/x)')
+    expect(md).not.toContain('(javascript:')
+    expect(md).not.toContain('onmouseover')
+    expect(md).toContain('[圆括号](https://a.com/%28x%29)')
+  })
 })
 
 describe('外部数据块（输出扩展）', () => {

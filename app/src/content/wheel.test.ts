@@ -27,4 +27,17 @@ describe('轮盘格位配置', () => {
     saveWheelSlots([...slots, ...slots.slice(0, 2).map((s) => ({ ...s, id: `${s.id}-x` }))])
     expect(loadWheelSlots()).toHaveLength(8)
   })
+
+  it('url 格位只放行 http(s) 协议、route 格位只放行站内路径，其余格位被读取层剔除', () => {
+    saveWheelSlots([
+      { id: 'ok', label: '正常外链', icon: 'globe', kind: 'url', target: 'https://a.com' },
+      { id: 'rel', label: '无协议', icon: 'globe', kind: 'url', target: 'a.com/path' },
+      { id: 'js', label: '脚本', icon: 'globe', kind: 'url', target: 'javascript:alert(1)' },
+      { id: 'data', label: '数据页', icon: 'globe', kind: 'url', target: 'data:text/html,x' },
+      { id: 'ext', label: '外部路由', icon: 'grid', kind: 'route', target: 'https://evil.com' },
+      { id: 'inner', label: '站内', icon: 'grid', kind: 'route', target: '/process' },
+    ])
+    const got = loadWheelSlots()
+    expect(got.map((s) => s.id)).toEqual(['ok', 'rel', 'inner'])
+  })
 })

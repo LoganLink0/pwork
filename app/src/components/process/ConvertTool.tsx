@@ -130,7 +130,7 @@ export function ConvertTool({ preset, kindLabel }: { preset: ConvertPreset; kind
       )}
       {state.stage === 'error' && (
         <div className="notice" style={{ borderLeftColor: 'var(--danger)' }} role="alert">
-          转换失败：{state.errorMsg}（首次使用需联网加载引擎；大文件易失败，先试小文件）
+          转换失败：{state.errorMsg}（引擎在应用内，无需联网；大文件易失败，先试小文件）
         </div>
       )}
       {state.stage === 'done' && state.resultUrl && (

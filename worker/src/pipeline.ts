@@ -7,15 +7,19 @@ import type { AiConfig } from './ai'
 import { aiPrefilter, aiScore } from './ai'
 import { fingerprintOf, prefilterByRules, scoreByRules, type WorkerSource } from './rules'
 import { parseFeed, parseRss2Json } from './rss'
-import { guardedFetch } from './urlGuard'
+import { assertPublicHttpUrl, guardedFetch } from './urlGuard'
 
 export interface Env {
   DB: D1Database
   TOKEN: string
   LLM_TOKEN?: string
+  /** 读端点可选鉴权（安全审计 B9）：设置后 /api/items、/api/digest、/api/sources、/rss/daily.xml 需携带 */
+  READ_TOKEN?: string
   AI_BASE_URL: string
   AI_MODEL_CHEAP: string
   AI_MODEL_STRONG: string
+  /** LLM 代理端点允许的第二个模型（与 AI_MODEL_CHEAP 构成白名单） */
+  AI_MODEL?: string
   AI_DAILY_TOKEN_BUDGET: string
   INTERESTS: string
   DISLIKES: string
@@ -63,8 +67,10 @@ async function fetchWithTimeout(url: string, timeoutMs: number, headers?: Record
 // 部分源（如 Solidot）会 403 拒绝非浏览器 UA——出站统一带浏览器 UA
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 
-/** 抓一个源：直连 →（失败）rss2json 服务端转接。云端无 CORS 限制，直连为主 */
+/** 抓一个源：直连 →（失败）rss2json 服务端转接。云端无 CORS 限制，直连为主。
+ *  守卫拒绝（内网/环回地址）的 URL 不再交给 rss2json——内网主机名不能向第三方披露（安全审计 B6） */
 export async function fetchSourceFeed(url: string): Promise<{ ok: boolean; error: string | null; items: { title: string; url: string; summary: string; publishedAt: string | null }[] }> {
+  assertPublicHttpUrl(url)
   try {
     const resp = await fetchWithTimeout(url, TIMEOUT_MS, { 'user-agent': BROWSER_UA })
     if (resp.ok) {
@@ -83,6 +89,7 @@ export async function fetchSourceFeed(url: string): Promise<{ ok: boolean; error
       return { ok: false, items: [], error: `HTTP ${resp.status}` }
     }
   } catch (e) {
+    if (e instanceof Error && e.message.startsWith('拒绝')) return { ok: false, items: [], error: e.message }
     const msg = e instanceof Error && e.name === 'AbortError' ? '超时（>10s）' : '网络失败'
     try {
       const via = await fetchWithTimeout(
@@ -272,8 +279,18 @@ export async function runPipeline(env: Env, ai: AiConfig): Promise<RunSummary> {
 
   const results = await mapLimited(sources, CONCURRENCY, (s) => runSource(env, ai, s, domainCount, todayUtc))
 
-  // 免费档子请求限额：单次最多写 ~50 条的清理操作
-  await env.DB.prepare("DELETE FROM items WHERE stage IN ('raw', 'discarded') AND expires_at < ?").bind(new Date().toISOString()).run()
+  // 清理（B4，2026-10-26 安全审计：云端是暂存层，所有表都要有界）——
+  // items 的 expires_at = 写入 + 14 天 TTL，到期后再留 7 天宽限（给本地拉取留窗口）后删除；
+  // ingest_blocks 保 14 天；ingest_rate/usage 只留 90 天。D1 batch 一次往返
+  const d7 = new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const d14 = new Date(Date.now() - 14 * 86_400_000).toISOString()
+  const d90 = new Date(Date.now() - 90 * 86_400_000).toISOString()
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM items WHERE expires_at < ?').bind(d7),
+    env.DB.prepare('DELETE FROM ingest_blocks WHERE created_at < ?').bind(d14),
+    env.DB.prepare('DELETE FROM ingest_rate WHERE minute < ?').bind(d90),
+    env.DB.prepare('DELETE FROM usage WHERE day < ?').bind(d90.slice(0, 10)),
+  ])
 
   return {
     ranAt: new Date().toISOString(),

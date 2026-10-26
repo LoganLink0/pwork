@@ -80,6 +80,25 @@ export function saveCoachConfig(cfg: CoachConfig): void {
 
 export const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8788'
 
+/** 网关真实状态探测：引导页与设置页共用的判定源（本地存的"已配置"可能只是历史残留，
+ *  网关进程里到底有没有 Key 要问 /health 才算数） */
+export type GatewayProbe = { online: boolean; chatConfigured: boolean; searchConfigured?: boolean }
+
+export async function probeGateway(url: string = DEFAULT_GATEWAY_URL): Promise<GatewayProbe> {
+  const base = url.replace(/\/+$/, '')
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 2500)
+  try {
+    const r = await fetch(`${base}/health`, { signal: ctrl.signal })
+    const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean; searchConfigured?: boolean }
+    return { online: Boolean(j.ok), chatConfigured: Boolean(j.chatConfigured), searchConfigured: Boolean(j.searchConfigured) }
+  } catch {
+    return { online: false, chatConfigured: false }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export function llmConfigFrom(cfg: CoachConfig): LlmConfig {
   // 网关模式：Key 由网关注入，浏览器侧不带真实 Key（sentinel 占位）
   if (cfg.viaGateway) {

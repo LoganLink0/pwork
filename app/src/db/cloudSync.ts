@@ -42,6 +42,10 @@ export function loadCloudConfig(): CloudConfig {
 }
 
 export function saveCloudConfig(config: CloudConfig): void {
+  // 端点强制 https（安全审计 2026-10-26 B12：http:// 端点会把 Token 与同步数据明文送出）
+  if (config.endpoint.trim() && !/^https:\/\//i.test(config.endpoint.trim())) {
+    throw new Error('云端端点必须是 https:// 地址（http 明文传输会泄漏 Token）')
+  }
   localStorage.setItem(MODE_KEY, config.mode)
   localStorage.setItem(ENDPOINT_KEY, config.endpoint.trim())
   localStorage.setItem(TOKEN_KEY, config.token.trim())
@@ -381,9 +385,10 @@ export async function syncIngestBlocks(): Promise<IngestPullResult> {
       rows = r as unknown as IngestRow[]
     } else {
       if (!config.endpoint || !config.token) return { ok: false, pulled: 0, error: '端点模式需要：Worker 地址 + TOKEN' }
-      const resp = await fetch(
-        `${config.endpoint.replace(/\/$/, '')}/api/ingest?since=${encodeURIComponent(since)}&token=${encodeURIComponent(config.token)}`,
-      )
+      // Token 走 Authorization 头（安全审计 2026-10-26 B3：URL 查询串会落入边缘日志与代理日志）
+      const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/ingest?since=${encodeURIComponent(since)}`, {
+        headers: { authorization: `Bearer ${config.token}` },
+      })
       if (!resp.ok) return { ok: false, pulled: 0, error: `拉取失败（HTTP ${resp.status}）` }
       const body = (await resp.json()) as { blocks?: IngestRow[] }
       rows = body.blocks ?? []

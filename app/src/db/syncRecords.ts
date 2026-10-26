@@ -18,6 +18,7 @@ import { d1Query, loadCloudConfig } from './cloudSync'
 import { importBundle, type ImportResult } from './backup'
 import { db } from './schema'
 import { loadCollectConfig, saveCollectConfig } from '../content/collect'
+import { tombstonesSince, pruneTombstones, TOMBSTONE_DAYS } from './tombstones'
 
 const SYNC_KEY = 'pwork-device-sync'
 const PUSH_SINCE = 'pwork-sync-push-since'
@@ -135,6 +136,14 @@ export function upsertBatches(rows: SyncRow[], batch = 10): { sql: string; param
   return out
 }
 
+/** 判定墓碑行（B5）：本地物理清理后推送的专用形态——只有 id/deletedAt/updatedAt 三个键，无正文 */
+export function isTombstonePayload(entity: string, payload: unknown): payload is { id: string; deletedAt: string; updatedAt: string } {
+  if (entity === 'collectConfig' || !payload || typeof payload !== 'object') return false
+  const keys = Object.keys(payload as Record<string, unknown>)
+  const p = payload as Record<string, unknown>
+  return keys.length <= 3 && typeof p.id === 'string' && typeof p.deletedAt === 'string' && typeof p.updatedAt === 'string'
+}
+
 /** 拉回的行 → importBundle 的 entities 形态；collectConfig 单列（同步层自己按水位应用，不吃备份的无条件覆盖） */
 export function rowsToEntities(rows: { entity: string; payload: string }[]): { entities: Record<string, unknown[]>; configPayload: unknown | null } {
   const entities: Record<string, unknown[]> = {}
@@ -166,17 +175,27 @@ export async function pushChangedRecords(): Promise<SyncPushResult> {
   const since = localStorage.getItem(PUSH_SINCE) ?? ''
   const tables = await Promise.all(ENTITIES.map(async (e) => ({ key: e.key, rows: await e.table.toArray() })))
   let rows = pickChanged(tables, since, deviceId())
+  // 墓碑（B5）：本地已物理清理的行以专用形态推送（仅 id + 时间，无正文），
+  // 防其他设备把云端留存的删除前版本拉回去"复活"
+  const tombs = tombstonesSince(since)
+  for (const t of tombs) {
+    rows = [...rows, { entity: t.entity, id: t.id, updated_at: t.at, device: deviceId(), payload: JSON.stringify({ id: t.id, deletedAt: t.at, updatedAt: t.at }) }]
+  }
   // 配置：修改时间在本地 CONFIG_AT，变过则作为单记录推送
   const configAt = localStorage.getItem(CONFIG_AT) ?? ''
   if (configAt && configAt > since) {
     rows = [...rows, { entity: 'collectConfig', id: 'collect', updated_at: configAt, device: deviceId(), payload: JSON.stringify(loadCollectConfig()) }]
   }
-  if (rows.length === 0) return { ok: true, pushed: 0 }
+  if (rows.length === 0) {
+    pruneTombstones()
+    return { ok: true, pushed: 0 }
+  }
   await d1Query(cloud, TABLE_DDL, [])
   const batches = upsertBatches(rows)
   for (const b of batches) await d1Query(cloud, b.sql, b.params)
   const maxAt = rows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), since)
   localStorage.setItem(PUSH_SINCE, maxAt)
+  pruneTombstones()
   return { ok: true, pushed: rows.length }
 }
 
@@ -202,7 +221,28 @@ export async function pullChangedRecords(): Promise<SyncPullResult> {
     cursor = rows[rows.length - 1]!.updated_at
   }
   if (all.length === 0) return { ok: true, pulled: 0, configApplied: false }
-  const { entities, configPayload } = rowsToEntities(all)
+  // 墓碑分流（B5）：专用形态的行直接物理删除本地对应记录，不走 importBundle（缺正文字段会被 normalize 过滤）
+  const tombRows = all.filter((r) => {
+    try {
+      return isTombstonePayload(r.entity, JSON.parse(r.payload))
+    } catch {
+      return false
+    }
+  })
+  const entityRows = all.filter((r) => !tombRows.includes(r))
+  for (const t of tombRows) {
+    const table = ENTITIES.find((e) => e.key === t.entity)?.table
+    if (table) await (table as unknown as { delete(id: string): Promise<unknown> }).delete(t.id)
+  }
+  // 云端墓碑清理：留存窗口外的墓碑行从云端删除（隐私边界——删除操作最终在云端也生效）
+  const tombCutoff = new Date(Date.now() - TOMBSTONE_DAYS * 86_400_000).toISOString()
+  const expiredTombs = tombRows.filter((t) => t.updated_at < tombCutoff)
+  for (let i = 0; i < expiredTombs.length; i += 50) {
+    const part = expiredTombs.slice(i, i + 50)
+    const marks = part.map(() => '(?,?)').join(',')
+    await d1Query(cloud, `DELETE FROM pwork_sync_records WHERE (entity, id) IN (${marks})`, part.flatMap((t) => [t.entity, t.id]))
+  }
+  const { entities, configPayload } = rowsToEntities(entityRows)
   let merged = 0
   let importResult: ImportResult | undefined
   if (Object.keys(entities).length > 0) {

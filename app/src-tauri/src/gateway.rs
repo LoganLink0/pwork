@@ -9,12 +9,13 @@
 //! 记账：JSONL 落 %APPDATA%/<identifier>/gateway-usage.log，滚动上限 2MB（保最近 5000 条）。
 
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::thread;
 
 use serde_json::{json, Value};
+use tauri::Emitter;
 use tiny_http::{Header, Method, Response, Server};
 
 pub struct GatewayConfig {
@@ -56,11 +57,15 @@ fn var_from(list: &[(String, String)], key: &str) -> Option<String> {
 
 impl GatewayConfig {
     pub fn load(data_dir: &PathBuf) -> Self {
-        // 读取顺序：AppData/gateway.env → .env.local → .env；环境变量兜底
+        // 读取顺序：AppData/gateway.env → 环境变量。
+        // 开发构建额外允许 app 目录的 .env.local/.env（沿用开发流程）；发行构建不再读
+        // 工作目录——从下载目录等位置启动时，工作目录下预置的 .env 可劫持上游地址（安全审计 F10）
         let mut vars: Vec<(String, String)> = Vec::new();
         parse_env_file(&data_dir.join("gateway.env"), &mut vars);
-        parse_env_file(&PathBuf::from(".env.local"), &mut vars);
-        parse_env_file(&PathBuf::from(".env"), &mut vars);
+        if cfg!(debug_assertions) {
+            parse_env_file(&PathBuf::from(".env.local"), &mut vars);
+            parse_env_file(&PathBuf::from(".env"), &mut vars);
+        }
         for (k, v) in std::env::vars() {
             vars.push((k, v));
         }
@@ -125,16 +130,43 @@ fn valid_database_id(s: &str) -> bool {
         })
 }
 
+/// 拆出 host 与端口段（支持 [::1]:port 形态）
+fn split_host_port(s: &str) -> Option<(String, String)> {
+    if let Some(rest) = s.strip_prefix('[') {
+        let end = rest.find(']')?;
+        return Some((format!("[{}]", &rest[..end]), rest[end + 1..].strip_prefix(':').unwrap_or("").to_string()));
+    }
+    match s.rsplit_once(':') {
+        Some((h, p)) => Some((h.to_string(), p.to_string())),
+        None => Some((s.to_string(), String::new())),
+    }
+}
+
+/// 浏览器来源白名单：本机开发源 + 桌面 WebView 源（tauri.localhost，Windows 打包版的页面源）。
+/// 精确匹配 host，杜绝前缀拼接绕过（如 localhost.evil.com）
+fn origin_allowed(origin: &str) -> bool {
+    let Some(rest) = origin.trim().strip_prefix("http://").or_else(|| origin.trim().strip_prefix("https://")) else {
+        return false;
+    };
+    let Some((host, port)) = split_host_port(rest) else { return false };
+    let host_ok = matches!(host.to_lowercase().as_str(), "localhost" | "127.0.0.1" | "tauri.localhost" | "[::1]");
+    let port_ok = port.is_empty() || port.chars().all(|c| c.is_ascii_digit());
+    host_ok && port_ok
+}
+
+/// Host 校验（防 DNS rebinding）：网关的标准地址只有本机回环三种形态
+fn host_allowed(host: &str, port: u16) -> bool {
+    let Some((hostname, port_str)) = split_host_port(host.trim().to_lowercase().as_str()) else {
+        return false;
+    };
+    let host_ok = matches!(hostname.as_str(), "localhost" | "127.0.0.1" | "[::1]");
+    let port_ok = port_str.is_empty() || port_str == port.to_string();
+    host_ok && port_ok
+}
+
 fn cors_headers(origin: &str) -> Vec<Header> {
     let mut hs = Vec::new();
-    let lower = origin.to_lowercase();
-    let ok = (lower.starts_with("http://localhost") || lower.starts_with("http://127.0.0.1"))
-        && origin
-            .rsplit(':')
-            .next()
-            .map(|p| p.is_empty() || p.chars().all(|c| c.is_ascii_digit()))
-            .unwrap_or(true);
-    if ok && !origin.is_empty() {
+    if origin_allowed(origin) && !origin.is_empty() {
         if let (Ok(a), Ok(b), Ok(c)) = (
             Header::from_bytes("Access-Control-Allow-Origin", origin),
             Header::from_bytes("Access-Control-Allow-Headers", "Content-Type, Authorization"),
@@ -211,13 +243,15 @@ fn log_usage(cfg: &GatewayConfig, req_body: &str, resp_text: &str, lock: &Mutex<
     }
 }
 
-/// 启动内嵌网关（独立线程，随应用退出而终止）。端口被占（比如开发时 Node 版在跑）时静默让位。
-pub fn start(data_dir: PathBuf) {
+/// 启动内嵌网关（独立线程，随应用退出而终止）。端口被占（比如开发时 Node 版在跑）时静默让位，
+/// 并向前端发 gateway-conflict 事件——占用者也可能是在冒名（安全审计 F12），用户应能察觉。
+pub fn start(data_dir: PathBuf, app: tauri::AppHandle) {
     thread::spawn(move || {
         let cfg = GatewayConfig::load(&data_dir);
         let addr = format!("127.0.0.1:{}", cfg.port);
         let Ok(server) = Server::http(&addr) else {
             log::info!("[PWORK 网关] 端口 {} 已被占用（可能是开发版网关在跑），内嵌网关不启动", cfg.port);
+            let _ = app.emit("gateway-conflict", ());
             return;
         };
         log::info!(
@@ -238,6 +272,33 @@ pub fn start(data_dir: PathBuf) {
                 .unwrap_or_default();
             let path = url.split('?').next().unwrap_or("").to_string();
 
+            // 准入三道闸（安全审计 2026-10-26）：Host 必须是本机回环标准地址（防 DNS rebinding）；
+            // 带 Origin 的请求必须在白名单内（阻断恶意网页的 text/plain 简单请求直接刷 Key）；
+            // 非 Origin 客户端（curl 冒烟、本机脚本）照常放行
+            let ct = Header::from_bytes("Content-Type", "application/json; charset=utf-8").unwrap();
+            let host = req
+                .headers()
+                .iter()
+                .find(|h| h.field.equiv("Host"))
+                .map(|h| h.value.as_str().to_string())
+                .unwrap_or_default();
+            let forbidden = |req: tiny_http::Request| {
+                let h = Header::from_bytes("Content-Type", "application/json; charset=utf-8").unwrap();
+                let _ = req.respond(
+                    Response::from_string("{\"error\":\"forbidden\"}")
+                        .with_status_code(403)
+                        .with_header(h),
+                );
+            };
+            if !host_allowed(&host, cfg.port) {
+                forbidden(req);
+                continue;
+            }
+            if !origin.is_empty() && !origin_allowed(&origin) {
+                forbidden(req);
+                continue;
+            }
+
             // CORS 预检
             if method == Method::Options {
                 let mut r = Response::empty(204);
@@ -249,14 +310,28 @@ pub fn start(data_dir: PathBuf) {
             }
 
             let mut resp_headers = cors_headers(&origin);
-            let ct = Header::from_bytes("Content-Type", "application/json; charset=utf-8").unwrap();
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
             let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query";
+            const MAX_BODY: usize = 1_048_576;
+            let content_length = req
+                .headers()
+                .iter()
+                .find(|h| h.field.equiv("Content-Length"))
+                .and_then(|h| h.value.as_str().trim().parse::<usize>().ok());
+            if reads_body && content_length.map(|n| n > MAX_BODY).unwrap_or(false) {
+                let _ = req.respond(
+                    Response::from_string("{\"error\":\"request body too large\"}")
+                        .with_status_code(413)
+                        .with_header(ct.clone()),
+                );
+                continue;
+            }
             let body: Result<String, String> = if reads_body {
                 let mut b = String::new();
-                match req.as_reader().read_to_string(&mut b) {
+                match req.as_reader().take((MAX_BODY + 1) as u64).read_to_string(&mut b) {
+                    Ok(_) if b.len() > MAX_BODY => Err("请求体超过 1MB 上限".to_string()),
                     Ok(_) => Ok(b),
                     Err(e) => Err(format!("请求体读取失败（必须是 UTF-8）：{e}")),
                 }

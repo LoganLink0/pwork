@@ -1,15 +1,20 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "默认窗口权限 + 桌面版备份写磁盘（仅应用数据目录内）",
+  "description": "默认窗口权限 + 桌面版备份写磁盘（仅应用数据目录的 backups 子目录——不覆盖 gateway.env 等敏感文件，安全审计 2026-10-26 F2 收窄）",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
     "fs:default",
-    "fs:allow-appdata-read-recursive",
-    "fs:allow-appdata-write-recursive",
-    "fs:allow-mkdir"
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APPDATA/backups" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$APPDATA/backups/*" }]
+    }
   ]
 }

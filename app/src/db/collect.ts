@@ -5,6 +5,7 @@
  */
 import { db } from './schema'
 import { newId } from './repo'
+import { registerTombstones } from './tombstones'
 import type { Item, Source } from '../types/models'
 import { TIER_WEIGHT } from '../content/collect'
 import { localDateOf } from '../engine/datetime'
@@ -289,6 +290,9 @@ export async function cleanupExpired(now = new Date()): Promise<number> {
     if (a && (a.keepForever || a.vote !== null || a.notes)) return false
     return true
   })
+  // 软删后悔期清理的条目会同步到云端，物理删除前登记墓碑防他机复活（B5）；
+  // raw/discarded 过期清理是本地暂存语义，不涉及
+  registerTombstones('items', doomed.filter((i) => Boolean(i.deletedAt)))
   if (doomed.length) await db.items.bulkDelete(doomed.map((i) => i.id))
   return doomed.length
 }

@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
+import { randomBytes } from 'node:crypto'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -152,7 +153,7 @@ async function main() {
   // [5/6] Token
   log('\n[5/6] 设置访问 Token（云端数据的钥匙，之后要填回工作台）')
   const token =
-    DRY ? '__dry__' : (await ask('请输入自定义 Token（直接回车 = 自动生成随机值）: ')) || `ptk_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
+    DRY ? '__dry__' : (await ask('请输入自定义 Token（直接回车 = 自动生成随机值）: ')) || `ptk_${randomBytes(24).toString('base64url')}`
   if (DRY) {
     log('  [dry] 演示设置 secret')
   } else {

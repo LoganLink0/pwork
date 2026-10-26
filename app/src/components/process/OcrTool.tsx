@@ -32,9 +32,14 @@ export function OcrTool() {
     setProgress(0)
     setErrorMsg('')
     try {
-      setStatusText('加载识别引擎（首次约 15MB，一次即可）…')
+      setStatusText('加载识别引擎（本地打包，无需联网）…')
       const { createWorker } = await import('tesseract.js')
       const worker = await createWorker('chi_sim+eng', 1, {
+        // 引擎与语言包全部本地打包（public/tesseract/，安全审计 2026-10-26 A-3：
+        // 不再运行时从 jsdelivr 取代码；文件与 tesseract.js@7 官方包逐字节一致）
+        workerPath: '/tesseract/worker.min.js',
+        corePath: '/tesseract/core',
+        langPath: '/tesseract/lang',
         logger: (m: { status: string; progress: number }) => {
           if (m.status.includes('loading')) {
             setStage('loading')
@@ -83,7 +88,7 @@ export function OcrTool() {
       </div>
       {stage === 'error' && (
         <div className="notice" style={{ borderLeftColor: 'var(--danger)' }} role="alert">
-          识别失败：{errorMsg}（首次使用需联网加载引擎；检查网络后重试）
+          识别失败：{errorMsg}（引擎在应用内，无需联网；重试或换一张更清晰的图片）
         </div>
       )}
       {stage === 'done' && (

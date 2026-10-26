@@ -229,6 +229,22 @@ export default function App() {
     }
   }, [])
 
+  // 桌面版：网关端口被占（Rust 侧让位并发出事件）——可能是开发版网关，也可能是
+  // 冒名进程截获对话内容，必须让用户看见而不是静默降级（安全审计 F12）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    let unlisten: (() => void) | null = null
+    void import('@tauri-apps/api/event')
+      .then(({ listen }) => listen('gateway-conflict', () => {
+        window.alert('端口 8788 已被其他进程占用，应用内嵌 AI 网关没有启动。\n若不是你自己起的开发版网关，请检查占用 8788 的进程（可能截获对话内容）。')
+      }))
+      .then((fn) => {
+        unlisten = fn
+      })
+      .catch(() => {})
+    return () => unlisten?.()
+  }, [])
+
   return (
     <HashRouter>
       <RoutedBoundary>

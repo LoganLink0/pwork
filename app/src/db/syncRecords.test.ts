@@ -77,3 +77,27 @@ describe('记录级设备同步（2026-10-19 替换镜像档 1）', () => {
     expect(d1).toMatch(/^dev-/)
   })
 })
+
+describe('删除墓碑（安全审计 2026-10-26 B5）', () => {
+  it('registerTombstones / tombstonesSince / pruneTombstones：登记、水位筛选、过期裁剪', async () => {
+    const { registerTombstones, tombstonesSince, pruneTombstones, loadTombstones } = await import('./tombstones')
+    registerTombstones('notes', [{ id: 'n1', deletedAt: '2026-01-01T00:00:00Z' }, { id: 'n2', deletedAt: '2026-02-01T00:00:00Z' }], new Date('2026-03-01T00:00:00Z'))
+    // 墓碑时间取 deletedAt 优先（与软删时推送的墓碑行版本一致，避免重复推）
+    const all = loadTombstones()
+    expect(all.find((t) => t.id === 'n1')!.at).toBe('2026-01-01T00:00:00Z')
+    expect(all.find((t) => t.id === 'n2')!.at).toBe('2026-02-01T00:00:00Z')
+    expect(tombstonesSince('2026-01-15T00:00:00Z').map((t) => t.id)).toEqual(['n2'])
+    expect(tombstonesSince('2026-03-01T00:00:00Z')).toHaveLength(0)
+    // 90 天窗口外裁剪
+    pruneTombstones(new Date('2026-05-01T00:00:00Z'))
+    expect(loadTombstones().map((t) => t.id)).toEqual(['n2'])
+  })
+
+  it('isTombstonePayload：三键专用形态是墓碑；真实记录与配置不是', async () => {
+    const { isTombstonePayload } = await import('./syncRecords')
+    expect(isTombstonePayload('notes', { id: 'n1', deletedAt: 't', updatedAt: 't' })).toBe(true)
+    expect(isTombstonePayload('notes', { id: 'n1', deletedAt: 't', updatedAt: 't', body: '正文' })).toBe(false)
+    expect(isTombstonePayload('collectConfig', { id: 'x', deletedAt: 't', updatedAt: 't' })).toBe(false)
+    expect(isTombstonePayload('notes', null)).toBe(false)
+  })
+})

@@ -29,7 +29,22 @@ export function wheelIcons(): string[] {
   return ICONS
 }
 
-/** 读取防御：坏数据回默认；排序上限 8 格（轮盘一圈的可读上限） */
+/** 读取防御：坏数据回默认；排序上限 8 格（轮盘一圈的可读上限）。
+ *  target 按类型校验（安全审计 2026-10-26 A-4）：url 类带协议的只放行 http 与 https——
+ *  防 localStorage 被污染后脚本协议地址进 window.open；不带协议的相对地址无害，放行。
+ *  route 类只放行站内路径（以 / 开头） */
+function slotTargetValid(s: WheelSlot): boolean {
+  if (s.kind === 'url') {
+    const t = s.target ?? ''
+    const colon = t.indexOf(':')
+    if (colon <= 0) return true
+    const scheme = t.slice(0, colon).toLowerCase()
+    return (scheme === 'http' || scheme === 'https') && t.slice(colon + 1).startsWith('//')
+  }
+  if (s.kind === 'route') return !!s.target && s.target.startsWith('/')
+  return true
+}
+
 export function loadWheelSlots(): WheelSlot[] {
   try {
     const v = localStorage.getItem(KEY)
@@ -37,7 +52,7 @@ export function loadWheelSlots(): WheelSlot[] {
     const parsed = JSON.parse(v) as WheelSlot[]
     if (!Array.isArray(parsed) || parsed.length === 0) return [...DEFAULT_WHEEL_SLOTS]
     const ok = parsed
-      .filter((s) => s && typeof s.label === 'string' && KINDS.includes(s.kind))
+      .filter((s) => s && typeof s.label === 'string' && KINDS.includes(s.kind) && slotTargetValid(s))
       .slice(0, 8)
       .map((s) => ({ ...s, id: s.id || `slot_${Math.random().toString(36).slice(2, 8)}` }))
     return ok.length ? ok : [...DEFAULT_WHEEL_SLOTS]

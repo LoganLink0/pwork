@@ -51,6 +51,29 @@ function normalizeSource(raw: Source): Source {
   }
 }
 
+/* 以下四实体（B14，2026-10-26）：云端拉回的 payload 可能来自旧 schema——
+ * 缺必填字段的坏行直接跳过，可选字段补默认，防渲染层读到 undefined 崩 */
+
+function normalizeReview(raw: ReviewRecord): ReviewRecord | null {
+  if (!raw || typeof raw.id !== 'string' || typeof raw.title !== 'string') return null
+  return { ...raw, summary: Array.isArray(raw.summary) ? raw.summary : [], status: raw.status === 'archived' ? 'archived' : 'in-progress', quick: raw.quick === true }
+}
+
+function normalizeAction(raw: ActionItem): ActionItem | null {
+  if (!raw || typeof raw.id !== 'string' || typeof raw.text !== 'string') return null
+  return { ...raw, status: raw.status === 'done' || raw.status === 'dropped' ? raw.status : 'open', closedAt: raw.closedAt ?? null }
+}
+
+function normalizeInsight(raw: InsightRecord): InsightRecord | null {
+  if (!raw || typeof raw.id !== 'string' || typeof raw.text !== 'string') return null
+  return { ...raw, tags: Array.isArray(raw.tags) ? raw.tags : [], verified: raw.verified === true, revisit: Array.isArray(raw.revisit) ? raw.revisit : [] }
+}
+
+function normalizeSnapshot(raw: ReportSnapshot): ReportSnapshot | null {
+  if (!raw || typeof raw.id !== 'string' || typeof raw.day !== 'string') return null
+  return raw
+}
+
 export async function importBundle(text: string): Promise<ImportResult> {
   const data = JSON.parse(text) as Record<string, unknown>
   const entities = (data.entities ?? null) as Record<string, unknown> | null
@@ -58,9 +81,9 @@ export async function importBundle(text: string): Promise<ImportResult> {
 
   // ③ FUPAN v1：reviews/actions/insights 在顶层
   if (!entities && Array.isArray(data.reviews)) {
-    counts.reviews = await merge<ReviewRecord>(db.reviews, data.reviews as ReviewRecord[])
-    counts.actions = await merge<ActionItem>(db.actions, (data.actions ?? []) as ActionItem[])
-    counts.insights = await merge<InsightRecord>(db.insights, (data.insights ?? []) as InsightRecord[])
+    counts.reviews = await merge<ReviewRecord>(db.reviews, (data.reviews as ReviewRecord[]).map(normalizeReview).filter((r): r is ReviewRecord => r !== null))
+    counts.actions = await merge<ActionItem>(db.actions, ((data.actions ?? []) as ActionItem[]).map(normalizeAction).filter((a): a is ActionItem => a !== null))
+    counts.insights = await merge<InsightRecord>(db.insights, ((data.insights ?? []) as InsightRecord[]).map(normalizeInsight).filter((i): i is InsightRecord => i !== null))
     return { format: 'fupan-v1', counts }
   }
   if (!entities) throw new Error('无法识别的备份格式（缺少 entities 与 reviews）')
@@ -70,15 +93,15 @@ export async function importBundle(text: string): Promise<ImportResult> {
   if (Array.isArray(entities.sources)) counts.sources = await merge<Source>(db.sources, (entities.sources as Source[]).map(normalizeSource))
   if (Array.isArray(entities.items)) counts.items = await merge<Item>(db.items, (entities.items as Item[]).map(normalizeItem))
   if (Array.isArray(entities.tasks)) counts.tasks = await merge<TaskItem>(db.tasks, (entities.tasks as TaskItem[]).map(normalizeTask))
-  if (Array.isArray(entities.reviews)) counts.reviews = await merge<ReviewRecord>(db.reviews, entities.reviews as ReviewRecord[])
-  if (Array.isArray(entities.actions)) counts.actions = await merge<ActionItem>(db.actions, entities.actions as ActionItem[])
-  if (Array.isArray(entities.insights)) counts.insights = await merge<InsightRecord>(db.insights, entities.insights as InsightRecord[])
+  if (Array.isArray(entities.reviews)) counts.reviews = await merge<ReviewRecord>(db.reviews, (entities.reviews as ReviewRecord[]).map(normalizeReview).filter((r): r is ReviewRecord => r !== null))
+  if (Array.isArray(entities.actions)) counts.actions = await merge<ActionItem>(db.actions, (entities.actions as ActionItem[]).map(normalizeAction).filter((a): a is ActionItem => a !== null))
+  if (Array.isArray(entities.insights)) counts.insights = await merge<InsightRecord>(db.insights, (entities.insights as InsightRecord[]).map(normalizeInsight).filter((i): i is InsightRecord => i !== null))
   if (Array.isArray(entities.goals)) counts.goals = await merge<Goal>(db.goals, (entities.goals as Goal[]).map(normalizeGoal))
   if (Array.isArray(entities.blocks)) counts.blocks = await merge<DataBlock>(db.blocks, (entities.blocks as DataBlock[]).map(normalizeBlock))
   if (Array.isArray(entities.profiles)) counts.profiles = await merge<Profile>(db.profiles, (entities.profiles as Profile[]).map(normalizeProfile))
   if (Array.isArray(entities.caseFiles)) counts.caseFiles = await merge<CaseFile>(db.caseFiles, (entities.caseFiles as CaseFile[]).map(normalizeCaseFile))
   // 周趋势快照无 updatedAt 字段——只补缺，不覆盖（重复生成覆盖是生成侧的语义）
-  if (Array.isArray(entities.snapshots)) counts.snapshots = await merge<ReportSnapshot>(db.snapshots, entities.snapshots as ReportSnapshot[])
+  if (Array.isArray(entities.snapshots)) counts.snapshots = await merge<ReportSnapshot>(db.snapshots, (entities.snapshots as ReportSnapshot[]).map(normalizeSnapshot).filter((s): s is ReportSnapshot => s !== null))
   if (entities.collectConfig && typeof entities.collectConfig === 'object') {
     saveCollectConfig(entities.collectConfig as Parameters<typeof saveCollectConfig>[0])
     counts.collectConfig = 1

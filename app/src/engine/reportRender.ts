@@ -39,7 +39,11 @@ export function reportToMarkdown(d: ReportData): string {
   L.push('')
   if (d.topItems.length === 0) L.push('- （本期没有高分信息条目）')
   for (const it of d.topItems) {
-    L.push(`- [${it.title}](${it.url})（评分 ${it.score} · ${it.sourceName}）`)
+    // title/url 来自外部 RSS：中括号转义防链接劫持（标题尾拼 ](https://evil.com 可改写链接目标），
+    // url 走 http(s) 白名单，不干净就降级纯文本（与 HTML 版 safeHref 同一标准）
+    const safeTitle = it.title.replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+    const href = safeHref(it.url)
+    L.push(href ? `- [${safeTitle}](${href.replace(/[()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)})（评分 ${it.score} · ${it.sourceName}）` : `- ${safeTitle}（评分 ${it.score} · ${it.sourceName}）`)
   }
   L.push('')
   L.push('## 五、复盘与信号')

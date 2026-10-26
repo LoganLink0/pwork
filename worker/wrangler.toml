@@ -10,7 +10,9 @@ crons = ["0 1,3,7,11,15 * * *"] # 每天 5 次（UTC 1/3/7/11/15 ≈ 北京 9/11
 [[d1_databases]]
 binding = "DB"
 database_name = "pwork-collect"
-database_id = "b60c68f9-b121-4c4f-a1ee-004b9b8a0adf"
+# 占位符：部署向导建库后自动回写真实 ID（database_id 单独无法访问数据库，但属于部署指纹，仓库不存真实值）。
+# 已部署环境升级流程：npx wrangler d1 list --json 取回 uuid → node scripts/patch-toml.mjs database_id <uuid> → npx wrangler deploy → 提交前换回本占位符
+database_id = "00000000-0000-0000-0000-000000000000"
 
 # ── 配置（wrangler.toml 改 vars；密钥用 npx wrangler secret put）────────
 [vars]

@@ -5,7 +5,7 @@
  */
 import { createServer } from 'node:http'
 import { createReadStream, existsSync, statSync } from 'node:fs'
-import { extname, join, normalize, resolve } from 'node:path'
+import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 
@@ -58,10 +58,18 @@ const MIME = {
 }
 
 const server = createServer((req, res) => {
-  const urlPath = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname)
-  // 防目录穿越：归一化后必须仍在 ROOT 内
+  let urlPath
+  try {
+    urlPath = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname)
+  } catch {
+    // 非法百分号序列（如 /%）不能让进程崩溃——同步抛出会击穿 http 模块连网关子进程一起带走（安全审计 F9）
+    res.writeHead(400).end()
+    return
+  }
+  // 防目录穿越：归一化后必须仍在 ROOT 内（带尾分隔符，杜绝 dist 兄弟目录前缀误判）
   let filePath = normalize(join(ROOT, urlPath))
-  if (!filePath.startsWith(ROOT)) {
+  const rootBoundary = ROOT.endsWith(sep) ? ROOT : ROOT + sep
+  if (filePath !== ROOT && !filePath.startsWith(rootBoundary)) {
     res.writeHead(403).end()
     return
   }

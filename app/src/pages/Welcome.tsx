@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULES } from '../content/help'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
-import { llmConfigured } from '../modules/review/engine/coach'
+import { DEFAULT_GATEWAY_URL, loadCoachConfig, probeGateway } from '../modules/review/engine/coach'
 
 /**
  * 首访引导（/welcome）：全屏遮罩分步式（成熟实现的主流形态——遮罩覆盖主界面、
@@ -24,7 +24,22 @@ export function Welcome() {
   const { config, setConfig } = useCollect()
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
-  const aiReady = llmConfigured()
+  // AI 配置的真实状态：本地存过"已配置"不代表网关进程里真有 Key（gateway.env 可能没写），
+  // 网关模式下必须探测 /health 才能下结论（2026-10-26 用户实测：引导页说配好了、实际全走不通）
+  const aiCfg = loadCoachConfig()
+  const gwMode = aiCfg.mode === 'llm' && Boolean(aiCfg.viaGateway)
+  const [gwProbe, setGwProbe] = useState<'checking' | 'ok' | 'nokey' | 'offline'>('checking')
+  useEffect(() => {
+    if (!gwMode) return
+    let alive = true
+    void probeGateway(aiCfg.gatewayUrl || DEFAULT_GATEWAY_URL).then((p) => {
+      if (!alive) return
+      setGwProbe(!p.online ? 'offline' : p.chatConfigured ? 'ok' : 'nokey')
+    })
+    return () => {
+      alive = false
+    }
+  }, [gwMode, aiCfg.gatewayUrl])
 
   /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
   const finish = (to = '/') => {
@@ -63,7 +78,12 @@ export function Welcome() {
   }
 
   const saveAndSync = async () => {
-    saveCloudConfig(cloud)
+    try {
+      saveCloudConfig(cloud)
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e))
+      return
+    }
     const r = await syncFromCloud()
     setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在 设置 → 云端同步 管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
   }
@@ -186,10 +206,20 @@ export function Welcome() {
             <h2>{STEPS[3]}</h2>
             <div className="desc">不配也完全能用——信息筛选走本地规则、报告走内置模板。配上自己的 Key 后，多出 AI 复盘教练、AI 写大纲、联网调研这些增强</div>
             <div className="set-body">
-              {aiReady ? (
-                <div className="notice">✅ AI 已配置，无需操作。想确认状态就去 设置 → AI 页点「测试网关」。</div>
+              {aiCfg.mode === 'llm' && !aiCfg.viaGateway ? (
+                <div className="notice">✅ AI 已配置（浏览器直连模式）。想验证 Key 是否有效，去 设置 → AI 页发一次对话试试。</div>
+              ) : gwMode && gwProbe === 'checking' ? (
+                <div className="notice">正在检查本地网关状态…</div>
+              ) : gwMode && gwProbe === 'ok' ? (
+                <div className="notice">✅ AI 已配置：网关在线，Key 已加载。想确认就去 设置 → AI 页点「测试网关」。</div>
               ) : (
                 <>
+                  {gwMode && gwProbe === 'nokey' && (
+                    <div className="notice">⚠️ 网关在运行，但还没配置 Key——按下面说明补上后重启生效。</div>
+                  )}
+                  {gwMode && gwProbe === 'offline' && (
+                    <div className="notice">⚠️ 本地网关没连上：桌面版请重启应用；浏览器版请在 app 目录运行 <code>npm run gateway</code>。配 Key 的说明在下面。</div>
+                  )}
                   <div className="notice">
                     <b>Key 怎么拿</b>：到大模型服务商官网注册获取（如 DeepSeek 开放平台、智谱开放平台），一把 Key 网关全用。
                   </div>

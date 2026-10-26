@@ -1,13 +1,14 @@
 /**
- * FFmpeg wasm 客户端（单例懒加载）：首次使用时从 CDN 加载 core（约 30MB，一次即可），
+ * FFmpeg wasm 客户端（单例懒加载）：首次使用时加载本地打包的 core（public/ffmpeg/，约 30MB，一次即可），
  * 之后常驻内存。单线程核心，无需 COOP/COEP 响应头。
  * 限制：wasm 软编码，适合中小文件（≤100MB / 短视频）。
+ * core 不再从 CDN 运行时取（安全审计 2026-10-26 A-3：CDN 被劫持即远程代码进应用）；
+ * public/ffmpeg/ 内文件与 @ffmpeg/core@0.12.10 官方包逐字节一致（sha256 校验过）。
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
 
-const CORE_VERSION = '0.12.10'
-const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`
+const CORE_BASE = '/ffmpeg'
 
 let instance: FFmpeg | null = null
 let loading: Promise<FFmpeg> | null = null
@@ -24,6 +25,8 @@ export async function getFFmpeg(cb: FFmpegCallbacks = {}): Promise<FFmpeg> {
       const ff = new FFmpeg()
       ff.on('log', ({ message }) => cb.onLog?.(message))
       ff.on('progress', ({ progress }) => cb.onProgress?.(progress))
+      // blob 中转：worker 内部对 coreURL 走动态 import，dev 模式下同源 URL 会被 Vite
+      // 加 ?import 走转换管线（31MB 文件直接失败）；blob URL 不经 Vite，dev/build 行为一致
       await ff.load({
         coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),

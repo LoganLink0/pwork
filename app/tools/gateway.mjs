@@ -55,6 +55,25 @@ const json = (res, status, obj) => {
   res.end(JSON.stringify(obj))
 }
 
+/** 请求体统一读取：上限 1MB，超限回 413（安全审计 2026-10-26：本机恶意页面耗内存面） */
+const MAX_BODY = 1_048_576
+function readBody(req, res, onEnd) {
+  let body = ''
+  let overflow = false
+  req.on('data', (c) => {
+    if (overflow) return
+    body += c
+    if (body.length > MAX_BODY) overflow = true
+  })
+  req.on('end', () => {
+    if (overflow) {
+      json(res, 413, { error: 'request body too large' })
+      return
+    }
+    onEnd(body)
+  })
+}
+
 /** 归一上游地址：允许填基础地址、带 /v1、或完整端点 */
 function normalizeUpstream(url) {
   const u = String(url || '').trim().replace(/\/+$/, '')
@@ -65,7 +84,19 @@ function normalizeUpstream(url) {
 
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin || ''
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+  // 准入三道闸（安全审计 2026-10-26）：Host 白名单防 DNS rebinding；带 Origin 的请求
+  // 必须命中白名单（阻断恶意网页 text/plain 简单请求直接刷 Key）；不带 Origin 的
+  // 本机客户端（curl 冒烟、脚本）照常放行。白名单含桌面 WebView 源 tauri.localhost。
+  const host = String(req.headers.host || '').toLowerCase()
+  const hostOk =
+    host === `127.0.0.1:${PORT}` || host === `localhost:${PORT}` || host === `[::1]:${PORT}` ||
+    host === '127.0.0.1' || host === 'localhost'
+  const originOk = !origin || /^https?:\/\/(localhost|127\.0\.0\.1|tauri\.localhost|\[::1\])(:\d+)?$/i.test(origin)
+  if (!hostOk || !originOk) {
+    json(res, 403, { error: 'forbidden' })
+    return
+  }
+  if (/^https?:\/\/(localhost|127\.0\.0\.1|tauri\.localhost|\[::1\])(:\d+)?$/i.test(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Vary', 'Origin')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -97,9 +128,7 @@ const server = http.createServer(async (req, res) => {
       json(res, 503, { ok: false, error: '网关未配置搜索 Key——在 gateway.env/.env.local 写 PWORK_SEARCH_API_KEY（不写则复用 PWORK_LLM_API_KEY）' })
       return
     }
-    let body = ''
-    req.on('data', (c) => (body += c))
-    req.on('end', async () => {
+    readBody(req, res, async (body) => {
       try {
         const { query, count } = JSON.parse(body || '{}')
         if (!query || typeof query !== 'string') {
@@ -141,9 +170,7 @@ const server = http.createServer(async (req, res) => {
   // D1 直连代理（2026-10-20）：api.cloudflare.com 不带 CORS 头，浏览器页面直连必被拦；
   // 云端同步/设备同步的 D1 查询经此转发。Token 随请求带来——不落盘、不进日志。
   if (path === '/d1/query' && req.method === 'POST') {
-    let body = ''
-    req.on('data', (c) => (body += c))
-    req.on('end', async () => {
+    readBody(req, res, async (body) => {
       try {
         const { accountId, databaseId, token, sql, params } = JSON.parse(body || '{}')
         const okAccount = /^[0-9a-f]{32}$/i.test(accountId ?? '')
@@ -176,9 +203,7 @@ const server = http.createServer(async (req, res) => {
       json(res, 503, { error: '网关未配置 PWORK_LLM_API_KEY——请在 app/.env.local 填写后重启网关' })
       return
     }
-    let body = ''
-    req.on('data', (c) => (body += c))
-    req.on('end', async () => {
+    readBody(req, res, async (body) => {
       try {
         // 提取并剥离 purpose（前端场景标记，只用于记账，不转发上游）；模型固定时替换 model
         let purpose = null

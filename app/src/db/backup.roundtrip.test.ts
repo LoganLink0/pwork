@@ -84,15 +84,14 @@ describe('备份恢复演练：12 张表全量回路', () => {
     const insight: InsightRecord = {
       id: newId('ins'),
       reviewId: review.id,
-      content: '演练洞察：备份是安全网',
+      text: '演练洞察：备份是安全网',
+      tags: ['复盘'],
+      kind: 'inductive',
       verified: false,
-      patternGroup: null,
-      revisitAt: null,
+      patternGroup: '备份',
       createdAt: NOW,
-      updatedAt: NOW,
-      deletedAt: null,
-      schemaVersion: 1,
-    } as unknown as InsightRecord
+      revisit: [],
+    }
     await db.insights.put(insight)
 
     const task = await db.tasks.put({

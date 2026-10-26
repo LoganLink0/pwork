@@ -3,6 +3,7 @@
  * 纪律：软删除优先（铁律 3）；读取侧防御可选字段（铁律 2）；导出统一包裹（02 §4）。
  */
 import { db } from './schema'
+import { registerTombstones } from './tombstones'
 import type { ExportBundle, Note, NoteLinks } from '../types/models'
 
 /** 生成本地唯一 ID（无需 uuid 依赖） */
@@ -155,8 +156,11 @@ export async function restoreNote(id: string): Promise<void> {
   await db.notes.put({ ...note, deletedAt: null, updatedAt: new Date().toISOString() })
 }
 
-/** 彻底删除单条（仅在回收站手动触发；先确认，删后不可恢复） */
+/** 彻底删除单条（仅在回收站手动触发；先确认，删后不可恢复）。
+ *  设备同步开启时登记墓碑，防止其他设备把云端留存的删除前版本拉回去"复活"（安全审计 B5） */
 export async function purgeNote(id: string): Promise<void> {
+  const note = await db.notes.get(id)
+  registerTombstones('notes', note ? [note] : [{ id }])
   await db.notes.delete(id)
 }
 
@@ -164,6 +168,7 @@ export async function purgeNote(id: string): Promise<void> {
 export async function purgeOldDeletedNotes(days = 30, now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
   const stale = (await db.notes.toArray()).filter((n) => n.deletedAt !== null && n.deletedAt < cutoff)
+  registerTombstones('notes', stale)
   await db.notes.bulkDelete(stale.map((n) => n.id))
   return stale.length
 }

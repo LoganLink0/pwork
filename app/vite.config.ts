@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { fork } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -54,6 +55,21 @@ export default defineConfig({
   plugins: [
     react(),
     pworkGatewayAutostart(),
+    // 本地引擎资源（安全审计 2026-10-26 A-3：FFmpeg/OCR 不再运行时从 CDN 取代码）。
+    // 资源以 npm 依赖安装、构建时拷进 dist（版本由 lock 锁定；esm 版 core 是 module worker
+    // 动态 import 的正确形态）；src/engine/ffmpegClient.ts 与 OcrTool.tsx 按这些目标路径加载
+    viteStaticCopy({
+      targets: [
+        { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.js', stripBase: true } },
+        { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.wasm', stripBase: true } },
+        { src: 'node_modules/tesseract.js/dist/worker.min.js', dest: 'tesseract', rename: { name: 'worker.min.js', stripBase: true } },
+        { src: 'node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-lstm.wasm.js', stripBase: true } },
+        { src: 'node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-simd-lstm.wasm.js', stripBase: true } },
+        { src: 'node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-relaxedsimd-lstm.wasm.js', stripBase: true } },
+        { src: 'node_modules/@tesseract.js-data/chi_sim/4.0.0/chi_sim.traineddata.gz', dest: 'tesseract/lang', rename: { name: 'chi_sim.traineddata.gz', stripBase: true } },
+        { src: 'node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz', dest: 'tesseract/lang', rename: { name: 'eng.traineddata.gz', stripBase: true } },
+      ],
+    }),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
@@ -75,6 +91,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // 懒加载的大体积引擎（ffmpeg 与 tesseract，共约 64MB）不进 precache：
+        // 使用时按需请求 + 浏览器 HTTP 缓存即可，首装同步缓存过重会拖垮 PWA 安装
+        globIgnores: ['ffmpeg/**', 'tesseract/**'],
         navigateFallback: 'index.html',
       },
     }),

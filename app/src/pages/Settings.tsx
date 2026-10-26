@@ -89,7 +89,11 @@ export function Settings() {
 
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
-    saveCloudConfig(next)
+    try {
+      saveCloudConfig(next)
+    } catch (e) {
+      setCloudMsg(e instanceof Error ? e.message : String(e))
+    }
   }
 
   // 设备同步（记录级增量，2026-10-19 替换镜像档 1）
@@ -832,7 +836,7 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v1.1.3</span>
+            <span className="val">v1.1.4</span>
           </div>
           <div className="set-row">
             <label>数据存放</label>

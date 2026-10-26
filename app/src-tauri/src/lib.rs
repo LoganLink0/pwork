@@ -62,10 +62,12 @@ pub fn run() {
             .build(),
         )?;
       }
-      // 内嵌网关：AI Key 的安全存放点（127.0.0.1，随应用启停）
+      // 内嵌网关：AI Key 的安全存放点（127.0.0.1，随应用启停）。
+      // 端口被占（如开发版 Node 网关在跑）时让位，但发事件告知前端——
+      // 8788 也可能是恶意进程冒名占位，用户应能察觉（安全审计 F12）
       let data_dir = app.path().app_data_dir()?;
       let _ = std::fs::create_dir_all(&data_dir);
-      gateway::start(data_dir);
+      gateway::start(data_dir, app.handle().clone());
 
       // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走 Ctrl+K 面板）
       let mods = Modifiers::CONTROL | Modifiers::ALT;

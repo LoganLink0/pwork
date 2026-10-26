@@ -31,11 +31,18 @@ function json(data: unknown, status = 200): Response {
 let ingestEnsured = false
 
 function checkAuth(request: Request, env: Env): boolean {
+  // TOKEN 未配置或为空串时一律拒绝（安全审计 2026-10-26 B10：空串时 '' === '' 会放行全部写操作）
+  if (!env.TOKEN) return false
   const header = request.headers.get('authorization') ?? ''
-  const url = new URL(request.url)
-  const queryToken = url.searchParams.get('token') ?? ''
-  const token = header.replace(/^Bearer\s+/i, '') || queryToken
+  const token = header.replace(/^Bearer\s+/i, '')
   return token === env.TOKEN
+}
+
+/** 读端点可选鉴权（B9）：设置了 READ_TOKEN 时匿名读关闭，个人兴趣画像不再对全网公开 */
+function checkReadAuth(request: Request, env: Env): boolean {
+  if (!env.READ_TOKEN) return true
+  const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  return token === env.READ_TOKEN
 }
 
 interface ItemRow {
@@ -106,7 +113,7 @@ export default {
     if (path === '/api/sources' && request.method === 'POST') {
       if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
       const body = (await request.json().catch(() => null)) as { sources?: unknown } | null
-      const list = Array.isArray(body?.sources) ? (body!.sources as Record<string, unknown>[]) : []
+      const list = (Array.isArray(body?.sources) ? (body!.sources as Record<string, unknown>[]) : []).slice(0, 100) // B11：条数上限，防 Token 泄漏后写入配额被刷爆
       let imported = 0
       let skipped = 0
       for (const s of list) {
@@ -117,7 +124,9 @@ export default {
           continue
         }
         const tier = Number(s.tier) || 2
-        const weight = typeof s.weight === 'number' ? s.weight : tier === 1 ? 1.0 : tier === 1.5 ? 0.7 : 0.4
+        // B11：weight 夹在 0-5（负数与超大值会扭曲评分加权）
+        const rawWeight = typeof s.weight === 'number' ? s.weight : tier === 1 ? 1.0 : tier === 1.5 ? 0.7 : 0.4
+        const weight = Math.min(5, Math.max(0, rawWeight))
         await env.DB.prepare(
           `INSERT INTO sources (id, name, url, domain, tier, weight, active, fail_streak, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?)
@@ -174,8 +183,9 @@ export default {
       return json({ blocks: results })
     }
 
-    // ── 读操作：开放 ──
+    // ── 读操作：默认开放；设置了 READ_TOKEN 则需鉴权（B9） ──
     if (path === '/api/items' && request.method === 'GET') {
+      if (!checkReadAuth(request, env)) return json({ error: 'unauthorized（已启用读鉴权 READ_TOKEN）' }, 401)
       const since = url.searchParams.get('since') ?? ''
       const minScore = Number(url.searchParams.get('minScore') ?? 0)
       const ot = url.searchParams.get('ot')
@@ -195,6 +205,7 @@ export default {
     }
 
     if (path === '/api/digest' && request.method === 'GET') {
+      if (!checkReadAuth(request, env)) return json({ error: 'unauthorized（已启用读鉴权 READ_TOKEN）' }, 401)
       const n = Math.min(50, Number(url.searchParams.get('n') ?? 10))
       const { results } = await env.DB.prepare(
         "SELECT * FROM items WHERE stage = 'scored' ORDER BY score_total DESC, fetched_at DESC LIMIT ?",
@@ -205,11 +216,13 @@ export default {
     }
 
     if (path === '/api/sources' && request.method === 'GET') {
+      if (!checkReadAuth(request, env)) return json({ error: 'unauthorized（已启用读鉴权 READ_TOKEN）' }, 401)
       const { results } = await env.DB.prepare('SELECT * FROM sources WHERE active = 1 ORDER BY tier').all()
       return json({ sources: results })
     }
 
     if (path === '/rss/daily.xml' && request.method === 'GET') {
+      if (!checkReadAuth(request, env)) return json({ error: 'unauthorized（已启用读鉴权 READ_TOKEN）' }, 401)
       const { results } = await env.DB.prepare(
         "SELECT title, url, summary, score_total FROM items WHERE stage = 'scored' ORDER BY score_total DESC, fetched_at DESC LIMIT 10",
       )
@@ -241,15 +254,23 @@ export default {
         return json({ error: 'invalid json' }, 400)
       }
       if (!Array.isArray(body.messages) || body.messages.length === 0) return json({ error: 'messages required' }, 400)
+      // B7：条数与输出上限——口令泄漏时损失有界，不再能拿最贵模型刷无上限调用
+      if (body.messages.length > 40) return json({ error: 'messages 最多 40 条' }, 400)
+      const allowedModels = [env.AI_MODEL_CHEAP, env.AI_MODEL].filter((m): m is string => Boolean(m))
+      const model = allowedModels.length === 0 ? 'deepseek-chat' : allowedModels[0]!
+      if (allowedModels.length > 0 && body.model && !allowedModels.includes(body.model)) {
+        return json({ error: `model 只允许：${allowedModels.join(' / ')}` }, 400)
+      }
       const upstreamUrl = env.AI_BASE_URL.replace(/\/+$/, '') + '/chat/completions'
       assertPublicHttpUrl(upstreamUrl) // AI_BASE_URL 误配置指向内网时拒绝外联
       const upstream = await guardedFetch(upstreamUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.AI_API_KEY },
         body: JSON.stringify({
-          model: body.model || env.AI_MODEL_CHEAP || 'deepseek-chat',
+          model,
           messages: body.messages,
           temperature: body.temperature ?? 0.7,
+          max_tokens: 2000,
         }),
       }, 60_000)
       return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })

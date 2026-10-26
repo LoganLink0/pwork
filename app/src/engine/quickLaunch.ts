@@ -49,7 +49,17 @@ function validEntries(raw: unknown): QuickSite[] {
   if (!Array.isArray(raw)) return []
   return raw.filter((s): s is QuickSite => {
     const site = s as QuickSite
-    return typeof site?.id === 'string' && typeof site?.name === 'string' && !!site.name.trim() && typeof site?.url === 'string'
+    // 读取层兜底（安全审计 2026-10-26 A-4）：只拒绝显式非 http(s) 协议（脚本协议地址），
+    // 防 localStorage 被污染后进 window.open；无协议的地址原样放行（归一发生在编辑层）
+    const u = site?.url
+    const colon = typeof u === 'string' ? u.indexOf(':') : -1
+    if (typeof u === 'string' && colon > 0) {
+      const scheme = u.slice(0, colon).toLowerCase()
+      if (scheme !== 'http' && scheme !== 'https') return false
+    }
+    return (
+      typeof site?.id === 'string' && typeof site?.name === 'string' && !!site.name.trim() && typeof u === 'string'
+    )
   })
 }
 
