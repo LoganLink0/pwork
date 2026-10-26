@@ -8,7 +8,12 @@ rem ============================================================
 setlocal
 set PORT=5273
 set APPDIR=%~dp0app
-if not exist "%APPDIR%\package.json" set APPDIR=E:\AIPROJECT-GLM\PWORK\app
+if not exist "%APPDIR%\package.json" set APPDIR=%~dp0..\app
+if not exist "%APPDIR%\package.json" (
+  echo app directory not found next to this script.
+  pause
+  exit /b 1
+)
 
 rem already running? just open the browser
 netstat -ano | findstr /C:":%PORT% " | findstr /C:"LISTENING" >nul 2>&1

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PWORK · 本地优先的个人工作台</title>
+<meta name="description" content="记下来、加工、成稿、复盘——一个在你本机跑的四模块闭环工作台。数据只属于你：不上传、不注册、离线可用。开源免费。">
+<!-- intent: 单页产品介绍；主次：信任主张（数据只属于你）最先读到 → 四模块闭环次之 → 数字与获取方式最后。
+     视觉与应用同源：米白底/白卡/墨字/琥珀强调/四模块标记色（蓝绿赭琥珀）。 -->
+<style>
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface-2: #faf9f7;
+    --line: #e6e4df;
+    --line-strong: #cfcac1;
+    --ink: #211e1a;
+    --ink-soft: #66625a;
+    --ink-faint: #736e66;
+    --accent: #e8833a;
+    --accent-deep: #b0500f;
+    --accent-text: #a34e12;
+    --m-input: #3d6e9e;
+    --m-process: #2f7d52;
+    --m-output: #a05353;
+    --m-review: #e8833a;
+    --font: -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--accent-text); }
+
+  /* 顶栏 */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .topbar .wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 14px; padding-bottom: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+  .brand .mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  }
+  .gh {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border: 1px solid var(--line-strong); border-radius: 999px;
+    background: var(--surface-2); color: var(--ink);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .gh:hover { border-color: var(--ink-faint); background: var(--bg); }
+  .gh svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* Hero */
+  .hero { padding: 88px 0 64px; }
+  .hero .kicker {
+    color: var(--accent-text); font-weight: 600; letter-spacing: 0.1em; font-size: 14px;
+  }
+  .hero h1 {
+    margin: 12px 0 16px; font-size: 48px; line-height: 1.25; letter-spacing: -0.02em; font-weight: 700;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent-deep); }
+  .hero p.lead { margin: 0 0 12px; font-size: 18px; color: var(--ink-soft); max-width: 560px; }
+  .hero p.sub { margin: 0 0 32px; font-size: 15px; color: var(--ink-faint); max-width: 560px; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 26px; border-radius: 10px; border: none;
+    background: var(--accent-deep); color: #fff;
+    font-size: 16px; font-weight: 600; text-decoration: none;
+  }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 26px; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: var(--surface);
+    color: var(--ink); font-size: 16px; font-weight: 600; text-decoration: none;
+  }
+  .btn-ghost:hover { border-color: var(--ink-faint); }
+  .hero .note { margin-top: 16px; font-size: 13px; color: var(--ink-faint); }
+
+  /* 区块通用 */
+  section { padding: 56px 0; }
+  .sec-head { margin-bottom: 32px; }
+  .sec-head .kicker { color: var(--accent-text); font-weight: 600; font-size: 13px; letter-spacing: 0.1em; }
+  .sec-head h2 { margin: 6px 0 8px; font-size: 30px; letter-spacing: -0.01em; }
+  .sec-head p { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 640px; }
+
+  /* 四模块带：等高卡、说明锚底同线 */
+  .mods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .mod {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px;
+  }
+  .mod .tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700;
+  }
+  .mod .tag::before {
+    content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--mc);
+  }
+  .mod b { font-size: 17px; }
+  .mod span { font-size: 14px; color: var(--ink-soft); }
+  .loop-back {
+    margin-top: 14px; text-align: center; font-size: 13px; color: var(--ink-faint);
+  }
+  .loop-back b { color: var(--accent-text); }
+
+  /* 三信任点带：等高卡 */
+  .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .trust .card {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px;
+  }
+  .trust b { font-size: 16px; }
+  .trust p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+  /* 数字带 */
+  .facts {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 28px;
+  }
+  .fact { text-align: center; }
+  .fact .num { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+  .fact .lab { font-size: 13px; color: var(--ink-faint); }
+
+  /* 获取方式 */
+  .get { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .get .card {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px;
+  }
+  .get b { font-size: 16px; }
+  .get p { margin: 0; font-size: 14px; color: var(--ink-soft); flex: 1; }
+  .get a { font-size: 14px; font-weight: 600; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--ink-faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
+
+  @media (max-width: 900px) {
+    .mods { grid-template-columns: repeat(2, 1fr); }
+    .trust, .get { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: repeat(2, 1fr); row-gap: 24px; }
+    .hero h1 { font-size: 34px; }
+    .hero { padding: 56px 0 40px; }
+  }
+  @media (max-width: 560px) {
+    .mods { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#"><span class="mark">P</span>PWORK</a>
+    <a class="gh" href="https://github.com/israelberne/pwork" target="_blank" rel="noreferrer noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      GitHub 开源
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="hero wrap">
+    <div class="kicker">本地优先 · 开源免费</div>
+    <h1>一个闭环的个人工作台<br>数据<em>只属于你</em></h1>
+    <p class="lead">记下来、加工、成稿、复盘，四步连成一个圈——全部在你自己的电脑上运行，不上传、不注册、断网也能用。</p>
+    <p class="sub">速记、信源订阅、信息日报、全库搜索、周报与 PPT 生成、复盘行动项回流待办。想要的功能都在，不想要的杂音都没有。</p>
+    <div class="cta-row">
+      <a class="btn-primary" href="https://github.com/israelberne/pwork/releases" target="_blank" rel="noreferrer noopener">下载 Windows 版</a>
+      <a class="btn-ghost" href="https://github.com/israelberne/pwork" target="_blank" rel="noreferrer noopener">查看源码</a>
+    </div>
+    <p class="note">桌面版 Windows 10/11；也可在浏览器里直接跑（含安装为应用），数据都存在本机。</p>
+  </div>
+
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="kicker">四模块一个圈</div>
+      <h2>每一轮工作，自动变成下一轮的起点</h2>
+      <p>复盘产出的行动项直接进入待办，勾选完成即闭环——产出回流输入，越用越顺。</p>
+    </div>
+    <div class="mods">
+      <div class="mod" style="--mc: var(--m-input)">
+        <span class="tag">输入</span>
+        <b>记下来</b>
+        <span>速记浮层随时唤起；11 个领域 48 个实测可用的信源勾选订阅，信息日报自动抓进库。</span>
+      </div>
+      <div class="mod" style="--mc: var(--m-process)">
+        <span class="tag">处理</span>
+        <b>加工</b>
+        <span>Ctrl K 一次搜遍全库；条目投票筛选，越用越合你的口味；常用小工具一应俱全。</span>
+      </div>
+      <div class="mod" style="--mc: var(--m-output)">
+        <span class="tag">输出</span>
+        <b>成稿</b>
+        <span>周报月报一键汇成，导出 HTML / PPT / 朗读音频；一堆材料直接产出可编辑的演示文稿。</span>
+      </div>
+      <div class="mod" style="--mc: var(--m-review)">
+        <span class="tag">回路</span>
+        <b>复盘</b>
+        <span>3 分钟快答复盘产出行动项，自动进任务库；勾选完成即闭环，下周自动带出这一轮。</span>
+      </div>
+    </div>
+    <p class="loop-back">复盘的行动项回到待办 → 又成为下一轮「输入」——<b>这个圈是自动转的</b></p>
+  </section>
+
+  <section class="wrap" style="background: var(--surface-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="sec-head">
+      <div class="kicker">三条底线</div>
+      <h2>先说清楚什么不做，再说能做什么</h2>
+    </div>
+    <div class="trust">
+      <div class="card">
+        <b>数据不出本机</b>
+        <p>全部数据存在你电脑的本地库里（可随时全量导出搬家）。没有账号体系，没有任何「同步到我们服务器」——因为根本没有我们的服务器。</p>
+      </div>
+      <div class="card">
+        <b>AI 配不配都行</b>
+        <p>不配 AI，信息筛选、报告生成全部本地规则完成，功能完整。想增强，用自己的大模型 Key 即刻接入；Key 只写进本机文件，不经过任何第三方。</p>
+      </div>
+      <div class="card">
+        <b>上云是可选项</b>
+        <p>想要 7×24 自动抓信源、多设备同步？一键部署你自己的 Cloudflare 云端（免费档 ¥0/月）——部署的是你自己的账号，端点和密钥都归你。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="kicker">现在长什么样</div>
+      <h2>当前版本 1.1.8</h2>
+    </div>
+    <div class="facts">
+      <div class="fact"><div class="num">48</div><div class="lab">实测可用的预置信源</div></div>
+      <div class="fact"><div class="num">404</div><div class="lab">项自动化测试，全绿</div></div>
+      <div class="fact"><div class="num">5 步</div><div class="lab">首访引导，跟着走完就能用</div></div>
+      <div class="fact"><div class="num">¥0</div><div class="lab">开源免费，云端可选免费档</div></div>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding-top: 0;">
+    <div class="sec-head">
+      <div class="kicker">怎么拿到</div>
+      <h2>三种方式，都在 GitHub 仓库里</h2>
+    </div>
+    <div class="get">
+      <div class="card">
+        <b>Windows 安装包</b>
+        <p>到仓库的 Releases 页下载安装包，双击安装即用；装完自动进入五步首访引导。</p>
+        <a href="https://github.com/israelberne/pwork/releases" target="_blank" rel="noreferrer noopener">去 Releases 下载 →</a>
+      </div>
+      <div class="card">
+        <b>浏览器直接用</b>
+        <p>克隆或下载仓库，进入 app 目录装依赖后一条命令启动；也可安装为浏览器里的应用（PWA）。</p>
+        <a href="https://github.com/israelberne/pwork#快速开始" target="_blank" rel="noreferrer noopener">看快速开始 →</a>
+      </div>
+      <div class="card">
+        <b>从源码构建</b>
+        <p>全部代码开源：前端、桌面壳、云端抓取服务与部署向导都在仓库里，404 项测试可供验证。</p>
+        <a href="https://github.com/israelberne/pwork" target="_blank" rel="noreferrer noopener">浏览源码 →</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>PWORK · 本地优先的个人工作台 · 数据只属于你</span>
+    <span><a href="https://github.com/israelberne/pwork" target="_blank" rel="noreferrer noopener">GitHub 开源仓库</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

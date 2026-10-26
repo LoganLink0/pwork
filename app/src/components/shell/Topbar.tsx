@@ -2,25 +2,16 @@ import { Link, useLocation } from 'react-router-dom'
 import { crumbFor } from '../../content/nav'
 import { useUi } from '../../store/ui'
 import { Icon } from './icons'
-import type { ThemePref } from '../../engine/appearance'
 
-const THEME_ORDER: ThemePref[] = ['auto', 'light', 'dark']
-const THEME_ICON: Record<ThemePref, string> = { auto: 'appearance', light: 'sun', dark: 'moon' }
-const THEME_LABEL: Record<ThemePref, string> = { auto: '跟随系统', light: '明亮', dark: '暗色' }
-const THEME_TITLE: Record<ThemePref, string> = { auto: '主题：跟随系统（点击切到明亮）', light: '主题：明亮（点击切到暗色）', dark: '主题：暗色（点击切到跟随系统）' }
-
-/** 顶栏（PRD §4.1）：面包屑 + 搜索(⌘K) + 速记 + 主题 + 设置 */
+/** 顶栏（PRD §4.1）：面包屑 + 搜索(⌘K) + 速记 + 设置（主题切换在侧栏底部） */
 export function Topbar() {
   const { pathname } = useLocation()
   const openPalette = useUi((s) => s.openPalette)
   const openQuick = useUi((s) => s.openQuick)
-  const theme = useUi((s) => s.theme)
-  const setTheme = useUi((s) => s.setTheme)
   const updateReady = useUi((s) => s.updateReady)
   const applyUpdate = useUi((s) => s.applyUpdate)
 
   const [title, trail, mark] = crumbFor(pathname)
-  const nextTheme = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length] ?? 'auto'
 
   return (
     <header className="topbar">
@@ -46,16 +37,6 @@ export function Topbar() {
       )}
       <button type="button" className="quicknote-btn" onClick={openQuick}>
         <Icon name="zap" /> 速记
-      </button>
-      <button
-        type="button"
-        className="iconbtn"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: 'auto', padding: '0 10px', fontSize: 'var(--fs-xs)' }}
-        title={THEME_TITLE[theme]}
-        aria-label={THEME_TITLE[theme]}
-        onClick={() => setTheme(nextTheme)}
-      >
-        <Icon name={THEME_ICON[theme]} /> {THEME_LABEL[theme]}
       </button>
       <Link to="/settings" className="iconbtn" title="设置" aria-label="设置">
         <Icon name="settings" />

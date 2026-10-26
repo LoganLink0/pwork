@@ -897,6 +897,12 @@ export function Settings() {
             <label>AI 数据边界</label>
             <span className="val">只有你主动触发的 AI 调用会把对应内容发往你配置的服务商，其余数据一律不出本机（详见「AI」页底部的说明）</span>
           </div>
+          <div className="set-row">
+            <label>首访引导</label>
+            <span className="val">
+              <Link className="btn-ghost" to="/welcome" onClick={() => localStorage.removeItem('pwork-welcomed')}>重看首访引导 →</Link>
+            </span>
+          </div>
         </div>
       </div>
         </div>

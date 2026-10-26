@@ -135,7 +135,7 @@ describe('工作台壳（W1）', () => {
     expect(useNotes.getState().notes.filter((n) => n.body === '最后一条用按钮')).toHaveLength(1)
   })
 
-  it('设置页：默认进数据分类且导出入口在；主题切换走顶栏（2026-10-24 外观卡删除）', async () => {
+  it('设置页：默认进数据分类且导出入口在；主题切换走侧栏分段控件（2026-10-25 从顶栏迁移）', async () => {
     const user = userEvent.setup()
     render(<App />)
     // 顶栏（banner）里的设置入口，避免与侧边栏同名链接多匹配
@@ -144,10 +144,9 @@ describe('工作台壳（W1）', () => {
     // 外观卡已删：默认分类=数据，全量导出直接可见（铁律 6 入口）
     expect(await screen.findByRole('button', { name: /全量导出/ })).toBeInTheDocument()
 
-    // 主题唯一入口=顶栏按钮（带当前态文案，点击轮换）
-    const themeBtn = within(screen.getByRole('banner')).getByRole('button', { name: /跟随系统|明亮|暗色/ })
-    await user.click(themeBtn)
-    await waitFor(() => expect(['dark', 'light', 'auto']).toContain(document.documentElement.dataset.theme ?? 'auto'))
+    // 主题唯一入口=侧栏左下角分段控件（三格暗色/跟随系统/明亮），点暗色格立即生效
+    await user.click(sidebar().getByRole('button', { name: '主题：暗色' }))
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'))
   })
 
   it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染（2026-10-22 重排：四模块卡已移除）', async () => {

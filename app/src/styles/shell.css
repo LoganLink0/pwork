@@ -135,6 +135,60 @@ button.nav-item {
 
 .sidebar .spacer { flex: 1; }
 
+/* 左下角快捷区（2026-10-25 用户拍板，形态参考 aihot.news）：
+   GitHub 开源按钮 + 视觉主题分段控件，压在「帮助」上方 */
+.gh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  margin: 0 var(--sp-1) var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
+}
+.gh-btn:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+/* 主题分段控件：胶囊浅底容器 + 三格纯图标（暗/跟随系统/亮），选中格白底浮起 */
+.theme-seg {
+  display: flex;
+  gap: 2px;
+  margin: 0 var(--sp-1) var(--sp-3);
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.theme-seg button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
+}
+.theme-seg button:hover {
+  color: var(--ink-soft);
+}
+.theme-seg button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-1);
+}
+
 .sidebar .foot {
   font-size: var(--fs-xs);
   color: var(--ink-faint);
@@ -1806,6 +1860,17 @@ a.mcard .m-link:hover {
   padding: var(--sp-4) var(--sp-6);
   border-top: 1px solid var(--line);
   background: var(--surface-2);
+}
+/* 跳过引导 + 再入提示小字（2026-10-25 用户要求：提醒之后从哪里重看） */
+.skip-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+.skip-hint {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
 }
 
 /* 组块：组标题（含行内说明）+ 紧凑内容——亲密性的基本单位 */

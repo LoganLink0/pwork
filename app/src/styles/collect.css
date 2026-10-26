@@ -815,7 +815,9 @@ a.origin:hover {
   gap: var(--sp-1);
 }
 .src-catalog-list {
-  max-height: 42vh;
+  /* 固定三行条目的高度（2026-10-25 用户拍板）：切领域时源数不同，框高恒定，
+     上方领域标签不再跟着跳动；放不下的领域在框内滚动 */
+  height: 126px;
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--r-md);

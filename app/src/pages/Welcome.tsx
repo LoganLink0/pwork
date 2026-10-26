@@ -410,7 +410,10 @@ export function Welcome() {
           </div>
 
           <footer className="welcome-card-foot">
-            <button type="button" className="text-btn" onClick={() => finish()}>跳过引导</button>
+            <div className="skip-wrap">
+              <button type="button" className="text-btn" onClick={() => finish()}>跳过引导</button>
+              <span className="skip-hint">以后想再看：设置 → 关于 → 重看首访引导</span>
+            </div>
             <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
               {step > 0 && (
                 <button type="button" className="btn-ghost" onClick={() => setStep((s) => s - 1)}>上一步</button>

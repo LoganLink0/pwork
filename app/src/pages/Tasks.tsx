@@ -87,7 +87,7 @@ export function Tasks() {
     localStorage.setItem(VIEW_KEY, v)
   }
 
-  // 手动扫描（首次会弹目录选择器——选你的项目根目录，如 E:\AIPROJECT-GLM）
+  // 手动扫描（首次会弹目录选择器——选你的项目根目录）
   const runScan = async () => {
     if (scanBusy) return
     setScanBusy(true)

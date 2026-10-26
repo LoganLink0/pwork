@@ -5,8 +5,17 @@ import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useCollect } from '../../store/collect'
 import { useTasks } from '../../store/tasks'
+import { useUi } from '../../store/ui'
+import type { ThemePref } from '../../engine/appearance'
 
 const OPEN_KEY = 'pwork-nav-open'
+
+/** 主题三态（分段控件展示顺序：暗色 / 跟随系统 / 明亮） */
+const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
+  { pref: 'dark', icon: 'moon', label: '暗色' },
+  { pref: 'auto', icon: 'appearance', label: '跟随系统' },
+  { pref: 'light', icon: 'sun', label: '明亮' },
+]
 
 function loadOpen(): Record<string, boolean> {
   try {
@@ -22,6 +31,8 @@ export function Sidebar() {
   const noteCount = useNotes((s) => s.notes.length)
   const sourceCount = useCollect((s) => s.sources.filter((src) => src.active).length)
   const todayDue = useTasks((s) => s.stats.today)
+  const theme = useUi((s) => s.theme)
+  const setTheme = useUi((s) => s.setTheme)
   const [open, setOpen] = useState<Record<string, boolean>>(() => loadOpen())
 
   const countOf = (from: 'notes' | 'sources' | undefined): number | null => {
@@ -103,6 +114,29 @@ export function Sidebar() {
       )}
 
       <div className="spacer" />
+      <a
+        className="gh-btn"
+        href="https://github.com/israelberne/pwork"
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        <Icon name="github" size={16} /> GitHub 开源
+      </a>
+      <div className="theme-seg" role="group" aria-label="视觉主题">
+        {THEMES.map((t) => (
+          <button
+            key={t.pref}
+            type="button"
+            className={theme === t.pref ? 'on' : ''}
+            aria-pressed={theme === t.pref}
+            title={`主题：${t.label}`}
+            aria-label={`主题：${t.label}`}
+            onClick={() => setTheme(t.pref)}
+          >
+            <Icon name={t.icon} size={15} />
+          </button>
+        ))}
+      </div>
       <NavLink to="/help" className={({ isActive }) => `nav-item mark-workspace${isActive ? ' active' : ''}`}>
         <span className="ico" aria-hidden><Icon name="helpCircle" /></span>
         帮助
