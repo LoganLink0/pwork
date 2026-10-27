@@ -27,7 +27,7 @@
 
 首次运行如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」（安装包未购买代码签名证书，属预期）。覆盖安装即可升级，数据不受影响。
 
-大陆访问 GitHub 慢？联网版也放在 [Gitee 镜像](https://gitee.com/lsydy/pwork/releases)（Gitee 平台规则：下载附件需注册/登录 Gitee 账号；离线版仅在 GitHub）。
+大陆访问 GitHub 慢？联网版也放在 [Gitee 镜像](https://gitee.com/LoganLink0/pwork/releases)（Gitee 平台规则：下载附件需注册/登录 Gitee 账号；离线版仅在 GitHub）。
 
 ## 快速上手
 

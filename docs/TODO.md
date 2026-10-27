@@ -4,7 +4,7 @@
 
 ## 待办（按优先级；做完勾掉留档）
 
-- [x] **Gitee 下载镜像开通（2026-10-27，用户配置账号后 AI 接手）**：建仓 gitee.com/lsydy/pwork（API）→ 全量代码+双 tag 推平 → Release v0.1.9 建成（id 1245739）+ 48MB 联网版附件上传（50.4MB 链接已验证存在）；**已查证平台规则：Gitee 附件匿名下载 403（需登录 Gitee 账号），离线版 254MB 超 100MB 附件上限**——入口文案如实写明（介绍页 Windows 安装包卡 + README 下载节）；development.md 发布流程补 Gitee 同步步骤（双推+API 建 Release+传附件）。**发版流程新增两步：git push gitee master --tags + API 传附件**。遗留：用户对话中直发过 Gitee 令牌（已提醒撤销重建）
+- [x] **Gitee 下载镜像开通（2026-10-27，用户配置账号后 AI 接手）**：建仓 gitee.com/LoganLink0/pwork（原名 lsydy 空间，同日用户改名 LoganLink0；API 建仓）→ 全量代码+双 tag 推平 → Release v0.1.9 建成（id 1245739）+ 48MB 联网版附件上传（50.4MB 链接已验证存在）；**已查证平台规则：Gitee 附件匿名下载 403（需登录 Gitee 账号），离线版 254MB 超 100MB 附件上限，仓库改路径触发开源重新审核（期间匿名不可见）**——入口文案如实写明（介绍页 Windows 安装包卡 + README 下载节）；development.md 发布流程补 Gitee 同步步骤（双推+API 建 Release+传附件）。**发版流程新增两步：git push gitee master --tags + API 传附件**。遗留：用户对话中直发过 Gitee 令牌（已提醒撤销重建）
 
 - [x] **0.1.9 已发布（2026-10-27 用户拍板发版）**：内容=桌面外链修复批（见上一条留档）+ 侧栏控件设计适配。版本四处同步（package.json/tauri.conf/Cargo.toml/设置关于页）+ 发布说明与介绍页版本号；双版安装包重打（online 48.03MiB / offline 253.92MiB）；装机冒烟 install=0 启动正常；**Release v0.1.9 已发布**（https://github.com/LoganLink0/pwork/releases/tag/v0.1.9，双资产+中文说明）；404 绿/tsc -b 0
 
