@@ -4,6 +4,8 @@
 
 ## 待办（按优先级；做完勾掉留档）
 
+- [x] **0.1.9 已发布（2026-10-27 用户拍板发版）**：内容=桌面外链修复批（见上一条留档）+ 侧栏控件设计适配。版本四处同步（package.json/tauri.conf/Cargo.toml/设置关于页）+ 发布说明与介绍页版本号；双版安装包重打（online 48.03MiB / offline 253.92MiB）；装机冒烟 install=0 启动正常；**Release v0.1.9 已发布**（https://github.com/LoganLink0/pwork/releases/tag/v0.1.9，双资产+中文说明）；404 绿/tsc -b 0
+
 - [x] **桌面外链修复 + 侧栏控件设计适配（2026-10-27 深夜批）**：①桌面版点外链无反应根治——WebView 不处理 target=_blank，新增 Rust 命令 open_external_url（http/https 白名单守卫，file:// 实测被拒），App 层 ExternalLinks 组件全局接管全站外链点击（GitHub 入口/拿 Key/注册引导等十余处一次修复）；**根因插曲：@tauri/api 的运行时动态 import 在 tauri.localhost 下被 vite 预加载环节挂起（无异常无输出的静默失败），改静态 import 根治，Welcome 一键部署同款写法一并修**（复盘 3.36）；CDP 三轮装机验证：直调 OK+守卫生效、诊断日志版全链路、干净版真实点击无错误。②侧栏 GitHub 按钮与主题分段控件适配设计系统——GitHub 行完全复用 nav-item 形态（实测 padding 7px 12px/圆角 8px/行高 36px 三项与导航行逐项一致），主题控件 surface-2 底 r-sm 圆角、行高贴合（32px）；404 全绿/tsc -b 0/lint 24 警告 0 错误。**Release v0.1.8 资产未含此修复（用户未示意发版）——E:\PWORK 本机已装最终版**
 
 - [x] **开源后文档三连批（2026-10-27）**：①README 按开源惯例重写（6564c3f）：徽章+一句话+实拍截图/核心特性/下载安装双版对照/快速上手/五入口/开发一节/MIT——下载入口从开发启动器改指 Releases，W0-W5 流水账与内部编号清除，文档索引 18 行迁入 overview「仓库地图」、版本重打迁入 development「发布打包」；②仓库目录整理（f2ac664）：根目录只留 README/LICENSE/AGENTS/发布说明（惯例位置+Release notes 链接依赖），活文档九份归 docs/、01-07 基座归 docs/design/（git mv 保历史），全部交叉链接改后存在性校验全绿，docs/.nojekyll 防 Jekyll，PWORK-Launcher.exe 挪 tools/、删 ~.DDF；③个人信息清理（53a4e40）：TODO 与交接文档两处本机局域网地址改中性表述，全仓扫描公网 IP/用户名零残留，测试用例的通用保留段（192.168.1.1 等 URL 守卫）确认保留——**历史提交中的内网地址经用户拍板维持现状（2026-10-27，内网段无定位价值，改写历史代价大于收益）**。教训入复盘 3.33-3.35
