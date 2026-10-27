@@ -30,7 +30,7 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 4. 涉及桌面版：`npx tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
 5. 涉及抓取链：真实抓一轮看横幅（耗时/源成败/无卡死）
 6. 涉及 worker：worker 测试 19 绿
-7. 提交纪律：一个 commit 一件事；`git add -A` 前先 `git status` 过目（防误装残留/无关文件混入，复盘 3.17）
+7. 提交纪律：一个 commit 一件事；`git add -A` 前先 `git status` 过目（防误装残留/无关文件混入，复盘 3.17）；提交前个人信息 grep 自查（`192.168|E:\\|C:\\Users` 等模式——仓库已公开，AGENTS 纪律 7）
 
 视觉类改动加两步（2026-10-23 起常用）：
 - 浏览器计算样式采样断言（字号/圆角/对比度——探针见会话记录，h1=28/h2=18/引导句 13/tnum 12）
