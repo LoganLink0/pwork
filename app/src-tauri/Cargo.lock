@@ -80,6 +80,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tiny_http",
  "ureq",
+ "url",
 ]
 
 [[package]]

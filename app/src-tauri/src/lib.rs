@@ -89,6 +89,29 @@ fn open_deploy_wizard(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+/// 打开外部网页（桌面版）：WebView 不处理 target=_blank 的外链，
+/// 统一由这里交给系统默认浏览器。只放行 http/https，其余一律拒绝。
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    let parsed = url::Url::parse(&url).map_err(|_| "链接格式无效".to_string())?;
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
+        return Err("只支持打开网页链接（http/https）".into());
+    }
+    #[cfg(windows)]
+    {
+        // explorer 用系统默认浏览器打开 URL；URL 作为单个参数传递，不经 shell 解析
+        std::process::Command::new("explorer")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败：{e}"))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        Err("仅支持 Windows".into())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -157,7 +180,7 @@ pub fn run() {
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard])
+    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }

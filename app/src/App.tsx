@@ -7,6 +7,7 @@ import { CommandPalette } from './components/shell/CommandPalette'
 import { QuickNote } from './components/shell/QuickNote'
 import { WheelMenu } from './components/shell/WheelMenu'
 import { isDesktopApp } from './engine/platform'
+import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
 import { Home } from './pages/Home'
 import { useNotes } from './store/notes'
@@ -88,6 +89,29 @@ function FirstRunRedirect() {
       if (hash === '' || hash === '#/' || hash === '#') navigate('/welcome', { replace: true })
     }
   }, [navigate])
+  return null
+}
+
+/** 桌面版外链统一走系统浏览器：WebView 不处理 target=_blank，
+ *  全站所有外链（GitHub 入口、拿 Key、注册引导等）在这里一次接管。
+ *  invoke 用静态 import（动态 import 的依赖预加载在 tauri.localhost 下挂起，点击无响应）。 */
+function ExternalLinks() {
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    const onClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement | null)?.closest?.('a[target="_blank"]')
+      if (!(anchor instanceof HTMLAnchorElement)) return
+      const href = anchor.getAttribute('href') ?? ''
+      if (!/^https?:\/\//i.test(href)) return
+      e.preventDefault()
+      tauriInvoke('open_external_url', { url: href }).catch((err) => {
+        void recordError({ where: 'ExternalLinks', kind: 'app', message: `外链打开失败 ${href}: ${err instanceof Error ? err.message : String(err)}` })
+        toast('error', '链接打开失败——已记录，可复制地址到浏览器手动打开')
+      })
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [])
   return null
 }
 
@@ -249,6 +273,7 @@ export default function App() {
     <HashRouter>
       <RoutedBoundary>
         <FirstRunRedirect />
+        <ExternalLinks />
         <GlobalShortcuts />
         <div className="app">
           <Sidebar />

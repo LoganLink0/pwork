@@ -6,6 +6,7 @@ import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
 import { isDesktopApp } from '../engine/platform'
+import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
 import {
   AI_VENDORS,
@@ -137,12 +138,12 @@ export function Welcome() {
     setAiBusy(false)
   }
 
-  /** 一键部署：部署源码随应用打进安装目录，新窗口直接跑向导——无需选择任何位置 */
+  /** 一键部署：部署源码随应用打进安装目录，新窗口直接跑向导——无需选择任何位置。
+   *  invoke 静态引入（动态 import 的依赖预加载在 tauri.localhost 下会挂起，点击无响应） */
   const runDeploy = async () => {
     setDeploying(true)
     try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_deploy_wizard')
+      await tauriInvoke('open_deploy_wizard')
       setMsg('部署窗口已在新窗口打开——跟着向导走完（约 10 分钟），结束时它打印的端点地址和 Token 填到下面')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))

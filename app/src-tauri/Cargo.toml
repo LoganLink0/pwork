@@ -30,3 +30,4 @@ tauri-plugin-global-shortcut = "2"
 tiny_http = "0.12"
 ureq = { version = "2", features = ["json"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+url = "2"

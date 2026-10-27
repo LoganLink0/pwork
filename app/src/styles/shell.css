@@ -135,36 +135,35 @@ button.nav-item {
 
 .sidebar .spacer { flex: 1; }
 
-/* 左下角快捷区（2026-10-25 用户拍板，形态参考 aihot.news）：
-   GitHub 开源按钮 + 视觉主题分段控件，压在「帮助」上方 */
+/* 左下角快捷区（2026-10-27 适配侧栏设计语言）：GitHub 入口沿用 nav-item 形态
+   （图标+文字左对齐、同 padding/圆角/hover），主题分段控件同高同宽、surface-2 底 r-sm 圆角 */
 .gh-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--sp-2);
-  margin: 0 var(--sp-1) var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--ink);
+  padding: 7px var(--sp-3);
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-soft);
+  font-family: inherit;
   font-size: var(--fs-sm);
-  font-weight: 600;
   text-decoration: none;
-  transition: border-color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
+  user-select: none;
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 .gh-btn:hover {
-  border-color: var(--line-strong);
-  background: var(--surface);
+  background: var(--surface-2);
+  color: var(--ink);
 }
-/* 主题分段控件：胶囊浅底容器 + 三格纯图标（暗/跟随系统/亮），选中格白底浮起 */
+/* 主题分段控件：行高对齐 nav-item、贴侧栏令牌（surface-2 底、r-sm 圆角、选中格白底细边） */
 .theme-seg {
   display: flex;
-  gap: 2px;
-  margin: 0 var(--sp-1) var(--sp-3);
+  gap: 3px;
+  margin: var(--sp-1) 0 var(--sp-2);
   padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
 }
 .theme-seg button {
@@ -174,7 +173,7 @@ button.nav-item {
   justify-content: center;
   height: 26px;
   border: none;
-  border-radius: 999px;
+  border-radius: calc(var(--r-sm) - 2px);
   background: none;
   color: var(--ink-faint);
   cursor: pointer;
