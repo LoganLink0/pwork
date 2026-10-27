@@ -2,10 +2,10 @@ name = "pwork-collect"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
 
-# 免费档额度核算（04 §2 C2）：约 14 源 × 5 次/天 ≈ 70 调用/天（额度 10 万）；
-# 日写入 <200 行（额度 10 万）；¥0/月。单轮子请求上限 24 源，超了分批或裁源。
 [triggers]
-crons = ["0 1,3,7,11,15 * * *"] # 每天 5 次（UTC 1/3/7/11/15 ≈ 北京 9/11/15/19/23 点——9 点档保证早上打开就有当天内容）
+# 每小时触发一次；是否真抓由云端配置的「北京时间整点表」决定（默认 9/11/15/18/19/20/23）——
+# 用户在应用 设置 → 云端同步 改抓取时间即生效（写 D1 config 表），不用改这里重新部署
+crons = ["0 * * * *"]
 
 [[d1_databases]]
 binding = "DB"
@@ -21,12 +21,12 @@ database_id = "00000000-0000-0000-0000-000000000000"
 # AI 两级筛选（AD4：BYOK；不设 AI_API_KEY 则整链走规则评分，系统照常转）
 AI_BASE_URL = "https://api.deepseek.com/v1"
 AI_MODEL_CHEAP = "deepseek-flash"   # 4a 预筛（便宜模型）
-AI_MODEL_STRONG = "deepseek-flash"  # 4b 评分打标（可配更强模型，如 deepseek-v4-pro）
+AI_MODEL_STRONG = "deepseek-flash"  # 4b 评分打标（可配更强模型）
 AI_DAILY_TOKEN_BUDGET = "300000"   # 每日 token 熔断（04 §10）
-# 兴趣域配置（评分锚点，04 §4.2——你的经验物化点，随使用修订）
-INTERESTS = "AI 应用,独立开发,前端工程化"
-DISLIKES = "融资,八卦,软文"
-CONTEXT = "我在做个人复盘工具与信息采集系统，关注能直接借鉴的产品与增长打法"
+# 兴趣域配置（评分锚点，04 §4.2）：部署向导会问一遍并回写；仓库里只放中性默认值
+INTERESTS = "科技动态,效率工具,行业观察"
+DISLIKES = "广告软文,八卦娱乐"
+CONTEXT = "我关注能直接用在工作和学习里的实用内容"
 
 # secrets（不进 git，命令行设置）：
 #   npx wrangler secret put AI_API_KEY

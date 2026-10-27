@@ -21,13 +21,12 @@ const DB_NAME = 'pwork-collect'
 const log = (...a) => console.log(...a)
 const line = () => log('─'.repeat(60))
 
+// 单例 readline（2026-10-27 修复）：逐问新建接口会在管道/连续问询下丢输入缓冲，
+// 某个 ask 永远等不到行——全程共用一个接口，顺序消费标准输入
+let rlSingleton = null
 async function ask(question) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    return (await rl.question(question)).trim()
-  } finally {
-    rl.close()
-  }
+  rlSingleton ??= readline.createInterface({ input: process.stdin, output: process.stdout })
+  return (await rlSingleton.question(question)).trim()
 }
 
 /** 运行命令（继承控制台输出，交互命令可用）；返回是否成功。
@@ -77,13 +76,20 @@ export function parseDatabaseId(text) {
 }
 
 /** 回写 wrangler.toml 字段 */
-export function patchToml(key, value) {
+function patchToml(key, value) {
   const p = path.join(ROOT, 'wrangler.toml')
   let s = fs.readFileSync(p, 'utf8')
   const re = new RegExp(`${key} = "[^"]*"`)
   if (!re.test(s)) throw new Error(`wrangler.toml 中未找到 ${key} = "..."`)
-  fs.writeFileSync(p, s.replace(re, `${key} = "${value}"`))
+  fs.writeFileSync(p, s.replace(re, `${key} = "${value.replace(/"/g, '')}"`))
   log(`  [OK] 已写入 ${key} = ${value}`)
+}
+
+/** 读 wrangler.toml 的 [vars] 值（采集偏好的默认值来源） */
+export function readTomlVar(key) {
+  const s = fs.readFileSync(path.join(ROOT, 'wrangler.toml'), 'utf8')
+  const m = s.match(new RegExp(`^${key} = "([^"]*)"`, 'm'))
+  return m ? m[1] : null
 }
 
 /** 建 D1（已存在时自动从 d1 list 取回 id） */
@@ -216,10 +222,29 @@ async function main() {
     log('  [OK] TOKEN 已设为 secret（未写入 wrangler.toml，凭据不进仓库）')
   }
 
+  // [5.5/6] 采集偏好（2026-10-27 用户拍板：云端评分用的三项偏好必须让用户自己填，
+  // 不再默默用部署者残留的旧值；直接回车 = 沿用通用默认）
+  log('\n[5.5/6] 采集偏好（影响云端筛选的口味，可回车跳过）')
+  const defInterests = readTomlVar('INTERESTS') ?? '科技动态,效率工具,行业观察'
+  const defDislikes = readTomlVar('DISLIKES') ?? '广告软文,八卦娱乐'
+  const defContext = readTomlVar('CONTEXT') ?? '我关注能直接用在工作和学习里的实用内容'
+  const interests = (await ask(`兴趣域（逗号分隔，回车=默认「${defInterests}」）: `)).trim() || defInterests
+  const dislikes = (await ask(`屏蔽词（逗号分隔，回车=默认「${defDislikes}」）: `)).trim() || defDislikes
+  const context = (await ask(`一句话介绍你关注什么（回车=默认「${defContext}」）: `)).trim() || defContext
+  if (!DRY) {
+    patchToml('INTERESTS', interests)
+    patchToml('DISLIKES', dislikes)
+    patchToml('CONTEXT', context)
+  } else {
+    log('  [dry] 跳过偏好回写')
+  }
+
   // [6/6] 部署
   log('\n[6/6] 部署到 Cloudflare（免费档 ¥0/月）...')
+  let endpoint = ''
   if (DRY) {
     log('  [dry] 跳过真实部署')
+    endpoint = 'https://pwork-collect.你的子域.workers.dev'
   } else {
     const deployed = runCapture('npx wrangler deploy')
     // 只保留有内容的行（空行与进度动画残迹不进终端）
@@ -229,17 +254,27 @@ async function main() {
       await ask('按回车退出...')
       return
     }
+    endpoint = deployed.out.match(/https:\/\/[\w.-]+\.workers\.dev/)?.[0] ?? ''
   }
 
+  // 收尾必须把两样凭据醒目交到用户手上（2026-10-27 用户反馈：Token 藏在中间日志里等于没给）
   log('')
-  log('='.repeat(60))
+  log('█'.repeat(58))
+  log('  保存下面两样——回工作台要用（关掉窗口就找不回 Token 了，')
+  log('  万一丢了重跑本向导再设一次即可）：')
+  log('')
+  log(`  端点地址：${endpoint || '（见上方部署输出里 workers.dev 那一行）'}`)
+  log(`  Token　　：${token}`)
+  log('█'.repeat(58))
+  log('')
   log('  部署完成！最后两步：')
   log('  1. 打开工作台 http://127.0.0.1:5273/#/settings 的「云端同步」')
   log('     · 推荐（大陆网络稳）：模式选「D1 直连」，填 账户 ID / 数据库 ID /')
   log('       API Token（按页面内指引在 Cloudflare 控制台创建，约 2 分钟）')
-  log('     · 或：端点 = 上面的 workers.dev 地址 + 本 Token（workers.dev 大陆常被阻断）')
+  log('     · 或：端点 = 上面的端点地址 + 本 Token（workers.dev 大陆常被阻断）')
   log('     配好后：「推送信源清单」把本地活跃源上云 →「立即同步」拉取')
-  log('  2. 以后想改抓取频率/AI 配置：编辑 wrangler.toml 后重跑本向导或 npx wrangler deploy')
+  log('  2. 抓取时间/采集偏好在工作台 设置 → 云端同步 里改，改完即生效，')
+  log('     不用再跑本向导（AI 供应商等高级配置才需要重跑）')
   log('='.repeat(60))
   await ask('\n按回车退出...')
 }

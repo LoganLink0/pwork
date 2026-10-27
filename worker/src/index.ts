@@ -13,7 +13,7 @@
  *   POST /api/llm/chat/completions         LLM 代理（Bearer LLM_TOKEN；本地工具经此调 AI，真 Key 只存服务端 secret）
  */
 
-import { aiConfigFrom, runPipeline, type Env } from './pipeline'
+import { aiConfigFrom, loadAiConfig, runPipeline, type Env } from './pipeline'
 import { INGEST_MAX_PER_MINUTE, INGEST_MAX_PER_REQUEST, minuteKey, normalizeIngest } from './ingest'
 import { assertPublicHttpUrl, guardedFetch } from './urlGuard'
 
@@ -106,7 +106,7 @@ export default {
     // ── 写操作：必须鉴权 ──
     if (path === '/api/fetch' && request.method === 'POST') {
       if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
-      const summary = await runPipeline(env, aiConfigFrom(env))
+      const summary = await runPipeline(env, await loadAiConfig(env))
       return json(summary)
     }
 
@@ -286,15 +286,80 @@ export default {
       })
     }
 
+    // 云端抓取时间配置（2026-10-27）：应用设置页读取/推送，用户无需命令行
+    if (path === '/api/config/schedule' && request.method === 'GET') {
+      const hours = await getScheduleHours(env)
+      return json({ hours })
+    }
+    if (path === '/api/config/schedule' && request.method === 'PUT') {
+      if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
+      const body = (await request.json().catch(() => null)) as { hours?: unknown } | null
+      const list = (Array.isArray(body?.hours) ? body!.hours : [])
+        .map((h) => Number(h))
+        .filter((n) => Number.isInteger(n) && n >= 0 && n <= 23)
+      if (!list.length) return json({ error: 'hours 为空或全部非法（0-23 的整点列表）' }, 400)
+      const value = Array.from(new Set(list)).sort((a, b) => a - b).join(',')
+      await env.DB.prepare('INSERT OR REPLACE INTO config(key, value) VALUES(?, ?)').bind('schedule_hours', value).run()
+      return json({ ok: true, hours: value.split(',').map(Number) })
+    }
+
+    // 采集偏好（云端化 2026-10-27）：兴趣域/屏蔽词/上下文——应用设置页读与推，改完即生效
+    if (path === '/api/config/prefs' && request.method === 'GET') {
+      const base = aiConfigFrom(env)
+      const rows = await env.DB.prepare(
+        "SELECT key, value FROM config WHERE key IN ('interests', 'dislikes', 'context')",
+      ).all<{ key: string; value: string }>()
+      const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]))
+      return json({
+        interests: map.get('interests') ?? base.interests.join(','),
+        dislikes: map.get('dislikes') ?? base.dislikes.join(','),
+        context: map.get('context') ?? base.context,
+      })
+    }
+    if (path === '/api/config/prefs' && request.method === 'PUT') {
+      if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)
+      const body = (await request.json().catch(() => null)) as Record<string, unknown> | null
+      const pick = (k: string) => (typeof body?.[k] === 'string' ? (body![k] as string).slice(0, 300) : null)
+      const stmt = env.DB.prepare('INSERT OR REPLACE INTO config(key, value) VALUES(?, ?)')
+      const batch = [
+        pick('interests') !== null ? stmt.bind('interests', pick('interests')) : null,
+        pick('dislikes') !== null ? stmt.bind('dislikes', pick('dislikes')) : null,
+        pick('context') !== null ? stmt.bind('context', pick('context')) : null,
+      ].filter(Boolean)
+      if (!batch.length) return json({ error: '没有可保存的字段（interests / dislikes / context）' }, 400)
+      await env.DB.batch(batch as D1PreparedStatement[])
+      return json({ ok: true })
+    }
+
     return json({ error: 'not found' }, 404)
   },
 
-  // Cron：定时抓取（时间见 wrangler.toml triggers）
+  // Cron 每小时触发（wrangler.toml），是否真抓由 D1 配置的「北京小时列表」决定
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const bjHour = (new Date().getUTCHours() + 8) % 24
+    const hours = await getScheduleHours(env)
+    if (!hours.includes(bjHour)) {
+      console.log(`[cron] 北京 ${bjHour} 点不在抓取时间表 [${hours.join(',')}]，跳过`)
+      return
+    }
     ctx.waitUntil(
-      runPipeline(env, aiConfigFrom(env)).then((s) => {
+      runPipeline(env, await loadAiConfig(env)).then((s) => {
         console.log(`[cron] new=${s.totalNew} ok=${s.results.filter((r) => r.ok).length}/${s.results.length}`)
       }),
     )
   },
 } satisfies ExportedHandler<Env>
+
+/** 抓取时间表（北京时间整点）：默认 9/11/15/18/19/20/23，存 D1 config，应用端可覆盖。
+ *  config 表不存在（旧部署升级窗口期）时按默认表照常抓，不因配置缺失停摆。 */
+export async function getScheduleHours(env: Env): Promise<number[]> {
+  const DEFAULT = [9, 11, 15, 18, 19, 20, 23]
+  try {
+    const row = await env.DB.prepare('SELECT value FROM config WHERE key = ?').first<{ value: string }>('schedule_hours')
+    if (!row) return DEFAULT
+    const parsed = row.value.split(',').map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n >= 0 && n <= 23)
+    return parsed.length ? Array.from(new Set(parsed)).sort((a, b) => a - b) : DEFAULT
+  } catch {
+    return DEFAULT
+  }
+}

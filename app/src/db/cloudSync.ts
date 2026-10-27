@@ -342,6 +342,105 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
   }
 }
 
+/** 云端抓取时间（北京时间整点表）：读与推。D1 模式直查/写 config 表；
+ *  端点模式走 worker 的 /api/config/schedule。用户在设置页改，无需命令行。 */
+export async function getScheduleHours(): Promise<{ ok: boolean; hours?: number[]; message: string }> {
+  const config = loadCloudConfig()
+  try {
+    if (config.mode === 'd1') {
+      const rows = await d1Query(config, 'SELECT value FROM config WHERE key = ?', ['schedule_hours'])
+      const raw = (rows[0]?.value as string) ?? ''
+      const hours = raw ? raw.split(',').map(Number) : [9, 11, 15, 18, 19, 20, 23]
+      return { ok: true, hours, message: '' }
+    }
+    const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/config/schedule`)
+    if (!resp.ok) return { ok: false, message: `云端返回 HTTP ${resp.status}` }
+    const data = (await resp.json()) as { hours?: number[] }
+    return { ok: true, hours: data.hours ?? [9, 11, 15, 18, 19, 20, 23], message: '' }
+  } catch {
+    return { ok: false, message: '读不到云端抓取时间——检查云端同步配置' }
+  }
+}
+
+export async function pushScheduleHours(hours: number[]): Promise<{ ok: boolean; message: string }> {
+  if (!hours.length || hours.some((h) => !Number.isInteger(h) || h < 0 || h > 23)) {
+    return { ok: false, message: '抓取时间须为 0-23 的整点（用逗号分隔）' }
+  }
+  const config = loadCloudConfig()
+  try {
+    if (config.mode === 'd1') {
+      await d1Query(config, 'INSERT OR REPLACE INTO config(key, value) VALUES(?, ?)', ['schedule_hours', hours.join(',')])
+      return { ok: true, message: `已保存：每天 ${hours.join('、')} 点自动抓取` }
+    }
+    const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/config/schedule`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+      body: JSON.stringify({ hours }),
+    })
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => '')
+      return { ok: false, message: `云端返回 HTTP ${resp.status}${t ? '：' + t.slice(0, 80) : ''}` }
+    }
+    return { ok: true, message: `已保存：每天 ${hours.join('、')} 点自动抓取` }
+  } catch {
+    return { ok: false, message: '保存失败——检查云端同步配置与网络' }
+  }
+}
+
+/** 云端采集偏好（兴趣域/屏蔽词/上下文）：向导部署后用户可在设置页改，改完即生效 */
+export type CloudPrefs = { interests: string; dislikes: string; context: string }
+
+export async function getCloudPrefs(): Promise<{ ok: boolean; prefs?: CloudPrefs; message: string }> {
+  const config = loadCloudConfig()
+  try {
+    if (config.mode === 'd1') {
+      const rows = await d1Query(config, 'SELECT key, value FROM config WHERE key IN (?, ?, ?)', ['interests', 'dislikes', 'context'])
+      const map = new Map(rows.map((r) => [r.key as string, r.value as string]))
+      return {
+        ok: true,
+        prefs: {
+          interests: map.get('interests') ?? '',
+          dislikes: map.get('dislikes') ?? '',
+          context: map.get('context') ?? '',
+        },
+        message: '',
+      }
+    }
+    const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/config/prefs`)
+    if (!resp.ok) return { ok: false, message: `云端返回 HTTP ${resp.status}` }
+    const data = (await resp.json()) as CloudPrefs
+    return { ok: true, prefs: data, message: '' }
+  } catch {
+    return { ok: false, message: '读不到云端偏好——检查云端同步配置' }
+  }
+}
+
+export async function pushCloudPrefs(prefs: CloudPrefs): Promise<{ ok: boolean; message: string }> {
+  const config = loadCloudConfig()
+  try {
+    if (config.mode === 'd1') {
+      const entries = Object.entries(prefs).filter(([, v]) => String(v).trim() !== '') as [string, string][]
+      if (!entries.length) return { ok: false, message: '至少填一项再保存' }
+      for (const [k, v] of entries) {
+        await d1Query(config, 'INSERT OR REPLACE INTO config(key, value) VALUES(?, ?)', [k, String(v).slice(0, 300)])
+      }
+      return { ok: true, message: '云端采集偏好已保存，下次抓取生效' }
+    }
+    const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/config/prefs`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+      body: JSON.stringify(prefs),
+    })
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => '')
+      return { ok: false, message: `云端返回 HTTP ${resp.status}${t ? '：' + t.slice(0, 80) : ''}` }
+    }
+    return { ok: true, message: '云端采集偏好已保存，下次抓取生效' }
+  } catch {
+    return { ok: false, message: '保存失败——检查云端同步配置与网络' }
+  }
+}
+
 
 /* ------------------------------ 外部数据推送拉取（/api/ingest） ------------------------------ */
 

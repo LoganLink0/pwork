@@ -61,3 +61,9 @@ CREATE TABLE IF NOT EXISTS ingest_blocks (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ingest_created ON ingest_blocks(created_at);
+
+-- 云端可改配置（2026-10-27：抓取时间等由应用设置页推送，用户无需跑命令行改 wrangler.toml）
+CREATE TABLE IF NOT EXISTS config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

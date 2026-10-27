@@ -44,6 +44,29 @@ export function aiConfigFrom(env: Env): AiConfig {
   }
 }
 
+/** 运行时配置（2026-10-27 偏好云端化）：env 值为基础，D1 config 表里有用户推送的
+ *  兴趣域/屏蔽词/上下文则覆盖——用户在应用设置页改偏好即生效，无需重新部署。 */
+export async function loadAiConfig(env: Env): Promise<AiConfig> {
+  const base = aiConfigFrom(env)
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT key, value FROM config WHERE key IN ('interests', 'dislikes', 'context')",
+    ).all<{ key: string; value: string }>()
+    const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]))
+    const interests = map.get('interests')
+    const dislikes = map.get('dislikes')
+    const context = map.get('context')
+    return {
+      ...base,
+      interests: interests !== undefined ? interests.split(',').map((s) => s.trim()).filter(Boolean) : base.interests,
+      dislikes: dislikes !== undefined ? dislikes.split(',').map((s) => s.trim()).filter(Boolean) : base.dislikes,
+      context: context !== undefined ? context : base.context,
+    }
+  } catch {
+    return base // config 表未建（升级窗口期）→ 用 env 部署值照常跑
+  }
+}
+
 /** 每日 token 熔断（D1 usage 表，UTC 日）；返回 false 表示已熔断 */
 export async function spendTokens(env: Env, n: number): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10)

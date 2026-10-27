@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle } from '../db/backup'
-import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncIngestBlocks, type CloudConfig } from '../db/cloudSync'
+import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncIngestBlocks, getScheduleHours, pushScheduleHours, getCloudPrefs, pushCloudPrefs, type CloudConfig } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
@@ -66,6 +66,21 @@ export function Settings() {
   const [cloudMsg, setCloudMsg] = useState<string | null>(null)
   const [cloudBusy, setCloudBusy] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(() => lastSyncAt())
+  const [scheduleDraft, setScheduleDraft] = useState('')
+  const [prefsDraft, setPrefsDraft] = useState({ interests: '', dislikes: '', context: '' })
+
+  // 进云端同步分类时拉一次云端抓取时间与采集偏好（只拉一次，切分类不重复打）
+  const [scheduleLoaded, setScheduleLoaded] = useState(false)
+  useEffect(() => {
+    if (tab !== 'cloud' || scheduleLoaded) return
+    setScheduleLoaded(true)
+    void getScheduleHours().then((r) => {
+      if (r.ok && r.hours) setScheduleDraft(r.hours.join(','))
+    })
+    void getCloudPrefs().then((r) => {
+      if (r.ok && r.prefs) setPrefsDraft(r.prefs)
+    })
+  }, [tab, scheduleLoaded])
 
   // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）——默认只看最近 5 条，其余折叠
   const [errors, setErrors] = useState<ErrorLogEntry[]>([])
@@ -623,6 +638,91 @@ export function Settings() {
             <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doIngest()} data-testid="ingest-pull">
               拉取推送数据
             </button>
+          </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>云端抓取时间</label>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                className="input"
+                style={{ maxWidth: 260 }}
+                placeholder="如 9,12,18,20,23（北京时间整点）"
+                value={scheduleDraft}
+                onChange={(e) => setScheduleDraft(e.target.value)}
+                aria-label="云端抓取时间（北京时间整点，逗号分隔）"
+              />
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={cloudBusy}
+                onClick={async () => {
+                  const hours = scheduleDraft.split(/[,，\s]+/).map((s) => Number(s.trim())).filter((n) => Number.isInteger(n))
+                  setCloudBusy(true)
+                  setCloudMsg(null)
+                  const r = await pushScheduleHours(hours)
+                  setCloudMsg(r.message)
+                  setCloudBusy(false)
+                }}
+              >
+                保存抓取时间
+              </button>
+              <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                云端 7×24 按这些整点自动抓信源（北京时间），保存即生效
+              </span>
+            </div>
+          </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>云端采集偏好</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', flex: 1, minWidth: 0 }}>
+              <div className="chips">
+                <input
+                  className="input"
+                  placeholder="兴趣域（逗号分隔），如：科技动态,效率工具"
+                  value={prefsDraft.interests}
+                  onChange={(e) => setPrefsDraft({ ...prefsDraft, interests: e.target.value })}
+                  aria-label="云端兴趣域"
+                />
+                <input
+                  className="input"
+                  placeholder="屏蔽词（逗号分隔），如：广告软文,八卦娱乐"
+                  value={prefsDraft.dislikes}
+                  onChange={(e) => setPrefsDraft({ ...prefsDraft, dislikes: e.target.value })}
+                  aria-label="云端屏蔽词"
+                />
+                <input
+                  className="input"
+                  placeholder="一句话介绍你关注什么（云端 AI 筛选的口径）"
+                  value={prefsDraft.context}
+                  onChange={(e) => setPrefsDraft({ ...prefsDraft, context: e.target.value })}
+                  aria-label="云端关注上下文"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={cloudBusy}
+                  onClick={async () => {
+                    setCloudBusy(true)
+                    setCloudMsg(null)
+                    const r = await pushCloudPrefs({
+                      interests: prefsDraft.interests.trim(),
+                      dislikes: prefsDraft.dislikes.trim(),
+                      context: prefsDraft.context.trim(),
+                    })
+                    setCloudMsg(r.message)
+                    setCloudBusy(false)
+                  }}
+                >
+                  保存采集偏好
+                </button>
+                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                  云端筛选用这三项打分，保存后下次抓取生效——和本地「采集偏好」是两份，云端管 7×24 自动抓取的口味
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="set-row">
+            <label>连通</label>
             <button
               type="button"
               className="btn-ghost"
