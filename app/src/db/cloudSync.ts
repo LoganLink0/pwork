@@ -347,6 +347,10 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
  *  端点模式走 worker 的 /api/config/schedule。用户在设置页改，无需命令行。 */
 export async function getScheduleHours(): Promise<{ ok: boolean; hours?: number[]; message: string }> {
   const config = loadCloudConfig()
+  // 云端未配置时直接返回（空地址会退化成打到应用自身的相对路径请求）
+  if (config.mode === 'endpoint' ? !config.endpoint : !config.accountId || !config.databaseId) {
+    return { ok: false, message: '云端未配置' }
+  }
   try {
     if (config.mode === 'd1') {
       const rows = await d1Query(config, 'SELECT value FROM config WHERE key = ?', ['schedule_hours'])
@@ -393,6 +397,9 @@ export type CloudPrefs = { interests: string; dislikes: string; context: string 
 
 export async function getCloudPrefs(): Promise<{ ok: boolean; prefs?: CloudPrefs; message: string }> {
   const config = loadCloudConfig()
+  if (config.mode === 'endpoint' ? !config.endpoint : !config.accountId || !config.databaseId) {
+    return { ok: false, message: '云端未配置' }
+  }
   try {
     if (config.mode === 'd1') {
       const rows = await d1Query(config, 'SELECT key, value FROM config WHERE key IN (?, ?, ?)', ['interests', 'dislikes', 'context'])

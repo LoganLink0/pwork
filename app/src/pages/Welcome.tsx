@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULES } from '../content/help'
-import { loadCloudConfig, saveCloudConfig, syncFromCloud, testConnection } from '../db/cloudSync'
+import { loadCloudConfig, saveCloudConfig, syncFromCloud, d1Query } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
@@ -197,11 +197,22 @@ export function Welcome() {
   const testCloud = async () => {
     setTesting(true)
     setMsg(null)
-    // D1 直连模式：走 Cloudflare 官方接口（大陆可达），复用设置页同款测试
+    // D1 直连模式：直接用当前输入框的值测试（不读已存配置——用户可能还没点保存）
     if (cloud.mode === 'd1') {
-      const r = await testConnection()
-      setMsg(r.message)
-      setTesting(false)
+      if (!cloud.accountId.trim() || !cloud.databaseId.trim() || !cloud.token.trim()) {
+        setMsg('先填齐 账户 ID / 数据库 ID / API Token 再测试')
+        setTesting(false)
+        return
+      }
+      try {
+        const rows = await d1Query(cloud, 'SELECT count(*) AS n FROM sources', [])
+        const n = (rows[0]?.n as number) ?? 0
+        setMsg(`连接成功！云端已有 ${n} 个信源，点「保存并同步」完成接入`)
+      } catch {
+        setMsg('连不上：检查 账户 ID / 数据库 ID / API Token 是否正确（大陆网络 D1 直连走 Cloudflare 官方接口，一般可达）')
+      } finally {
+        setTesting(false)
+      }
       return
     }
     if (!cloud.endpoint.trim()) {

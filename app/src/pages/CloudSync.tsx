@@ -33,13 +33,15 @@ export function CloudSyncCards({ active }: { active: boolean }) {
     saveSyncConfig(next)
   }
 
+  // 进到云端同步分类时拉一次抓取时间（组件随设置页常驻挂载，必须在 active 变化时拉，
+  // 否则挂载即拉一次失败后就不再拉——用户配置好云端切进来输入框仍是空）
   useEffect(() => {
-    if (scheduleLoaded) return
+    if (!active || scheduleLoaded) return
     setScheduleLoaded(true)
     void getScheduleHours().then((r) => {
       if (r.ok && r.hours) setScheduleDraft(r.hours.join(','))
     })
-  }, [scheduleLoaded])
+  }, [active, scheduleLoaded])
 
   const doSync = async () => {
     setCloudBusy(true)

@@ -1951,6 +1951,10 @@ a.mcard .m-link:hover {
 .welcome-right .ai-vendors {
   grid-template-columns: repeat(4, 1fr);
 }
+@media (max-width: 1100px) {
+  /* 窄屏右栏宽度不足 4 列：退 2 列（与设置页同节奏） */
+  .welcome-right .ai-vendors { grid-template-columns: repeat(2, 1fr); }
+}
 .ai-vendor {
   display: flex;
   flex-direction: column;

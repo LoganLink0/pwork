@@ -519,6 +519,35 @@ export function Settings() {
                   </>
                 )}
               </div>
+              {ai.viaGateway && isDesktopApp() && (
+                <div className="set-row">
+                  <label>网关状态</label>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={async () => {
+                      setAiTesting(true)
+                      setAiTestMsg('')
+                      try {
+                        const r = await fetch('http://127.0.0.1:8788/health')
+                        const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean }
+                        setAiTestOk(Boolean(j.ok && j.chatConfigured))
+                        setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效')
+                      } catch {
+                        setAiTestOk(false)
+                        setAiTestMsg('无法连接网关——重启应用后再试')
+                      } finally {
+                        setAiTesting(false)
+                      }
+                    }}
+                  >
+                    {aiTesting ? '检测中…' : '测试网关'}
+                  </button>
+                  <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                    桌面版网关随应用内置运行（127.0.0.1:8788），地址固定不可改
+                  </span>
+                </div>
+              )}
               {ai.viaGateway && !isDesktopApp() ? (
                 <>
                   <div className="set-row">
