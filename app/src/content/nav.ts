@@ -26,6 +26,7 @@ export const WORKSPACE_NAV: { to: string; icon: string; label: string; end?: boo
   { to: '/', icon: 'today', label: '今日', end: true, mark: 'mark-workspace' },
   { to: '/tasks', icon: 'tasks', label: '待办', mark: 'mark-workspace' },
   { to: '/goals', icon: 'goals', label: '目标', mark: 'mark-workspace' },
+  { to: '/cloud', icon: 'cloud', label: '云端同步', mark: 'mark-workspace' },
 ]
 
 export const MODULE_NAV: NavModule[] = [
@@ -64,6 +65,7 @@ export const PAGE_META: Record<string, [string, string, string]> = {
   '/': ['今日', '工作台 · 首页', 'mark-workspace'],
   '/tasks': ['待办', '工作区 · 任务库', 'mark-workspace'],
   '/goals': ['目标', '工作区 · 目标', 'mark-workspace'],
+  '/cloud': ['云端同步', '工作区 · 云端同步', 'mark-workspace'],
   '/input/notes': ['速记', '输入 · 速记', 'mark-input'],
   '/input/notes/new': ['新速记', '输入 · 速记', 'mark-input'],
   '/input/digest': ['信息日报', '输入 · 信息采集', 'mark-input'],

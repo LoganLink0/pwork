@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle } from '../db/backup'
-import { syncFromCloud, pushSourcesToCloud, loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncIngestBlocks, getScheduleHours, pushScheduleHours, getCloudPrefs, pushCloudPrefs, type CloudConfig } from '../db/cloudSync'
+import { pushCloudPrefs } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
@@ -11,11 +11,10 @@ import { loadCoachConfig, saveCoachConfig, llmConfigFrom, AI_VENDORS, PROVIDER_P
 import { chatCompletion } from '../modules/review/engine/llm'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
 import { fmtLocal, monthLocal } from '../engine/datetime'
-import { listErrors, clearErrors, formatErrorLog, type ErrorKind } from '../engine/errorLog'
+import { listErrors, clearErrors, formatErrorLog, recordError, type ErrorKind } from '../engine/errorLog'
 import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
-import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, type SyncConfig } from '../db/syncRecords'
 import type { ErrorLogEntry } from '../types/models'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { WheelSettingsCard } from '../components/shell/WheelSettingsCard'
@@ -32,7 +31,6 @@ const SETTINGS_TABS = [
   { id: 'collect', label: '采集偏好', icon: 'collect' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
-  { id: 'cloud', label: '云端同步', icon: 'cloud' },
   { id: 'ai', label: 'AI', icon: 'ai' },
   { id: 'about', label: '关于', icon: 'about' },
 ] as const
@@ -62,25 +60,7 @@ export function Settings() {
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
   const [importMsg, setImportMsg] = useState<string | null>(null)
-  const [cloud, setCloud] = useState<CloudConfig>(() => loadCloudConfig())
-  const [cloudMsg, setCloudMsg] = useState<string | null>(null)
-  const [cloudBusy, setCloudBusy] = useState(false)
-  const [lastSync, setLastSync] = useState<string | null>(() => lastSyncAt())
-  const [scheduleDraft, setScheduleDraft] = useState('')
-  const [prefsDraft, setPrefsDraft] = useState({ interests: '', dislikes: '', context: '' })
-
-  // 进云端同步分类时拉一次云端抓取时间与采集偏好（只拉一次，切分类不重复打）
-  const [scheduleLoaded, setScheduleLoaded] = useState(false)
-  useEffect(() => {
-    if (tab !== 'cloud' || scheduleLoaded) return
-    setScheduleLoaded(true)
-    void getScheduleHours().then((r) => {
-      if (r.ok && r.hours) setScheduleDraft(r.hours.join(','))
-    })
-    void getCloudPrefs().then((r) => {
-      if (r.ok && r.prefs) setPrefsDraft(r.prefs)
-    })
-  }, [tab, scheduleLoaded])
+  const [prefsMsg, setPrefsMsg] = useState<string | null>(null)
 
   // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）——默认只看最近 5 条，其余折叠
   const [errors, setErrors] = useState<ErrorLogEntry[]>([])
@@ -103,73 +83,15 @@ export function Settings() {
   const [profileBusy, setProfileBusy] = useState(false)
   const [profileMsg, setProfileMsg] = useState('')
 
-  const saveCloud = (next: CloudConfig) => {
-    setCloud(next)
-    try {
-      saveCloudConfig(next)
-    } catch (e) {
-      setCloudMsg(e instanceof Error ? e.message : String(e))
-    }
-  }
-
-  // 设备同步（记录级增量，2026-10-19 替换镜像档 1）
-  const [sync, setSyncState] = useState(() => loadSyncConfig())
-  const [syncBusy, setSyncBusy] = useState(false)
-  const setSync = (next: SyncConfig) => {
-    setSyncState(next)
-    saveSyncConfig(next)
-  }
-  const doDeviceSync = async () => {
-    setSyncBusy(true)
-    setCloudMsg(null)
-    try {
-      const { pull, push } = await syncNow()
-      const changed = pull.merged ?? 0
-      if (changed > 0 || pull.configApplied) {
-        await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
-      }
-      setSync({ ...sync, lastSyncAt: new Date().toISOString(), lastPushed: push.pushed, lastPulled: pull.pulled })
-      setCloudMsg(`同步完成：拉取 ${pull.pulled} 条（合并 ${changed} 条${pull.configApplied ? '，采集配置已更新' : ''}），推送 ${push.pushed} 条增量`)
-    } catch (e) {
-      setCloudMsg(`设备同步失败：${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setSyncBusy(false)
-    }
-  }
-
-  const doSync = async () => {
-    setCloudBusy(true)
-    setCloudMsg(null)
-    try {
-      const r = await syncFromCloud()
-      setCloudMsg(r.ok ? `同步完成：新 ${r.newCount} 条 · 跳过 ${r.skipCount} 条（按指纹去重）` : `同步失败：${r.error}`)
-      if (r.ok) setLastSync(lastSyncAt())
-      if (r.ok && r.newCount > 0) await useCollect.getState().load()
-    } finally {
-      setCloudBusy(false)
-    }
-  }
-
-  const doPush = async () => {
-    setCloudBusy(true)
-    setCloudMsg(null)
-    try {
-      const r = await pushSourcesToCloud()
-      setCloudMsg(r.ok ? `信源已推送：云端导入 ${r.imported} 个` : `推送失败：${r.error}`)
-    } finally {
-      setCloudBusy(false)
-    }
-  }
-
-  const doIngest = async () => {
-    setCloudBusy(true)
-    setCloudMsg(null)
-    try {
-      const r = await syncIngestBlocks()
-      setCloudMsg(r.ok ? `推送数据已拉取：新 ${r.pulled} 块（在 输出 → 周报导出 → 外部数据块 查看）` : `拉取失败：${r.error}`)
-    } finally {
-      setCloudBusy(false)
-    }
+  /** 本地采集偏好是唯一真相；一键把当前偏好同步给云端（云端 7×24 抓取用它打分） */
+  const syncPrefsToCloud = async () => {
+    setPrefsMsg(null)
+    const r = await pushCloudPrefs({
+      interests: config.interests.join(','),
+      dislikes: config.dislikes.join(','),
+      context: '我的兴趣与屏蔽以这份配置为准',
+    })
+    setPrefsMsg(r.message)
   }
 
   // AI · BYOK（全工作台一把钥匙：fupan-coach 配置复用，02 §4 凭据只存 localStorage）
@@ -192,6 +114,8 @@ export function Settings() {
       saveAi({ ...ai, mode: 'llm', provider: r.vendor ?? gwVendor, baseURL: r.baseURL ?? '', apiKey: '', model: r.model ?? '', viaGateway: true })
       setPinnedModel(r.model ?? null)
       setGwKey('')
+    } else {
+      void recordError({ where: '设置.AI测试', kind: 'app', message: `AI 连接测试失败：${r.message}` }, { silent: true })
     }
     setGwKeyMsg({ ok: r.ok, text: r.message })
     setGwKeyBusy(false)
@@ -464,6 +388,15 @@ export function Settings() {
             </span>
           </div>
           <div className="set-row">
+            <label>同步到云端</label>
+            <button type="button" className="btn-ghost" onClick={() => void syncPrefsToCloud()}>
+              把这份偏好推给云端
+            </button>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              {prefsMsg || '配了云端 7×24 抓取才需要——云端用这份偏好给自动抓的内容打分'}
+            </span>
+          </div>
+          <div className="set-row">
             <label>转接服务</label>
             <input
               className="input"
@@ -547,241 +480,6 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="set-card" data-tab="cloud" style={{ display: tab === 'cloud' ? undefined : 'none' }}>
-        <h2>云端同步</h2>
-        <div className="desc">Cloudflare Worker 定时抓取 → 本地拉取合并；云端数据随时可丢可重建，本地才是你的真实数据。不确定自己需不需要？<Link to="/help">看帮助 → 配置指南</Link>——不配云端，一切功能照常</div>
-        <div className="set-body">
-          <div className="set-row">
-            <label>模式</label>
-            <div className="radio" role="radiogroup" aria-label="同步模式">
-              <button type="button" className={cloud.mode === 'd1' ? 'on' : ''} onClick={() => saveCloud({ ...cloud, mode: 'd1' })}>
-                D1 直连（大陆推荐）
-              </button>
-              <button type="button" className={cloud.mode === 'endpoint' ? 'on' : ''} onClick={() => saveCloud({ ...cloud, mode: 'endpoint' })}>
-                端点（workers.dev）
-              </button>
-            </div>
-          </div>
-
-          {cloud.mode === 'endpoint' ? (
-            <>
-              <div className="set-row">
-                <label>同步端点</label>
-                <input
-                  className="input"
-                  placeholder="https://pwork-collect.你的子域.workers.dev"
-                  value={cloud.endpoint}
-                  onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
-                  onBlur={() => saveCloud(cloud)}
-                  aria-label="同步端点"
-                />
-              </div>
-              <div className="set-row">
-                <label>访问 Token</label>
-                <input
-                  className="input"
-                  type="password"
-                  placeholder="wrangler.toml 中的 TOKEN（只存 localStorage）"
-                  value={cloud.token}
-                  onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
-                  aria-label="访问 Token"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="set-row">
-                <label>账户 ID</label>
-                <input
-                  className="input"
-                  value={cloud.accountId}
-                  placeholder="32 位串（dash 首页右侧 / worker\wrangler.toml 附近）"
-                  onChange={(e) => { const next = { ...cloud, accountId: e.target.value }; setCloud(next); saveCloud(next) }}
-                  aria-label="账户 ID"
-                />
-              </div>
-              <div className="set-row">
-                <label>数据库 ID</label>
-                <input
-                  className="input"
-                  value={cloud.databaseId}
-                  placeholder="worker\wrangler.toml 里 database_id"
-                  onChange={(e) => { const next = { ...cloud, databaseId: e.target.value }; setCloud(next); saveCloud(next) }}
-                  aria-label="数据库 ID"
-                />
-              </div>
-              <div className="set-row">
-                <label>API Token</label>
-                <input
-                  className="input"
-                  type="password"
-                  placeholder="只存 localStorage"
-                  value={cloud.token}
-                  onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
-                  aria-label="D1 API Token"
-                />
-              </div>
-              <div className="notice" style={{ marginBottom: 'var(--sp-2)' }}>
-                <b>创建 Token（约 2 分钟）</b>：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌；② 权限选「账户 → D1 → 编辑」，账户资源选你的账户；③ 继续 → 创建，复制只显示一次的 Token 粘到上面。账户/数据库 ID 可从 <code>worker\wrangler.toml</code> 抄。
-              </div>
-            </>
-          )}
-
-          <div className="set-row">
-            <label>同步</label>
-            <button type="button" className="btn-primary" disabled={cloudBusy} onClick={() => void doSync()} data-testid="cloud-sync">
-              {cloudBusy ? '同步中…' : '立即同步'}
-            </button>
-            <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doPush()}>
-              推送信源清单
-            </button>
-            <button type="button" className="btn-ghost" disabled={cloudBusy} onClick={() => void doIngest()} data-testid="ingest-pull">
-              拉取推送数据
-            </button>
-          </div>
-          <div className="set-row" style={{ alignItems: 'flex-start' }}>
-            <label>云端抓取时间</label>
-            <div style={{ display: 'flex', gap: 'var(--sp-2)', flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input
-                className="input"
-                style={{ maxWidth: 260 }}
-                placeholder="如 9,12,18,20,23（北京时间整点）"
-                value={scheduleDraft}
-                onChange={(e) => setScheduleDraft(e.target.value)}
-                aria-label="云端抓取时间（北京时间整点，逗号分隔）"
-              />
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={cloudBusy}
-                onClick={async () => {
-                  const hours = scheduleDraft.split(/[,，\s]+/).map((s) => Number(s.trim())).filter((n) => Number.isInteger(n))
-                  setCloudBusy(true)
-                  setCloudMsg(null)
-                  const r = await pushScheduleHours(hours)
-                  setCloudMsg(r.message)
-                  setCloudBusy(false)
-                }}
-              >
-                保存抓取时间
-              </button>
-              <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-                云端 7×24 按这些整点自动抓信源（北京时间），保存即生效
-              </span>
-            </div>
-          </div>
-          <div className="set-row" style={{ alignItems: 'flex-start' }}>
-            <label>云端采集偏好</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', flex: 1, minWidth: 0 }}>
-              <div className="chips">
-                <input
-                  className="input"
-                  placeholder="兴趣域（逗号分隔），如：科技动态,效率工具"
-                  value={prefsDraft.interests}
-                  onChange={(e) => setPrefsDraft({ ...prefsDraft, interests: e.target.value })}
-                  aria-label="云端兴趣域"
-                />
-                <input
-                  className="input"
-                  placeholder="屏蔽词（逗号分隔），如：广告软文,八卦娱乐"
-                  value={prefsDraft.dislikes}
-                  onChange={(e) => setPrefsDraft({ ...prefsDraft, dislikes: e.target.value })}
-                  aria-label="云端屏蔽词"
-                />
-                <input
-                  className="input"
-                  placeholder="一句话介绍你关注什么（云端 AI 筛选的口径）"
-                  value={prefsDraft.context}
-                  onChange={(e) => setPrefsDraft({ ...prefsDraft, context: e.target.value })}
-                  aria-label="云端关注上下文"
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  disabled={cloudBusy}
-                  onClick={async () => {
-                    setCloudBusy(true)
-                    setCloudMsg(null)
-                    const r = await pushCloudPrefs({
-                      interests: prefsDraft.interests.trim(),
-                      dislikes: prefsDraft.dislikes.trim(),
-                      context: prefsDraft.context.trim(),
-                    })
-                    setCloudMsg(r.message)
-                    setCloudBusy(false)
-                  }}
-                >
-                  保存采集偏好
-                </button>
-                <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-                  云端筛选用这三项打分，保存后下次抓取生效——和本地「采集偏好」是两份，云端管 7×24 自动抓取的口味
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="set-row">
-            <label>连通</label>
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={cloudBusy}
-              onClick={async () => {
-                saveCloud(cloud)
-                setCloudBusy(true)
-                setCloudMsg(null)
-                try {
-                  const r = await testConnection()
-                  setCloudMsg(`${r.ok ? '' : ''}${r.message}`)
-                } finally {
-                  setCloudBusy(false)
-                }
-              }}
-              data-testid="cloud-test"
-            >
-              测试连接
-            </button>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              {lastSync ? `上次同步：${fmtLocal(lastSync)}` : '从未同步'}
-            </span>
-          </div>
-          {cloudMsg && (
-            <div className="run-banner" style={{ marginTop: 'var(--sp-3)' }} data-testid="cloud-msg" role="status">
-              {cloudMsg}
-            </div>
-          )}
-          <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            cron 在云端服务器按计划抓取（不需要你的网络可达 workers.dev）；D1 直连模式绕过 workers.dev 域名阻断，走实测可达的 api.cloudflare.com。部署与配置详见 <code>worker/README.md</code>。
-          </div>
-
-          <h3 style={{ fontSize: 'var(--fs-md)', margin: 'var(--sp-4) 0 0' }}>设备同步（手机 / 电脑数据一致 · 记录级增量）</h3>
-          <div className="desc">每台设备都能读能写：打开应用自动"先拉后推"，只传各自变过的记录，相同记录按修改时间新者为准——没有"主从设备"之分</div>
-          <div className="set-row" style={{ marginTop: 'var(--sp-2)' }}>
-            <label>同步开关</label>
-            <div className="radio" role="radiogroup" aria-label="设备同步开关">
-              <button type="button" className={sync.enabled ? 'on' : ''} onClick={() => setSync({ ...sync, enabled: true })} aria-pressed={sync.enabled}>开</button>
-              <button type="button" className={!sync.enabled ? 'on' : ''} onClick={() => setSync({ ...sync, enabled: false })} aria-pressed={!sync.enabled}>关</button>
-            </div>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              {sync.enabled ? '打开应用自动同步；首批是全量初始化，之后每轮只传增量' : '关着就完全不动'}
-            </span>
-          </div>
-          <div className="set-row">
-            <label>本机标识</label>
-            <span className="val tnum">{deviceId()}</span>
-            <button type="button" className="btn-primary" disabled={syncBusy} onClick={() => void doDeviceSync()} data-testid="device-sync">
-              {syncBusy ? '同步中…' : '⇄ 立即同步'}
-            </button>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              {sync.lastSyncAt ? `上次 ${fmtLocal(sync.lastSyncAt)}：拉 ${sync.lastPulled} / 推 ${sync.lastPushed} 条` : '还没同步过'}
-            </span>
-          </div>
-          <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
-            <b>外发明示</b>：开启后你的数据<b>记录级</b>经你自己的 Cloudflare D1 中转（含速记/任务/调研发现等）——它只是管道，删掉云端表只断同步不丢数据，每台设备本地各有全量；需要云端同步已按 D1 直连配置。删除通过"软删除记录"传播（备份可找回）。
-          </div>
-        </div>
-      </div>
 
       <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
         <h2>AI · BYOK</h2>
@@ -798,15 +496,28 @@ export function Settings() {
             <>
               <div className="set-row">
                 <label>接入方式</label>
-                <div className="radio">
-                  <button type="button" className={ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: true, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })}>本地网关（推荐）</button>
-                  <button type="button" className={!ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: false })}>浏览器直连</button>
-                </div>
-                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  {ai.viaGateway ? 'Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器接触不到' : 'Key 明文存 localStorage，仅限本机个人使用'}
-                </span>
+                {isDesktopApp() ? (
+                  <>
+                    <div className="radio">
+                      <button type="button" className="on">本地网关（桌面版唯一方式）</button>
+                    </div>
+                    <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                      Key 只存本机应用数据目录的 gateway.env，浏览器接触不到
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="radio">
+                      <button type="button" className={ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: true, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })}>本地网关（推荐）</button>
+                      <button type="button" className={!ai.viaGateway ? 'on' : ''} onClick={() => saveAi({ ...ai, viaGateway: false })}>浏览器直连</button>
+                    </div>
+                    <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                      {ai.viaGateway ? 'Key 只存本机源码目录的 .env.local，浏览器接触不到' : 'Key 明文存 localStorage，仅限本机个人使用'}
+                    </span>
+                  </>
+                )}
               </div>
-              {ai.viaGateway ? (
+              {ai.viaGateway && !isDesktopApp() ? (
                 <>
                   <div className="set-row">
                     <label>网关地址</label>
@@ -987,7 +698,7 @@ export function Settings() {
         <div className="set-body">
           <div className="set-row">
             <label>版本</label>
-            <span className="val">v0.1.10（内测）</span>
+            <span className="val">v{__APP_VERSION__}（内测）</span>
           </div>
           <div className="set-row">
             <label>数据存放</label>

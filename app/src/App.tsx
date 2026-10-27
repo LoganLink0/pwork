@@ -34,6 +34,7 @@ const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m
 const DesignSystem = lazy(() => import('./pages/DesignSystem').then((m) => ({ default: m.DesignSystem })))
 const Placeholder = lazy(() => import('./pages/Placeholder').then((m) => ({ default: m.Placeholder })))
 const Sources = lazy(() => import('./pages/Sources').then((m) => ({ default: m.Sources })))
+const CloudSync = lazy(() => import('./pages/CloudSync').then((m) => ({ default: m.CloudSync })))
 const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Digest })))
 const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
 const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
@@ -165,6 +166,9 @@ export default function App() {
           const where = r.location === 'dir' ? '备份文件夹' : r.location === 'disk' ? 'AppData 备份目录' : '下载文件夹'
           toast('ok', `自动备份完成（${where}${r.fileName ? `：${r.fileName}` : ''}）`)
         }
+        if (r.error) {
+          void recordError({ where: 'App.自动备份', kind: 'app', message: `自动备份失败：${r.error}` }, { silent: true })
+        }
       }),
       '自动备份',
     )
@@ -261,6 +265,7 @@ export default function App() {
     void import('@tauri-apps/api/event')
       .then(({ listen }) => listen('gateway-conflict', () => {
         window.alert('端口 8788 已被其他进程占用，应用内嵌 AI 网关没有启动。\n若不是你自己起的开发版网关，请检查占用 8788 的进程（可能截获对话内容）。')
+        void recordError({ where: 'App.网关冲突', kind: 'app', message: '端口 8788 被其他进程占用，内嵌网关未启动——AI 与抓取网关通路不可用' })
       }))
       .then((fn) => {
         unlisten = fn
@@ -294,6 +299,7 @@ export default function App() {
                   </Route>
                   <Route path="/input/digest" element={<Digest />} />
                   <Route path="/input/sources" element={<Sources />} />
+                  <Route path="/cloud" element={<CloudSync />} />
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/input/blocks" element={<InputBlocks />} />
                   <Route path="/cases" element={<CasesPage />} />

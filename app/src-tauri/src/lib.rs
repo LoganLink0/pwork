@@ -112,6 +112,75 @@ fn open_external_url(url: String) -> Result<(), String> {
     }
 }
 
+/// 应用内一键部署（2026-10-27 用户拍板）：不再弹终端窗口——后台跑部署向导的全自动模式，
+/// 逐行输出推给前端（deploy-log），@@step/@@done/@@fail 标记解析成结构化事件；
+/// 偏好参数由前端带入（本地采集配置），部署即同步口味到云端。
+#[tauri::command]
+fn deploy_cloud(
+    app: tauri::AppHandle,
+    interests: String,
+    dislikes: String,
+    context: String,
+) -> Result<(), String> {
+    let worker_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("定位安装目录失败：{e}"))?
+        .join("worker");
+    if !worker_dir.join("scripts").join("deploy-wizard.mjs").is_file() {
+        return Err("安装目录里没找到部署源码——请重新安装应用（安装包损坏或被安全软件删改）".into());
+    }
+    #[cfg(windows)]
+    {
+        use std::io::BufRead;
+        use std::os::windows::process::CommandExt;
+        use std::process::Stdio;
+        use tauri::Emitter;
+        let mut child = std::process::Command::new("node")
+            .arg("scripts/deploy-wizard.mjs")
+            .arg("--auto")
+            .arg("--interests").arg(&interests)
+            .arg("--dislikes").arg(&dislikes)
+            .arg("--context").arg(&context)
+            .current_dir(&worker_dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW：应用内部署，不出终端
+            .spawn()
+            .map_err(|e| format!("部署进程启动失败：{e}（确认电脑装了 Node.js ≥ 20）"))?;
+        let stdout = child.stdout.take().ok_or("无法读取部署输出")?;
+        std::thread::spawn(move || {
+            for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
+                let _ = app.emit("deploy-log", &line);
+                if let Some(rest) = line.strip_prefix("@@step ") {
+                    let _ = app.emit("deploy-step", rest);
+                } else if let Some(rest) = line.strip_prefix("@@fail ") {
+                    let _ = app.emit("deploy-fail", rest);
+                } else if let Some(rest) = line.strip_prefix("@@done ") {
+                    let mut endpoint = String::new();
+                    let mut token = String::new();
+                    for part in rest.split_whitespace() {
+                        if let Some(v) = part.strip_prefix("endpoint=") {
+                            endpoint = v.to_string();
+                        }
+                        if let Some(v) = part.strip_prefix("token=") {
+                            token = v.to_string();
+                        }
+                    }
+                    let _ = app.emit("deploy-done", serde_json::json!({ "endpoint": endpoint, "token": token }));
+                }
+            }
+            let _ = child.wait();
+        });
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (worker_dir, interests, dislikes, context);
+        Err("仅支持 Windows".into())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -180,7 +249,7 @@ pub fn run() {
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url])
+    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url, deploy_cloud])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }

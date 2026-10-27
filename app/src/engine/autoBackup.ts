@@ -60,6 +60,8 @@ export interface AutoBackupResult {
   fileName?: string
   /** 实际落点：自定义文件夹 / 桌面应用数据目录 / 浏览器下载 */
   location?: 'dir' | 'disk' | 'download'
+  /** 失败原因（2026-10-27 错误留痕）：构建或落盘失败时带出，调用方入错误日志 */
+  error?: string
 }
 
 /**
@@ -157,12 +159,23 @@ export async function runAutoBackupIfDue(
 
   const build = opts?.build ?? (async () => buildBackupBundle())
 
-  const bundle = await build()
+  // 失败如实上抛给调用方入错误日志（2026-10-27 用户明令），上次备份时间不动（下轮重试）
+  let bundle: unknown
+  try {
+    bundle = await build()
+  } catch (e) {
+    return { downloaded: false, error: `构建备份内容失败：${e instanceof Error ? e.message : String(e)}` }
+  }
   const fileName = backupFileName(now)
   // 测试注入 download 时跳过真实落盘（桌面写盘/自定义目录都不可用）
-  const location: AutoBackupResult['location'] = opts?.download
-    ? (opts.download(fileName, JSON.stringify(bundle, null, 2)), 'download')
-    : await deliverBackup(fileName, JSON.stringify(bundle, null, 2))
+  let location: AutoBackupResult['location']
+  try {
+    location = opts?.download
+      ? (opts.download(fileName, JSON.stringify(bundle, null, 2)), 'download')
+      : await deliverBackup(fileName, JSON.stringify(bundle, null, 2))
+  } catch (e) {
+    return { downloaded: false, error: `备份落盘失败：${e instanceof Error ? e.message : String(e)}` }
+  }
   localStorage.setItem('pwork-last-backup', now.toISOString())
   saveAutoBackup({ ...cfg, lastAt: now.toISOString() })
   return { downloaded: true, fileName, location }

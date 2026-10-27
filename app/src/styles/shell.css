@@ -1964,9 +1964,11 @@ a.mcard .m-link:hover {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .ai-vendor-pick {
+  /* 三行纵排（2026-10-27 用户拍板）：名称一行、模型名一行——窄布局不再与模型名挤同一行 */
   display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   background: none;
   border: none;
   padding: 0;
@@ -1975,12 +1977,16 @@ a.mcard .m-link:hover {
   color: var(--ink);
   font-family: inherit;
   font-size: var(--fs-sm);
+  position: relative;
 }
 .ai-vendor-pick .sub {
   color: var(--ink-faint);
   font-size: var(--fs-xs);
 }
 .ai-vendor-check {
+  position: absolute;
+  right: 4px;
+  top: 2px;
   color: var(--ok);
   font-size: var(--fs-sm);
   font-weight: 700;
@@ -2140,6 +2146,39 @@ a.mcard .m-link:hover {
   position: relative;
   width: 360px;
   height: 360px;
+}
+/* 设置页的可编辑轮盘（2026-10-27）：复用呼出态的圆形布局，居中缩小并加中心提示 */
+.wheel-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+.wheel-edit-ring {
+  transform: scale(0.78);
+  transform-origin: top left;
+  margin-bottom: -80px;
+}
+.wheel-slot.editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--ink);
+}
+.wheel-edit-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+.wheel-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: min(560px, 100%);
 }
 .wheel-slot {
   position: absolute;
@@ -2340,3 +2379,19 @@ a.mcard .m-link:hover {
   .module-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+
+/* 应用内部署面板（引导第五步桌面版）：日志尾行等宽小字，浅底圆角 */
+.deploy-log {
+  margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

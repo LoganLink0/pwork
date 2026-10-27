@@ -8,6 +8,7 @@ import { REFRAME } from '../content/copy'
 import type { DebiasKind } from './debias'
 import { chatCompletion, type LlmConfig } from './llm'
 import { parseAiJson } from '../../../engine/aiJson'
+import { isDesktopApp as isDesktopRuntime } from '../../../engine/platform'
 
 export interface CoachContext {
   scenario: string
@@ -103,7 +104,13 @@ export function loadCoachConfig(): CoachConfig {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULT_COACH_CONFIG }
     const parsed = JSON.parse(raw) as Partial<CoachConfig>
-    return { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && (parsed.apiKey || parsed.viaGateway) ? 'llm' : 'rule' }
+    const cfg: CoachConfig = { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && (parsed.apiKey || parsed.viaGateway) ? 'llm' : 'rule' }
+    // 桌面版没有浏览器直连模式（2026-10-27 边界定稿）：内嵌网关是唯一方式，
+    // 历史上存过直连配置的桌面用户在这里自动归一，Key 在网关里的照常可用
+    if (cfg.mode === 'llm' && !cfg.viaGateway && isDesktopRuntime()) {
+      return { ...cfg, viaGateway: true, gatewayUrl: cfg.gatewayUrl || DEFAULT_GATEWAY_URL }
+    }
+    return cfg
   } catch {
     return { ...DEFAULT_COACH_CONFIG }
   }

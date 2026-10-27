@@ -16,15 +16,25 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DRY = process.argv.includes('--dry')
+/** 全自动模式（2026-10-27 应用内部署）：--auto 跳过全部问询（偏好取参数/默认、Token 自动生成），
+ *  每步前输出 `@@step n/6 说明` 供前端进度解析；结束输出 `@@done endpoint=… token=…`。 */
+const AUTO = process.argv.includes('--auto')
+const argOf = (name) => {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 ? (process.argv[i + 1] ?? '') : ''
+}
 const DB_NAME = 'pwork-collect'
 
 const log = (...a) => console.log(...a)
+const step = (n, label) => { if (AUTO) log(`@@step ${n}/6 ${label}`) }
 const line = () => log('─'.repeat(60))
 
 // 单例 readline（2026-10-27 修复）：逐问新建接口会在管道/连续问询下丢输入缓冲，
-// 某个 ask 永远等不到行——全程共用一个接口，顺序消费标准输入
+// 某个 ask 永远等不到行——全程共用一个接口，顺序消费标准输入。
+// --auto 下全部问询直接放行（失败路径的「按回车退出」不再等人）。
 let rlSingleton = null
 async function ask(question) {
+  if (AUTO) return ''
   rlSingleton ??= readline.createInterface({ input: process.stdin, output: process.stdout })
   return (await rlSingleton.question(question)).trim()
 }
@@ -113,6 +123,7 @@ async function ensureDatabase() {
 
 function die(message) {
   console.error(`\n[X] ${message}`)
+  console.error('@@fail ' + message) // 机器可读失败标记（应用内部署面板解析）
   console.error('    修复后重新运行本向导即可（已完成的步骤不会重复生效）。')
 }
 
@@ -129,9 +140,11 @@ async function main() {
     await ask('按回车退出...')
     return
   }
+  step(0, '检查环境')
   log(`\n[0/6] 环境 OK：Node.js ${process.version}`)
 
   // [1/6] 依赖
+  step(1, '安装依赖（首次约 1 分钟）')
   log('\n[1/6] 安装依赖（首次约 1 分钟）...')
   if (DRY) {
     log('  [dry] 跳过真实安装')
@@ -143,9 +156,25 @@ async function main() {
 
   // [2/6] 登录（输出治理 2026-10-26：不透传 wrangler 日志——OAuth 网址只在失败兜底时折叠成
   // 一行给出；超时/失败给具体原因与下一步，不再让英文堆栈淹没中文提示）
+  step(2, 'Cloudflare 账号登录')
   log('\n[2/6] Cloudflare 账号')
   if (!DRY && alreadyLoggedIn()) {
     log('  [OK] 本机已登录 Cloudflare，直接继续')
+  } else if (AUTO && !DRY) {
+    // 全自动：直接发起授权（浏览器弹出让用户点 Allow），无人值守不问「准备好了吗」
+    log('  正在打开浏览器授权——在浏览器里点「Allow」即完成（3 分钟内）...')
+    const login = runLogin()
+    if (login.ok) {
+      log('  [OK] 已登录')
+    } else {
+      const url = login.out.match(/https:\/\/dash\.cloudflare\.com\/oauth2\/auth\S+/)?.[0]
+      if (url) log('  浏览器没弹出来的话，手动复制这一行到浏览器打开：' + url)
+      const timedOut = /timed? ?out|超时/i.test(login.out)
+      die(timedOut
+        ? '授权超时（3 分钟内没在浏览器完成登录）——回到应用里重新点「一键部署」再试一次'
+        : '登录未完成——回到应用里重新点「一键部署」再试一次')
+      return
+    }
   } else {
     log('  还没有账号？先用邮箱注册（免费计划，无需信用卡）：')
     log('  https://dash.cloudflare.com/sign-up')
@@ -179,6 +208,7 @@ async function main() {
   }
 
   // [3/6] 数据库
+  step(3, '创建数据库')
   log(`\n[3/6] 创建数据库 D1（${DB_NAME}）...`)
   if (DRY) {
     log('  [dry] 演示解析：sample → ' + parseDatabaseId('database_id = "abcd1234-5678-90ef"'))
@@ -193,6 +223,7 @@ async function main() {
   }
 
   // [4/6] 建表
+  step(4, '初始化数据表')
   log('\n[4/6] 初始化数据表...')
   if (DRY) {
     log('  [dry] 跳过远程建表')
@@ -204,9 +235,10 @@ async function main() {
   log('  [OK] 数据表就绪')
 
   // [5/6] Token
+  step(5, '设置访问 Token')
   log('\n[5/6] 设置访问 Token（云端数据的钥匙，之后要填回工作台）')
   const token =
-    DRY ? '__dry__' : (await ask('请输入自定义 Token（直接回车 = 自动生成随机值）: ')) || `ptk_${randomBytes(24).toString('base64url')}`
+    DRY || AUTO ? `ptk_${randomBytes(24).toString('base64url')}` : (await ask('请输入自定义 Token（直接回车 = 自动生成随机值）: ')) || `ptk_${randomBytes(24).toString('base64url')}`
   if (DRY) {
     log('  [dry] 演示设置 secret')
   } else {
@@ -223,14 +255,22 @@ async function main() {
   }
 
   // [5.5/6] 采集偏好（2026-10-27 用户拍板：云端评分用的三项偏好必须让用户自己填，
-  // 不再默默用部署者残留的旧值；直接回车 = 沿用通用默认）
-  log('\n[5.5/6] 采集偏好（影响云端筛选的口味，可回车跳过）')
+  // 不再默默用部署者残留的旧值；直接回车 = 沿用通用默认；--auto 时取参数（应用带入本地配置））
   const defInterests = readTomlVar('INTERESTS') ?? '科技动态,效率工具,行业观察'
   const defDislikes = readTomlVar('DISLIKES') ?? '广告软文,八卦娱乐'
   const defContext = readTomlVar('CONTEXT') ?? '我关注能直接用在工作和学习里的实用内容'
-  const interests = (await ask(`兴趣域（逗号分隔，回车=默认「${defInterests}」）: `)).trim() || defInterests
-  const dislikes = (await ask(`屏蔽词（逗号分隔，回车=默认「${defDislikes}」）: `)).trim() || defDislikes
-  const context = (await ask(`一句话介绍你关注什么（回车=默认「${defContext}」）: `)).trim() || defContext
+  let interests, dislikes, context
+  if (AUTO) {
+    interests = argOf('interests').trim() || defInterests
+    dislikes = argOf('dislikes').trim() || defDislikes
+    context = argOf('context').trim() || defContext
+    log(`\n[5.5/6] 采集偏好：兴趣「${interests}」· 屏蔽「${dislikes}」`)
+  } else {
+    log('\n[5.5/6] 采集偏好（影响云端筛选的口味，可回车跳过）')
+    interests = (await ask(`兴趣域（逗号分隔，回车=默认「${defInterests}」）: `)).trim() || defInterests
+    dislikes = (await ask(`屏蔽词（逗号分隔，回车=默认「${defDislikes}」）: `)).trim() || defDislikes
+    context = (await ask(`一句话介绍你关注什么（回车=默认「${defContext}」）: `)).trim() || defContext
+  }
   if (!DRY) {
     patchToml('INTERESTS', interests)
     patchToml('DISLIKES', dislikes)
@@ -240,6 +280,7 @@ async function main() {
   }
 
   // [6/6] 部署
+  step(6, '部署到 Cloudflare')
   log('\n[6/6] 部署到 Cloudflare（免费档 ¥0/月）...')
   let endpoint = ''
   if (DRY) {
@@ -255,6 +296,12 @@ async function main() {
       return
     }
     endpoint = deployed.out.match(/https:\/\/[\w.-]+\.workers\.dev/)?.[0] ?? ''
+  }
+
+  // 全自动模式：机器可读的完成标记（应用内部署面板解析并自动回填两样凭据）
+  if (AUTO) {
+    log(`@@done endpoint=${endpoint} token=${token}`)
+    return
   }
 
   // 收尾必须把两样凭据醒目交到用户手上（2026-10-27 用户反馈：Token 藏在中间日志里等于没给）

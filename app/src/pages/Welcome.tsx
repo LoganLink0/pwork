@@ -7,7 +7,9 @@ import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
 import { isDesktopApp } from '../engine/platform'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
+import { listen as tauriListen } from '@tauri-apps/api/event'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
+import { recordError } from '../engine/errorLog'
 import {
   AI_VENDORS,
   DEFAULT_GATEWAY_URL,
@@ -92,7 +94,30 @@ export function Welcome() {
   }, [gwMode, gwUrl])
 
   // ── 一键部署（第 5 步，桌面版）：部署源码随应用打进安装目录，一键直跑 ──
-  const [deploying, setDeploying] = useState(false)
+  // ── 应用内部署面板状态（桌面版第五步）：running 显示步骤与日志尾行，done 自动回填凭据 ──
+  type DeployPhase = 'idle' | 'running' | 'done' | 'fail'
+  const [deployPhase, setDeployState] = useState<DeployPhase>('idle')
+  const [deployStep, setDeployStep] = useState('')
+  const [deployLogs, setDeployLogs] = useState<string[]>([])
+  useEffect(() => {
+    if (!desktop) return
+    const unsubs: Promise<() => void>[] = []
+    unsubs.push(tauriListen<string>('deploy-log', (e) => {
+      const l = e.payload
+      setDeployLogs((ls) => [...ls.slice(-4), l])
+    }))
+    unsubs.push(tauriListen<string>('deploy-step', (e) => setDeployStep(e.payload)))
+    unsubs.push(tauriListen<string>('deploy-fail', (e) => {
+      setDeployState('fail')
+      setMsg(`部署失败：${e.payload}`)
+    }))
+    unsubs.push(tauriListen<{ endpoint: string; token: string }>('deploy-done', (e) => {
+      setDeployState('done')
+      setCloud((c) => ({ ...c, endpoint: e.payload.endpoint, token: e.payload.token }))
+      setMsg('部署完成！端点地址和 Token 已自动填到下面——点「测试连接」验证后「保存并同步」')
+    }))
+    return () => { void Promise.all(unsubs).then((fns) => fns.forEach((f) => f())) }
+  }, [desktop])
 
   /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
   const finish = (to = '/') => {
@@ -134,21 +159,26 @@ export function Welcome() {
       setApiKey('')
     } else {
       setAiMsg({ ok: false, text: r.message })
+      void recordError({ where: '引导.AI测试', kind: 'app', message: `AI 连接测试失败：${r.message}` }, { silent: true })
     }
     setAiBusy(false)
   }
 
-  /** 一键部署：部署源码随应用打进安装目录，新窗口直接跑向导——无需选择任何位置。
-   *  invoke 静态引入（动态 import 的依赖预加载在 tauri.localhost 下会挂起，点击无响应） */
+  /** 应用内一键部署（2026-10-27 定稿）：无终端窗口，Rust 后台跑向导全自动模式，
+   *  进度经事件回流面板；本地采集偏好随部署带上云端。invoke/listen 静态引入
+   *  （动态 import 的依赖预加载在 tauri.localhost 下会挂起，复盘 3.36）。 */
   const runDeploy = async () => {
-    setDeploying(true)
+    setDeployState('running')
+    setDeployLogs([])
     try {
-      await tauriInvoke('open_deploy_wizard')
-      setMsg('部署窗口已在新窗口打开——跟着向导走完（约 10 分钟），结束时它打印的端点地址和 Token 填到下面')
+      await tauriInvoke('deploy_cloud', {
+        interests: config.interests.join(','),
+        dislikes: config.dislikes.join(','),
+        context: '我的兴趣与屏蔽以这份配置为准',
+      })
     } catch (e) {
+      setDeployState('fail')
       setMsg(e instanceof Error ? e.message : String(e))
-    } finally {
-      setDeploying(false)
     }
   }
 
@@ -179,7 +209,7 @@ export function Welcome() {
       return
     }
     const r = await syncFromCloud()
-    setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在 设置 → 云端同步 管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
+    setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在侧边栏「云端同步」页管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
   }
 
   const last = step === STEPS.length - 1
@@ -364,15 +394,24 @@ export function Welcome() {
               {step === 4 && (
                 <>
                   <div className="wgroup">
-                    <div className="wgroup-title">一键部署<span className="sub">全程约 10 分钟</span></div>
+                    <div className="wgroup-title">一键部署<span className="sub">全程约 10 分钟，在应用里直接跑</span></div>
                     {desktop ? (
                       <>
                         <div className="key-row">
-                          <button type="button" className="btn-primary" disabled={deploying} onClick={() => void runDeploy()}>
-                            {deploying ? '启动中…' : '一键部署'}
+                          <button type="button" className="btn-primary" disabled={deployPhase === 'running'} onClick={() => void runDeploy()}>
+                            {deployPhase === 'running' ? '部署中…' : deployPhase === 'done' ? '重新部署' : '一键部署'}
                           </button>
+                          {deployPhase === 'running' && deployStep && <span className="val" style={{ color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)' }}>{deployStep}…</span>}
                         </div>
-                        <p className="caption">在 PWORK 安装目录下直接开始，无需选择位置。向导在新窗口中文逐步引导：装依赖 → 登录 → 建库 → 部署。</p>
+                        {deployPhase === 'running' && (
+                          <pre className="deploy-log" aria-label="部署进度">{deployLogs.join('\n')}</pre>
+                        )}
+                        {deployPhase === 'fail' && (
+                          <p className="caption" style={{ color: 'var(--danger)' }}>部署失败——看上方提示的原因，处理后点「一键部署」重试（已完成的步骤自动跳过）。</p>
+                        )}
+                        <p className="caption">
+                          点按钮直接在应用里部署（不弹终端窗口）：第一次会弹出浏览器让你登录 Cloudflare（免费注册，点「Allow」），之后全自动。你的本地采集偏好会一并同步到云端。中途失败随时重试，已完成的步骤不重复。
+                        </p>
                       </>
                     ) : (
                       <p className="caption">双击项目源码 worker 目录里的 <code>部署向导.cmd</code>，向导会中文逐步引导：装依赖 → 登录 → 建库 → 部署。</p>

@@ -147,7 +147,7 @@ export function Sidebar() {
         ))}
       </div>
       <div className="foot">
-        本地优先 · 数据都在本机
+        v{__APP_VERSION__} · 内测中
       </div>
     </aside>
   )

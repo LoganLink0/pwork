@@ -52,6 +52,10 @@ function pworkGatewayAutostart(): Plugin {
 export default defineConfig({
   // PWORK 专用端口（与 FUPAN 的 5173/5174 区隔；启动器 launcher.cmd 依赖此端口）
   server: { port: 5273 },
+  // 版本号注入（与 package.json 同源）：侧栏底部与设置关于页共用，发版自动跟随
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+  },
   plugins: [
     react(),
     pworkGatewayAutostart(),

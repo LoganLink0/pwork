@@ -114,6 +114,25 @@ export const useCollect = create<CollectState>((set, get) => ({
     set({ fetch: { running: true, summary: null, lastRunAt: get().fetch.lastRunAt, error: null } })
     try {
       const summary = await runCollect(active, config)
+      // 失败留痕（2026-10-27 用户明令：手动检查能发现的问题必须如实进错误日志）——
+      // 横幅已有当轮反馈，这里静默入库供回查
+      const failed = summary.results.filter((r) => !r.ok)
+      if (failed.length > 0) {
+        void recordError({
+          where: '采集.抓取',
+          kind: 'app',
+          message: `${failed.length}/${summary.results.length} 个源失败：${failed.map((f) => `${f.sourceName}（${f.error ?? '未知'}）`).join('、').slice(0, 280)}`,
+          detail: { failed: failed.map((f) => ({ name: f.sourceName, error: f.error })) },
+        }, { silent: true })
+      }
+      const stopped = summary.results.filter((r) => r.autoStopped)
+      if (stopped.length > 0) {
+        void recordError({
+          where: '采集.自动停用',
+          kind: 'app',
+          message: `连败 3 次自动停用：${stopped.map((f) => f.sourceName).join('、')}——换地址后到信源页点「启用」开关重启`,
+        }, { silent: true })
+      }
       const [allSources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
       set({ sources: allSources, items, items7d, fetch: { running: false, summary, lastRunAt: new Date().toISOString(), error: null } })
       set(await reloadDigest(get()))
