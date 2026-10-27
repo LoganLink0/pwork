@@ -65,7 +65,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
 
   const removeSlot = (slotId: string) => setSlots((ss) => ss.filter((s) => s.id !== slotId))
 
-  const n = slots.length
+  const n = slots.length + (slots.length < 8 ? 1 : 0) // 实格与虚线空格一起均分——空格落位在下一档，不压任何实格
   const slotName = (s: WheelSlot) => s.label?.trim() || (s.kind === 'quick' ? '速记浮层' : s.kind === 'fetch' ? '立即抓取' : s.kind === 'url' ? '网址' : '页面')
 
   return (
@@ -109,7 +109,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
             {slots.length < 8 && (
               <div
                 className="wheel-slot wheel-slot-empty"
-                style={{ '--i': slots.length, '--n': slots.length + 1 } as React.CSSProperties}
+                style={{ '--i': slots.length, '--n': n } as React.CSSProperties}
                 onDragOver={(e) => { e.preventDefault(); setHoverSlot('__new__') }}
                 onDragLeave={() => setHoverSlot((h) => (h === '__new__' ? null : h))}
                 onDrop={(e) => dropOn(`slot_${Date.now().toString(36)}`, e)}
