@@ -70,18 +70,19 @@ export function Sidebar() {
       ))}
 
       <div className="nav-group">模块</div>
-      {MODULE_NAV.map((mod) =>
-        mod.children ? (
-          <div key={mod.key}>
-            <button
-              type="button"
-              className={`nav-item ${mod.mark}`}
-              aria-expanded={open[mod.key] ?? true}
-              onClick={() => toggle(mod.key)}
-            >
-              <span className="ico" aria-hidden><Icon name={mod.icon} /></span>
-              <b style={{ fontWeight: 600 }}>{mod.label}</b>
-            </button>
+        {MODULE_NAV.map((mod) =>
+          mod.children ? (
+            <div key={mod.key}>
+              <button
+                type="button"
+                className={`nav-item ${mod.mark}`}
+                aria-expanded={open[mod.key] ?? true}
+                onClick={() => toggle(mod.key)}
+              >
+                <span className="ico" aria-hidden><Icon name={mod.icon} /></span>
+                <b style={{ fontWeight: 600 }}>{mod.label}</b>
+                <span className="fold" aria-hidden><Icon name="chevronDown" size={14} /></span>
+              </button>
             {(open[mod.key] ?? true) && (
               <nav className="nav-sub" aria-label={mod.label}>
                 {mod.children.map((child) => (
@@ -122,21 +123,6 @@ export function Sidebar() {
       >
         <Icon name="github" size={16} /> GitHub 开源
       </a>
-      <div className="theme-seg" role="group" aria-label="视觉主题">
-        {THEMES.map((t) => (
-          <button
-            key={t.pref}
-            type="button"
-            className={theme === t.pref ? 'on' : ''}
-            aria-pressed={theme === t.pref}
-            title={`主题：${t.label}`}
-            aria-label={`主题：${t.label}`}
-            onClick={() => setTheme(t.pref)}
-          >
-            <Icon name={t.icon} size={15} />
-          </button>
-        ))}
-      </div>
       <NavLink to="/help" className={({ isActive }) => `nav-item mark-workspace${isActive ? ' active' : ''}`}>
         <span className="ico" aria-hidden><Icon name="helpCircle" /></span>
         帮助
@@ -145,6 +131,24 @@ export function Sidebar() {
         <span className="ico" aria-hidden><Icon name="settings" /></span>
         设置
       </NavLink>
+      <div className="theme-wrap">
+        <span className="theme-label" aria-hidden>主题</span>
+        <div className="theme-seg" role="group" aria-label="视觉主题">
+          {THEMES.map((t) => (
+            <button
+              key={t.pref}
+              type="button"
+              className={theme === t.pref ? 'on' : ''}
+              aria-pressed={theme === t.pref}
+              title={`主题：${t.label}`}
+              aria-label={`主题：${t.label}`}
+              onClick={() => setTheme(t.pref)}
+            >
+              <Icon name={t.icon} size={15} />
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="foot">
         本地优先 · 数据都在本机
       </div>

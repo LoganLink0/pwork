@@ -107,6 +107,7 @@ export function Digest() {
           {fetchState.summary.results.filter((r) => !r.ok).length > 0 && (
             <>；失败：{fetchState.summary.results.filter((r) => !r.ok).map((r) => r.sourceName).join('、')}</>
           )}
+          {fetchState.summary.totalNew > 0 && <> · <Link to="/input/items">去条目库看全部 →</Link></>}
         </div>
       )}
       {fetchState.error && (

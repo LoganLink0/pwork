@@ -33,7 +33,7 @@ const STEP_GUIDES: { title: string; desc: string; tips?: string[] }[] = [
   {
     title: '一个闭环',
     desc: '记下来 → 加工 → 成稿 → 复盘，复盘产出的行动项又回到待办。右边四个模块各配一段真实操作录屏。',
-    tips: ['输入：速记浮层随手记、信息日报', '处理：全库搜索、文字/音频/图片工具', '输出：周报月报、文章、调研', '回路：CLAP 复盘、认知资产回访'],
+    tips: ['输入：速记浮层按 N 随手记、信息日报', '处理：Ctrl K 一次搜遍全库；桌面版 Ctrl+Alt+Q 呼出工具轮盘', '输出：周报月报、文章、调研', '回路：CLAP 复盘、认知资产回访'],
   },
   {
     title: '挑你要读的',
@@ -163,7 +163,7 @@ export function Welcome() {
       const resp = await fetch(`${cloud.endpoint.replace(/\/$/, '')}/api/digest?n=1`, {
         headers: cloud.token ? { authorization: `Bearer ${cloud.token}` } : {},
       })
-      setMsg(resp.ok ? '连接成功！点「保存并同步」完成接入' : `端点可达但返回 HTTP ${resp.status}`)
+      setMsg(resp.ok ? '连接成功！点「保存并同步」完成接入' : `地址能访问但被拒绝（HTTP ${resp.status}）——多半是 Token 不对或还没生效，回去核对一下再试`)
     } catch {
       setMsg('连不上：确认已完成部署、地址拼写正确')
     } finally {
@@ -319,18 +319,24 @@ export function Welcome() {
                   )}
                   <div className="wgroup">
                     <div className="wgroup-title">① 选厂商，去官网拿 Key</div>
-                    <div className="ai-vendors">
-                      {AI_VENDORS.map((v) => (
-                        <div key={v.id} className={`ai-vendor${vendor === v.id ? ' on' : ''}`}>
-                          <button type="button" className="ai-vendor-pick" aria-pressed={vendor === v.id} onClick={() => setVendor(v.id)}>
-                            <b>{v.name}</b>
-                            <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
-                            {vendor === v.id && <span className="ai-vendor-check" aria-hidden>✓</span>}
-                          </button>
-                          <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
+                    {(['国内常用', '聚合平台', '本地'] as const).map((g) => (
+                      <div key={g} className="vendor-group">
+                        <div className="vendor-group-title">{g === '本地' ? '本机模型（Ollama，零成本，Key 随便填）' : g === '聚合平台' ? '聚合平台（一个 Key 用多家模型）' : g}</div>
+                        <div className="ai-vendors">
+                          {AI_VENDORS.filter((v) => v.group === g).map((v) => (
+                            <div key={v.id} className={`ai-vendor${vendor === v.id ? ' on' : ''}`}>
+                              <button type="button" className="ai-vendor-pick" aria-pressed={vendor === v.id} onClick={() => setVendor(v.id)}>
+                                <b>{v.name}</b>
+                                <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
+                                {vendor === v.id && <span className="ai-vendor-check" aria-hidden>✓</span>}
+                              </button>
+                              <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                    <p className="caption">OpenAI、Claude、Gemini、Grok、Groq 等国际厂商同样支持——配完引导后在 设置 → AI 里选。</p>
                   </div>
                   <div className="wgroup">
                     <div className="wgroup-title">② 粘贴 Key，保存即测试</div>

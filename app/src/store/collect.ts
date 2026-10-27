@@ -10,6 +10,7 @@ import {
   itemsPerSource7d,
   listAllSources,
   listRecentItems,
+  resetSourceHealth,
   updateAnnotation,
   updateSource,
   type SourceInput,
@@ -142,6 +143,7 @@ export const useCollect = create<CollectState>((set, get) => ({
 
   toggleActive: async (id, active) => {
     await updateSource(id, { active })
+    if (active) await resetSourceHealth(id)
     set({ sources: await listAllSources() })
   },
 

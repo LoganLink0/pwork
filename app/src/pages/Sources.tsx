@@ -17,8 +17,15 @@ function tierCls(tier: number): string {
 function HealthCell({ s }: { s: Source }) {
   const stopped = !s.active && s.health.failStreak >= 3
   const failing = s.health.failStreak > 0 && s.active
+  const tip = stopped
+    ? `连败 ${s.health.failStreak} 次自动停用。最近错误：${s.health.lastError ?? '未知'}——换地址后点本行「启用」开关重新启用，失败计数会清零重新开始`
+    : s.health.lastError
+      ? `最近错误：${s.health.lastError}`
+      : s.health.lastOkAt
+        ? `上次成功 ${fmtLocal(s.health.lastOkAt)}`
+        : '还没抓取过'
   return (
-    <span title={s.health.lastError ? `最近错误：${s.health.lastError}` : s.health.lastOkAt ? `上次成功 ${fmtLocal(s.health.lastOkAt)}` : '还没抓取过'}>
+    <span title={tip}>
       <span className={`health-dot ${stopped ? 'health-stopped' : failing ? 'health-fail' : 'health-ok'}`} />
       {stopped ? '已停用' : failing ? `连败×${s.health.failStreak}` : '正常'}
     </span>
@@ -29,7 +36,7 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
-  const { sources, items, items7d, loaded, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState } = useCollect()
+  const { sources, items, items7d, loaded, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState, runFetchAll } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
   // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = useMemo(() => voteStatsBySource(items), [items])
@@ -84,13 +91,16 @@ export function Sources() {
         <h1>信源</h1>
         <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 手动抓取，不自动定时</span>
         <div className="right">
+          <button type="button" className="btn-primary" disabled={fetchState.running || sources.filter((s) => s.active).length === 0} onClick={() => void runFetchAll()}>
+            {fetchState.running ? '抓取中…' : '立即抓取'}
+          </button>
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>导出 JSON</button>
           {sources.length > 0 && (
             <button type="button" className="btn-ghost" onClick={() => setCatalogOpen((v) => !v)}>
               {catalogOpen ? '收起目录' : '从目录挑选'}
             </button>
           )}
-          <label className="btn-ghost" style={{ cursor: 'pointer' }}>
+          <label className="btn-ghost" style={{ cursor: 'pointer' }} title="JSON 数组文件，每项含名称与地址；重复地址自动跳过。格式说明见 帮助 → 排错">
             导入 JSON
             <input
               type="file"

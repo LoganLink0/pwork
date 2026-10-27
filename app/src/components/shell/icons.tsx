@@ -76,6 +76,8 @@ const SHAPES: Record<string, ReactNode> = {
     </>
   ),
   moon: <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />,
+  /* 折叠指示（侧栏子菜单）：收起时向下，展开随按钮状态旋转 */
+  chevronDown: <polyline points="6 9 12 15 18 9" />,
   /* GitHub 品牌标（填充型，覆盖库默认的描边设定） */
   github: (
     <path

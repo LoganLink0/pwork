@@ -107,6 +107,17 @@ export async function markSourceOk(id: string): Promise<void> {
   })
 }
 
+/** 重新启用停用源：失败计数清零——用户显式重开等于给它新机会，不清零会在下次失败时立刻再停 */
+export async function resetSourceHealth(id: string): Promise<void> {
+  const s = await db.sources.get(id)
+  if (!s) return
+  await db.sources.put({
+    ...s,
+    health: { failStreak: 0, lastOkAt: s.health.lastOkAt, lastError: null },
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 /** 抓取失败：failStreak++；≥3 自动停用（04 §3.1 死源治理）。返回是否触发自动停用 */
 export async function markSourceFail(id: string, error: string): Promise<boolean> {
   const s = await db.sources.get(id)

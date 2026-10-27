@@ -25,7 +25,13 @@ export interface CoachAdapter {
 
 /* ------------------------------ 配置 ------------------------------ */
 
-export type CoachProvider = 'deepseek' | 'zhipu' | 'moonshot' | 'openai' | 'custom'
+export type CoachProvider =
+  | 'deepseek' | 'zhipu' | 'moonshot' | 'openai'
+  | 'qwen' | 'doubao' | 'hunyuan' | 'ernie' | 'spark'
+  | 'siliconflow' | 'openrouter'
+  | 'claude' | 'gemini' | 'grok' | 'groq'
+  | 'ollama'
+  | 'custom'
 
 export interface CoachConfig {
   mode: 'rule' | 'llm'
@@ -38,20 +44,48 @@ export interface CoachConfig {
   gatewayUrl?: string
 }
 
+/** 厂商预设（端点/Key 页/默认模型 2026-10-27 官方文档逐一查证；模型名会随版本演进，
+ *  过期时在 设置 → AI 里可改）。ollama 是本机模型端点，Key 随便填即可通过鉴权。 */
 export const PROVIDER_PRESETS: Partial<Record<CoachProvider, { name: string; baseURL: string; model: string }>> = {
   deepseek: { name: 'DeepSeek', baseURL: 'https://api.deepseek.com', model: 'deepseek-chat' },
   zhipu: { name: '智谱', baseURL: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
   moonshot: { name: 'Moonshot Kimi', baseURL: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
   openai: { name: 'OpenAI', baseURL: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  qwen: { name: '通义千问', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  doubao: { name: '豆包', baseURL: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-1-6-flash-250715' },
+  hunyuan: { name: '腾讯混元', baseURL: 'https://api.hunyuan.cloud.tencent.com/v1', model: 'hunyuan-turbos-latest' },
+  ernie: { name: '百度文心', baseURL: 'https://qianfan.baidubce.com/v2', model: 'ernie-4.0-8k' },
+  spark: { name: '讯飞星火', baseURL: 'https://spark-api-open.xf-yun.com/v1', model: '4.0Ultra' },
+  siliconflow: { name: '硅基流动', baseURL: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct' },
+  openrouter: { name: 'OpenRouter', baseURL: 'https://openrouter.ai/api/v1', model: 'openrouter/auto' },
+  claude: { name: 'Claude', baseURL: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-5' },
+  gemini: { name: 'Gemini', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+  grok: { name: 'Grok', baseURL: 'https://api.x.ai/v1', model: 'grok-4' },
+  groq: { name: 'Groq', baseURL: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+  ollama: { name: '本地模型（Ollama）', baseURL: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b' },
 }
 
-/** 常用大模型厂商直达信息（2026-10-25 官方页面逐一查证）：引导页与设置页配置 AI 用——
- *  keyPage 是各自开放平台「获取 API Key」页面的直达地址，baseURL/model 是网关侧默认接入参数 */
-export const AI_VENDORS: { id: CoachProvider; name: string; keyPage: string }[] = [
-  { id: 'deepseek', name: 'DeepSeek', keyPage: 'https://platform.deepseek.com/api_keys' },
-  { id: 'zhipu', name: '智谱', keyPage: 'https://open.bigmodel.cn/usercenter/apikeys' },
-  { id: 'moonshot', name: 'Moonshot Kimi', keyPage: 'https://platform.kimi.com/console/api-keys' },
-  { id: 'openai', name: 'OpenAI', keyPage: 'https://platform.openai.com/api-keys' },
+/** 大模型厂商直达信息（端点/Key 页/默认模型 2026-10-27 官方文档逐一查证）：引导页与设置页配置 AI 用。
+ *  keyPage 是各自开放平台「获取 API Key」页面的直达地址；group 用于引导页与设置页的分组呈现。
+ *  引导页展示前两组（国内常用 + 聚合），其余在 设置 → AI 的完整列表里。 */
+export type VendorGroup = '国内常用' | '聚合平台' | '国际' | '本地'
+export const AI_VENDORS: { id: CoachProvider; name: string; keyPage: string; group: VendorGroup }[] = [
+  { id: 'deepseek', name: 'DeepSeek', keyPage: 'https://platform.deepseek.com/api_keys', group: '国内常用' },
+  { id: 'zhipu', name: '智谱', keyPage: 'https://open.bigmodel.cn/usercenter/apikeys', group: '国内常用' },
+  { id: 'moonshot', name: 'Moonshot Kimi', keyPage: 'https://platform.kimi.com/console/api-keys', group: '国内常用' },
+  { id: 'qwen', name: '通义千问', keyPage: 'https://bailian.console.aliyun.com/model/settings/api-key', group: '国内常用' },
+  { id: 'doubao', name: '豆包', keyPage: 'https://console.volcengine.com/ark', group: '国内常用' },
+  { id: 'hunyuan', name: '腾讯混元', keyPage: 'https://console.cloud.tencent.com/hunyuan/api-key', group: '国内常用' },
+  { id: 'ernie', name: '百度文心', keyPage: 'https://console.bce.baidu.com/qianfan/overview', group: '国内常用' },
+  { id: 'spark', name: '讯飞星火', keyPage: 'https://xinghuo.xfyun.cn', group: '国内常用' },
+  { id: 'openai', name: 'OpenAI', keyPage: 'https://platform.openai.com/api-keys', group: '国际' },
+  { id: 'siliconflow', name: '硅基流动', keyPage: 'https://cloud.siliconflow.cn/account/ak', group: '聚合平台' },
+  { id: 'openrouter', name: 'OpenRouter', keyPage: 'https://openrouter.ai/settings/keys', group: '聚合平台' },
+  { id: 'claude', name: 'Claude', keyPage: 'https://console.anthropic.com/settings/keys', group: '国际' },
+  { id: 'gemini', name: 'Gemini', keyPage: 'https://aistudio.google.com/apikey', group: '国际' },
+  { id: 'grok', name: 'Grok', keyPage: 'https://console.x.ai', group: '国际' },
+  { id: 'groq', name: 'Groq', keyPage: 'https://console.groq.com/keys', group: '国际' },
+  { id: 'ollama', name: '本地模型（Ollama）', keyPage: 'https://ollama.com', group: '本地' },
 ]
 
 const KEY = 'fupan-coach'
