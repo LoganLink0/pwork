@@ -319,23 +319,18 @@ export function Welcome() {
                   )}
                   <div className="wgroup">
                     <div className="wgroup-title">① 选厂商，去官网拿 Key</div>
-                    {(['国内常用', '聚合平台', '本地'] as const).map((g) => (
-                      <div key={g} className="vendor-group">
-                        <div className="vendor-group-title">{g === '本地' ? '本机模型（Ollama，零成本，Key 随便填）' : g === '聚合平台' ? '聚合平台（一个 Key 用多家模型）' : g}</div>
-                        <div className="ai-vendors">
-                          {AI_VENDORS.filter((v) => v.group === g).map((v) => (
-                            <div key={v.id} className={`ai-vendor${vendor === v.id ? ' on' : ''}`}>
-                              <button type="button" className="ai-vendor-pick" aria-pressed={vendor === v.id} onClick={() => setVendor(v.id)}>
-                                <b>{v.name}</b>
-                                <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
-                                {vendor === v.id && <span className="ai-vendor-check" aria-hidden>✓</span>}
-                              </button>
-                              <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
-                            </div>
-                          ))}
+                    <div className="ai-vendors">
+                      {AI_VENDORS.filter((v) => v.group !== '国际').map((v) => (
+                        <div key={v.id} className={`ai-vendor${vendor === v.id ? ' on' : ''}`}>
+                          <button type="button" className="ai-vendor-pick" aria-pressed={vendor === v.id} onClick={() => setVendor(v.id)}>
+                            <b>{v.name}</b>
+                            <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
+                            {vendor === v.id && <span className="ai-vendor-check" aria-hidden>✓</span>}
+                          </button>
+                          <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                     <p className="caption">OpenAI、Claude、Gemini、Grok、Groq 等国际厂商同样支持——配完引导后在 设置 → AI 里选。</p>
                   </div>
                   <div className="wgroup">

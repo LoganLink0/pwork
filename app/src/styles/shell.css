@@ -167,21 +167,11 @@ button.nav-item {
   background: var(--surface-2);
   color: var(--ink);
 }
-/* 主题分段控件：行高对齐 nav-item、贴侧栏令牌（surface-2 底、r-sm 圆角、选中格白底细边）；
-   上方小字组标签（纯图标三格的可发现性——2026-10-27 UX 审查） */
-.theme-wrap {
-  margin: var(--sp-1) 0 var(--sp-2);
-}
-.theme-label {
-  display: block;
-  padding: 0 var(--sp-2);
-  margin-bottom: 4px;
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-}
+/* 主题分段控件：行高对齐 nav-item、贴侧栏令牌（surface-2 底、r-sm 圆角、选中格白底细边） */
 .theme-seg {
   display: flex;
   gap: 3px;
+  margin: var(--sp-1) 0 var(--sp-2);
   padding: 3px;
   border-radius: var(--r-sm);
   background: var(--surface-2);
@@ -1918,17 +1908,6 @@ a.mcard .m-link:hover {
   line-height: 1.7;
   color: var(--ink-soft);
 }
-/* 厂商分组（引导第四步/设置 AI）：组小标题 + 组内卡片网格 */
-.vendor-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.vendor-group-title {
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-  margin-top: var(--sp-1);
-}
 .key-row {
   display: flex;
   gap: var(--sp-2);
@@ -1961,11 +1940,14 @@ a.mcard .m-link:hover {
   flex: none;
 }
 
-/* AI 卡厂商选择：四厂商一排（右栏宽足够），选中态描边+浅底+✓，直达拿 Key 页 */
+/* AI 卡厂商选择：单一网格固定 4 列（2026-10-27 用户拍板"4 个一行"），窄屏退 2 列；选中态描边+浅底+✓ */
 .ai-vendors {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-2);
+}
+@media (max-width: 1000px) {
+  .ai-vendors { grid-template-columns: repeat(2, 1fr); }
 }
 .ai-vendor {
   display: flex;

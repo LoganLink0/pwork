@@ -44,23 +44,23 @@ export interface CoachConfig {
   gatewayUrl?: string
 }
 
-/** 厂商预设（端点/Key 页/默认模型 2026-10-27 官方文档逐一查证；模型名会随版本演进，
- *  过期时在 设置 → AI 里可改）。ollama 是本机模型端点，Key 随便填即可通过鉴权。 */
+/** 厂商预设（端点/Key 页 2026-10-27 官方文档查证；默认模型名 2026-10-27 逐家重查修正——
+ *  模型名随版本演进，过期时在 设置 → AI 里可改）。ollama 是本机模型端点，Key 随便填即可通过鉴权。 */
 export const PROVIDER_PRESETS: Partial<Record<CoachProvider, { name: string; baseURL: string; model: string }>> = {
-  deepseek: { name: 'DeepSeek', baseURL: 'https://api.deepseek.com', model: 'deepseek-chat' },
-  zhipu: { name: '智谱', baseURL: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
-  moonshot: { name: 'Moonshot Kimi', baseURL: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
-  openai: { name: 'OpenAI', baseURL: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  deepseek: { name: 'DeepSeek', baseURL: 'https://api.deepseek.com', model: 'deepseek-flash' },
+  zhipu: { name: '智谱', baseURL: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-5.3-flash' },
+  moonshot: { name: 'Moonshot Kimi', baseURL: 'https://api.moonshot.cn/v1', model: 'kimi-k3' },
+  openai: { name: 'OpenAI', baseURL: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
   qwen: { name: '通义千问', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
-  doubao: { name: '豆包', baseURL: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-1-6-flash-250715' },
+  doubao: { name: '豆包', baseURL: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-1-8' },
   hunyuan: { name: '腾讯混元', baseURL: 'https://api.hunyuan.cloud.tencent.com/v1', model: 'hunyuan-turbos-latest' },
-  ernie: { name: '百度文心', baseURL: 'https://qianfan.baidubce.com/v2', model: 'ernie-4.0-8k' },
+  ernie: { name: '百度文心', baseURL: 'https://qianfan.baidubce.com/v2', model: 'ernie-4.5-turbo-32k' },
   spark: { name: '讯飞星火', baseURL: 'https://spark-api-open.xf-yun.com/v1', model: '4.0Ultra' },
-  siliconflow: { name: '硅基流动', baseURL: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct' },
+  siliconflow: { name: '硅基流动', baseURL: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen3.5-4B' },
   openrouter: { name: 'OpenRouter', baseURL: 'https://openrouter.ai/api/v1', model: 'openrouter/auto' },
-  claude: { name: 'Claude', baseURL: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-5' },
-  gemini: { name: 'Gemini', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
-  grok: { name: 'Grok', baseURL: 'https://api.x.ai/v1', model: 'grok-4' },
+  claude: { name: 'Claude', baseURL: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-6' },
+  gemini: { name: 'Gemini', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3-flash' },
+  grok: { name: 'Grok', baseURL: 'https://api.x.ai/v1', model: 'grok-4.7' },
   groq: { name: 'Groq', baseURL: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
   ollama: { name: '本地模型（Ollama）', baseURL: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b' },
 }
@@ -95,7 +95,7 @@ export const DEFAULT_COACH_CONFIG: CoachConfig = {
   provider: 'deepseek',
   baseURL: 'https://api.deepseek.com',
   apiKey: '',
-  model: 'deepseek-chat',
+  model: 'deepseek-flash',
 }
 
 export function loadCoachConfig(): CoachConfig {

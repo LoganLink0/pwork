@@ -56,10 +56,12 @@ const SHAPES: Record<string, ReactNode> = {
     </>
   ),
   /* ---- 主题三态 ---- */
+  /* 跟随系统=显示器（2026-10-27 用户拍板：半圆歧义，换成直观的显示器） */
   appearance: (
     <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none" />
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
     </>
   ),
   sun: (

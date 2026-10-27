@@ -56,6 +56,20 @@ function runLogin() {
   return { ok: r.status === 0, out: `${r.stdout ?? ''}${r.stderr ?? ''}` }
 }
 
+/** 登录态检查（2026-10-27 修复）：本机已有 OAuth 时（升级场景重跑向导）跳过浏览器授权——
+ *  旧版每次强制重新 login，没人盯着浏览器就 3 分钟超时，把「升级部署」卡死在登录步 */
+function alreadyLoggedIn() {
+  const r = spawnSync('npx wrangler whoami', {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    shell: true,
+    cwd: ROOT,
+    timeout: 30_000,
+  })
+  const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
+  return /You are logged in/i.test(out)
+}
+
 /** 从 wrangler 输出中提取 database_id */
 export function parseDatabaseId(text) {
   const m = text.match(/database_id\s*=\s*"?([0-9a-f][0-9a-f-]{7,})"?/i)
@@ -124,13 +138,16 @@ async function main() {
   // [2/6] 登录（输出治理 2026-10-26：不透传 wrangler 日志——OAuth 网址只在失败兜底时折叠成
   // 一行给出；超时/失败给具体原因与下一步，不再让英文堆栈淹没中文提示）
   log('\n[2/6] Cloudflare 账号')
-  log('  还没有账号？先用邮箱注册（免费计划，无需信用卡）：')
-  log('  https://dash.cloudflare.com/sign-up')
-  await ask('注册/登录准备好后，按回车打开浏览器授权登录...')
-  log('  正在打开浏览器授权（在浏览器里点「Allow」即完成）...')
-  if (DRY) {
-    log('  [dry] 跳过真实登录')
+  if (!DRY && alreadyLoggedIn()) {
+    log('  [OK] 本机已登录 Cloudflare，直接继续')
   } else {
+    log('  还没有账号？先用邮箱注册（免费计划，无需信用卡）：')
+    log('  https://dash.cloudflare.com/sign-up')
+    await ask('注册/登录准备好后，按回车打开浏览器授权登录...')
+    log('  正在打开浏览器授权（在浏览器里点「Allow」即完成）...')
+    if (DRY) {
+      log('  [dry] 跳过真实登录')
+    } else {
     const login = runLogin()
     if (login.ok) {
       log('  [OK] 已登录')
@@ -151,6 +168,7 @@ async function main() {
       line()
       await ask('按回车退出...')
       return
+    }
     }
   }
 
