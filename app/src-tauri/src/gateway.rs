@@ -168,6 +168,37 @@ fn host_allowed(host: &str, port: u16) -> bool {
     host_ok && port_ok
 }
 
+/// RSS 代理的 URL 守卫：只放行 http/https，且解析出的地址不落在内网/回环/保留段。
+/// 域名先做 DNS 解析再校验全部地址（防解析到内网 IP 的 rebinding）；解析失败按拒绝处理。
+fn guard_public_http_url(target: &str) -> Result<String, String> {
+    use std::net::ToSocketAddrs;
+    let u = url::Url::parse(target).map_err(|_| "链接格式无效".to_string())?;
+    if u.scheme() != "http" && u.scheme() != "https" {
+        return Err("只支持 http/https".to_string());
+    }
+    let host = u.host_str().ok_or("链接缺少主机名")?.to_string();
+    let port = u.port_or_known_default().ok_or("链接端口无效")?;
+    let addrs = (host.as_str(), port)
+        .to_socket_addrs()
+        .map_err(|_| "主机名解析失败".to_string())?
+        .collect::<Vec<_>>();
+    if addrs.is_empty() {
+        return Err("主机名解析失败".to_string());
+    }
+    for a in &addrs {
+        let blocked = match a.ip() {
+            std::net::IpAddr::V4(v) => {
+                v.is_private() || v.is_loopback() || v.is_link_local() || v.is_unspecified() || v.is_broadcast()
+            }
+            std::net::IpAddr::V6(v) => v.is_loopback() || v.is_unique_local() || v.is_unspecified(),
+        };
+        if blocked {
+            return Err("内网或保留地址不允许".to_string());
+        }
+    }
+    Ok(u.to_string())
+}
+
 fn cors_headers(origin: &str) -> Vec<Header> {
     let mut hs = Vec::new();
     if origin_allowed(origin) && !origin.is_empty() {
@@ -359,6 +390,39 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                     "model": if cfg.chat_model.is_empty() { Value::Null } else { json!(cfg.chat_model) },
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
+            } else if path == "/rss" && method == Method::Get {
+                // RSS 代理：网关服务端直抓源站，无 CORS/浏览器指纹限制——前端抓取的第一通路，
+                // 公共转接（rss2json 等免费服务会被 Cloudflare 人机验证挡住）只做无网关时的兜底
+                let target = url::Url::parse(&url)
+                    .ok()
+                    .and_then(|u| u.query_pairs().find(|(k, _)| k == "url").map(|(_, v)| v.to_string()))
+                    .unwrap_or_default();
+                match guard_public_http_url(&target) {
+                    Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                    Ok(t) => {
+                        match ureq::get(&t)
+                            .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 PWORK/0.1")
+                            .timeout(std::time::Duration::from_secs(15))
+                            .call()
+                        {
+                            Ok(up) if up.status() == 200 => {
+                                let mut body = String::new();
+                                let read_ok = up
+                                    .into_reader()
+                                    .take(4 * 1024 * 1024)
+                                    .read_to_string(&mut body)
+                                    .is_ok();
+                                if read_ok && !body.trim().is_empty() {
+                                    (200, json!({ "ok": true, "url": t, "body": body }))
+                                } else {
+                                    (502, json!({ "ok": false, "error": "源站返回空内容或读取失败" }))
+                                }
+                            }
+                            Ok(up) => (502, json!({ "ok": false, "error": format!("源站 HTTP {}", up.status()) })),
+                            Err(e) => (502, json!({ "ok": false, "error": format!("源站连接失败：{e}") })),
+                        }
+                    }
+                }
             } else if path == "/search" && method == Method::Post {
                 match body.as_deref() {
                     Err(msg) => (400, json!({ "ok": false, "error": msg })),

@@ -80,24 +80,33 @@ export function parseFeed(xml: string): ParseResult {
 }
 
 /**
- * 抓取单个信源，按序尝试候选通路（实测结论 2026-08-31）：
+ * 抓取单个信源，按序尝试候选通路：
+ * ⓪ 本地网关代理（2026-10-27 起第一通路）——桌面版网关随应用起、浏览器版随 dev/serve 起，
+ *    服务端直抓源站，无 CORS 与浏览器指纹限制；网关不在时本机连接立即被拒，毫秒级落到下一通路。
+ *    背景：公共转接 rss2json 被 Cloudflare 人机验证挡住后浏览器抓取全军覆没（当日真实事故）。
  * ① 直连——仅当源自带 CORS 头（access-control-allow-origin: *）时浏览器可用；
  * ② rsshub.app 源自动换 rssforever 公共镜像（该实例可达但 CORS 锁自身域名，浏览器直抓仍被拦，
- *    主要为 Tauri 化后无 CORS 场景预留）；
- * ③ RSS 转接服务——服务端抓取 + 开放 CORS，是浏览器内 C1 的主力通路。
- *    默认走公共 rss2json（无 SLA、慢/限流时可在设置里换自建地址）。
+ *    主要为无网关场景预留）；
+ * ③ RSS 转接服务——服务端抓取 + 开放 CORS，无网关时的兜底（免费公共服务不保证可用，可在设置换自建地址）。
  * data: URL 用于本地测试/离线演示，fetch 原生支持。
  */
 export async function fetchFeed(url: string, timeoutMs = 10_000, relayBase = ''): Promise<ParseResult> {
+  let lastError: string | null = null
+  if (/^https?:\/\//i.test(url)) {
+    const viaGateway = await tryViaGateway(url, timeoutMs + 10_000)
+    if (viaGateway.ok) return viaGateway
+    // 网关业务错误（源站超时/HTTP 4xx 等）比直连的 CORS 泛错更有信息量，记录它；
+    // 而「网关不在」只说明这条通路缺席（error 为 null），不抢直连错误
+    if (viaGateway.error) lastError = viaGateway.error
+  }
   const candidates: string[] = [url]
   if (url.includes('rsshub.app')) {
     candidates.push(url.replace('//rsshub.app', '//rsshub.rssforever.com'))
   }
-  let lastError: string | null = null
   for (const candidate of candidates) {
     const direct = await tryFetch(candidate, timeoutMs)
     if (direct.ok) return direct
-    lastError = direct.error
+    if (!lastError) lastError = direct.error
   }
   const relay = (relayBase.trim() || 'https://api.rss2json.com').replace(/\/+$/, '')
   const viaJson = await tryFetch(
@@ -107,6 +116,40 @@ export async function fetchFeed(url: string, timeoutMs = 10_000, relayBase = '')
   )
   if (viaJson.ok) return viaJson
   return { ok: false, items: [], error: lastError ?? viaJson.error ?? '抓取失败' }
+}
+
+/** 本地网关（127.0.0.1:8788）的 RSS 代理：网关服务端抓原文返回，前端解析。
+ *  网关侧自带 URL 守卫（拒绝内网/保留地址）与 4MB/15s 上限。 */
+const LOCAL_GATEWAY = 'http://127.0.0.1:8788'
+
+async function tryViaGateway(feedUrl: string, timeoutMs: number): Promise<ParseResult> {
+  let resp: Response
+  try {
+    resp = await fetch(`${LOCAL_GATEWAY}/rss?url=${encodeURIComponent(feedUrl)}`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch {
+    // 连接被拒/超时=网关不在这台机器上（纯静态托管场景），通路缺席而非源站错误——error 置空不抢占
+    return { ok: false, items: [], error: null }
+  }
+  if (!resp.ok) {
+    let msg = `网关 HTTP ${resp.status}`
+    try {
+      const v = JSON.parse(await resp.text()) as { error?: string }
+      if (v.error) msg = v.error
+    } catch {
+      /* 错误体非 JSON 时保留状态码信息 */
+    }
+    return { ok: false, items: [], error: msg }
+  }
+  let data: { ok?: boolean; body?: string; error?: string }
+  try {
+    data = JSON.parse(await resp.text()) as typeof data
+  } catch {
+    return { ok: false, items: [], error: '网关响应解析失败' }
+  }
+  if (!data.ok || !data.body) return { ok: false, items: [], error: data.error ?? '网关返回空' }
+  return parseFeed(data.body)
 }
 
 async function tryFetch(url: string, timeoutMs: number, isRelay = false): Promise<ParseResult> {

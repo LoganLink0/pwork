@@ -17,6 +17,8 @@ const RSS_DISCARDED = `<?xml version="1.0"?><rss version="2.0"><channel>
 
 function mockFetch(map: Record<string, { status?: number; body?: string } | { error: 'network' }>) {
   return vi.fn(async (url: string) => {
+    // 本地网关代理通路在测试环境不存在——模拟连接拒绝，让 fetchFeed 走 mock 的直连/转接路径
+    if (url.includes('127.0.0.1:8788')) throw new TypeError('connect ECONNREFUSED')
     const hit = map[url]
     if (!hit) return new Response('not found', { status: 404 })
     if ('error' in hit) throw new TypeError('network error')

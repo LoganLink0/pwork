@@ -147,6 +147,59 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  // RSS 代理（与 Rust 网关同构）：服务端直抓源站，无 CORS/浏览器指纹限制——前端抓取第一通路。
+  // URL 守卫：只放行 http/https，域名解析后校验全部地址不落内网/回环/保留段（防 rebinding）。
+  if (path === '/rss' && req.method === 'GET') {
+    const target = url.searchParams.get('url') || ''
+    try {
+      const u = new URL(target)
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        json(res, 400, { ok: false, error: '只支持 http/https' })
+        return
+      }
+      const { lookup } = await import('node:dns/promises')
+      const addrs = await lookup(u.hostname, { all: true })
+      if (!addrs.length) {
+        json(res, 400, { ok: false, error: '主机名解析失败' })
+        return
+      }
+      const blocked = addrs.some(({ address, family }) => {
+        if (family === 6) {
+          return address === '::1' || address.startsWith('fc') || address.startsWith('fd') || address === '::'
+        }
+        const o = address.split('.').map(Number)
+        return (
+          o[0] === 127 || o[0] === 10 || o[0] === 0 ||
+          (o[0] === 172 && o[1] >= 16 && o[1] <= 31) ||
+          (o[0] === 192 && o[1] === 168) ||
+          (o[0] === 169 && o[1] === 254)
+        )
+      })
+      if (blocked) {
+        json(res, 400, { ok: false, error: '内网或保留地址不允许' })
+        return
+      }
+      const resp = await fetch(u, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 PWORK/0.1' },
+        signal: AbortSignal.timeout(15_000),
+      })
+      if (!resp.ok) {
+        json(res, 502, { ok: false, error: `源站 HTTP ${resp.status}` })
+        return
+      }
+      const body = await resp.text()
+      if (!body.trim()) {
+        json(res, 502, { ok: false, error: '源站返回空内容' })
+        return
+      }
+      json(res, 200, { ok: true, url: u.toString(), body: body.slice(0, 4 * 1024 * 1024) })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      json(res, 502, { ok: false, error: `抓取失败：${msg}` })
+    }
+    return
+  }
+
   // 配置写入（2026-10-26 引导页/设置页直配 Key）：合并写 .env.local 并热更新内存——写完即可连接测试。
   // 暴露面与既有端点同级（本机回环来源限定，三道闸之后才到这里）；请求体里过的 Key 不落日志
   if (path === '/key' && req.method === 'POST') {

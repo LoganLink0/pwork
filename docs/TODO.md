@@ -4,6 +4,8 @@
 
 ## 待办（按优先级；做完勾掉留档）
 
+- [x] **抓取全军覆没修复批（2026-10-27 深夜，异机+本机 8 源 0 成功）**：**根因=公共转接 rss2json 被 Cloudflare 人机验证挡住**（实测返回 Just a moment 挑战页而非 JSON），本地抓取主力通路压在无 SLA 免费第三方上，第三方一变全断。修复=把第一通路换成**自己的本地网关**：①Rust 网关与 node 网关（gateway.mjs）各加 `GET /rss?url=` 服务端直抓端点（URL 守卫：仅 http/https+DNS 解析后拒内网/回环/保留段防 rebinding，4MB/15s 上限）；②engine/rss.ts 通路改为网关→直连→转接兜底，「网关不在」视为通路缺席不抢占错误信息。验证：node 网关 curl 量子位原文 200+守卫 400；dev 浏览器实测 1/1 源新 9 条；**装机用户真实库 7/8 源成功新增 628 条 2.7 秒（修复前 0/8）**；守卫双测（127.0.0.1 拒、file:// 拒）。测试 406 绿（新增网关通路两用例，mock 补网关语义）/tsc -b 0。**观察项：机器之心源站把 /rss 改成了 HTML 网页（非本项目问题），failStreak 三次自动停用机制会处置，换新地址再更新目录**。**Release v0.1.9 资产含坏抓取（rss2json 依赖），待发 0.1.10**
+
 - [x] **Gitee 下载镜像开通（2026-10-27，用户配置账号后 AI 接手）**：建仓 gitee.com/LoganLink0/pwork（原名 lsydy 空间，同日用户改名 LoganLink0；API 建仓）→ 全量代码+双 tag 推平 → Release v0.1.9 建成（id 1245739）+ 48MB 联网版附件上传（50.4MB 链接已验证存在）；**已查证平台规则：Gitee 附件匿名下载 403（需登录 Gitee 账号），离线版 254MB 超 100MB 附件上限，仓库改路径触发开源重新审核（期间匿名不可见）**——入口文案如实写明（介绍页 Windows 安装包卡 + README 下载节）；development.md 发布流程补 Gitee 同步步骤（双推+API 建 Release+传附件）。**发版流程新增两步：git push gitee master --tags + API 传附件**。遗留：用户对话中直发过 Gitee 令牌（已提醒撤销重建）
 
 - [x] **0.1.9 已发布（2026-10-27 用户拍板发版）**：内容=桌面外链修复批（见上一条留档）+ 侧栏控件设计适配。版本四处同步（package.json/tauri.conf/Cargo.toml/设置关于页）+ 发布说明与介绍页版本号；双版安装包重打（online 48.03MiB / offline 253.92MiB）；装机冒烟 install=0 启动正常；**Release v0.1.9 已发布**（https://github.com/LoganLink0/pwork/releases/tag/v0.1.9，双资产+中文说明）；404 绿/tsc -b 0

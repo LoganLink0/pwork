@@ -77,7 +77,11 @@ describe('fetchFeed 读取响应体失败', () => {
   it('响应头已到但 text() 中止 → ok:false 带原因，不抛异常', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => {
+      vi.fn(async (input: RequestInfo | URL) => {
+        // 本地网关不通（毫秒级拒绝），落到直连路径触发读体中止场景
+        if (String(input).includes('127.0.0.1:8788')) {
+          throw new TypeError('connect ECONNREFUSED')
+        }
         // 模拟：fetch 已拿到响应头（200），读体时超时信号触发
         const aborted = new DOMException('The user aborted a request.', 'AbortError')
         return {
@@ -134,5 +138,54 @@ describe('fetchFeed 自定义转接地址', () => {
     )
     await fetchFeed('https://example.com/feed.xml')
     expect(calls.some((c) => c.startsWith('https://api.rss2json.com/v1/api.json'))).toBe(true)
+  })
+})
+
+/** 网关代理通路（2026-10-27 起第一通路；rss2json 被 Cloudflare 盾挡后引入） */
+describe('fetchFeed 本地网关代理', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('网关可用 → 只调网关一次并按 RSS 原文解析，不再走直连/转接', async () => {
+    const calls: string[] = []
+    const rss = '<?xml version="1.0"?><rss version="2.0"><channel><item><title>网关条目</title><link>https://a.example/x</link><pubDate>Mon, 26 Oct 2026 08:00:00 GMT</pubDate></item></channel></rss>'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        calls.push(String(input))
+        if (String(input).startsWith('http://127.0.0.1:8788/rss')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, url: 'https://example.com/feed.xml', body: rss }) } as unknown as Response
+        }
+        return { ok: false, status: 500, text: async () => '' } as unknown as Response
+      }),
+    )
+    const r = await fetchFeed('https://example.com/feed.xml')
+    expect(r.ok).toBe(true)
+    expect(r.items[0]!.title).toBe('网关条目')
+    expect(calls).toHaveLength(1)
+  })
+
+  it('网关报错 → 错误原因保留，继续降级到直连与转接', async () => {
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const u = String(input)
+        calls.push(u)
+        if (u.startsWith('http://127.0.0.1:8788/rss')) {
+          return { ok: false, status: 502, text: async () => JSON.stringify({ ok: false, error: '源站连接失败：dns loop' }) } as unknown as Response
+        }
+        if (u.startsWith('https://example.com')) {
+          return { ok: false, status: 403, text: async () => '' } as unknown as Response
+        }
+        return { ok: false, status: 500, text: async () => '' } as unknown as Response
+      }),
+    )
+    const r = await fetchFeed('https://example.com/feed.xml')
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('源站连接失败')
+    expect(calls.some((c) => c.startsWith('http://127.0.0.1:8788/rss'))).toBe(true)
+    expect(calls.some((c) => c.startsWith('https://api.rss2json.com'))).toBe(true)
   })
 })
