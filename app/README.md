@@ -58,6 +58,6 @@ src/
 
 ## 纪律（动工前重读）
 
-- 数据治理七条铁律见 [../02-数据治理规范.md](../02-数据治理规范.md)；踩坑实录见 `FUPAN/开发复盘.md`（Hooks 先于早退 / 函数式更新 / ID 引用不用下标 / 本地日期比较一律用 localDateOf/todayLocal（禁裸 toISOString 与 iso.slice(0,10)——午夜后错位一天的隐性 bug） / 测试库隔离 / **Windows 下改完必须 curl 验证 served 内容**）。
+- 数据治理七条铁律见 [../docs/design/02-数据治理规范.md](../docs/design/02-数据治理规范.md)；踩坑实录见 `FUPAN/开发复盘.md`（Hooks 先于早退 / 函数式更新 / ID 引用不用下标 / 本地日期比较一律用 localDateOf/todayLocal（禁裸 toISOString 与 iso.slice(0,10)——午夜后错位一天的隐性 bug） / 测试库隔离 / **Windows 下改完必须 curl 验证 served 内容**）。
 - 跨模块只 ID 引用；导出统一 `{ version, exportedAt, entities }`（v2 全量）；条目 raw/discarded 层不进备份（04 §3.4）。
 - 新组件先入 `/design` 样例页再上页面；回路模块改动保持行为零漂移（迁移单测是回归网）。

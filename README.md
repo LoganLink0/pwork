@@ -38,9 +38,9 @@
 ## 文档
 
 - [发布说明.md](./发布说明.md)——安装、首用三步、数据怎么搬（使用者从这里进）
-- [project-overview.md](./project-overview.md)——项目整体说明与全量文档索引（想深入了解从这里进）
-- [architecture.md](./architecture.md) / [DESIGN.md](./DESIGN.md)——架构与数据流 / 视觉规则
-- [development.md](./development.md)——开发方式、回归清单、发布打包
+- [project-overview.md](./docs/project-overview.md)——项目整体说明与全量文档索引（想深入了解从这里进）
+- [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md)——架构与数据流 / 视觉规则
+- [development.md](./docs/development.md)——开发方式、回归清单、发布打包
 - 应用内「帮助」页——功能清单与配置指南，装好后直接看
 
 ## 开发
@@ -53,7 +53,7 @@ npm install
 npm run dev        # 端口 5273，AI 网关自动随启
 ```
 
-桌面安装包：`cd app && npx tauri build`（默认联网版；离线版与发布流程见 [development.md](./development.md) 的「发布打包」）。云端服务在 [worker/](./worker/README.md)，双击 `worker\部署向导.cmd` 走中文向导即可部署。前端细节见 [app/README.md](./app/README.md)。
+桌面安装包：`cd app && npx tauri build`（默认联网版；离线版与发布流程见 [development.md](./docs/development.md) 的「发布打包」）。云端服务在 [worker/](./worker/README.md)，双击 `worker\部署向导.cmd` 走中文向导即可部署。前端细节见 [app/README.md](./app/README.md)。
 
 回归基线：404 项自动化测试全绿、tsc 零错误、lint 24 警告 0 错误。
 

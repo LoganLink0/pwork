@@ -29,19 +29,19 @@ PWORK 是**本地优先**的个人工作台：速记、信息日报、任务目�
 
 ## 仓库地图
 
-`app/`（React 19 + Vite 8 + Dexie 前端，含 src-tauri 桌面壳与 tools/gateway.mjs 开发网关，详见 [app/README](./app/README.md)）· `worker/`（Cloudflare Worker 云端抓取，已部署，详见 [worker/README](./worker/README.md)）· `docs/`（本站介绍页 + backlog 遗留分层）。
+`app/`（React 19 + Vite 8 + Dexie 前端，含 src-tauri 桌面壳与 tools/gateway.mjs 开发网关，详见 [app/README](../app/README.md)）· `worker/`（Cloudflare Worker 云端抓取，已部署，详见 [worker/README](../worker/README.md)）· `docs/`（本站介绍页 + 工程文档 + design/ 设计基座）。
 
 **文档全量索引**（README 只放用户入口，完整清单在此）：
 
 | 类别 | 文档 |
 |---|---|
-| 使用者 | [发布说明.md](./发布说明.md)（安装/首用/数据搬家）· 应用内「帮助」 |
-| 接手与规则 | [交接文档.md](./交接文档.md)（接手入口）· [AGENTS.md](./AGENTS.md)（协作规则+速览）· [TODO.md](./TODO.md)（任务队列） |
+| 使用者 | [发布说明.md](../发布说明.md)（安装/首用/数据搬家）· 应用内「帮助」 |
+| 接手与规则 | [交接文档.md](./交接文档.md)（接手入口）· [AGENTS.md](../AGENTS.md)（协作规则+速览）· [TODO.md](./TODO.md)（任务队列） |
 | 工程说明 | [architecture.md](./architecture.md)（架构与数据流）· [DESIGN.md](./DESIGN.md)（视觉规则）· [development.md](./development.md)（开发方式与回归清单）· [component-api.md](./component-api.md)（组件与接口）· [user-guide.md](./user-guide.md)（功能说明） |
-| 设计基座 | [01-总体架构与决策](./01-总体架构与决策.md) · [02-数据治理规范](./02-数据治理规范.md) · [03-模块-回路-复盘工作台](./03-模块-回路-复盘工作台.md) · [04-模块-输入-信息采集系统](./04-模块-输入-信息采集系统.md) · [05-路线图](./05-路线图.md) · [06-个人工作台PRD](./06-个人工作台PRD.md)（附[低保真原型](./06-附件-低保真原型.html)）· [07-场景包设计](./07-场景包设计.md) |
-| 教训与遗留 | [开发复盘.md](./开发复盘.md)（踩坑实录）· [docs/backlog.md](./docs/backlog.md)（遗留分层） |
+| 设计基座 | [01-总体架构与决策](./design/01-总体架构与决策.md) · [02-数据治理规范](./design/02-数据治理规范.md) · [03-模块-回路-复盘工作台](./design/03-模块-回路-复盘工作台.md) · [04-模块-输入-信息采集系统](./design/04-模块-输入-信息采集系统.md) · [05-路线图](./design/05-路线图.md) · [06-个人工作台PRD](./design/06-个人工作台PRD.md)（附[低保真原型](./design/06-附件-低保真原型.html)）· [07-场景包设计](./design/07-场景包设计.md) |
+| 教训与遗留 | [开发复盘.md](./开发复盘.md)（踩坑实录）· [backlog.md](./backlog.md)（遗留分层） |
 
-已迁出的关联项目：简历辅导（resume-coach，独立仓库未开源，服务手册与交付物模板随迁——08 场景包两文档与交付物模板/ 是其历史底稿）。
+已迁出的关联项目：简历辅导（resume-coach，独立仓库未开源，服务手册、交付物模板与 08 场景包底稿均随迁，不在本仓库）。
 
 ## 已知边界
 

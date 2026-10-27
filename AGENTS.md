@@ -21,7 +21,7 @@
 3a. **严禁"现成件冒充原理推演"（2026-10-19 用户明令，违反=返工）。**
    现成组件/管线/数据结构只决定"怎么实现"，不许决定"方案长什么样"。动手前必答三问：
    ①假如这个现成件不存在，我会怎么设计？②方案说明里"复用了 X"是效率佐证还是选择理由（是理由即红灯）？
-   ③数据/频率/用户规模 ×10 后方案仍成立吗？案例库与病理见 [开发复盘.md](./开发复盘.md) 3.20——此规则在所有项目中生效，不限于 PWORK。
+   ③数据/频率/用户规模 ×10 后方案仍成立吗？案例库与病理见 [开发复盘.md](./docs/开发复盘.md) 3.20——此规则在所有项目中生效，不限于 PWORK。
 
 4. **新功能上线必须做入口审查**：站在用户最可能去找的位置（首页、工具箱、相关功能页），检查能不能三步内到达新功能；到达后能不能一眼看懂从哪开始用。功能能用但找不到，等于没做。
 
@@ -31,12 +31,12 @@
 ## 其他约定
 
 - 界面与文档用简体中文，平实表达
-- 数据原则见 [02-数据治理规范.md](./02-数据治理规范.md)（七条铁律）
-- 开发教训见 [开发复盘.md](./开发复盘.md)（持续追加，不要重犯）
+- 数据原则见 [02-数据治理规范.md](./docs/design/02-数据治理规范.md)（七条铁律）
+- 开发教训见 [开发复盘.md](./docs/开发复盘.md)（持续追加，不要重犯）
 
 ## 项目速览（AI 进入项目首先要知道）
 
-- **是什么**：本地优先个人工作台（输入/处理/输出/回路四模块），React 19 + Vite 8 + Dexie(IndexedDB) + Tauri 桌面壳，内测期（版本 0.1.x，未到正式定版）。整体说明见 [project-overview.md](./project-overview.md)。
-- **文档导航**：[交接文档.md](./交接文档.md)（接手入口）→ [TODO.md](./TODO.md)（当前队列与待拍板）→ [docs/backlog.md](./docs/backlog.md)（遗留分层）→ [architecture.md](./architecture.md) / [DESIGN.md](./DESIGN.md) / [user-guide.md](./user-guide.md) / [development.md](./development.md) / [component-api.md](./component-api.md)（架构/视觉/功能/开发/接口）→ 01–07 编号文档（设计基座）→ [开发复盘.md](./开发复盘.md)（踩坑实录）。
-- **日常命令与回归清单**（app/ 目录，测试基线 404、lint 基线 24 警告 0 错误、端口 5273/8788）：见 [development.md](./development.md)。
+- **是什么**：本地优先个人工作台（输入/处理/输出/回路四模块），React 19 + Vite 8 + Dexie(IndexedDB) + Tauri 桌面壳，内测期（版本 0.1.x，未到正式定版）。整体说明见 [project-overview.md](./docs/project-overview.md)。
+- **文档导航**：[交接文档.md](./docs/交接文档.md)（接手入口）→ [TODO.md](./docs/TODO.md)（当前队列与待拍板）→ [docs/backlog.md](./docs/backlog.md)（遗留分层）→ [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md) / [user-guide.md](./docs/user-guide.md) / [development.md](./docs/development.md) / [component-api.md](./docs/component-api.md)（架构/视觉/功能/开发/接口）→ 01–07 编号文档（设计基座）→ [开发复盘.md](./docs/开发复盘.md)（踩坑实录）。
+- **日常命令与回归清单**（app/ 目录，测试基线 404、lint 基线 24 警告 0 错误、端口 5273/8788）：见 [development.md](./docs/development.md)。
 - **三条最常违反的既有纪律**：改完 curl 验证 served 内容（watcher 竞态）；`void asyncFn()` 必须想过"它拒绝了谁知道"（错误立即暴露是用户明令）；分发产物零个人配置（默认值入产物前自查）。
