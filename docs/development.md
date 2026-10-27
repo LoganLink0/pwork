@@ -41,7 +41,8 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 1. 版本号四处同步：`app/package.json`、`app/src-tauri/tauri.conf.json`、`app/src-tauri/Cargo.toml` 的 `version`，加设置关于页文案（Settings.tsx 搜 `v0.`）；lock 文件用 `npm install --package-lock-only` 刷。
 2. 打联网版（默认配置，产物约 48MiB）：`cd app && npx tauri build` → 拿走 `bundle/nsis/` 产物，改名加 `-online` 后缀。
 3. 打离线版（约 254MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
-4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.8）。
+4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。
+5. Gitee 镜像同步（大陆下载通路，仓 gitee.com/lsydy/pwork）：`git push gitee master --tags` → Gitee API 建 Release（POST /repos/lsydy/pwork/releases，必填 target_commitish=master）→ 传附件（POST …/releases/{id}/attach_files，仅联网版，Gitee 附件上限 100MB 且匿名下载 403=平台规则需登录，入口文案已写明）。凭据已存 Windows 凭据管理器（gitee.com / lsydy）。
 5. 更新器（未启用）：签名密钥在 `app/.tauri/`（不入库，私钥丢失则永远无法推送更新）。启用：装 tauri-plugin-updater → conf 配 `plugins.updater.endpoints` 指向 GitHub Releases 的 latest.json → 构建带 `TAURI_SIGNING_PRIVATE_KEY`。当前无托管源故意不接。
 6. 代码签名（未购买）：无证书时 Windows 提示"未知发布者"属预期；正式分发可购证书后配 `bundle.windows.certificateThumbprint`。
 
