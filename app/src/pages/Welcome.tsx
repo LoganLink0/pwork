@@ -438,25 +438,56 @@ export function Welcome() {
                     )}
                   </div>
                   <div className="wgroup">
-                    <div className="wgroup-title">部署完成后回来填<span className="sub">向导结束时会打印这两样</span></div>
-                    <div className="key-row">
-                      <input
-                        className="input"
-                        placeholder="端点地址 https://pwork-collect.xxx.workers.dev"
-                        value={cloud.endpoint}
-                        onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
-                        aria-label="云端端点"
-                      />
-                      <input
-                        className="input"
-                        type="password"
-                        style={{ maxWidth: 170 }}
-                        placeholder="Token"
-                        value={cloud.token}
-                        onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
-                        aria-label="云端 Token"
-                      />
-                    </div>
+                    <div className="wgroup-title">部署完成后回来填<span className="sub">D1 直连（推荐，大陆网络稳）</span></div>
+                    {cloud.mode === 'd1' ? (
+                      <>
+                        <div className="key-row">
+                          <input
+                            className="input"
+                            placeholder="账户 ID（32 位，部署完自动填好）"
+                            value={cloud.accountId}
+                            onChange={(e) => setCloud({ ...cloud, accountId: e.target.value })}
+                            aria-label="Cloudflare 账户 ID"
+                          />
+                          <input
+                            className="input"
+                            placeholder="数据库 ID（部署完自动填好）"
+                            value={cloud.databaseId}
+                            onChange={(e) => setCloud({ ...cloud, databaseId: e.target.value })}
+                            aria-label="数据库 ID"
+                          />
+                        </div>
+                        <div className="key-row">
+                          <input
+                            className="input"
+                            type="password"
+                            placeholder="API Token（按下方指引在 Cloudflare 控制台创建，约 2 分钟）"
+                            value={cloud.token}
+                            onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
+                            aria-label="Cloudflare API Token"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="key-row">
+                        <input
+                          className="input"
+                          placeholder="端点地址 https://pwork-collect.xxx.workers.dev"
+                          value={cloud.endpoint}
+                          onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
+                          aria-label="云端端点"
+                        />
+                        <input
+                          className="input"
+                          type="password"
+                          style={{ maxWidth: 170 }}
+                          placeholder="Token"
+                          value={cloud.token}
+                          onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
+                          aria-label="云端 Token"
+                        />
+                      </div>
+                    )}
                     <div className="key-row">
                       <button type="button" className="btn-ghost" disabled={testing} onClick={() => void testCloud()}>
                         {testing ? '测试中…' : '测试连接'}

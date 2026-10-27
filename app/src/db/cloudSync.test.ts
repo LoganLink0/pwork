@@ -9,10 +9,10 @@ beforeEach(async () => {
 })
 
 describe('cloudSync（W4/C2 本地拉取端）', () => {
-  it('未配置端点 → 明确报错', async () => {
+  it('未配置云端（默认 D1 直连但字段空）→ 明确报错', async () => {
     const r = await syncFromCloud()
     expect(r.ok).toBe(false)
-    expect(r.error).toContain('未配置')
+    expect(r.error).toContain('D1 直连需要')
   })
 
   it('拉取合并：新条目入库、同指纹跳过、serverTime 记录水位', async () => {

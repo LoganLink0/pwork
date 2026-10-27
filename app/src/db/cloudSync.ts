@@ -33,7 +33,8 @@ export interface CloudConfig {
 
 export function loadCloudConfig(): CloudConfig {
   return {
-    mode: (localStorage.getItem(MODE_KEY) as CloudMode) || 'endpoint',
+    // 默认 D1 直连（2026-10-28 用户拍板）：Cloudflare 官方接口大陆可达，workers.dev 端点常被阻断
+    mode: (localStorage.getItem(MODE_KEY) as CloudMode) || 'd1',
     endpoint: localStorage.getItem(ENDPOINT_KEY) ?? '',
     token: localStorage.getItem(TOKEN_KEY) ?? '',
     accountId: localStorage.getItem(ACCOUNT_KEY) ?? '',
