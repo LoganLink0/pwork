@@ -5,6 +5,8 @@
 
 一个装在你电脑里的个人工作台：记下来、加工、成稿、复盘，四步连成一个循环。数据只属于你——不上传、不注册、断网也能用。开源免费，内测中（版本 0.1.x）。产品介绍页：https://loganlink0.github.io/pwork/
 
+大陆访问 GitHub 慢？本仓库镜像与安装包下载在 [Gitee：LoganLink0/pwork](https://gitee.com/LoganLink0/pwork)（Gitee 平台规则：下载附件需注册/登录 Gitee 账号）。
+
 ![首次打开时的 5 步上手引导](docs/assets/app-home.png)
 
 ## 核心特性
