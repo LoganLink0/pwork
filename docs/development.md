@@ -61,6 +61,8 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 
 5273 本项目 dev/serve · 8788 AI 网关 · 5177/5180/5274/5275 是用户其他项目（Corealize/MIND/RESUME），**杀进程前必查身份**（复盘 3.2/3.3）。孤儿进程：`netstat -ano | grep :端口` → 确认身份 → `taskkill //F //PID`。
 
+**dev 网关劫持桌面版测试（2026-10-27 真实事故）**：本机同时跑 dev（vite 自带 node 网关占 8788）与桌面版时，桌面版内置 Rust 网关启动会让位（conflict 告警），此后桌面版/引导页的「保存并测试」全部打到 dev 网关——用的是源码目录 .env.local 的旧 Key，表现为「新 Key 保存后测试仍报 Key 无效」。诊断法：比较 `%APPDATA%/com.pwork.workbench/gateway.env` 的 Key 尾号与上游报错里的 `****尾号`。处理：停 dev 网关 → 重启桌面版。**给用户验证桌面版功能前，先确认 8788 归属桌面进程。**
+
 ## 浏览器自动化注意（IAB）
 
 evaluate 跑在隔离世界（派发事件到不了页面监听器，验证全局处理用单测或真实交互，复盘 2.8）；fill 不触发 React onChange 时用真实键入；locator.click 卡可操作性时用 `locator.evaluate(el => el.click())` 兜底。
