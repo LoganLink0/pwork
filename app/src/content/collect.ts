@@ -101,7 +101,6 @@ export const SOURCE_CATALOG: { domain: string; sources: CatalogEntry[] }[] = [
     sources: [
       { name: 'AIHOT 精选', url: 'https://aihot.virxact.com/rss', domain: 'ai', tier: 1 },
       { name: '量子位', url: 'https://www.qbitai.com/feed', domain: 'ai', tier: 1 },
-      { name: '机器之心', url: 'https://www.jiqizhixin.com/rss', domain: 'ai', tier: 1 },
       { name: 'Latent Space', url: 'https://www.latent.space/feed', domain: 'ai', tier: 1.5 },
       { name: 'Simon Willison', url: 'https://simonwillison.net/atom/everything/', domain: 'ai', tier: 1.5 },
       { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', domain: 'ai', tier: 1.5 },
@@ -180,7 +179,7 @@ export const SOURCE_CATALOG: { domain: string; sources: CatalogEntry[] }[] = [
     domain: 'finance',
     sources: [
       { name: '华尔街见闻', url: 'https://dedicated.wallstreetcn.com/rss.xml', domain: 'finance', tier: 1 },
-      { name: '36氪', url: 'https://36kr.com/feed', domain: 'finance', tier: 1.5 },
+      { name: '36氪快讯', url: 'https://rsshub.rssforever.com/36kr/newsflashes', domain: 'finance', tier: 1.5 },
     ],
   },
   {
