@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULES } from '../content/help'
-import { loadCloudConfig, saveCloudConfig, syncFromCloud } from '../db/cloudSync'
+import { loadCloudConfig, saveCloudConfig, syncFromCloud, testConnection } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
@@ -111,10 +111,22 @@ export function Welcome() {
       setDeployState('fail')
       setMsg(`部署失败：${e.payload}`)
     }))
-    unsubs.push(tauriListen<{ endpoint: string; token: string }>('deploy-done', (e) => {
+    unsubs.push(tauriListen<{ endpoint: string; token: string; account: string; db: string }>('deploy-done', (e) => {
       setDeployState('done')
-      setCloud((c) => ({ ...c, endpoint: e.payload.endpoint, token: e.payload.token }))
-      setMsg('部署完成！端点地址和 Token 已自动填到下面——点「测试连接」验证后「保存并同步」')
+      // 大陆网络 workers.dev 常被阻断——部署能拿到账户/数据库 ID 时直接切 D1 直连模式，
+      // 测试连接走 Cloudflare 官方接口（大陆可达），只剩 API Token 需要用户创建
+      const hasD1 = Boolean(e.payload.account && e.payload.db)
+      setCloud((c) => ({
+        ...c,
+        mode: hasD1 ? 'd1' : c.mode,
+        endpoint: e.payload.endpoint || c.endpoint,
+        token: e.payload.token || c.token,
+        accountId: e.payload.account || c.accountId,
+        databaseId: e.payload.db || c.databaseId,
+      }))
+      setMsg(hasD1
+        ? '部署完成！已自动切到 D1 直连模式并填好 账户 ID / 数据库 ID / Token——只剩 API Token 需要创建（下面有指引），创建填入后点「测试连接」'
+        : '部署完成！端点地址和 Token 已自动填到下面——点「测试连接」验证后「保存并同步」')
     }))
     return () => { void Promise.all(unsubs).then((fns) => fns.forEach((f) => f())) }
   }, [desktop])
@@ -183,19 +195,27 @@ export function Welcome() {
   }
 
   const testCloud = async () => {
-    if (!cloud.endpoint.trim()) {
-      setMsg('先填写部署输出的端点地址')
-      return
-    }
     setTesting(true)
     setMsg(null)
+    // D1 直连模式：走 Cloudflare 官方接口（大陆可达），复用设置页同款测试
+    if (cloud.mode === 'd1') {
+      const r = await testConnection()
+      setMsg(r.message)
+      setTesting(false)
+      return
+    }
+    if (!cloud.endpoint.trim()) {
+      setMsg('先填写部署输出的端点地址')
+      setTesting(false)
+      return
+    }
     try {
       const resp = await fetch(`${cloud.endpoint.replace(/\/$/, '')}/api/digest?n=1`, {
         headers: cloud.token ? { authorization: `Bearer ${cloud.token}` } : {},
       })
       setMsg(resp.ok ? '连接成功！点「保存并同步」完成接入' : `地址能访问但被拒绝（HTTP ${resp.status}）——多半是 Token 不对或还没生效，回去核对一下再试`)
     } catch {
-      setMsg('连不上：确认已完成部署、地址拼写正确')
+      setMsg('连不上端点——大陆网络 workers.dev 常被阻断，建议切到 D1 直连模式（Cloudflare 官方接口，大陆可达）：填 账户 ID / 数据库 ID / API Token')
     } finally {
       setTesting(false)
     }
@@ -209,7 +229,7 @@ export function Welcome() {
       return
     }
     const r = await syncFromCloud()
-    setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在侧边栏「云端同步」页管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
+    setMsg(r.ok ? `已保存并完成首次同步：新 ${r.newCount} 条（之后在 设置 → 云端同步 管理）` : `已保存；首次同步失败：${r.error ?? '云端还没有数据，部署后等一轮抓取再试'}`)
   }
 
   const last = step === STEPS.length - 1

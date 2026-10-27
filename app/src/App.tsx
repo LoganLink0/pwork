@@ -34,7 +34,6 @@ const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m
 const DesignSystem = lazy(() => import('./pages/DesignSystem').then((m) => ({ default: m.DesignSystem })))
 const Placeholder = lazy(() => import('./pages/Placeholder').then((m) => ({ default: m.Placeholder })))
 const Sources = lazy(() => import('./pages/Sources').then((m) => ({ default: m.Sources })))
-const CloudSync = lazy(() => import('./pages/CloudSync').then((m) => ({ default: m.CloudSync })))
 const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Digest })))
 const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
 const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
@@ -299,7 +298,7 @@ export default function App() {
                   </Route>
                   <Route path="/input/digest" element={<Digest />} />
                   <Route path="/input/sources" element={<Sources />} />
-                  <Route path="/cloud" element={<CloudSync />} />
+                  <Route path="/cloud" element={<Navigate to="/settings?tab=cloud" replace />} />
                   <Route path="/input/items" element={<Items />} />
                   <Route path="/input/blocks" element={<InputBlocks />} />
                   <Route path="/cases" element={<CasesPage />} />

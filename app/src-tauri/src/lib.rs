@@ -157,17 +157,18 @@ fn deploy_cloud(
                 } else if let Some(rest) = line.strip_prefix("@@fail ") {
                     let _ = app.emit("deploy-fail", rest);
                 } else if let Some(rest) = line.strip_prefix("@@done ") {
-                    let mut endpoint = String::new();
-                    let mut token = String::new();
+                    let mut fields = std::collections::HashMap::new();
                     for part in rest.split_whitespace() {
-                        if let Some(v) = part.strip_prefix("endpoint=") {
-                            endpoint = v.to_string();
-                        }
-                        if let Some(v) = part.strip_prefix("token=") {
-                            token = v.to_string();
+                        if let Some((k, v)) = part.split_once('=') {
+                            fields.insert(k.to_string(), v.to_string());
                         }
                     }
-                    let _ = app.emit("deploy-done", serde_json::json!({ "endpoint": endpoint, "token": token }));
+                    let _ = app.emit("deploy-done", serde_json::json!({
+                        "endpoint": fields.get("endpoint").cloned().unwrap_or_default(),
+                        "token": fields.get("token").cloned().unwrap_or_default(),
+                        "account": fields.get("account").cloned().unwrap_or_default(),
+                        "db": fields.get("db").cloned().unwrap_or_default(),
+                    }));
                 }
             }
             let _ = child.wait();

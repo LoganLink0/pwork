@@ -102,6 +102,13 @@ export function readTomlVar(key) {
   return m ? m[1] : null
 }
 
+/** 读 wrangler.toml 当前 database_id（@@done 附带用） */
+function readTomlDatabaseId() {
+  const s = fs.readFileSync(path.join(ROOT, 'wrangler.toml'), 'utf8')
+  const m = s.match(/^database_id = "([^"]*)"/m)
+  return m ? m[1] : null
+}
+
 /** 建 D1（已存在时自动从 d1 list 取回 id） */
 async function ensureDatabase() {
   const created = runCapture(`npx wrangler d1 create ${DB_NAME}`)
@@ -298,9 +305,12 @@ async function main() {
     endpoint = deployed.out.match(/https:\/\/[\w.-]+\.workers\.dev/)?.[0] ?? ''
   }
 
-  // 全自动模式：机器可读的完成标记（应用内部署面板解析并自动回填两样凭据）
+  // 全自动模式：机器可读的完成标记（应用内部署面板解析并自动回填）——
+  // 附 database_id 与 account_id（D1 直连模式要的字段，大陆网络走它测试才通；workers.dev 常被阻断）
   if (AUTO) {
-    log(`@@done endpoint=${endpoint} token=${token}`)
+    const accountId = runCapture('npx wrangler whoami').out.match(/[0-9a-f]{32}/)?.[0] ?? ''
+    const dbId = readTomlDatabaseId() ?? ''
+    log(`@@done endpoint=${endpoint} token=${token} account=${accountId} db=${dbId}`)
     return
   }
 

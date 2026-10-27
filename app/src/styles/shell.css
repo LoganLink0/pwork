@@ -96,7 +96,7 @@
 .nav-item.active .ico {
   color: var(--mark, var(--accent-text));
 }
-/* 可折叠模块的指示箭头：收起时向下（chevronDown），展开随 aria-expanded 旋转指向左 */
+/* 可折叠模块的指示箭头：收起时向下（chevronDown），展开旋转后尖朝左（2026-10-28 实测修正方向） */
 .nav-item .fold {
   margin-left: auto;
   display: inline-flex;
@@ -104,7 +104,7 @@
   transition: transform var(--dur-1) var(--ease);
 }
 .nav-item[aria-expanded="true"] .fold {
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
 }
 
 .nav-item.dim {
@@ -1420,6 +1420,7 @@ a.mcard .m-link:hover {
 
 .errlog-item {
   border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs); /* 元素级显式字号：任何继承链都压不到正文级（2026-10-28 用户反馈字大） */
 }
 
 .errlog-item:last-child {
@@ -1940,14 +1941,15 @@ a.mcard .m-link:hover {
   flex: none;
 }
 
-/* AI 卡厂商选择：单一网格固定 4 列（2026-10-27 用户拍板"4 个一行"），窄屏退 2 列；选中态描边+浅底+✓ */
+/* AI 卡厂商选择：按容器自适应列数（2026-10-28 修正——设置页窄容器下固定 4 列会塌成单列溢出）；
+   引导页宽容器用 4 列上限（用户拍板"4 个一行"），窄容器自动 2-3 列 */
 .ai-vendors {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
   gap: var(--sp-2);
 }
-@media (max-width: 1000px) {
-  .ai-vendors { grid-template-columns: repeat(2, 1fr); }
+.welcome-right .ai-vendors {
+  grid-template-columns: repeat(4, 1fr);
 }
 .ai-vendor {
   display: flex;
@@ -2147,7 +2149,8 @@ a.mcard .m-link:hover {
   width: 360px;
   height: 360px;
 }
-/* 设置页的可编辑轮盘（2026-10-27）：复用呼出态的圆形布局，居中缩小并加中心提示 */
+/* 设置页的可编辑轮盘（2026-10-28 重做到位）：放大到清晰可读（400px 环、格 92px、字 13px），
+   绝对定位圆形布局天然不换行；窄容器整体缩放 */
 .wheel-edit {
   display: flex;
   flex-direction: column;
@@ -2155,9 +2158,17 @@ a.mcard .m-link:hover {
   align-items: flex-start;
 }
 .wheel-edit-ring {
-  transform: scale(0.78);
-  transform-origin: top left;
-  margin-bottom: -80px;
+  width: 400px;
+  height: 400px;
+  --ring-r: 148px; /* 格中心半径（呼出环 360/132 的放大版） */
+}
+.wheel-edit-ring .wheel-slot {
+  width: 92px;
+  height: 92px;
+  margin: -46px 0 0 -46px;
+  font-size: var(--fs-sm);
+  gap: 3px;
+  transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(148px) rotate(calc(-1 * var(--i) * (360deg / var(--n))));
 }
 .wheel-slot.editing {
   border-color: var(--accent);
@@ -2169,9 +2180,9 @@ a.mcard .m-link:hover {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 120px;
+  width: 130px;
   text-align: center;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   color: var(--ink-faint);
 }
 .wheel-edit-panel {
@@ -2179,6 +2190,9 @@ a.mcard .m-link:hover {
   flex-direction: column;
   gap: var(--sp-2);
   width: min(560px, 100%);
+}
+@media (max-width: 640px) {
+  .wheel-edit-ring { transform: scale(0.72); transform-origin: top left; margin-bottom: -110px; }
 }
 .wheel-slot {
   position: absolute;

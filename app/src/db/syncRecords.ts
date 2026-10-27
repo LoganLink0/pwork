@@ -60,7 +60,7 @@ export function deviceId(): string {
 function requireD1() {
   const cloud = loadCloudConfig()
   if (cloud.mode !== 'd1' || !cloud.accountId || !cloud.databaseId || !cloud.token) {
-    throw new Error('设备同步需要云端同步按「D1 直连」配置（侧边栏「云端同步」页）')
+    throw new Error('设备同步需要云端同步按「D1 直连」配置（设置 → 云端同步）')
   }
   return cloud
 }

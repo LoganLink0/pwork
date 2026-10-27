@@ -10,11 +10,11 @@ import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
 
 /**
- * 云端同步独立页（2026-10-27 从设置拆出——云端内容多，混在设置里体验差）。
+ * 设置 → 云端同步（2026-10-28 归位用户拍板：在设置的左侧分类导航里拆一项，不占侧栏工作区）。
  * 只放云端专属的事：连接配置、同步动作、抓取时间、设备同步。
  * 采集偏好不在这一页：本地 设置 → 采集偏好 是唯一入口，那边带「同步到云端」。
  */
-export function CloudSync() {
+export function CloudSyncCards({ active }: { active: boolean }) {
   const [cloud, setCloud] = useState<CloudConfig>(() => loadCloudConfig())
   const [cloudMsg, setCloudMsg] = useState<string | null>(null)
   const [cloudBusy, setCloudBusy] = useState(false)
@@ -99,12 +99,7 @@ export function CloudSync() {
   }
 
   return (
-    <section>
-      <div className="page-head">
-        <h1>云端同步</h1>
-        <span className="sub">Cloudflare Worker 定时抓取 → 本地拉取合并；云端数据随时可丢可重建，本地才是你的真实数据</span>
-      </div>
-
+    <div data-tab="cloud" style={{ display: active ? undefined : 'none' }}>
       <div className="set-card">
         <h2>连接</h2>
         <div className="desc">
@@ -297,6 +292,6 @@ export function CloudSync() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

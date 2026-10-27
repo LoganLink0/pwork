@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { isDesktopApp } from '../../engine/platform'
 import { toast } from '../../engine/toast'
-import { DEFAULT_WHEEL_SLOTS, loadWheelSlots, saveWheelSlots, wheelIcons, type WheelSlot } from '../../content/wheel'
+import { DEFAULT_WHEEL_SLOTS, loadWheelSlots, saveWheelSlots, type WheelSlot } from '../../content/wheel'
 import { Icon } from './icons'
 
-const KIND_LABEL: Record<WheelSlot['kind'], string> = {
-  route: '打开页面',
-  quick: '速记浮层',
-  fetch: '立即抓取',
-  url: '打开网址',
-}
+/** 动作类型：中文标签 + 随动作的固定图标（图标不再让用户选——英文名选择器是理解负担） */
+const KINDS: { kind: WheelSlot['kind']; label: string; icon: string; hint: string }[] = [
+  { kind: 'route', label: '打开页面', icon: 'grid', hint: '应用里的页面，如 待办、信息日报' },
+  { kind: 'quick', label: '速记浮层', icon: 'zap', hint: '弹出速记窗口，随手记一条' },
+  { kind: 'fetch', label: '立即抓取', icon: 'rss', hint: '抓一轮所有信源' },
+  { kind: 'url', label: '打开网址', icon: 'globe', hint: '任意网站地址' },
+]
 
 /**
- * 设置 → 工具轮盘（2026-10-27 重做）：按用户拍板改为「直接编辑轮盘本身」——
- * 画出与呼出形态一致的圆形轮盘，点格位就地编辑动作与目标，所见即所得；
- * 去掉旧版每格的「名称」自造字段（显示用动作名+目标），字级压回 13/12px 规范档。
+ * 设置 → 工具轮盘（2026-10-28 重做到位）：画出轮盘本身（呼出形态同款圆形布局），
+ * 点格就地编辑——动作四选（中文）、目标、格名；图标随动作自动；全部控件走标准类（字号受控 13px）。
  */
 export function WheelSettingsCard({ active }: { active: boolean }) {
   const [slots, setSlots] = useState<WheelSlot[]>(loadWheelSlots)
@@ -34,8 +34,9 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
   }
 
   const n = slots.length
-  const slotName = (s: WheelSlot) =>
-    s.kind === 'quick' ? '速记' : s.kind === 'fetch' ? '立即抓取' : s.kind === 'route' ? (s.label?.trim() || '页面') : (s.label?.trim() || '网址')
+  const slotName = (s: WheelSlot) => s.label?.trim() || KINDS.find((k) => k.kind === s.kind)?.label || ''
+  const editingSlot = slots.find((x) => x.id === editing) ?? null
+  const editingIndex = editingSlot ? slots.indexOf(editingSlot) : -1
 
   return (
     <div className="set-card" data-tab="wheel" style={{ display: active ? undefined : 'none' }}>
@@ -59,62 +60,68 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
                 onClick={() => setEditing(editing === s.id ? null : s.id)}
                 aria-label={`编辑第 ${i + 1} 格：${slotName(s)}`}
               >
-                <Icon name={s.icon} size={18} />
+                <Icon name={KINDS.find((k) => k.kind === s.kind)?.icon ?? 'zap'} size={20} />
                 <span>{slotName(s)}</span>
               </button>
             ))}
             <div className="wheel-edit-center">
-              {editing ? '正在编辑选中格' : '点一圈里的格子编辑'}
+              {editingSlot ? `正在改第 ${editingIndex + 1} 格` : '点一圈里的格子编辑'}
             </div>
           </div>
 
-          {editing && (() => {
-            const s = slots.find((x) => x.id === editing)
-            if (!s) return null
-            const i = slots.indexOf(s)
-            return (
-              <div className="wheel-edit-panel">
-                <div className="wgroup-title">第 {i + 1} 格放什么</div>
-                <div className="chips">
-                  <select value={s.kind} onChange={(e) => patch(s.id, { kind: e.target.value as WheelSlot['kind'] })} aria-label="动作类型">
-                    {(['route', 'quick', 'fetch', 'url'] as const).map((k) => (
-                      <option key={k} value={k}>{KIND_LABEL[k]}</option>
-                    ))}
-                  </select>
-                  {(s.kind === 'route' || s.kind === 'url') && (
-                    <input
-                      className="input"
-                      style={{ flex: 1, minWidth: 200 }}
-                      value={s.target ?? ''}
-                      placeholder={s.kind === 'route' ? '页面路径，如 /tasks' : 'https://…'}
-                      aria-label="目标"
-                      onChange={(e) => patch(s.id, { target: e.target.value })}
-                    />
-                  )}
-                  <select value={s.icon} onChange={(e) => patch(s.id, { icon: e.target.value })} aria-label="图标">
-                    {wheelIcons().map((ic) => (
-                      <option key={ic} value={ic}>{ic}</option>
-                    ))}
-                  </select>
-                  <input className="input" style={{ maxWidth: 110 }} value={s.label} placeholder="格名（可选）" aria-label="格名" onChange={(e) => patch(s.id, { label: e.target.value })} />
-                </div>
-                <div className="chips">
-                  <button type="button" className="mini-btn" onClick={() => {
-                    const j = (i - 1 + n) % n
-                    setSlots((ss) => { const t = [...ss]; [t[i], t[j]] = [t[j]!, t[i]!]; return t })
-                  }}>← 左移一格</button>
-                  <button type="button" className="mini-btn" onClick={() => {
-                    const j = (i + 1) % n
-                    setSlots((ss) => { const t = [...ss]; [t[i], t[j]] = [t[j]!, t[i]!]; return t })
-                  }}>右移一格 →</button>
-                  <button type="button" className="mini-btn" onClick={() => { setSlots((ss) => ss.filter((x) => x.id !== s.id)); setEditing(null) }}>✕ 删除这一格</button>
-                </div>
+          {editingSlot && (
+            <div className="wheel-edit-panel">
+              <div className="wgroup-title">第 {editingIndex + 1} 格放什么</div>
+              <div className="radio" role="radiogroup" aria-label="动作类型">
+                {KINDS.map((k) => (
+                  <button
+                    key={k.kind}
+                    type="button"
+                    className={editingSlot.kind === k.kind ? 'on' : ''}
+                    aria-pressed={editingSlot.kind === k.kind}
+                    onClick={() => patch(editingSlot.id, { kind: k.kind, icon: k.icon })}
+                  >
+                    {k.label}
+                  </button>
+                ))}
               </div>
-            )
-          })()}
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                {KINDS.find((k) => k.kind === editingSlot.kind)?.hint}
+              </span>
+              {(editingSlot.kind === 'route' || editingSlot.kind === 'url') && (
+                <input
+                  className="input"
+                  style={{ maxWidth: 420 }}
+                  value={editingSlot.target ?? ''}
+                  placeholder={editingSlot.kind === 'route' ? '页面路径，如 /tasks（待办）' : 'https://…'}
+                  aria-label="目标"
+                  onChange={(e) => patch(editingSlot.id, { target: e.target.value })}
+                />
+              )}
+              <input
+                className="input"
+                style={{ maxWidth: 200 }}
+                value={editingSlot.label ?? ''}
+                placeholder="格名（可不填，默认用动作名）"
+                aria-label="格名"
+                onChange={(e) => patch(editingSlot.id, { label: e.target.value })}
+              />
+              <div className="chips">
+                <button type="button" className="mini-btn" onClick={() => {
+                  const j = (editingIndex - 1 + n) % n
+                  setSlots((ss) => { const t = [...ss]; [t[editingIndex], t[j]] = [t[j]!, t[editingIndex]!]; return t })
+                }}>← 左移一格</button>
+                <button type="button" className="mini-btn" onClick={() => {
+                  const j = (editingIndex + 1) % n
+                  setSlots((ss) => { const t = [...ss]; [t[editingIndex], t[j]] = [t[j]!, t[editingIndex]!]; return t })
+                }}>右移一格 →</button>
+                <button type="button" className="mini-btn" onClick={() => { setSlots((ss) => ss.filter((x) => x.id !== editingSlot.id)); setEditing(null) }}>✕ 删除这一格</button>
+              </div>
+            </div>
+          )}
 
           <div className="chips">
-            <button type="button" className="btn-ghost" onClick={() => setSlots((ss) => ss.length >= 8 ? ss : [...ss, { id: `slot_${Date.now().toString(36)}`, label: '', icon: 'zap', kind: 'route', target: '/' }])} disabled={slots.length >= 8}>＋ 加一格</button>
+            <button type="button" className="btn-ghost" onClick={() => setSlots((ss) => ss.length >= 8 ? ss : [...ss, { id: `slot_${Date.now().toString(36)}`, label: '', icon: 'grid', kind: 'route', target: '/' }])} disabled={slots.length >= 8}>＋ 加一格</button>
             <button type="button" className="btn-primary" onClick={save}>保存格位</button>
             <button
               type="button"

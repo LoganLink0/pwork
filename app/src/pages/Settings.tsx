@@ -18,6 +18,7 @@ import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestPro
 import type { ErrorLogEntry } from '../types/models'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { WheelSettingsCard } from '../components/shell/WheelSettingsCard'
+import { CloudSyncCards } from './CloudSync'
 
 const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   render: '页面崩溃',
@@ -31,6 +32,7 @@ const SETTINGS_TABS = [
   { id: 'collect', label: '采集偏好', icon: 'collect' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
+  { id: 'cloud', label: '云端同步', icon: 'cloud' },
   { id: 'ai', label: 'AI', icon: 'ai' },
   { id: 'about', label: '关于', icon: 'about' },
 ] as const
@@ -691,6 +693,8 @@ export function Settings() {
       </div>
 
       <WheelSettingsCard active={tab === 'wheel'} />
+
+      <CloudSyncCards active={tab === 'cloud'} />
 
       <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
         <h2>关于</h2>
