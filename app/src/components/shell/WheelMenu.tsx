@@ -18,7 +18,11 @@ export function WheelMenu() {
   const openWheel = useUi((s) => s.openWheel)
   const closeWheel = useUi((s) => s.closeWheel)
   const openQuick = useUi((s) => s.openQuick)
-  const [slots] = useState(loadWheelSlots)
+  // 每次呼出都重读格位配置（2026-10-28 修复：此前挂载时读一次，设置里保存后呼出仍是旧格）
+  const [slots, setSlots] = useState(loadWheelSlots)
+  useEffect(() => {
+    if (open) setSlots(loadWheelSlots())
+  }, [open])
 
   // 桌面版：全局快捷键事件驱动开关（jsdom/浏览器不挂，测试用 store 直驱）
   useEffect(() => {
