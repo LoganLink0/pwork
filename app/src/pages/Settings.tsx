@@ -494,6 +494,35 @@ export function Settings() {
               <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>AI（自带 Key）</button>
             </div>
           </div>
+          {ai.mode === 'rule' && (
+            <div className="set-row" style={{ alignItems: 'flex-start' }}>
+              <label>开启 AI</label>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  跳过了首访引导里的 AI 配置？在这里选一个厂商开始——不配也完全能用（规则评分兜底）。
+                </span>
+                <div className="ai-vendors">
+                  {AI_VENDORS.map((v) => (
+                    <div key={v.id} className="ai-vendor">
+                      <button
+                        type="button"
+                        className="ai-vendor-pick"
+                        aria-label={`选${v.name}开始配置`}
+                        onClick={() => {
+                          setGwVendor(v.id)
+                          saveAi({ ...ai, mode: 'llm', viaGateway: true, provider: v.id, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })
+                        }}
+                      >
+                        <b>{v.name}</b>
+                        <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
+                      </button>
+                      <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {ai.mode === 'llm' && (
             <>
               <div className="set-row">
