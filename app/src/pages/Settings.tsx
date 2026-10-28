@@ -105,6 +105,7 @@ export function Settings() {
   const [usageMsg, setUsageMsg] = useState('')
   // 网关 Key 直配（与引导页同款，2026-10-26）：选厂商 → 填 Key → 保存即测试（写 gateway.env/.env.local 并热更新）
   const [gwVendor, setGwVendor] = useState<CoachProvider>(() => loadCoachConfig().provider)
+  const [vendorPickerOpen, setVendorPickerOpen] = useState(false)
   const [gwKey, setGwKey] = useState('')
   const [gwKeyBusy, setGwKeyBusy] = useState(false)
   const [gwKeyMsg, setGwKeyMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -494,35 +495,50 @@ export function Settings() {
               <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>AI（自带 Key）</button>
             </div>
           </div>
-          {ai.mode === 'rule' && (
-            <div className="set-row" style={{ alignItems: 'flex-start' }}>
-              <label>开启 AI</label>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  跳过了首访引导里的 AI 配置？在这里选一个厂商开始——不配也完全能用（规则评分兜底）。
-                </span>
-                <div className="ai-vendors">
-                  {AI_VENDORS.map((v) => (
-                    <div key={v.id} className="ai-vendor">
-                      <button
-                        type="button"
-                        className="ai-vendor-pick"
-                        aria-label={`选${v.name}开始配置`}
-                        onClick={() => {
-                          setGwVendor(v.id)
-                          saveAi({ ...ai, mode: 'llm', viaGateway: true, provider: v.id, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })
-                        }}
-                      >
-                        <b>{v.name}</b>
-                        <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
-                      </button>
-                      <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>选厂商</label>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ alignSelf: 'flex-start' }}
+                aria-expanded={vendorPickerOpen}
+                onClick={() => setVendorPickerOpen((v) => !v)}
+              >
+                {vendorPickerOpen ? '收起厂商列表 ▴' : '点我快速获取各大 AI 厂商 Key ▾'}
+              </button>
+              {vendorPickerOpen && (
+                <>
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                    16 家厂商任选——点「拿 Key ↗」去官网申请（多为免费额度），回来在下面粘贴。不配 AI 也完全能用（规则评分兜底）。
+                  </span>
+                  <div className="ai-vendors">
+                    {AI_VENDORS.map((v) => (
+                      <div key={v.id} className={`ai-vendor${gwVendor === v.id ? ' on' : ''}`}>
+                        <button
+                          type="button"
+                          className="ai-vendor-pick"
+                          aria-pressed={gwVendor === v.id}
+                          aria-label={`选${v.name}`}
+                          onClick={() => {
+                            setGwVendor(v.id)
+                            // 规则模式下选厂商 = 用户要开始配 AI，自动切到 AI 模式免得再找开关
+                            if (ai.mode === 'rule') saveAi({ ...ai, mode: 'llm', viaGateway: true, provider: v.id, gatewayUrl: ai.gatewayUrl || 'http://127.0.0.1:8788' })
+                            else saveAi({ ...ai, provider: v.id })
+                          }}
+                        >
+                          <b>{v.name}</b>
+                          <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
+                          {gwVendor === v.id && <span className="ai-vendor-check" aria-hidden>✓</span>}
+                        </button>
+                        <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
           {ai.mode === 'llm' && (
             <>
               <div className="set-row">
@@ -668,17 +684,11 @@ export function Settings() {
                   <div className="set-row" style={{ alignItems: 'flex-start' }}>
                     <label>配置 Key</label>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                      <div className="ai-vendors">
-                        {AI_VENDORS.map((v) => (
-                          <div key={v.id} className={`ai-vendor${gwVendor === v.id ? ' on' : ''}`}>
-                            <button type="button" className="ai-vendor-pick" aria-pressed={gwVendor === v.id} onClick={() => setGwVendor(v.id)}>
-                              <b>{v.name}</b>
-                              <span className="sub">{PROVIDER_PRESETS[v.id]?.model}</span>
-                            </button>
-                            <a href={v.keyPage} target="_blank" rel="noreferrer noopener">拿 Key ↗</a>
-                          </div>
-                        ))}
-                      </div>
+                      <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                        当前厂商：<b style={{ color: 'var(--ink)' }}>{PROVIDER_PRESETS[gwVendor]?.name ?? gwVendor}</b>（{PROVIDER_PRESETS[gwVendor]?.model}）·
+                        换厂商点上方「点我快速获取各大 AI 厂商 Key」，
+                        <a href={AI_VENDORS.find((v) => v.id === gwVendor)?.keyPage} target="_blank" rel="noreferrer noopener">去官网拿 Key ↗</a>
+                      </span>
                       <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
                         <input
                           className="input"
