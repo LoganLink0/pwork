@@ -208,8 +208,10 @@ async function pushViaEndpoint(config: CloudConfig): Promise<PushResult> {
 
 async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
   // api.cloudflare.com 不发 CORS 头（预检 405），浏览器页面直连必被拦——D1 查询先走本地
-  // 网关代理（8788，随 dev/serve/桌面版自启，已带跨域头）；网关不在再退直连（Node 语境
-  // 如脚本/测试可用；浏览器此路不通）
+  // 网关代理（8788，随 dev/serve/桌面版自启，已带跨域头）；网关不在（网络级失败）再退
+  // 直连（Node 语境可用）。网关有响应但报错（如 Token 无效 401）必须如实抛出——
+  // 2026-10-28 修复：旧版把这类业务错误也吞进 fallback 直连，浏览器端被 CORS 拦后
+  // 只剩 "Failed to fetch"，真实原因（凭据错）被完全掩盖
   let resp: Response
   try {
     resp = await fetch('http://127.0.0.1:8788/d1/query', {
@@ -218,8 +220,14 @@ async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | n
       body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, token: config.token, sql, params }),
       signal: AbortSignal.timeout(30_000),
     })
-    if (!resp.ok) throw new Error(`D1 网关代理 HTTP ${resp.status}`)
-  } catch {
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '')
+      const detail = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${resp.status}`
+      throw new Error(`D1 查询失败：${detail}（检查 账户 ID / 数据库 ID / API Token；API Token 需在 Cloudflare 控制台创建，不是部署输出的 ptk_ 开头 Token）`)
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith('D1 查询失败')) throw e
+    // 网关本身不在（连接被拒/超时）→ 尝试直连（浏览器会被 CORS 拦，但 Node/测试语境可用）
     resp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
       {

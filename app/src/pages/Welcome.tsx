@@ -113,19 +113,20 @@ export function Welcome() {
     }))
     unsubs.push(tauriListen<{ endpoint: string; token: string; account: string; db: string }>('deploy-done', (e) => {
       setDeployState('done')
-      // 大陆网络 workers.dev 常被阻断——部署能拿到账户/数据库 ID 时直接切 D1 直连模式，
-      // 测试连接走 Cloudflare 官方接口（大陆可达），只剩 API Token 需要用户创建
+      // 大陆网络 workers.dev 常被阻断——部署能拿到账户/数据库 ID 时直接切 D1 直连模式。
+      // 注意两种凭据不同：部署输出的 ptk_ Token 给端点模式用；D1 直连要的是 Cloudflare
+      // 控制台创建的 API Token——所以切 D1 后 token 留空，提示用户创建，绝不拿错钥匙混填
       const hasD1 = Boolean(e.payload.account && e.payload.db)
       setCloud((c) => ({
         ...c,
         mode: hasD1 ? 'd1' : c.mode,
         endpoint: e.payload.endpoint || c.endpoint,
-        token: e.payload.token || c.token,
+        token: hasD1 ? '' : (e.payload.token || c.token),
         accountId: e.payload.account || c.accountId,
         databaseId: e.payload.db || c.databaseId,
       }))
       setMsg(hasD1
-        ? '部署完成！已自动切到 D1 直连模式并填好 账户 ID / 数据库 ID / Token——只剩 API Token 需要创建（下面有指引），创建填入后点「测试连接」'
+        ? '部署完成！已自动切到 D1 直连并填好 账户 ID / 数据库 ID——只剩 API Token 需要创建（下面回填区有指引，约 2 分钟），创建填入后点「测试连接」'
         : '部署完成！端点地址和 Token 已自动填到下面——点「测试连接」验证后「保存并同步」')
     }))
     return () => { void Promise.all(unsubs).then((fns) => fns.forEach((f) => f())) }
