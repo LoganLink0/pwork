@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-BB9-612F.js";import{s as t}from"./copy-Pa4gvJs_.js";/* empty css           */var n=e();function r({delta:e}){let{mark:r,name:i}=t[e];return(0,n.jsx)(`span`,{className:`delta delta--${e} tnum`,title:i,"aria-label":i,children:r})}export{r as t};

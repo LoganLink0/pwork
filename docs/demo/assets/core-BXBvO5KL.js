@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-BCiCTKAo.js";var t=e({SERIALIZE_TO_IPC_FN:()=>n,invoke:()=>i,transformCallback:()=>r}),n=`__TAURI_TO_IPC_KEY__`;function r(e,t=!1){return window.__TAURI_INTERNALS__.transformCallback(e,t)}async function i(e,t={},n){return window.__TAURI_INTERNALS__.invoke(e,t,n)}export{i as n,r,t};

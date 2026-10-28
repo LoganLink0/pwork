@@ -22,6 +22,7 @@ import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
+import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
 import { PLACEHOLDER } from './content/placeholder'
 
@@ -275,6 +276,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      {import.meta.env.MODE === 'demo' && <DemoBanner />}
       <RoutedBoundary>
         <FirstRunRedirect />
         <ExternalLinks />

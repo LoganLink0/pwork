@@ -2496,3 +2496,19 @@ a.mcard .m-link:hover {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
   transition: box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
 }
+
+/* 在线演示版常驻横幅（仅 demo 构建渲染）：置顶盖在一切之上（含引导遮罩） */
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: var(--accent-deep);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  padding: 5px 16px;
+}
+.demo-banner a { color: #fff; font-weight: 700; text-decoration: underline; }

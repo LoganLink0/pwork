@@ -1,0 +1,1 @@
+function e(e){return e.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu,``).replace(/\d+/g,``).slice(0,16)||`empty`}export{e as t};

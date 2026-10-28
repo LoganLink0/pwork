@@ -49,21 +49,25 @@ function pworkGatewayAutostart(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // PWORK 专用端口（与 FUPAN 的 5173/5174 区隔；启动器 launcher.cmd 依赖此端口）
   server: { port: 5273 },
   // 版本号注入（与 package.json 同源）：侧栏底部与设置关于页共用，发版自动跟随
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
   },
+  // 演示模式（npm run build:demo）：部署到 GitHub Pages 的 /pwork/demo/，
+  // 资源地址前缀必须对齐该路径（正式构建保持默认根路径）
+  base: mode === 'demo' ? '/pwork/demo/' : '/',
   plugins: [
     react(),
     pworkGatewayAutostart(),
     // 本地引擎资源（安全审计 2026-10-26 A-3：FFmpeg/OCR 不再运行时从 CDN 取代码）。
     // 资源以 npm 依赖安装、构建时拷进 dist（版本由 lock 锁定；esm 版 core 是 module worker
-    // 动态 import 的正确形态）；src/engine/ffmpegClient.ts 与 OcrTool.tsx 按这些目标路径加载
+    // 动态 import 的正确形态）；src/engine/ffmpegClient.ts 与 OcrTool.tsx 按这些目标路径加载。
+    // 演示模式剔除 ffmpeg/tesseract 共约 64MB（入仓体积考虑，演示横幅已引导桌面版拿完整功能）
     viteStaticCopy({
-      targets: [
+      targets: mode === 'demo' ? [] : [
         { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.js', stripBase: true } },
         { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.wasm', stripBase: true } },
         { src: 'node_modules/tesseract.js/dist/worker.min.js', dest: 'tesseract', rename: { name: 'worker.min.js', stripBase: true } },
@@ -85,12 +89,12 @@ export default defineConfig({
         theme_color: '#e8833a',
         background_color: '#f5f4f1',
         display: 'standalone',
-        start_url: '/',
+        start_url: mode === 'demo' ? '/pwork/demo/' : '/',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -108,4 +112,4 @@ export default defineConfig({
     // 整树渲染 <App /> 的集成测试在全量并发时单条可超 5s（单跑 <1s），默认超时会误报
     testTimeout: 15000,
   },
-})
+}))
