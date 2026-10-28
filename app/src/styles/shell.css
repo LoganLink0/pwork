@@ -2497,10 +2497,10 @@ a.mcard .m-link:hover {
   transition: box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
 }
 
-/* 在线演示版常驻横幅（仅 demo 构建渲染）：置顶盖在一切之上（含引导遮罩） */
+/* 在线演示版常驻横幅（仅 demo 构建渲染）：置底不遮顶部内容 */
 .demo-banner {
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
   z-index: 300;
