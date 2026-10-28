@@ -42,5 +42,5 @@
 - **是什么**：本地优先个人工作台（输入/处理/输出/回路四模块），React 19 + Vite 8 + Dexie(IndexedDB) + Tauri 桌面壳，内测期（版本 0.1.x，未到正式定版）。整体说明见 [project-overview.md](./docs/project-overview.md)。
 - **开源状态（2026-10-27）**：GitHub 公开仓库 `LoganLink0/pwork`（MIT）· Release v0.1.8 双版安装包（联网 48MiB 默认/离线 254MiB）· 介绍页 https://loganlink0.github.io/pwork/ （源在 docs/，push 即更新）· 仓库描述与 topics 已配。
 - **文档导航**：[交接文档.md](./docs/交接文档.md)（接手入口）→ [TODO.md](./docs/TODO.md)（当前队列与待拍板）→ [docs/backlog.md](./docs/backlog.md)（遗留分层）→ [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md) / [user-guide.md](./docs/user-guide.md) / [development.md](./docs/development.md) / [component-api.md](./docs/component-api.md)（架构/视觉/功能/开发/接口）→ 01–07 编号文档（设计基座）→ [开发复盘.md](./docs/开发复盘.md)（踩坑实录）。
-- **日常命令与回归清单**（app/ 目录，测试基线 404、lint 基线 24 警告 0 错误、端口 5273/8788）：见 [development.md](./docs/development.md)。
+- **日常命令与回归清单**（app/ 目录，测试基线 406、lint 基线 24 警告 0 错误、端口 5273/8788）：见 [development.md](./docs/development.md)。
 - **三条最常违反的既有纪律**：改完 curl 验证 served 内容（watcher 竞态）；`void asyncFn()` 必须想过"它拒绝了谁知道"（错误立即暴露是用户明令）；分发产物零个人配置（默认值入产物前自查）。
