@@ -13,7 +13,7 @@ import { recordError } from '../engine/errorLog'
 
 // 进页拉云端：进本页时若配置了云端同步就拉一轮增量——应用开着不动也能在日报页看到云端新抓的
 // 条目（打开应用自动同步只覆盖"刚打开"的场景）。5 分钟内不重复拉，往返切换不成反复请求。
-let lastDigestPullAt = 0
+let lastAutoFreshAt = 0
 
 /** 信息日报页（04 §4 ⑤ 分发的 UI；Top N 硬顶、两分钟扫完、无未读数） */
 export function Digest() {
@@ -51,17 +51,37 @@ export function Digest() {
   const isToday = digestDate === todayLocal()
 
   useEffect(() => {
-    if (!cloudConfigured()) return
-    if (Date.now() - lastDigestPullAt < 5 * 60_000) return
-    lastDigestPullAt = Date.now()
-    void syncFromCloud().then(async (r) => {
-      if (!r.ok) {
-        // 与"打开应用自动同步"同一纪律：云端偶发不可达不打扰，只入错误日志
-        void recordError({ where: '信息日报.进页拉云端', kind: 'app', message: r.error ?? '未知失败' }, { silent: true })
-        return
-      }
-      if (r.newCount > 0) await useCollect.getState().load()
-    })
+    // 进页自动保鲜（2026-10-28 用户拍板）：今天没数据就自动抓一轮——
+    // 配了云端先拉云端增量（快、省流量），云端没新货或没配云端则本地直接抓源站。
+    // 10 分钟防抖：往返切页不反复抓；历史日期浏览不触发（只关心"今天"）。
+    if (!isToday) return
+    if (Date.now() - lastAutoFreshAt < 10 * 60_000) return
+    lastAutoFreshAt = Date.now()
+
+    const runLocalFetchIfNeeded = async (cloudHadNew: boolean) => {
+      if (cloudHadNew) return
+      // 云端没新货且本地今天也空 → 本地抓一轮源站（有活跃源才抓）
+      const active = useCollect.getState().sources.filter((s) => s.active)
+      if (active.length === 0 || useCollect.getState().fetch.running) return
+      if (useCollect.getState().digest.length > 0) return
+      await useCollect.getState().runFetchAll()
+    }
+
+    if (cloudConfigured()) {
+      void syncFromCloud().then(async (r) => {
+        if (!r.ok) {
+          // 与"打开应用自动同步"同一纪律：云端偶发不可达不打扰，只入错误日志
+          void recordError({ where: '信息日报.进页拉云端', kind: 'app', message: r.error ?? '未知失败' }, { silent: true })
+        }
+        if (r.ok && r.newCount > 0) {
+          await useCollect.getState().load()
+          return
+        }
+        await runLocalFetchIfNeeded(false)
+      })
+    } else {
+      void runLocalFetchIfNeeded(false)
+    }
   }, [])
 
   return (
