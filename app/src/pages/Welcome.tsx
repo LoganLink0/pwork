@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULES } from '../content/help'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud, d1Query } from '../db/cloudSync'
@@ -99,6 +99,8 @@ export function Welcome() {
   const [deployPhase, setDeployState] = useState<DeployPhase>('idle')
   const [deployStep, setDeployStep] = useState('')
   const [deployLogs, setDeployLogs] = useState<string[]>([])
+  const backfillRef = useRef<HTMLDivElement>(null)
+  const [backfillGlow, setBackfillGlow] = useState(false)
   useEffect(() => {
     if (!desktop) return
     const unsubs: Promise<() => void>[] = []
@@ -126,8 +128,14 @@ export function Welcome() {
         databaseId: e.payload.db || c.databaseId,
       }))
       setMsg(hasD1
-        ? '部署完成！已自动切到 D1 直连并填好 账户 ID / 数据库 ID——只剩 API Token 需要创建（下面回填区有指引，约 2 分钟），创建填入后点「测试连接」'
-        : '部署完成！端点地址和 Token 已自动填到下面——点「测试连接」验证后「保存并同步」')
+        ? '部署完成，云端已开始首轮抓取！账户 ID / 数据库 ID 已自动填进下方「部署完成后回来填」区——只剩 API Token 按旁边的三步指引创建（约 2 分钟），填好点「测试连接」'
+        : '部署完成，云端已开始首轮抓取！端点地址和 Token 已自动填进下方「部署完成后回来填」区——点「测试连接」验证后「保存并同步」')
+      // 部署按钮在页面顶部，回填区在底部——完成即滚动过去并高亮，用户不用找
+      setTimeout(() => {
+        backfillRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setBackfillGlow(true)
+        setTimeout(() => setBackfillGlow(false), 2400)
+      }, 300)
     }))
     return () => { void Promise.all(unsubs).then((fns) => fns.forEach((f) => f())) }
   }, [desktop])
@@ -454,7 +462,7 @@ export function Welcome() {
                       <p className="caption">双击项目源码 worker 目录里的 <code>部署向导.cmd</code>，向导会中文逐步引导：装依赖 → 登录 → 建库 → 部署。</p>
                     )}
                   </div>
-                  <div className="wgroup">
+                  <div className={`wgroup${backfillGlow ? ' wgroup-glow' : ''}`} ref={backfillRef}>
                     <div className="wgroup-title">部署完成后回来填<span className="sub">D1 直连（推荐，大陆网络稳）</span></div>
                     {cloud.mode === 'd1' ? (
                       <>

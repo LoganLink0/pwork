@@ -306,10 +306,25 @@ async function main() {
   }
 
   // 全自动模式：机器可读的完成标记（应用内部署面板解析并自动回填）——
-  // 附 database_id 与 account_id（D1 直连模式要的字段，大陆网络走它测试才通；workers.dev 常被阻断）
+  // 附 database_id 与 account_id（D1 直连模式要的字段，大陆网络走它测试才通；workers.dev 常被阻断）。
+  // 部署完立刻触发云端首轮抓取——用户随后打开应用同步就有内容，不用等下一个整点
   if (AUTO) {
     const accountId = runCapture('npx wrangler whoami').out.match(/[0-9a-f]{32}/)?.[0] ?? ''
     const dbId = readTomlDatabaseId() ?? ''
+    log('@@step 6/6 首轮抓取（让云端马上有数据）')
+    if (endpoint && token) {
+      try {
+        const res = await fetch(`${endpoint}/api/fetch`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(120_000),
+        })
+        const body = res.ok ? await res.json().catch(() => ({})) : {}
+        log(`  [OK] 云端首轮抓取已触发（新 ${(body.totalNew ?? '?')} 条）`)
+      } catch (e) {
+        log(`  云端首轮抓取没跑成（${e instanceof Error ? e.message : e}）——不影响部署，云端会在下个整点自动抓`)
+      }
+    }
     log(`@@done endpoint=${endpoint} token=${token} account=${accountId} db=${dbId}`)
     return
   }

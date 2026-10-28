@@ -2487,3 +2487,12 @@ a.mcard .m-link:hover {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* 部署完成后的回填区高亮（短暂发光引导视线）：配合滚动定位 */
+.wgroup-glow {
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: var(--sp-2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  transition: box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
+}
