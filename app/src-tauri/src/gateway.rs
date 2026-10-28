@@ -392,8 +392,11 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                 }))
             } else if path == "/rss" && method == Method::Get {
                 // RSS 代理：网关服务端直抓源站，无 CORS/浏览器指纹限制——前端抓取的第一通路，
-                // 公共转接（rss2json 等免费服务会被 Cloudflare 人机验证挡住）只做无网关时的兜底
-                let target = url::Url::parse(&url)
+                // 公共转接（rss2json 等免费服务会被 Cloudflare 人机验证挡住）只做无网关时的兜底。
+                // 注意 req.url() 是请求行（/rss?url=…，无 scheme/host）——url::Url::parse 只吃
+                // 绝对地址，先拼一个绝对形态再取 query（2026-10-28 修复：此前直接 parse 请求行
+                // 必失败，target 恒空，桌面版抓取全部走死兜底）
+                let target = url::Url::parse(&format!("http://localhost{url}"))
                     .ok()
                     .and_then(|u| u.query_pairs().find(|(k, _)| k == "url").map(|(_, v)| v.to_string()))
                     .unwrap_or_default();

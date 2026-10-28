@@ -89,7 +89,7 @@ export function Sources() {
     <section>
       <div className="page-head">
         <h1>信源</h1>
-        <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 手动抓取，不自动定时</span>
+        <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 信息日报页进页自动抓；这里可随时手动抓</span>
         <div className="right">
           <button type="button" className="btn-primary" disabled={fetchState.running || sources.filter((s) => s.active).length === 0} onClick={() => void runFetchAll()}>
             {fetchState.running ? '抓取中…' : '立即抓取'}
