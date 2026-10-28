@@ -330,7 +330,8 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
   const config = loadCloudConfig()
   try {
     if (config.mode === 'd1') {
-      if (!config.accountId || !config.databaseId || !config.token) return { ok: false, message: '先填齐账户 ID / 数据库 ID / API Token' }
+      if (!config.token) return { ok: false, message: 'API Token 还没填——按下方「创建 API Token」三步指引创建后粘进来（部署输出的 ptk_ 开头 Token 在这里无效）' }
+      if (!config.accountId || !config.databaseId) return { ok: false, message: '账户 ID / 数据库 ID 还没填——一键部署会自动填好，或到 Cloudflare 控制台首页复制' }
       const rows = await d1Query(config, 'SELECT count(*) AS n FROM sources', [])
       const n = (rows[0]?.n as number) ?? 0
       return { ok: true, message: `连接成功！云端已有 ${n} 个信源` }

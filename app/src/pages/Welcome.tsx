@@ -200,8 +200,13 @@ export function Welcome() {
     setMsg(null)
     // D1 直连模式：直接用当前输入框的值测试（不读已存配置——用户可能还没点保存）
     if (cloud.mode === 'd1') {
-      if (!cloud.accountId.trim() || !cloud.databaseId.trim() || !cloud.token.trim()) {
-        setMsg('先填齐 账户 ID / 数据库 ID / API Token 再测试')
+      if (!cloud.accountId.trim() || !cloud.databaseId.trim()) {
+        setMsg('账户 ID / 数据库 ID 还没填——刚部署完会自动填好；没填上就点上面的「一键部署」或到 设置 → 云端同步 手动填')
+        setTesting(false)
+        return
+      }
+      if (!cloud.token.trim()) {
+        setMsg('API Token 还没填——按回填区下面的三步指引创建（约 2 分钟），复制粘贴到这里')
         setTesting(false)
         return
       }
@@ -473,12 +478,16 @@ export function Welcome() {
                           <input
                             className="input"
                             type="password"
-                            placeholder="API Token（按下方指引在 Cloudflare 控制台创建，约 2 分钟）"
+                            placeholder="API Token（还没创建？按下面三步，约 2 分钟）"
                             value={cloud.token}
                             onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
                             aria-label="Cloudflare API Token"
                           />
                         </div>
+                        <p className="caption">
+                          <b>创建 API Token（三步）</b>：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">Cloudflare 令牌页 ↗</a> → 创建令牌 → 自定义令牌；
+                          ② 权限选「账户 → D1 → 编辑」，账户选你自己的；③ 创建后复制（<b>只显示一次</b>）粘到上面。注：这里要的是 Cloudflare 控制台的 API Token，部署时给的 ptk_ 开头 Token 用在这里无效。
+                        </p>
                       </>
                     ) : (
                       <div className="key-row">
