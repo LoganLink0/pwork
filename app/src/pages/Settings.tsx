@@ -486,13 +486,13 @@ export function Settings() {
 
       <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
         <h2>AI · BYOK</h2>
-        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / AI 写大纲 / 采集筛选）；AI 不可用时自动改用规则评分</div>
+        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / AI 写大纲 / 采集筛选）；不配或 AI 不可用时自动用内置规则，功能完整</div>
         <div className="set-body">
           <div className="set-row">
             <label>模式</label>
             <div className="radio">
-              <button type="button" className={ai.mode === 'rule' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'rule' })}>规则评分（不用 AI）</button>
-              <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>AI（自带 Key）</button>
+              <button type="button" className={ai.mode === 'rule' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'rule' })}>不用 AI</button>
+              <button type="button" className={ai.mode === 'llm' ? 'on' : ''} onClick={() => saveAi({ ...ai, mode: 'llm' })}>使用 AI</button>
             </div>
           </div>
           <div className="set-row" style={{ alignItems: 'flex-start' }}>
@@ -510,7 +510,7 @@ export function Settings() {
               {vendorPickerOpen && (
                 <>
                   <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                    16 家厂商任选——点「拿 Key ↗」去官网申请（多为免费额度），回来在下面粘贴。不配 AI 也完全能用（规则评分兜底）。
+                    16 家厂商任选——点「拿 Key ↗」去官网申请（多为免费额度），回来在下面粘贴。不配 AI 也完全能用（内置规则兜底）。
                   </span>
                   <div className="ai-vendors">
                     {AI_VENDORS.map((v) => (
@@ -755,7 +755,7 @@ export function Settings() {
             </>
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            <b>外发明示</b>：LLM 模式下，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，规则评分兜底，产品完整可用。
+            <b>外发明示</b>：使用 AI 时，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，内置规则兜底，产品完整可用。
           </div>
         </div>
       </div>
