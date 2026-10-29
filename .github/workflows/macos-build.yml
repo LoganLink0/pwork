@@ -77,6 +77,6 @@ jobs:
           cat latest.json
           gh release create "v${VERSION}" out/PWORK_0.1.11_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
             --title "PWORK ${VERSION}（内测）" \
-            --notes-file ../发布说明.md \
+            --notes-file 发布说明.md \
           || gh release upload "v${VERSION}" out/* latest.json --clobber
 
