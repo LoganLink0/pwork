@@ -1,0 +1,27 @@
+name: 信源失效报告
+description: 推荐目录里的某个源抓不到了，或你想推荐新源
+labels: ["信源目录"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - 目录里的源失效了
+        - 推荐新源
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 信源名称与地址
+      placeholder: "例：量子位 https://www.qbitai.com/feed"
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: 说明（失效现象 / 推荐理由与领域）
+      placeholder: "例：抓取一直超时；或：这是某领域的优质源，原生 RSS 已实测可达"
+    validations:
+      required: true

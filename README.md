@@ -60,7 +60,9 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 桌面安装包：`cd app && npx tauri build`（默认联网版；离线版与发布流程见 [development.md](./docs/development.md) 的「发布打包」）。云端服务在 [worker/](./worker/README.md)，双击 `worker\部署向导.cmd` 走中文向导即可部署。前端细节见 [app/README.md](./app/README.md)。
 
-回归基线：406 项自动化测试全绿、tsc 零错误、lint 24 警告 0 错误。
+想参与贡献（推荐信源、报缺陷、提代码）：见 [CONTRIBUTING.md](./CONTRIBUTING.md)。推荐信源只需改[目录数据文件](app/src/content/source-catalog.json)，CI 每周自动逐源验证活性。
+
+回归基线：448 项自动化测试全绿、tsc 零错误、lint 26 警告 0 错误。
 
 ## 许可证
 

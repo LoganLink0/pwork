@@ -1,0 +1,122 @@
+{
+  "$comment": "推荐信源目录（社区可贡献的数据文件，0.4-6 内容插件层）：改本文件即可新增/修订推荐源，应用构建时读取并做字段校验。新增源要求：原生 RSS 且自行实测可达（curl 返回 200 且响应体是 feed）；tier 含义：1 核心源（默认预选）/ 1.5 优质源 / 2 观察源。recommended 是首页快捷导入的名称清单（必须与下面 sources 里的 name 一致）。CI 每周自动逐源验证活性，失效源会开 issue 提醒。",
+  "recommended": [
+    "AIHOT 精选",
+    "量子位",
+    "Latent Space",
+    "CNCF Blog",
+    "AWS News Blog",
+    "Azure Blog",
+    "美团技术团队",
+    "Martin Fowler",
+    "The New Stack",
+    "dbt Labs Blog",
+    "人人都是产品经理",
+    "Rebel's Guide to Project Management",
+    "国家统计局 · 最新发布"
+  ],
+  "domains": [
+    {
+      "domain": "ai",
+      "sources": [
+        { "name": "AIHOT 精选", "url": "https://aihot.virxact.com/rss", "tier": 1 },
+        { "name": "量子位", "url": "https://www.qbitai.com/feed", "tier": 1 },
+        { "name": "Latent Space", "url": "https://www.latent.space/feed", "tier": 1.5 },
+        { "name": "Simon Willison", "url": "https://simonwillison.net/atom/everything/", "tier": 1.5 },
+        { "name": "TechCrunch AI", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "tier": 1.5 },
+        { "name": "The Decoder", "url": "https://the-decoder.com/feed/", "tier": 1.5 },
+        { "name": "雷锋网", "url": "https://www.leiphone.com/feed/", "tier": 1.5 },
+        { "name": "HackerNoon", "url": "https://hackernoon.com/feed", "tier": 2 },
+        { "name": "Ars Technica AI", "url": "https://arstechnica.com/ai/feed/", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "frontend",
+      "sources": [
+        { "name": "阮一峰 · 网络日志", "url": "https://www.ruanyifeng.com/blog/atom.xml", "tier": 1 },
+        { "name": "张鑫旭 · 鑫空间", "url": "https://www.zhangxinxu.com/wordpress/feed/", "tier": 1.5 },
+        { "name": "CSS-Tricks", "url": "https://css-tricks.com/feed/", "tier": 1.5 },
+        { "name": "Smashing Magazine", "url": "https://www.smashingmagazine.com/feed/", "tier": 1.5 },
+        { "name": "freeCodeCamp", "url": "https://www.freecodecamp.org/news/rss/", "tier": 1.5 },
+        { "name": "Josh W. Comeau", "url": "https://www.joshwcomeau.com/rss.xml", "tier": 1.5 },
+        { "name": "Kent C. Dodds", "url": "https://kentcdodds.com/rss.xml", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "arch",
+      "sources": [
+        { "name": "美团技术团队", "url": "https://tech.meituan.com/feed", "tier": 1 },
+        { "name": "Martin Fowler", "url": "https://martinfowler.com/feed.atom", "tier": 1.5 },
+        { "name": "The New Stack", "url": "https://thenewstack.io/feed/", "tier": 1.5 },
+        { "name": "InfoQ 中文", "url": "https://www.infoq.cn/feed", "tier": 1.5 },
+        { "name": "InfoQ 国际", "url": "https://feed.infoq.com/", "tier": 1.5 },
+        { "name": "Netflix 技术博客", "url": "https://netflixtechblog.com/feed", "tier": 2 },
+        { "name": "开源中国", "url": "https://www.oschina.net/news/rss", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "cloud",
+      "sources": [
+        { "name": "CNCF Blog", "url": "https://www.cncf.io/blog/feed/", "tier": 1.5 },
+        { "name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/", "tier": 1.5 },
+        { "name": "Kubernetes Blog", "url": "https://kubernetes.io/feed.xml", "tier": 1.5 },
+        { "name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "data",
+      "sources": [
+        { "name": "dbt Labs Blog", "url": "https://www.getdbt.com/blog/feed.xml", "tier": 1.5 },
+        { "name": "Towards Data Science", "url": "https://towardsdatascience.com/feed", "tier": 1.5 },
+        { "name": "ClickHouse Blog", "url": "https://clickhouse.com/rss.xml", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "pm",
+      "sources": [
+        { "name": "人人都是产品经理", "url": "https://www.woshipm.com/feed", "tier": 1.5 },
+        { "name": "Lenny's Newsletter", "url": "https://www.lennysnewsletter.com/feed", "tier": 1.5 },
+        { "name": "Rebel's Guide to Project Management", "url": "https://www.girlsguidetopm.com/feed/", "tier": 2 },
+        { "name": "Product Talk", "url": "https://www.producttalk.org/feed/", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "policy",
+      "sources": [
+        { "name": "国家统计局 · 最新发布", "url": "https://www.stats.gov.cn/sj/zxfb/rss.xml", "tier": 1 }
+      ]
+    },
+    {
+      "domain": "indie",
+      "sources": [
+        { "name": "Product Hunt", "url": "https://www.producthunt.com/feed", "tier": 1.5 }
+      ]
+    },
+    {
+      "domain": "career",
+      "sources": [
+        { "name": "dev.to", "url": "https://dev.to/feed", "tier": 1.5 },
+        { "name": "HN 招聘帖", "url": "https://hnrss.org/jobs", "tier": 1.5 }
+      ]
+    },
+    {
+      "domain": "finance",
+      "sources": [
+        { "name": "华尔街见闻", "url": "https://dedicated.wallstreetcn.com/rss.xml", "tier": 1 },
+        { "name": "36氪快讯", "url": "https://rsshub.rssforever.com/36kr/newsflashes", "tier": 1.5 }
+      ]
+    },
+    {
+      "domain": "tool",
+      "sources": [
+        { "name": "小众软件", "url": "https://www.appinn.com/feed/", "tier": 1 },
+        { "name": "少数派", "url": "https://sspai.com/feed", "tier": 1.5 },
+        { "name": "Hacker News 精选", "url": "https://hnrss.org/best", "tier": 1.5 },
+        { "name": "奇客 Solidot", "url": "https://www.solidot.org/index.rss", "tier": 1.5 },
+        { "name": "Lifehacker", "url": "https://lifehacker.com/feed/rss", "tier": 2 },
+        { "name": "GitHub Blog", "url": "https://github.blog/feed/", "tier": 2 },
+        { "name": "异次元软件世界", "url": "https://www.iplaysoft.com/feed", "tier": 2 }
+      ]
+    }
+  ]
+}

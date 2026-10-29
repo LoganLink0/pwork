@@ -1,7 +1,10 @@
 /**
  * 采集配置与内容默认值（04 §4.2 兴趣域是评分锚点——你的经验物化点）。
+ * 推荐信源目录（0.4-6 内容插件层）：数据在 ./source-catalog.json（社区可贡献——
+ * PR 改数据文件，不碰代码），这里负责载入与读取防御（铁律 2）：字段类型校验、
+ * URL 协议白名单、地址全局去重，坏行跳过不进目录。
  */
-
+import catalogJson from './source-catalog.json'
 import type { CollectConfig } from '../types/models'
 
 export const DEFAULT_COLLECT_CONFIG: CollectConfig = {
@@ -63,31 +66,8 @@ export const TIER_LABEL: Record<number, string> = { 1: 'T1 核心源', 1.5: 'T1.
 /** tier → 默认权重映射（04 §3.1） */
 export const TIER_WEIGHT: Record<number, number> = { 1: 1.0, 1.5: 0.7, 2: 0.4 }
 
-/**
- * 推荐信源包（首页快捷入口一键导入）：按主题精选的核心源（2026-09-02 首版 13 个，全部实测可达）。
- * 完整可选目录见 SOURCE_CATALOG（2026-10-25 扩充，新源同样逐个实测；超时/403 的不入库）。
- */
-export const RECOMMENDED_SOURCES: { name: string; url: string; domain: string; tier: 1 | 1.5 | 2 }[] = [
-  { name: 'AIHOT 精选', url: 'https://aihot.virxact.com/rss', domain: 'ai', tier: 1 },
-  { name: '量子位', url: 'https://www.qbitai.com/feed', domain: 'ai', tier: 1 },
-  { name: 'Latent Space', url: 'https://www.latent.space/feed', domain: 'ai', tier: 1.5 },
-  { name: 'CNCF Blog', url: 'https://www.cncf.io/blog/feed/', domain: 'cloud', tier: 1.5 },
-  { name: 'AWS News Blog', url: 'https://aws.amazon.com/blogs/aws/feed/', domain: 'cloud', tier: 1.5 },
-  { name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/', domain: 'cloud', tier: 2 },
-  { name: '美团技术团队', url: 'https://tech.meituan.com/feed', domain: 'arch', tier: 1 },
-  { name: 'Martin Fowler', url: 'https://martinfowler.com/feed.atom', domain: 'arch', tier: 1.5 },
-  { name: 'The New Stack', url: 'https://thenewstack.io/feed/', domain: 'arch', tier: 1.5 },
-  { name: 'dbt Labs Blog', url: 'https://www.getdbt.com/blog/feed.xml', domain: 'data', tier: 1.5 },
-  { name: '人人都是产品经理', url: 'https://www.woshipm.com/feed', domain: 'pm', tier: 1.5 },
-  { name: "Rebel's Guide to Project Management", url: 'https://www.girlsguidetopm.com/feed/', domain: 'pm', tier: 2 },
-  { name: '国家统计局 · 最新发布', url: 'https://www.stats.gov.cn/sj/zxfb/rss.xml', domain: 'policy', tier: 1 },
-]
+/* --------------------- 信源目录（从 source-catalog.json 载入） --------------------- */
 
-/**
- * 信源目录（2026-10-25）：更广领域、可选订阅——首访引导与信源页共用的挑选清单。
- * 全部原生 RSS 且逐个实测可达（curl 200 + 响应体为 feed）；与已存信源按地址去重，可安全重复导入。
- * 预选 = 各领域 tier 1 源（合理起点，用户可自由增减）。
- */
 export interface CatalogEntry {
   name: string
   url: string
@@ -95,104 +75,50 @@ export interface CatalogEntry {
   tier: 1 | 1.5 | 2
 }
 
-export const SOURCE_CATALOG: { domain: string; sources: CatalogEntry[] }[] = [
-  {
-    domain: 'ai',
-    sources: [
-      { name: 'AIHOT 精选', url: 'https://aihot.virxact.com/rss', domain: 'ai', tier: 1 },
-      { name: '量子位', url: 'https://www.qbitai.com/feed', domain: 'ai', tier: 1 },
-      { name: 'Latent Space', url: 'https://www.latent.space/feed', domain: 'ai', tier: 1.5 },
-      { name: 'Simon Willison', url: 'https://simonwillison.net/atom/everything/', domain: 'ai', tier: 1.5 },
-      { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', domain: 'ai', tier: 1.5 },
-      { name: 'The Decoder', url: 'https://the-decoder.com/feed/', domain: 'ai', tier: 1.5 },
-      { name: '雷锋网', url: 'https://www.leiphone.com/feed/', domain: 'ai', tier: 1.5 },
-      { name: 'HackerNoon', url: 'https://hackernoon.com/feed', domain: 'ai', tier: 2 },
-      { name: 'Ars Technica AI', url: 'https://arstechnica.com/ai/feed/', domain: 'ai', tier: 2 },
-    ],
-  },
-  {
-    domain: 'frontend',
-    sources: [
-      { name: '阮一峰 · 网络日志', url: 'https://www.ruanyifeng.com/blog/atom.xml', domain: 'frontend', tier: 1 },
-      { name: '张鑫旭 · 鑫空间', url: 'https://www.zhangxinxu.com/wordpress/feed/', domain: 'frontend', tier: 1.5 },
-      { name: 'CSS-Tricks', url: 'https://css-tricks.com/feed/', domain: 'frontend', tier: 1.5 },
-      { name: 'Smashing Magazine', url: 'https://www.smashingmagazine.com/feed/', domain: 'frontend', tier: 1.5 },
-      { name: 'freeCodeCamp', url: 'https://www.freecodecamp.org/news/rss/', domain: 'frontend', tier: 1.5 },
-      { name: 'Josh W. Comeau', url: 'https://www.joshwcomeau.com/rss.xml', domain: 'frontend', tier: 1.5 },
-      { name: 'Kent C. Dodds', url: 'https://kentcdodds.com/rss.xml', domain: 'frontend', tier: 2 },
-    ],
-  },
-  {
-    domain: 'arch',
-    sources: [
-      { name: '美团技术团队', url: 'https://tech.meituan.com/feed', domain: 'arch', tier: 1 },
-      { name: 'Martin Fowler', url: 'https://martinfowler.com/feed.atom', domain: 'arch', tier: 1.5 },
-      { name: 'The New Stack', url: 'https://thenewstack.io/feed/', domain: 'arch', tier: 1.5 },
-      { name: 'InfoQ 中文', url: 'https://www.infoq.cn/feed', domain: 'arch', tier: 1.5 },
-      { name: 'InfoQ 国际', url: 'https://feed.infoq.com/', domain: 'arch', tier: 1.5 },
-      { name: 'Netflix 技术博客', url: 'https://netflixtechblog.com/feed', domain: 'arch', tier: 2 },
-      { name: '开源中国', url: 'https://www.oschina.net/news/rss', domain: 'arch', tier: 2 },
-    ],
-  },
-  {
-    domain: 'cloud',
-    sources: [
-      { name: 'CNCF Blog', url: 'https://www.cncf.io/blog/feed/', domain: 'cloud', tier: 1.5 },
-      { name: 'AWS News Blog', url: 'https://aws.amazon.com/blogs/aws/feed/', domain: 'cloud', tier: 1.5 },
-      { name: 'Kubernetes Blog', url: 'https://kubernetes.io/feed.xml', domain: 'cloud', tier: 1.5 },
-      { name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/', domain: 'cloud', tier: 2 },
-    ],
-  },
-  {
-    domain: 'data',
-    sources: [
-      { name: 'dbt Labs Blog', url: 'https://www.getdbt.com/blog/feed.xml', domain: 'data', tier: 1.5 },
-      { name: 'Towards Data Science', url: 'https://towardsdatascience.com/feed', domain: 'data', tier: 1.5 },
-      { name: 'ClickHouse Blog', url: 'https://clickhouse.com/rss.xml', domain: 'data', tier: 2 },
-    ],
-  },
-  {
-    domain: 'pm',
-    sources: [
-      { name: '人人都是产品经理', url: 'https://www.woshipm.com/feed', domain: 'pm', tier: 1.5 },
-      { name: "Lenny's Newsletter", url: 'https://www.lennysnewsletter.com/feed', domain: 'pm', tier: 1.5 },
-      { name: "Rebel's Guide to Project Management", url: 'https://www.girlsguidetopm.com/feed/', domain: 'pm', tier: 2 },
-      { name: 'Product Talk', url: 'https://www.producttalk.org/feed/', domain: 'pm', tier: 2 },
-    ],
-  },
-  {
-    domain: 'policy',
-    sources: [{ name: '国家统计局 · 最新发布', url: 'https://www.stats.gov.cn/sj/zxfb/rss.xml', domain: 'policy', tier: 1 }],
-  },
-  {
-    domain: 'indie',
-    sources: [{ name: 'Product Hunt', url: 'https://www.producthunt.com/feed', domain: 'indie', tier: 1.5 }],
-  },
-  {
-    domain: 'career',
-    sources: [
-      { name: 'dev.to', url: 'https://dev.to/feed', domain: 'career', tier: 1.5 },
-      { name: 'HN 招聘帖', url: 'https://hnrss.org/jobs', domain: 'career', tier: 1.5 },
-    ],
-  },
-  {
-    domain: 'finance',
-    sources: [
-      { name: '华尔街见闻', url: 'https://dedicated.wallstreetcn.com/rss.xml', domain: 'finance', tier: 1 },
-      { name: '36氪快讯', url: 'https://rsshub.rssforever.com/36kr/newsflashes', domain: 'finance', tier: 1.5 },
-    ],
-  },
-  {
-    domain: 'tool',
-    sources: [
-      { name: '小众软件', url: 'https://www.appinn.com/feed/', domain: 'tool', tier: 1 },
-      { name: '少数派', url: 'https://sspai.com/feed', domain: 'tool', tier: 1.5 },
-      { name: 'Hacker News 精选', url: 'https://hnrss.org/best', domain: 'tool', tier: 1.5 },
-      { name: '奇客 Solidot', url: 'https://www.solidot.org/index.rss', domain: 'tool', tier: 1.5 },
-      { name: 'Lifehacker', url: 'https://lifehacker.com/feed/rss', domain: 'tool', tier: 2 },
-      { name: 'GitHub Blog', url: 'https://github.blog/feed/', domain: 'tool', tier: 2 },
-      { name: '异次元软件世界', url: 'https://www.iplaysoft.com/feed', domain: 'tool', tier: 2 },
-    ],
-  },
-]
+/** 读取防御：单条目录项校验。返回 null = 坏行（跳过） */
+function normalizeEntry(raw: unknown, domain: string): CatalogEntry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  if (typeof r.name !== 'string' || !r.name.trim()) return null
+  if (typeof r.url !== 'string' || !/^https?:\/\//.test(r.url)) return null
+  if (r.tier !== 1 && r.tier !== 1.5 && r.tier !== 2) return null
+  return { name: r.name.trim(), url: r.url, domain, tier: r.tier }
+}
 
+function loadCatalog(): { domains: { domain: string; sources: CatalogEntry[] }[]; recommended: CatalogEntry[] } {
+  const raw = catalogJson as { recommended?: unknown; domains?: unknown }
+  const domains: { domain: string; sources: CatalogEntry[] }[] = []
+  const byName = new Map<string, CatalogEntry>()
+  const seen = new Set<string>()
+  if (Array.isArray(raw.domains)) {
+    for (const g of raw.domains) {
+      if (!g || typeof g !== 'object') continue
+      const domain = (g as Record<string, unknown>).domain
+      if (typeof domain !== 'string') continue
+      const list = (g as Record<string, unknown>).sources
+      if (!Array.isArray(list)) continue
+      const sources: CatalogEntry[] = []
+      for (const item of list) {
+        const entry = normalizeEntry(item, domain)
+        if (!entry || seen.has(entry.url)) continue // 坏行 / 重复地址跳过
+        seen.add(entry.url)
+        sources.push(entry)
+        if (!byName.has(entry.name)) byName.set(entry.name, entry)
+      }
+      if (sources.length > 0) domains.push({ domain, sources })
+    }
+  }
+  // 首页快捷导入包：按名称引用（单一事实——清单在 JSON 的 recommended 数组维护）
+  const recommended = Array.isArray(raw.recommended)
+    ? (raw.recommended.filter((n): n is string => typeof n === 'string').map((n) => byName.get(n)).filter((e): e is CatalogEntry => Boolean(e)))
+    : []
+  return { domains, recommended }
+}
+
+const catalog = loadCatalog()
+
+/** 完整可选目录：首访引导与信源页共用的挑选清单（按领域分组） */
+export const SOURCE_CATALOG: { domain: string; sources: CatalogEntry[] }[] = catalog.domains
+
+/** 推荐信源包（首页快捷入口一键导入）：跨领域精选，从完整目录按名单引用 */
+export const RECOMMENDED_SOURCES: CatalogEntry[] = catalog.recommended

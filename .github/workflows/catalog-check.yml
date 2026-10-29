@@ -1,0 +1,37 @@
+# 推荐信源目录活性验证（0.4-6 内容插件层）：
+# - 每周一 09:00 UTC 定时全量验证，结果进 Step Summary；有异常源时开 issue 提醒维护者
+# - 修改目录数据的 PR 同步验证（报告写在 summary，不硬卡——feed 时好时坏，人工判断为准）
+name: catalog-check
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  pull_request:
+    paths:
+      - 'app/src/content/source-catalog.json'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 逐源验证 feed 活性
+        id: probe
+        run: node scripts/check-catalog.mjs | tee probe-result.txt
+      - name: 有异常源时开 issue 提醒（仅定时任务）
+        if: github.event_name == 'schedule' && contains(steps.probe.outputs.stdout, '✗')
+        run: |
+          gh issue create \
+            --title "推荐信源目录每周验证发现异常源（$(date +%F)）" \
+            --body-file probe-result.txt \
+            --label "信源目录" \
+          || echo "issue 创建失败（可能重复），跳过"
+        env:
+          GH_TOKEN: ${{ github.token }}
