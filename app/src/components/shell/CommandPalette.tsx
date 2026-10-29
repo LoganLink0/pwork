@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MODULE_NAV, WORKSPACE_NAV } from '../../content/nav'
+import { PALETTE_PAGES } from '../../content/nav'
 import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
@@ -113,20 +113,8 @@ function PaletteDialog() {
       })
     }
 
-    const pageEntries: { to: string; icon: string; label: string; sub: string }[] = [
-      ...WORKSPACE_NAV.filter((w) => w.to !== '/').map((w) => ({ to: w.to, icon: w.icon, label: w.label, sub: '页面' })),
-      { to: '/', icon: 'today', label: '今日', sub: '页面' },
-      // 顶层直达模块（处理/输出无 children）也要能被搜到
-      ...MODULE_NAV.filter((m) => m.to).map((m) => ({ to: m.to!, icon: m.icon, label: m.label, sub: '页面' })),
-      ...MODULE_NAV.flatMap((m) =>
-        (m.children ?? []).map((c) => ({ to: c.to, icon: c.icon, label: c.label, sub: m.label })),
-      ),
-      // 外部数据在导航树无位次（入口在周报导出页），面板里补上直达
-      { to: '/input/blocks', icon: 'blocks', label: '外部数据', sub: '周报数据源' },
-      { to: '/settings', icon: 'settings', label: '设置', sub: '页面' },
-      { to: '/help', icon: 'helpCircle', label: '帮助', sub: '页面' },
-    ]
-    const pages: PaletteItem[] = pageEntries
+    // 页面组全部来自页面注册表派生（PALETTE_PAGES，0.4-5）——新增页面注册即出现在面板
+    const pages: PaletteItem[] = PALETTE_PAGES
       .filter((p) => match(p.label))
       .map((p) => ({ key: `pg-${p.to}`, group: '页面', icon: p.icon, label: p.label, sub: p.sub, run: () => { close(); navigate(p.to) } }))
 

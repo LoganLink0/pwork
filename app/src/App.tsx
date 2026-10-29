@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, type ReactNode } from 'react'
-import { HashRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './components/shell/Sidebar'
 import { Topbar } from './components/shell/Topbar'
 import { BottomNav } from './components/shell/BottomNav'
@@ -9,7 +9,7 @@ import { WheelMenu } from './components/shell/WheelMenu'
 import { isDesktopApp } from './engine/platform'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
-import { Home } from './pages/Home'
+import { PAGE_REGISTRY } from './registry'
 import { useNotes } from './store/notes'
 import { useCollect } from './store/collect'
 import { useTasks } from './store/tasks'
@@ -28,60 +28,47 @@ import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
-import { PLACEHOLDER } from './content/placeholder'
-
-// 代码分割：壳 + 首页保持轻量，其余页面按路由懒加载（AD2：模块为懒加载子路由）
-const Notes = lazy(() => import('./pages/Notes').then((m) => ({ default: m.Notes })))
-const CasesPage = lazy(() => import('./pages/CasesPage').then((m) => ({ default: m.CasesPage })))
-const NotesEmptyPane = lazy(() => import('./pages/Notes').then((m) => ({ default: m.NotesEmptyPane })))
-const NoteEditor = lazy(() => import('./pages/NoteEditor').then((m) => ({ default: m.NoteEditor })))
-const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
-const DesignSystem = lazy(() => import('./pages/DesignSystem').then((m) => ({ default: m.DesignSystem })))
-const Placeholder = lazy(() => import('./pages/Placeholder').then((m) => ({ default: m.Placeholder })))
-const Sources = lazy(() => import('./pages/Sources').then((m) => ({ default: m.Sources })))
-const Digest = lazy(() => import('./pages/Digest').then((m) => ({ default: m.Digest })))
-const Items = lazy(() => import('./pages/Items').then((m) => ({ default: m.Items })))
-const InputBlocks = lazy(() => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })))
-const PptWriter = lazy(() => import('./pages/PptWriter').then((m) => ({ default: m.PptWriter })))
-const ArticleDraftPage = lazy(() => import('./pages/ArticleDraftPage').then((m) => ({ default: m.ArticleDraftPage })))
-const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })))
-const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })))
-const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
-const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
-const Process = lazy(() => import('./pages/Process').then((m) => ({ default: m.Process })))
-const ProcessToolPage = lazy(() => import('./pages/ProcessToolPage').then((m) => ({ default: m.ProcessToolPage })))
-const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })))
-const Output = lazy(() => import('./pages/Output').then((m) => ({ default: m.Output })))
-const ReportGenerator = lazy(() => import('./pages/ReportGenerator').then((m) => ({ default: m.ReportGenerator })))
-const ReadOutLoud = lazy(() => import('./pages/ReadOutLoud').then((m) => ({ default: m.ReadOutLoud })))
-const DataCard = lazy(() => import('./pages/DataCard').then((m) => ({ default: m.DataCard })))
-
-// 回路模块（W3 自 FUPAN 迁入，03 §5）：页面组件零改动，路由收敛为 /review/* 子路由
-const ReviewDashboard = lazy(() => import('./modules/review/pages/Dashboard').then((m) => ({ default: m.Dashboard })))
-const ReviewNew = lazy(() => import('./modules/review/pages/NewReview').then((m) => ({ default: m.NewReview })))
-const ReviewWizard = lazy(() => import('./modules/review/pages/Wizard').then((m) => ({ default: m.Wizard })))
-const ReviewMeeting = lazy(() => import('./modules/review/pages/MeetingRoom').then((m) => ({ default: m.MeetingRoom })))
-const ReviewArchive = lazy(() => import('./modules/review/pages/ArchiveDetail').then((m) => ({ default: m.ArchiveDetail })))
-const ReviewAssets = lazy(() => import('./modules/review/pages/Library').then((m) => ({ default: m.Library })))
-const ReviewStats = lazy(() => import('./modules/review/pages/StatsView').then((m) => ({ default: m.StatsView })))
-const ReviewHelp = lazy(() => import('./modules/review/pages/Help').then((m) => ({ default: m.Help })))
+// 页面注册表（0.4-5）：路由/导航/面包屑/命令面板的单点数据源，见 registry.tsx
 
 function PageFallback() {
   return <div className="empty"><p>加载中…</p></div>
 }
 
-/** 回路模块布局：.review-root 作用域承载其样式（styles/review.css），与壳样式互不污染 */
-function ReviewLayout() {
-  return (
-    <div className="review-root">
-      <Outlet />
-    </div>
-  )
-}
-
-/** 占位路由元素：kind 对应 content/placeholder.ts */
-function Ph({ kind }: { kind: keyof typeof PLACEHOLDER | string }) {
-  return <Placeholder kind={kind} />
+/** 从注册表递归生成路由树：redirect → <Navigate>；children → 嵌套布局（layoutElement 或懒加载父组件）。
+ *  返回数组由 <Routes> 直接展开（Routes 的直接子元素必须是 Route，组件包装会被 react-router 拒绝）。 */
+function registryRoutes(): ReactNode[] {
+  return PAGE_REGISTRY.map((p) => {
+    if (p.redirect) {
+      return <Route key={p.path} path={p.path} element={<Navigate to={p.redirect} replace />} />
+    }
+    if (p.children?.length) {
+      if (p.layoutElement) {
+        return (
+          <Route key={p.path} path={p.path} element={p.layoutElement}>
+            {p.children.map((c) => {
+              if (!c.loader) return null
+              const C = lazy(c.loader)
+              return <Route key={c.path || 'index'} index={c.index} path={c.index ? undefined : c.path} element={<C />} />
+            })}
+          </Route>
+        )
+      }
+      if (!p.loader) return null
+      const Layout = lazy(p.loader)
+      return (
+        <Route key={p.path} path={p.path} element={<Layout />}>
+          {p.children.map((c) => {
+            if (!c.loader) return null
+            const C = lazy(c.loader)
+            return <Route key={c.path || 'index'} index={c.index} path={c.index ? undefined : c.path} element={<C />} />
+          })}
+        </Route>
+      )
+    }
+    if (!p.loader) return null
+    const C = lazy(p.loader)
+    return <Route key={p.path} path={p.path} element={<C />} />
+  })
 }
 
 /** 首访引导：只发生一次（本地标记），且仅在打开首页时。须在 Router 上下文内（useNavigate）。 */
@@ -327,51 +314,11 @@ export default function App() {
               <div className="content-inner">
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/tasks" element={<Tasks />} />
-                  <Route path="/goals" element={<Goals />} />
-                  <Route path="/input/notes" element={<Notes />}>
-                    <Route index element={<NotesEmptyPane />} />
-                    <Route path=":id" element={<NoteEditor />} />
-                  </Route>
-                  <Route path="/input/digest" element={<Digest />} />
-                  <Route path="/input/sources" element={<Sources />} />
-                  <Route path="/cloud" element={<Navigate to="/settings?tab=cloud" replace />} />
-                  <Route path="/input/items" element={<Items />} />
-                  <Route path="/input/blocks" element={<InputBlocks />} />
-                  <Route path="/cases" element={<CasesPage />} />
-                  <Route path="/process" element={<Process />} />
-                  <Route path="/process/t/:toolId" element={<ProcessToolPage />} />
-                  <Route path="/output" element={<Output />} />
-                  <Route path="/output/report" element={<ReportGenerator />} />
-                  <Route path="/output/read" element={<ReadOutLoud />} />
-                  <Route path="/output/card" element={<DataCard />} />
-                  <Route path="/output/ppt" element={<Navigate to="/output/report" replace />} />
-                  <Route path="/output/write" element={<PptWriter />} />
-                  <Route path="/output/article" element={<ArticleDraftPage />} />
-                  <Route path="/output/research" element={<ResearchPage />} />
-                  <Route path="/output/draft" element={<Navigate to="/output/article" replace />} />
-                  <Route path="/output/video" element={<Ph kind="video" />} />
-                  <Route
-                    path="/review"
-                    element={<ReviewLayout />}
-                  >
-                    <Route index element={<ReviewDashboard />} />
-                    <Route path="new" element={<ReviewNew />} />
-                    <Route path="wizard" element={<ReviewWizard />} />
-                    <Route path="meeting" element={<ReviewMeeting />} />
-                    <Route path="archive/:id" element={<ReviewArchive />} />
-                    <Route path="assets" element={<ReviewAssets />} />
-                    <Route path="analytics" element={<ReviewStats />} />
-                    <Route path="help" element={<ReviewHelp />} />
-                  </Route>
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/help" element={<Help />} />
-                  <Route path="/welcome" element={<Welcome />} />
-                  <Route path="/design" element={<DesignSystem />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
+                    {registryRoutes()}
+                    {/* 未知路径回首页 */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
               </div>
             </div>
           </div>
