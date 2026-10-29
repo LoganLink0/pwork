@@ -7,6 +7,7 @@ import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
 import { isDesktopApp } from '../engine/platform'
+import { WHEEL_LABEL_DISPLAY } from '../engine/keybinds'
 import { saveAutoBackup, loadAutoBackup } from '../engine/autoBackup'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen } from '@tauri-apps/api/event'
@@ -37,7 +38,7 @@ const STEP_GUIDES: { title: string; desc: string; tips?: string[] }[] = [
   {
     title: '一个闭环',
     desc: '记下来 → 加工 → 成稿 → 复盘，复盘产出的行动项又回到待办。右边四个模块各配一段真实操作录屏。',
-    tips: ['输入：速记浮层按 N 随手记、信息日报', '处理：Ctrl K 一次搜遍全库；桌面版 Ctrl+Alt+Q 呼出工具轮盘', '输出：周报月报、文章、调研', '回路：CLAP 复盘、认知资产回访'],
+    tips: ['输入：速记浮层按 N 随手记、信息日报', `处理：Ctrl K 或 ⌘K 一次搜遍全库；桌面版 ${WHEEL_LABEL_DISPLAY} 呼出工具轮盘`, '输出：周报月报、文章、调研', '回路：CLAP 复盘、认知资产回访'],
   },
   {
     title: '挑你要读的',

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   loadKeybinds,
   saveKeybinds,
@@ -23,6 +23,11 @@ describe('normalizeCombo', () => {
     expect(normalizeCombo('N')).toBe('n')
     expect(normalizeCombo('?')).toBe('?')
   })
+  it('meta（macOS ⌘）段：cmd/command 同义归一，定序在最后', () => {
+    expect(normalizeCombo('cmd+alt+q')).toBe('meta+alt+q')
+    expect(normalizeCombo('Meta+Q')).toBe('meta+q')
+    expect(normalizeCombo('command+shift+q')).toBe('shift+meta+q')
+  })
   it('无效形态返回 null：空、纯修饰键、双主键、保留键', () => {
     expect(normalizeCombo('')).toBeNull()
     expect(normalizeCombo('ctrl')).toBeNull()
@@ -42,9 +47,13 @@ describe('comboFromEvent（录制）', () => {
     expect(comboFromEvent(ev({ key: 'q', ctrlKey: true, altKey: true }))).toBe('ctrl+alt+q')
     expect(comboFromEvent(ev({ key: '?' , shiftKey: true }))).toBe('?') // 多数布局 ? = shift+/
   })
+  it('macOS ⌘ 键录制为 meta 段', () => {
+    expect(comboFromEvent(ev({ key: 'q', metaKey: true, altKey: true }))).toBe('meta+alt+q')
+  })
   it('纯修饰键按下返回 null（等待主键）', () => {
     expect(comboFromEvent(ev({ key: 'Control', ctrlKey: true }))).toBeNull()
     expect(comboFromEvent(ev({ key: 'Shift', shiftKey: true }))).toBeNull()
+    expect(comboFromEvent(ev({ key: 'Meta', metaKey: true }))).toBeNull()
   })
 })
 
@@ -70,12 +79,29 @@ describe('displayCombo / wheelComboAllowed', () => {
     expect(displayCombo('ctrl+alt+q')).toBe('Ctrl+Alt+Q')
     expect(displayCombo('n')).toBe('N')
     expect(displayCombo('?')).toBe('?')
+    expect(displayCombo('meta+alt+q')).toBe('⌘+Alt+Q')
   })
   it('轮盘键必须是组合键且主键在字母/数字/F 键范围', () => {
     expect(wheelComboAllowed('ctrl+alt+q')).toBe(true)
+    expect(wheelComboAllowed('meta+alt+q')).toBe(true)
     expect(wheelComboAllowed('f9')).toBe(false) // 单 F 键无修饰键，拒绝
     expect(wheelComboAllowed('ctrl+f9')).toBe(true)
     expect(wheelComboAllowed('n')).toBe(false) // 单字母全局键会劫持输入，拒绝
     expect(wheelComboAllowed('ctrl+?')).toBe(false)
+  })
+})
+
+describe('defaultKeybinds（平台默认，macOS②）', () => {
+  it('非 Mac 环境（含测试 jsdom）→ 轮盘默认 Ctrl+Alt+Q', () => {
+    expect(defaultKeybinds().wheel).toBe('ctrl+alt+q')
+  })
+  it('Mac 环境 → 轮盘默认 ⌘+Option+Q（stub navigator 模拟；isMac 每次调用实时读）', () => {
+    vi.stubGlobal('navigator', { platform: 'MacIntel', userAgent: 'Mozilla/5.0 (Macintosh) Intel Mac OS X' })
+    try {
+      expect(defaultKeybinds().wheel).toBe('meta+alt+q')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    expect(defaultKeybinds().wheel).toBe('ctrl+alt+q') // 恢复后回到平台真值
   })
 })

@@ -37,6 +37,9 @@ export function defaultKeybinds(): Keybinds {
   }
 }
 
+/** 轮盘默认键的展示文案（界面静态文案引用——引导页/帮助页不用再各写一份平台判断） */
+export const WHEEL_LABEL_DISPLAY = displayCombo(defaultKeybinds().wheel)
+
 const KEY = 'pwork-keybinds'
 
 export function loadKeybinds(): Keybinds {
@@ -79,7 +82,8 @@ export function normalizeCombo(input: string): string | null {
     else return null // 两个主键
   }
   if (main === '' || main === 'escape' || main === 'tab') return null // 保留键不分配
-  const prefix = `${mods.ctrl ? 'ctrl+' : ''}${mods.shift ? 'shift+' : ''}${mods.alt ? 'alt+' : ''}${mods.meta ? 'meta+' : ''}`
+  // 定序：ctrl+shift+meta+alt——⌘ 在 Option 前（macOS 惯例读法），录制值与默认值共用同一序
+  const prefix = `${mods.ctrl ? 'ctrl+' : ''}${mods.shift ? 'shift+' : ''}${mods.meta ? 'meta+' : ''}${mods.alt ? 'alt+' : ''}`
   return `${prefix}${main}`
 }
 
@@ -114,8 +118,8 @@ export function displayCombo(combo: string): string {
     .join('+')
 }
 
-/** 轮盘键允许的范围（Rust global-shortcut 侧只稳定支持字母/数字/F 键做主键）；meta/ctrl 均为合法修饰 */
+/** 轮盘键允许的范围（Rust global-shortcut 侧只稳定支持字母/数字/F 键做主键）；meta/ctrl 均为合法修饰。顺序与 normalizeCombo 一致 */
 export function wheelComboAllowed(combo: string): boolean {
-  const m = /^(ctrl\+)?(shift\+)?(alt\+)?(meta\+)?([a-z0-9]|f[1-9]|f1[0-2])$/.test(combo)
+  const m = /^(ctrl\+)?(shift\+)?(meta\+)?(alt\+)?([a-z0-9]|f[1-9]|f1[0-2])$/.test(combo)
   return m && combo.includes('+') // 全局键必须是组合键——单字母会劫持一切输入
 }
