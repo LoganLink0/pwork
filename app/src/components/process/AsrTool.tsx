@@ -22,7 +22,7 @@ function getRecognition(): SpeechRecognitionLike | null {
 /** 录音转文字：浏览器实时识别（Chrome/Edge 支持最好），结果可一键存为速记 */
 export function AsrTool() {
   const createNote = useNotes((s) => s.create)
-  const [supported, setSupported] = useState(true)
+  const [supported, setSupported] = useState(() => getRecognition() !== null)
   const [listening, setListening] = useState(false)
   const [finalText, setFinalText] = useState('')
   const [interim, setInterim] = useState('')
@@ -30,9 +30,13 @@ export function AsrTool() {
   const [savedMsg, setSavedMsg] = useState('')
   const recRef = useRef<SpeechRecognitionLike | null>(null)
 
+  // 浏览器可能在挂载后才暴露识别接口（特性开关/权限策略），挂载后复核一次；卸载停掉在录的会话
   useEffect(() => {
-    setSupported(getRecognition() !== null)
-    return () => recRef.current?.stop()
+    const t = window.setTimeout(() => setSupported(getRecognition() !== null), 0)
+    return () => {
+      window.clearTimeout(t)
+      recRef.current?.stop()
+    }
   }, [])
 
   if (!supported) {

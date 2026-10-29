@@ -3,7 +3,8 @@ import { getPack } from '../../content/scenario-packs'
 import { useDraft } from '../../store/draft'
 import type { InsightItem } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
-import { DebiasField, stickyStraight } from '../ui/DebiasField'
+import { DebiasField } from '../ui/DebiasField'
+import { stickyStraight } from '../ui/sticky'
 import { ConfidenceMeter } from '../ui/ConfidenceMeter'
 
 const emptyInsight = (): InsightItem => ({

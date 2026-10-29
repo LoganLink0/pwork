@@ -4,7 +4,8 @@ import { Icon } from '../../../../components/shell/icons'
 import { useDraft } from '../../store/draft'
 import type { ActionDraft, ActionKind } from '../../types/models'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
-import { DebiasField, stickyStraight } from '../ui/DebiasField'
+import { DebiasField } from '../ui/DebiasField'
+import { stickyStraight } from '../ui/sticky'
 import { ConfidenceMeter } from '../ui/ConfidenceMeter'
 
 const emptyAction = (): ActionDraft => ({ kind: 'start', text: '', confidence: 1 })

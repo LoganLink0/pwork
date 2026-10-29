@@ -47,7 +47,8 @@ export function Dashboard() {
   }, [])
 
   useEffect(() => {
-    void reload()
+    // 微任务起跑：挂载帧不写状态（批量统计都在数据返回后才落）
+    void Promise.resolve().then(reload)
   }, [reload])
 
   async function close(id: string, status: 'done' | 'dropped') {

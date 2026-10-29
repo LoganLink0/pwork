@@ -6,7 +6,8 @@ import { AsrTool } from '../components/process/AsrTool'
 import { OcrTool } from '../components/process/OcrTool'
 import { CardTool } from '../components/process/CardTool'
 import { ImageProcessTool } from '../components/process/ImageProcessTool'
-import { ConvertTool, AUDIO_PRESET, VIDEO_PRESET } from '../components/process/ConvertTool'
+import { ConvertTool } from '../components/process/ConvertTool'
+import { AUDIO_PRESET, VIDEO_PRESET } from '../components/process/convertPresets'
 
 function ToolBody({ id }: { id: string }) {
   switch (id) {

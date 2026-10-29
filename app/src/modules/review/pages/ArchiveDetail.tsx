@@ -14,11 +14,14 @@ import { Icon } from '../../../components/shell/icons'
 /** 挂载速记条：档案页回看这次复盘带着哪条速记来 */
 function AttachedNotes({ ids }: { ids: string[] }) {
   const [titles, setTitles] = useState<Record<string, string>>({})
+  // ids 是调用方每次渲染重建的数组，用内容键驱动拉取（内容不变不重拉）
+  const idsKey = ids.join(',')
   useEffect(() => {
-    void Promise.all(ids.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
+    const list = idsKey === '' ? [] : idsKey.split(',')
+    void Promise.all(list.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
       setTitles(Object.fromEntries(pairs))
     })
-  }, [ids.join(',')])
+  }, [idsKey])
   return (
     <div className="seg" aria-label="挂载的速记">
       {ids.map((id) => (
@@ -40,11 +43,9 @@ export function ArchiveDetail() {
   const [actions, setActions] = useState<ActionItem[]>([])
 
   useEffect(() => {
+    // 无 id 的渲染分支直接由下面的 missing 判定覆盖（!id && !rec 时显示"没有档案"），不进 effect
     let live = true
-    if (!id) {
-      setMissing(true)
-      return
-    }
+    if (!id) return
     void getReview(id).then((r) => {
       if (!live) return
       if (r) setRec(r)
@@ -58,7 +59,7 @@ export function ArchiveDetail() {
     }
   }, [id])
 
-  if (missing)
+  if (missing || (!id && !rec))
     return (
       <div className="container">
         <p className="coach-say">{GREETING.emptyReviews}</p>

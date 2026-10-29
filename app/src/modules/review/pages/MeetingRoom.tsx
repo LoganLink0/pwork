@@ -83,7 +83,7 @@ function phaseGuideItems(phase: number, d: ReviewRecord): GuideItem[] {
 }
 
 /** 会议各阶段的放行条件（先僵化：内容不缺位才放行） */
-export function meetingPhaseValid(phase: number, d: ReviewRecord): boolean {
+function meetingPhaseValid(phase: number, d: ReviewRecord): boolean {
   const m = d.meeting
   const c = d.clap
   switch (phase) {

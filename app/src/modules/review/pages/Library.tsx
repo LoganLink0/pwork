@@ -6,7 +6,7 @@ import { currentIntervalDays, daysUntilDue, isDue, isRetired, lastRevisitPartial
 import { deleteInsight, listInsights, listReviews, updateInsight } from '../db/repo'
 import { hashTheme } from '../engine/theme'
 import type { InsightRecord, ReviewRecord } from '../types/models'
-import { stickyStraight } from '../components/ui/DebiasField'
+import { stickyStraight } from '../components/ui/sticky'
 
 function fmtDate(iso?: string): string {
   if (!iso) return '—'

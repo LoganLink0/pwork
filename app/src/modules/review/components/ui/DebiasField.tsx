@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { scanDebias } from '../../engine/debias'
 import { getCoach } from '../../engine/coach'
 import { REFRAME } from '../../content/copy'
@@ -98,4 +97,3 @@ export function DebiasField({
   )
 }
 
-export const stickyStraight = { '--tilt': '0deg' } as CSSProperties

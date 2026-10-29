@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncFromCloud, pushSourcesToCloud, syncIngestBlocks, getScheduleHours, pushScheduleHours, type CloudConfig } from '../db/cloudSync'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, pullChangedRecords, type SyncConfig } from '../db/syncRecords'
@@ -20,7 +20,6 @@ export function CloudSyncCards({ active }: { active: boolean }) {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(() => lastSyncAt())
   const [scheduleDraft, setScheduleDraft] = useState('')
-  const [scheduleLoaded, setScheduleLoaded] = useState(false)
   const [sync, setSyncState] = useState<SyncConfig>(() => loadSyncConfig())
   const [syncBusy, setSyncBusy] = useState(false)
 
@@ -34,14 +33,16 @@ export function CloudSyncCards({ active }: { active: boolean }) {
   }
 
   // 进到云端同步分类时拉一次抓取时间（组件随设置页常驻挂载，必须在 active 变化时拉，
-  // 否则挂载即拉一次失败后就不再拉——用户配置好云端切进来输入框仍是空）
+  // 否则挂载即拉一次失败后就不再拉——用户配置好云端切进来输入框仍是空）。
+  // 防重入用 ref：它是流程标记，不该参与渲染
+  const scheduleLoadedRef = useRef(false)
   useEffect(() => {
-    if (!active || scheduleLoaded) return
-    setScheduleLoaded(true)
+    if (!active || scheduleLoadedRef.current) return
+    scheduleLoadedRef.current = true
     void getScheduleHours().then((r) => {
       if (r.ok && r.hours) setScheduleDraft(r.hours.join(','))
     })
-  }, [active, scheduleLoaded])
+  }, [active])
 
   const doSync = async () => {
     setCloudBusy(true)

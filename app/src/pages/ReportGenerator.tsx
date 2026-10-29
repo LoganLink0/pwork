@@ -26,7 +26,7 @@ export function ReportGenerator() {
   const [pptMsg, setPptMsg] = useState('')
   const [obsidianVault, setObsidianVault] = useState(() => localStorage.getItem('pwork-obsidian-vault') ?? '')
   const [obsidianMsg, setObsidianMsg] = useState('')
-  const snapshotsRef = useRef<ReportSnapshot[]>([])
+  const [snapshots, setSnapshots] = useState<ReportSnapshot[]>([])
 
   const gatherSeq = useRef(0)
   /** 切周期：摘要/错误属于特定周期，切换时在入口一并清掉（不在 effect 里 setState） */
@@ -44,7 +44,7 @@ export function ReportGenerator() {
       setData(d)
       // 每次生成报告即落一行当日快照（趋势与环比的数据源）
       await saveSnapshot(d)
-      snapshotsRef.current = await listSnapshots(8)
+      setSnapshots(await listSnapshots(8))
       setPrevRate((await latestSnapshotBefore())?.closureRate ?? null)
     })
   }, [mode])
@@ -89,7 +89,7 @@ export function ReportGenerator() {
     setPptBusy(true)
     setPptMsg('')
     try {
-      const name = await exportReportPptx(data, snapshotsRef.current)
+      const name = await exportReportPptx(data, snapshots)
       setPptMsg(`已生成 ${name}`)
     } catch (e) {
       setPptMsg(`PPT 生成失败：${e instanceof Error ? e.message : String(e)}`)
@@ -207,9 +207,9 @@ export function ReportGenerator() {
           {data && (
             <div style={{ paddingTop: 'var(--sp-3)' }}>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 6 }}>
-                PPT 幻灯片结构（{buildReportSlides(data, snapshotsRef.current).length} 页）
+                PPT 幻灯片结构（{data ? buildReportSlides(data, snapshots).length : 0} 页）
               </div>
-              {buildReportSlides(data, snapshotsRef.current).map((s, i) => (
+              {(data ? buildReportSlides(data, snapshots) : []).map((s, i) => (
                 <div key={i} style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline', padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
                   <span className="tnum" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', width: 20 }}>{i + 1}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: s.kind === 'title' ? 700 : 400 }}>{s.title}</span>

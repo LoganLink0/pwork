@@ -51,7 +51,7 @@ function stepGuideItems(step: number, d: ReviewRecord): GuideItem[] {
 }
 
 /** 每步的放行条件：内容必须真实存在，防止"走过场"（PRD 2.3 反刍防护） */
-export function stepValid(step: number, d: ReviewRecord): boolean {
+function stepValid(step: number, d: ReviewRecord): boolean {
   const c = d.clap
   switch (step) {
     case 0:
@@ -105,11 +105,14 @@ function QuickTimer() {
 /** 挂载速记条：向导内随时看到这次复盘带着哪条速记来 */
 function AttachedNoteChips({ ids }: { ids: string[] }) {
   const [titles, setTitles] = useState<Record<string, string>>({})
+  // ids 是调用方每次渲染重建的数组，用内容键驱动拉取（内容不变不重拉）
+  const idsKey = ids.join(',')
   useEffect(() => {
-    void Promise.all(ids.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
+    const list = idsKey === '' ? [] : idsKey.split(',')
+    void Promise.all(list.map((id) => getNote(id).then((n) => [id, n?.title || '（已删除的速记）'] as const))).then((pairs) => {
       setTitles(Object.fromEntries(pairs))
     })
-  }, [ids.join(',')])
+  }, [idsKey])
   return (
     <div className="seg" style={{ marginTop: 'var(--sp-2)' }} aria-label="挂载的速记">
       {ids.map((id) => (

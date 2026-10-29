@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNotes } from '../../store/notes'
 
 type Stage = 'idle' | 'loading' | 'recognizing' | 'done' | 'error'
@@ -12,12 +12,12 @@ export function OcrTool() {
   const [text, setText] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
-  const fileRef = useRef<File | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [savedMsg, setSavedMsg] = useState('')
 
   const onFile = (f: File | undefined) => {
     if (!f) return
-    fileRef.current = f
+    setFile(f)
     setPreview(URL.createObjectURL(f))
     setText('')
     setStage('idle')
@@ -26,7 +26,6 @@ export function OcrTool() {
   }
 
   const recognize = async () => {
-    const file = fileRef.current
     if (!file || stage === 'loading' || stage === 'recognizing') return
     setStage('loading')
     setProgress(0)
@@ -77,7 +76,7 @@ export function OcrTool() {
       </div>
       {preview && <img src={preview} alt="预览" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />}
       <div className="set-row">
-        <button type="button" className="btn-primary" disabled={!fileRef.current || stage === 'loading' || stage === 'recognizing'} onClick={() => void recognize()}>
+        <button type="button" className="btn-primary" disabled={!file || stage === 'loading' || stage === 'recognizing'} onClick={() => void recognize()}>
           {stage === 'loading' || stage === 'recognizing' ? '识别中…' : '开始识别'}
         </button>
         {stage === 'loading' || stage === 'recognizing' ? (

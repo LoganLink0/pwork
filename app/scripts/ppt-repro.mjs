@@ -4,7 +4,6 @@
  * 运行：cd app && node scripts/ppt-repro.mjs
  */
 import PptxGenJS from 'pptxgenjs'
-import { writeFileSync } from 'node:fs'
 
 const OUT = process.env.TEMP || '.'
 const C = { BG_DARK: '211E1A', BG_LIGHT: 'FAF9F7', CARD: 'FFFFFF', PRIMARY: 'B0500F', ACCENT: 'E8833A', TEXT: '211E1A', TEXT_INV: 'ECEBE7', MUTED: '97928A', MUTED_INV: '827D73', LINE: 'E6E4DF' }

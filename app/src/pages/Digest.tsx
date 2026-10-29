@@ -50,14 +50,8 @@ export function Digest() {
   const nextDate = nextCalendarDay(digestDate) ?? undefined
   const isToday = digestDate === todayLocal()
 
-  useEffect(() => {
-    // 进页自动保鲜（2026-10-28 用户拍板）：今天没数据就自动抓一轮——
-    // 配了云端先拉云端增量（快、省流量），云端没新货或没配云端则本地直接抓源站。
-    // 10 分钟防抖：往返切页不反复抓；历史日期浏览不触发（只关心"今天"）。
-    if (!isToday) return
-    if (Date.now() - lastAutoFreshAt < 10 * 60_000) return
-    lastAutoFreshAt = Date.now()
-
+  /** 保鲜链路：云端增量优先，没新货且本地今天为空则本地抓一轮 */
+  const runAutoFresh = async () => {
     const runLocalFetchIfNeeded = async (cloudHadNew: boolean) => {
       if (cloudHadNew) return
       // 云端没新货且本地今天也空 → 本地抓一轮源站（有活跃源才抓）
@@ -82,6 +76,18 @@ export function Digest() {
     } else {
       void runLocalFetchIfNeeded(false)
     }
+  }
+
+  useEffect(() => {
+    // 进页自动保鲜（2026-10-28 用户拍板）：今天没数据就自动抓一轮——
+    // 配了云端先拉云端增量（快、省流量），云端没新货或没配云端则本地直接抓源站。
+    // 10 分钟防抖：往返切页不反复抓；历史日期浏览不触发（只关心"今天"）。
+    // 放进微任务：挂载帧不写状态（保鲜链路的状态更新都在数据返回后）
+    if (!isToday) return
+    if (Date.now() - lastAutoFreshAt < 10 * 60_000) return
+    lastAutoFreshAt = Date.now()
+    void Promise.resolve().then(() => runAutoFresh())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次；保鲜链路自身读 store 最新值
   }, [])
 
   return (

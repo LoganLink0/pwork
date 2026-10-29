@@ -3,7 +3,7 @@ import { MEETING } from '../../content/copy'
 import { Icon } from '../../../../components/shell/icons'
 import { removeGapAt } from '../../engine/cascade'
 import { useDraft } from '../../store/draft'
-import { stickyStraight } from '../ui/DebiasField'
+import { stickyStraight } from '../ui/sticky'
 
 /**
  * 复盘墙（课程 07 讲）：GOOD/NEED 两列，卡片可拖拽换边（开放空间）。
