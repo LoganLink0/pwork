@@ -25,8 +25,8 @@ export function GlobalShortcuts() {
       const combo = comboFromEvent(e)
       if (!combo) return
       const kb = loadKeybinds()
-      // 命令面板：配置键 + 固定别名 / + 默认 Ctrl+K（写进肌肉记忆的键位恒可用），输入态也可唤出
-      if (combo === kb.palette || combo === 'ctrl+k' || e.key === '/') {
+      // 命令面板：配置键 + 固定别名 / + 默认 Ctrl+K / ⌘K（写进肌肉记忆的键位恒可用），输入态也可唤出
+      if (combo === kb.palette || combo === 'ctrl+k' || combo === 'meta+k' || e.key === '/') {
         e.preventDefault()
         openPalette()
         return

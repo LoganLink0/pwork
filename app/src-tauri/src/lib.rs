@@ -4,10 +4,13 @@ use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// 工具轮盘的全局呼出键（应用外任何地方可呼出）。默认 Ctrl+Alt+Q；键位自定义（0.4-3）
-/// 由前端存配置、经 register_wheel_shortcut 在启动时/改动时重注册
-const WHEEL_KEY: Code = Code::KeyQ;
+/// 工具轮盘的全局呼出键（应用外任何地方可呼出）。默认 Windows Ctrl+Alt+Q / macOS ⌘+Option+Q；
+/// 键位自定义（0.4-3）由前端存配置、经 register_wheel_shortcut 在启动时/改动时重注册
+#[cfg(target_os = "macos")]
+const WHEEL_LABEL: &str = "⌘+Option+Q";
+#[cfg(not(target_os = "macos"))]
 const WHEEL_LABEL: &str = "Ctrl+Alt+Q";
+const WHEEL_KEY: Code = Code::KeyQ;
 
 /// 解析归一化键位串（如 "ctrl+alt+q"）为修饰键 + 主键码。主键限字母/数字/F 键
 /// （与前端 wheelComboAllowed 同一口径）；解析失败返回人话错误
@@ -19,6 +22,8 @@ fn parse_wheel_combo(combo: &str) -> Result<(Modifiers, Code), String> {
       "ctrl" => mods |= Modifiers::CONTROL,
       "shift" => mods |= Modifiers::SHIFT,
       "alt" => mods |= Modifiers::ALT,
+      // macOS ⌘（与前端 keybinds 的 meta 段一致）
+      "meta" | "cmd" => mods |= Modifiers::META,
       _ => {
         if main.is_some() {
           return Err(format!("键位串有多个主键：{}", combo));
@@ -142,7 +147,12 @@ fn open_deploy_wizard(app: tauri::AppHandle) -> Result<(), String> {
         .resource_dir()
         .map_err(|e| format!("定位安装目录失败：{e}"))?
         .join("worker");
-    if !worker_dir.join("部署向导.cmd").is_file() {
+    // Windows 走 cmd 包装（部署向导.cmd）；macOS 走 Terminal 打开等价 shell 脚本
+    #[cfg(windows)]
+    let wizard_entry = "部署向导.cmd";
+    #[cfg(not(windows))]
+    let wizard_entry = "部署向导.sh";
+    if !worker_dir.join(wizard_entry).is_file() {
         return Err("安装目录里没找到部署向导——请重新安装应用（安装包损坏或被安全软件删改）".into());
     }
     #[cfg(windows)]
@@ -157,10 +167,20 @@ fn open_deploy_wizard(app: tauri::AppHandle) -> Result<(), String> {
             .map_err(|e| format!("部署窗口启动失败：{e}"))?;
         Ok(())
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        // Terminal.app 打开 shell 向导（窗口保留，脚本结束不关）
+        std::process::Command::new("open")
+            .args(["-a", "Terminal", wizard_entry])
+            .current_dir(&worker_dir)
+            .spawn()
+            .map_err(|e| format!("部署窗口启动失败：{e}"))?;
+        Ok(())
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = worker_dir;
-        Err("仅支持 Windows".into())
+        Err("仅支持 Windows 与 macOS".into())
     }
 }
 
@@ -181,9 +201,26 @@ fn open_external_url(url: String) -> Result<(), String> {
             .map_err(|e| format!("打开浏览器失败：{e}"))?;
         Ok(())
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
     {
-        Err("仅支持 Windows".into())
+        // macOS 系统标准：open 命令交给默认浏览器
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败：{e}"))?;
+        Ok(())
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败：{e}"))?;
+        Ok(())
+    }
+    #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
+    {
+        Err("仅支持 Windows 与 macOS".into())
     }
 }
 
@@ -205,56 +242,51 @@ fn deploy_cloud(
     if !worker_dir.join("scripts").join("deploy-wizard.mjs").is_file() {
         return Err("安装目录里没找到部署源码——请重新安装应用（安装包损坏或被安全软件删改）".into());
     }
+    // 平台差异只在"是否隐藏窗口"一处：macOS 上 spawn 图形会话进程默认无终端窗口
+    use std::io::BufRead;
+    let mut cmd = std::process::Command::new("node");
+    cmd.arg("scripts/deploy-wizard.mjs")
+        .arg("--auto")
+        .arg("--interests").arg(&interests)
+        .arg("--dislikes").arg(&dislikes)
+        .arg("--context").arg(&context)
+        .current_dir(&worker_dir);
     #[cfg(windows)]
     {
-        use std::io::BufRead;
         use std::os::windows::process::CommandExt;
-        use std::process::Stdio;
-        use tauri::Emitter;
-        let mut child = std::process::Command::new("node")
-            .arg("scripts/deploy-wizard.mjs")
-            .arg("--auto")
-            .arg("--interests").arg(&interests)
-            .arg("--dislikes").arg(&dislikes)
-            .arg("--context").arg(&context)
-            .current_dir(&worker_dir)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW：应用内部署，不出终端
-            .spawn()
-            .map_err(|e| format!("部署进程启动失败：{e}（确认电脑装了 Node.js ≥ 20）"))?;
-        let stdout = child.stdout.take().ok_or("无法读取部署输出")?;
-        std::thread::spawn(move || {
-            for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
-                let _ = app.emit("deploy-log", &line);
-                if let Some(rest) = line.strip_prefix("@@step ") {
-                    let _ = app.emit("deploy-step", rest);
-                } else if let Some(rest) = line.strip_prefix("@@fail ") {
-                    let _ = app.emit("deploy-fail", rest);
-                } else if let Some(rest) = line.strip_prefix("@@done ") {
-                    let mut fields = std::collections::HashMap::new();
-                    for part in rest.split_whitespace() {
-                        if let Some((k, v)) = part.split_once('=') {
-                            fields.insert(k.to_string(), v.to_string());
-                        }
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW：应用内部署，不出终端
+    }
+    let mut child = cmd
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("部署进程启动失败：{e}（确认电脑装了 Node.js ≥ 20）"))?;
+    let stdout = child.stdout.take().ok_or("无法读取部署输出")?;
+    std::thread::spawn(move || {
+        for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
+            let _ = app.emit("deploy-log", &line);
+            if let Some(rest) = line.strip_prefix("@@step ") {
+                let _ = app.emit("deploy-step", rest);
+            } else if let Some(rest) = line.strip_prefix("@@fail ") {
+                let _ = app.emit("deploy-fail", rest);
+            } else if let Some(rest) = line.strip_prefix("@@done ") {
+                let mut fields = std::collections::HashMap::new();
+                for part in rest.split_whitespace() {
+                    if let Some((k, v)) = part.split_once('=') {
+                        fields.insert(k.to_string(), v.to_string());
                     }
-                    let _ = app.emit("deploy-done", serde_json::json!({
-                        "endpoint": fields.get("endpoint").cloned().unwrap_or_default(),
-                        "token": fields.get("token").cloned().unwrap_or_default(),
-                        "account": fields.get("account").cloned().unwrap_or_default(),
-                        "db": fields.get("db").cloned().unwrap_or_default(),
-                    }));
                 }
+                let _ = app.emit("deploy-done", serde_json::json!({
+                    "endpoint": fields.get("endpoint").cloned().unwrap_or_default(),
+                    "token": fields.get("token").cloned().unwrap_or_default(),
+                    "account": fields.get("account").cloned().unwrap_or_default(),
+                    "db": fields.get("db").cloned().unwrap_or_default(),
+                }));
             }
-            let _ = child.wait();
-        });
-        Ok(())
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = (worker_dir, interests, dislikes, context);
-        Err("仅支持 Windows".into())
-    }
+        }
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -324,7 +356,10 @@ pub fn run() {
       let shared_gw = gateway::start(data_dir, app.handle().clone());
       app.manage(shared_gw);
 
-      // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走 Ctrl+K 面板）
+      // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走命令面板）；macOS 默认 ⌘+Option，其余 Ctrl+Alt
+      #[cfg(target_os = "macos")]
+      let mods = Modifiers::META | Modifiers::ALT;
+      #[cfg(not(target_os = "macos"))]
       let mods = Modifiers::CONTROL | Modifiers::ALT;
       app.global_shortcut().register(Shortcut::new(Some(mods), WHEEL_KEY))?;
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);

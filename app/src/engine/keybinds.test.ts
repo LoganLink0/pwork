@@ -7,7 +7,7 @@ import {
   findConflict,
   displayCombo,
   wheelComboAllowed,
-  DEFAULT_KEYBINDS,
+  defaultKeybinds,
 } from './keybinds'
 
 /** 键位中心（0.4-3）：归一化 / 录制 / 冲突 / 显示 / 轮盘范围 */
@@ -50,18 +50,18 @@ describe('comboFromEvent（录制）', () => {
 
 describe('loadKeybinds / saveKeybinds / findConflict', () => {
   it('无配置 → 默认键位', () => {
-    expect(loadKeybinds()).toEqual(DEFAULT_KEYBINDS)
+    expect(loadKeybinds()).toEqual(defaultKeybinds())
   })
   it('保存后读回；坏值回退默认', () => {
-    saveKeybinds({ ...DEFAULT_KEYBINDS, quickNote: 'j' })
+    saveKeybinds({ ...defaultKeybinds(), quickNote: 'j' })
     expect(loadKeybinds().quickNote).toBe('j')
     localStorage.setItem('pwork-keybinds', JSON.stringify({ quickNote: 'escape' }))
     expect(loadKeybinds().quickNote).toBe('n')
   })
   it('冲突检测：改成的键位被别的动作占用时报告占用方', () => {
-    expect(findConflict(DEFAULT_KEYBINDS, 'quickNote', 'ctrl+k')).toBe('palette')
-    expect(findConflict(DEFAULT_KEYBINDS, 'quickNote', 'j')).toBeNull()
-    expect(findConflict(DEFAULT_KEYBINDS, 'palette', 'ctrl+k')).toBeNull() // 自己不算冲突
+    expect(findConflict(defaultKeybinds(), 'quickNote', 'ctrl+k')).toBe('palette')
+    expect(findConflict(defaultKeybinds(), 'quickNote', 'j')).toBeNull()
+    expect(findConflict(defaultKeybinds(), 'palette', 'ctrl+k')).toBeNull() // 自己不算冲突
   })
 })
 

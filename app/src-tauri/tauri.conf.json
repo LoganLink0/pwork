@@ -47,7 +47,8 @@
       "../../worker/schema.sql": "worker/schema.sql",
       "../../worker/seed-sources.sql": "worker/seed-sources.sql",
       "../../worker/tsconfig.json": "worker/tsconfig.json",
-      "../../worker/部署向导.cmd": "worker/部署向导.cmd"
+      "../../worker/部署向导.cmd": "worker/部署向导.cmd",
+      "../../worker/部署向导.sh": "worker/部署向导.sh"
     },
     "windows": {
       "webviewInstallMode": {

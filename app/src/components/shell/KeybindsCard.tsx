@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  KEYBIND_ACTIONS, DEFAULT_KEYBINDS, loadKeybinds, saveKeybinds,
+  KEYBIND_ACTIONS, defaultKeybinds, loadKeybinds, saveKeybinds,
   comboFromEvent, findConflict, displayCombo, wheelComboAllowed, type Keybinds,
 } from '../../engine/keybinds'
 import type { KeybindAction } from '../../types/keybinds'
@@ -83,8 +83,8 @@ export function KeybindsCard({ active }: { active: boolean }) {
             className="btn-ghost"
             style={{ flex: 'none' }}
             onClick={() => {
-              setKb({ ...DEFAULT_KEYBINDS })
-              saveKeybinds({ ...DEFAULT_KEYBINDS })
+              setKb(defaultKeybinds())
+              saveKeybinds(defaultKeybinds())
               setMsg({ ok: true, text: '已恢复默认键位' })
             }}
           >

@@ -8,6 +8,8 @@ import type { KeybindAction } from '../types/keybinds'
 
 export type { KeybindAction }
 
+import { isMac } from './platform'
+
 export interface Keybinds {
   quickNote: string
   palette: string
@@ -24,29 +26,33 @@ export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string 
   { key: 'wheel', label: '工具轮盘', desc: '桌面版全局呼出（其他应用在前台也生效）' },
 ]
 
-export const DEFAULT_KEYBINDS: Keybinds = {
-  quickNote: 'n',
-  palette: 'ctrl+k',
-  help: '?',
-  settings: 'ctrl+,',
-  wheel: 'ctrl+alt+q',
+/** 平台默认键位：轮盘全局键 Windows 用 Ctrl，macOS 用 ⌘（键位中心 0.4-3 的 macOS 补全） */
+export function defaultKeybinds(): Keybinds {
+  return {
+    quickNote: 'n',
+    palette: 'ctrl+k',
+    help: '?',
+    settings: 'ctrl+,',
+    wheel: isMac() ? 'meta+alt+q' : 'ctrl+alt+q',
+  }
 }
 
 const KEY = 'pwork-keybinds'
 
 export function loadKeybinds(): Keybinds {
+  const defaults = defaultKeybinds()
   try {
     const raw = localStorage.getItem(KEY)
-    if (!raw) return { ...DEFAULT_KEYBINDS }
+    if (!raw) return defaults
     const p = JSON.parse(raw) as Partial<Keybinds>
-    const out = { ...DEFAULT_KEYBINDS }
-    for (const k of Object.keys(DEFAULT_KEYBINDS) as KeybindAction[]) {
+    const out = { ...defaults }
+    for (const k of Object.keys(defaults) as KeybindAction[]) {
       const v = p[k]
       if (typeof v === 'string' && normalizeCombo(v)) out[k] = normalizeCombo(v)!
     }
     return out
   } catch {
-    return { ...DEFAULT_KEYBINDS }
+    return defaults
   }
 }
 
@@ -54,7 +60,7 @@ export function saveKeybinds(cfg: Keybinds): void {
   localStorage.setItem(KEY, JSON.stringify(cfg))
 }
 
-/** 归一化：修饰键定序 ctrl+shift+alt + 小写主键；空串/纯修饰键/超长返回 null（无效） */
+/** 归一化：修饰键定序 ctrl+shift+alt+meta + 小写主键；空串/纯修饰键/超长返回 null（无效） */
 export function normalizeCombo(input: string): string | null {
   const parts = input
     .toLowerCase()
@@ -62,28 +68,29 @@ export function normalizeCombo(input: string): string | null {
     .map((s) => s.trim())
     .filter(Boolean)
   if (parts.length === 0 || parts.length > 4) return null
-  const mods = { ctrl: false, shift: false, alt: false }
+  const mods = { ctrl: false, shift: false, alt: false, meta: false }
   let main = ''
   for (const p of parts) {
     if (p === 'ctrl' || p === 'control') mods.ctrl = true
     else if (p === 'shift') mods.shift = true
     else if (p === 'alt' || p === 'option') mods.alt = true
+    else if (p === 'meta' || p === 'cmd' || p === 'command') mods.meta = true
     else if (main === '') main = p
     else return null // 两个主键
   }
   if (main === '' || main === 'escape' || main === 'tab') return null // 保留键不分配
-  const prefix = `${mods.ctrl ? 'ctrl+' : ''}${mods.shift ? 'shift+' : ''}${mods.alt ? 'alt+' : ''}`
+  const prefix = `${mods.ctrl ? 'ctrl+' : ''}${mods.shift ? 'shift+' : ''}${mods.alt ? 'alt+' : ''}${mods.meta ? 'meta+' : ''}`
   return `${prefix}${main}`
 }
 
 /** 从键盘事件录制键位串；纯修饰键按下返回 null（等主键）。参数收窄到实际读取的字段，React 合成事件同样可用 */
-export function comboFromEvent(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'shiftKey' | 'altKey'>): string | null {
+export function comboFromEvent(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey'>): string | null {
   const k = e.key
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(k)) return null
   const main = k.toLowerCase()
   let shift = e.shiftKey
   if (k.length === 1 && !/[a-z0-9]/.test(main)) shift = false // 符号键的 shift 是产生符号的一部分（? 就是 Shift+/），不算修饰键
-  return normalizeCombo(`${e.ctrlKey ? 'ctrl+' : ''}${shift ? 'shift+' : ''}${e.altKey ? 'alt+' : ''}${main}`)
+  return normalizeCombo(`${e.ctrlKey ? 'ctrl+' : ''}${shift ? 'shift+' : ''}${e.altKey ? 'alt+' : ''}${e.metaKey ? 'meta+' : ''}${main}`)
 }
 
 /** 冲突检测：combo 与其他动作的键位相同则返回那个动作（无冲突返回 null） */
@@ -95,16 +102,20 @@ export function findConflict(cfg: Keybinds, action: KeybindAction, combo: string
   return null
 }
 
-/** 显示格式："ctrl+alt+q" → "Ctrl+Alt+Q"；单字符原样（n → N、? → ?） */
+/** 显示格式："ctrl+alt+q" → "Ctrl+Alt+Q"；meta → ⌘（macOS 语义）；单字符原样（n → N、? → ?） */
 export function displayCombo(combo: string): string {
   return combo
     .split('+')
-    .map((p, i, arr) => (i === arr.length - 1 && p.length === 1 ? p.toUpperCase() : p.charAt(0).toUpperCase() + p.slice(1)))
+    .map((p, i, arr) => {
+      if (p === 'meta') return '⌘'
+      const cased = i === arr.length - 1 && p.length === 1 ? p.toUpperCase() : p.charAt(0).toUpperCase() + p.slice(1)
+      return cased
+    })
     .join('+')
 }
 
-/** 轮盘键允许的范围（Rust global-shortcut 侧只稳定支持字母/数字/F 键做主键） */
+/** 轮盘键允许的范围（Rust global-shortcut 侧只稳定支持字母/数字/F 键做主键）；meta/ctrl 均为合法修饰 */
 export function wheelComboAllowed(combo: string): boolean {
-  const m = /^(ctrl\+)?(shift\+)?(alt\+)?([a-z0-9]|f[1-9]|f1[0-2])$/.test(combo)
+  const m = /^(ctrl\+)?(shift\+)?(alt\+)?(meta\+)?([a-z0-9]|f[1-9]|f1[0-2])$/.test(combo)
   return m && combo.includes('+') // 全局键必须是组合键——单字母会劫持一切输入
 }

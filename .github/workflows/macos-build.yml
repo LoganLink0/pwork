@@ -1,0 +1,52 @@
+# macOS 构建工作流（macOS 版六步之①）：runner 上装 Rust + Node → tauri build → dmg/app 挂为构建工件。
+# 手动触发跑通出包（先验证管线，正式发版时再挂 Release 资产）。
+# 注意：tauri.conf.json 开了更新器工件（createUpdaterArtifacts），构建需要签名私钥——
+# 请在仓库 Settings → Secrets → Actions 配置 TAURI_SIGNING_PRIVATE_KEY（私钥内容）与
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD（无密码则留空字符串）。缺密钥时构建会在打包环节失败并明确报错。
+name: macos-build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: 安装 Rust 工具链
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable --profile minimal
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 构建 macOS 应用（app + dmg）
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri build --bundles app,dmg
+
+      - name: 收集构建产物
+        run: |
+          mkdir -p out
+          find src-tauri/target/release/bundle -name "*.dmg" -exec cp {} out/ \;
+          find src-tauri/target/release/bundle -name "*.app" -maxdepth 2 -exec cp -R {} out/ \;
+          find src-tauri/target/release/bundle -name "*.sig" -exec cp {} out/ \; || true
+          ls -la out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pwork-macos
+          path: app/out/
+          if-no-files-found: error
