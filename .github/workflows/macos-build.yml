@@ -75,8 +75,21 @@ jobs:
           printf '{ "version": "%s", "notes": "macOS 内测首包（Apple Silicon）。", "pub_date": "%s", "platforms": { "darwin-aarch64": { "signature": "%s", "url": "%s" } } }\n' \
             "$VERSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SIG" "$URL" > latest.json
           cat latest.json
-          gh release create "v${VERSION}" out/PWORK_0.1.11_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
+          # Release notes = 固定介绍 + CHANGELOG 对应版本段 + 下载表（保持历史 Release 的简短惯例，不贴发布说明全文）
+          {
+            echo "PWORK 是一个本地优先的个人工作台：你的速记、信息日报、任务、复盘全部保存在你自己的电脑上，不经过任何服务器。当前内测版本 ${VERSION}（0.x 表示内测期，未到正式定版）。"
+            echo
+            awk -v pat "^## ${VERSION} " 'BEGIN{f=0} $0 ~ pat {f=1; next} /^## / && f {exit} f' ../../CHANGELOG.md
+            echo
+            echo "## 下载"
+            echo
+            echo "| 资产 | 平台 | 说明 |"
+            echo "|---|---|---|"
+            echo "| \`PWORK_${VERSION}_aarch64.dmg\` | macOS（Apple Silicon） | 首次打开右键 → 打开（绕 Gatekeeper） |"
+            echo "| \`PWORK.app.tar.gz\` + \`latest.json\` | —— | 应用内自动更新的更新包与签名清单，手动安装用不到 |"
+          } > release-notes.md
+          gh release create "v${VERSION}" out/PWORK_${VERSION}_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
             --title "PWORK ${VERSION}（内测）" \
-            --notes-file 发布说明.md \
+            --notes-file release-notes.md \
           || gh release upload "v${VERSION}" out/* latest.json --clobber
 
