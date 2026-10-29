@@ -67,27 +67,59 @@ export interface AutoBackupResult {
   location?: 'dir' | 'disk' | 'download'
   /** 失败原因（2026-10-27 错误留痕）：构建或落盘失败时带出，调用方入错误日志 */
   error?: string
+  /** 旧备份清理失败（备份本身成功；0.3e 轮换），调用方 silent 入错误日志 */
+  rotateError?: string
 }
 
 /**
  * 桌面版：写进应用数据目录的 backups/ 文件夹（用户可备份/拷贝的固定位置）；
  * 浏览器版：默认走下载文件夹，可在设置页授权一个自定义文件夹（FS Access，一次授权长期有效）。
  * 任何写盘失败都回落浏览器下载，不丢备份。
+ * 桌面版写入后回读校验（0.3e）：内容不一致视为失败走兜底；随后轮换旧自动备份（保留最近 5 份）。
  */
-async function deliverBackup(fileName: string, content: string): Promise<'dir' | 'disk' | 'download'> {
-  if (await writeToCustomDir(fileName, content)) return 'dir'
+async function deliverBackup(fileName: string, content: string): Promise<{ location: 'dir' | 'disk' | 'download'; rotateError?: string }> {
+  if (await writeToCustomDir(fileName, content)) return { location: 'dir' }
   if (isDesktopApp()) {
     try {
-      const { mkdir, writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      const { mkdir, writeTextFile, readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
       await mkdir('backups', { baseDir: BaseDirectory.AppData, recursive: true })
       await writeTextFile(`backups/${fileName}`, content, { baseDir: BaseDirectory.AppData })
-      return 'disk'
+      const back = await readTextFile(`backups/${fileName}`, { baseDir: BaseDirectory.AppData })
+      if (back !== content) throw new Error('备份写入校验失败：读回内容与写入内容不一致（磁盘可能不可靠），已改走下载兜底')
+      const rotateError = await rotateDesktopBackups()
+      return { location: 'disk', rotateError: rotateError ?? undefined }
     } catch {
       // 落到浏览器下载兜底
     }
   }
   downloadFile(fileName, content, 'application/json')
-  return 'download'
+  return { location: 'download' }
+}
+
+/** 自动备份保留份数（桌面版轮换；手动导出文件不带 pwork-backup- 前缀，不受轮换影响） */
+export const KEEP_AUTO_BACKUPS = 5
+
+/** 纯函数：从按字典序（=时间序）排好的名单里挑出该删除的旧份（超出保留数的最旧若干） */
+export function pickStaleBackups(sortedNames: string[], keep: number = KEEP_AUTO_BACKUPS): string[] {
+  return sortedNames.slice(0, Math.max(0, sortedNames.length - keep))
+}
+
+/** 桌面版轮换：删掉超出保留数的旧自动备份。返回错误描述（null=正常），失败不阻断备份本身 */
+async function rotateDesktopBackups(): Promise<string | null> {
+  try {
+    const { readDir, remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+    const entries = await readDir('backups', { baseDir: BaseDirectory.AppData })
+    const autos = entries
+      .filter((e) => e.isFile && e.name.startsWith('pwork-backup-') && e.name.endsWith('.json'))
+      .map((e) => e.name)
+      .sort()
+    for (const name of pickStaleBackups(autos)) {
+      await remove(`backups/${name}`, { baseDir: BaseDirectory.AppData })
+    }
+    return null
+  } catch (e) {
+    return `旧备份清理失败（不影响本次备份）：${e instanceof Error ? e.message : String(e)}`
+  }
 }
 
 /* --------------------- 自定义备份目录（2026-10-22 用户需求） --------------------- */
@@ -174,14 +206,20 @@ export async function runAutoBackupIfDue(
   const fileName = backupFileName(now)
   // 测试注入 download 时跳过真实落盘（桌面写盘/自定义目录都不可用）
   let location: AutoBackupResult['location']
+  let rotateError: string | undefined
   try {
-    location = opts?.download
-      ? (opts.download(fileName, JSON.stringify(bundle, null, 2)), 'download')
-      : await deliverBackup(fileName, JSON.stringify(bundle, null, 2))
+    if (opts?.download) {
+      opts.download(fileName, JSON.stringify(bundle, null, 2))
+      location = 'download'
+    } else {
+      const r = await deliverBackup(fileName, JSON.stringify(bundle, null, 2))
+      location = r.location
+      rotateError = r.rotateError
+    }
   } catch (e) {
     return { downloaded: false, error: `备份落盘失败：${e instanceof Error ? e.message : String(e)}` }
   }
   localStorage.setItem('pwork-last-backup', now.toISOString())
   saveAutoBackup({ ...cfg, lastAt: now.toISOString() })
-  return { downloaded: true, fileName, location }
+  return { downloaded: true, fileName, location, rotateError }
 }

@@ -14,6 +14,11 @@ import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, recordError, type ErrorKind } from '../engine/errorLog'
 import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
+import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
+import { buildReadableArchive } from '../engine/readableArchive'
+import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
+import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
+import type { ImportResult } from '../db/backup'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
 import type { ErrorLogEntry } from '../types/models'
 import { SettingsNav } from '../components/shell/SettingsNav'
@@ -38,6 +43,18 @@ const SETTINGS_TABS = [
 ] as const
 
 /** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
+
+const ENTITY_CN: Record<string, string> = {
+  notes: '速记', sources: '信源', items: '条目', tasks: '任务', reviews: '复盘',
+  actions: '行动项', insights: '洞察', goals: '目标', blocks: '数据块', profiles: '案例',
+  caseFiles: '案例文件', snapshots: '周趋势',
+}
+
+function formatImportDetail(r: ImportResult): string {
+  return Object.entries(r.detail)
+    .map(([k, v]) => `${ENTITY_CN[k] ?? k} 新增${v.added} 更新${v.updated}${v.skipped ? ` 保留本地${v.skipped}` : ''}`)
+    .join(' · ')
+}
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = SETTINGS_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'data'
@@ -63,6 +80,25 @@ export function Settings() {
   const [dislikeDraft, setDislikeDraft] = useState('')
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [importBusy, setImportBusy] = useState(false)
+  // 应用内更新（桌面版专属；0.2 批）：检查 → 下载安装 → 重启生效
+  const [upd, setUpd] = useState<UpdateState>({ phase: 'idle' })
+  const doCheckUpdate = async () => {
+    try {
+      setUpd({ phase: 'checking' })
+      setUpd(await checkForUpdate())
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e)
+      setUpd({ phase: 'error', message: /404|not found|no release/i.test(raw) ? `暂时拿不到更新信息（发布过带更新清单的版本后可用）。技术细节：${raw}` : raw })
+    }
+  }
+  const doInstallUpdate = async () => {
+    try {
+      await downloadAndInstall((received, total) => setUpd({ phase: 'downloading', received, total }))
+      setUpd({ phase: 'ready' })
+    } catch (e) {
+      setUpd({ phase: 'error', message: e instanceof Error ? e.message : String(e) })
+    }
+  }
   // 导入前快照（2026-10-29 安全网）：有快照才显示恢复入口
   const [preSnapAt, setPreSnapAt] = useState<string | null>(null)
   const [prefsMsg, setPrefsMsg] = useState<string | null>(null)
@@ -170,8 +206,7 @@ export function Settings() {
       const r = await importBundle(text)
       // 各域重新加载（导入可能影响所有模块；与设备同步同口径含目标库）
       await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
-      const detail = Object.entries(r.counts).map(([k, v]) => `${k} ${v}`).join(' · ')
-      setImportMsg(`导入成功（${r.format}）：${detail || '无变化'}。导入前的数据已存快照，下方可一键恢复`)
+      setImportMsg(`导入成功（${r.format}）：${formatImportDetail(r) || '无变化'}。导入前的数据已存快照，下方可一键恢复`)
     } catch (e) {
       setImportMsg(`导入失败：${e instanceof Error ? e.message : '不是合法的 JSON'}`)
     } finally {
@@ -183,11 +218,60 @@ export function Settings() {
     try {
       const r = await restorePreImportSnapshot()
       await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
-      const detail = Object.entries(r.counts).map(([k, v]) => `${k} ${v}`).join(' · ')
-      setImportMsg(`已恢复到导入前的状态：${detail || '无变化'}`)
+      setImportMsg(`已恢复到导入前的状态：${formatImportDetail(r) || '无变化'}`)
     } catch (e) {
       setImportMsg(`恢复失败：${e instanceof Error ? e.message : String(e)}`)
     }
+  }
+
+  // 可读档案（0.3d）：zip 导出走带走场景，回导收解压后的 .md 文件/文件夹
+  const doExportArchive = async () => {
+    const b = await buildBackupBundle()
+    const e = b.entities
+    const bytes = await buildReadableArchive({
+      notes: e.notes ?? [], tasks: e.tasks ?? [], goals: e.goals ?? [], insights: e.insights ?? [],
+      reviews: e.reviews ?? [], actions: e.actions ?? [], sources: e.sources ?? [], items: e.items ?? [],
+    })
+    const now = new Date()
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+    downloadFile(`pwork-archive-${stamp}.zip`, new Blob([bytes as BlobPart]), 'application/zip')
+    setImportMsg('可读档案已导出：zip 里每条数据一个 Markdown 文件，可直接阅读；导回时先解压再点「导入可读档案」选文件夹')
+  }
+
+  const doImportArchive = async (files: FileList) => {
+    if (importBusy) return
+    setImportBusy(true)
+    try {
+      const mds: ArchiveMdFile[] = []
+      for (const f of Array.from(files)) {
+        if (!f.name.endsWith('.md')) continue
+        mds.push({ path: f.webkitRelativePath || f.name, text: await f.text() })
+      }
+      if (mds.length === 0) {
+        setImportMsg('没找到 .md 文件——请先解压档案压缩包，再选择解压出来的文件夹')
+        return
+      }
+      await savePreImportSnapshot(await buildBackupBundle())
+      setPreSnapAt(new Date().toISOString())
+      const r = await importBundle(JSON.stringify(parseArchiveFiles(mds)))
+      await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
+      setImportMsg(`档案导入成功：${formatImportDetail(r) || '无变化'}。导入前的数据已存快照，下方可一键恢复`)
+    } catch (e) {
+      setImportMsg(`档案导入失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
+  // 存储保护（0.3a）：持久化申请 + 用量水位
+  const [storage, setStorage] = useState<StorageStatus | null>(null)
+  const refreshStorage = async () => setStorage(await queryStorageStatus())
+  useEffect(() => {
+    void refreshStorage()
+  }, [])
+  const applyPersistence = async () => {
+    await requestPersistence()
+    await refreshStorage()
   }
 
   const doExport = async () => {
@@ -280,6 +364,45 @@ export function Settings() {
               >
                 恢复到导入前
               </button>
+            </div>
+          )}
+          <div className="set-row">
+            <label>可读档案</label>
+            <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="每条数据一个 Markdown 文件的压缩包：可直接阅读、可导入其他工具，也可原样导回" onClick={() => void doExportArchive()}>
+              导出可读档案
+            </button>
+            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择解压后的档案文件夹（或多选 .md 文件），数据按修改时间新者为准合并进来">
+              导入可读档案
+              <input
+                type="file"
+                multiple
+                accept=".md,text/markdown"
+                {...({ webkitdirectory: '' } as Record<string, string>)}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files?.length) void doImportArchive(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              人类可读的带走格式；恢复用上方的全量导出
+            </span>
+          </div>
+          {storage?.supported && (
+            <div className="set-row">
+              <label>存储保护</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                {storage.persisted
+                  ? '已开启：浏览器承诺不清除本应用的数据'
+                  : '未开启：磁盘紧张时浏览器可能清除本应用数据（仍建议开自动备份）'}
+                {storage.usage != null && ` · 已用 ${humanBytes(storage.usage)}${storage.quota ? ` / 配额约 ${humanBytes(storage.quota)}` : ''}`}
+              </span>
+              {!storage.persisted && (
+                <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="向浏览器申请持久化存储保护，通常直接生效、无需确认" onClick={() => void applyPersistence()}>
+                  申请持久化保护
+                </button>
+              )}
             </div>
           )}
           <div className="set-row">
@@ -823,6 +946,29 @@ export function Settings() {
             <label>版本</label>
             <span className="val">v{__APP_VERSION__}（内测）</span>
           </div>
+          {isDesktopApp() && (
+            <div className="set-row" data-testid="upd-row">
+              <label>应用更新</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                {upd.phase === 'idle' && '更新包挂在 GitHub Releases，点右边检查（不后台静默拉取）'}
+                {upd.phase === 'checking' && '正在检查…'}
+                {upd.phase === 'latest' && '已是最新'}
+                {upd.phase === 'available' && <>发现新版本 v{upd.version}{upd.notes ? `：${upd.notes.slice(0, 120)}` : ''}</>}
+                {upd.phase === 'downloading' && <>下载中 {humanSize(upd.received)}{upd.total ? ` / ${humanSize(upd.total)}` : ''}…</>}
+                {upd.phase === 'ready' && '新版本已就位，重启应用后生效'}
+                {upd.phase === 'error' && `检查或安装失败：${upd.message}`}
+              </span>
+              {(upd.phase === 'idle' || upd.phase === 'latest' || upd.phase === 'error') && (
+                <button type="button" className="btn-ghost" style={{ flex: 'none' }} onClick={() => void doCheckUpdate()}>检查更新</button>
+              )}
+              {upd.phase === 'available' && (
+                <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void doInstallUpdate()}>下载并安装</button>
+              )}
+              {upd.phase === 'ready' && (
+                <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void restartToUpdate()}>重启应用</button>
+              )}
+            </div>
+          )}
           <div className="set-row">
             <label>数据存放</label>
             <span className="val">全部数据存本机（浏览器 IndexedDB，桌面版在应用数据目录）——换机迁移用「数据」页的全量导出与导入</span>

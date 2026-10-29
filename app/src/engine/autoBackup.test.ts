@@ -5,6 +5,8 @@ import {
   autoBackupDue,
   backupFileName,
   runAutoBackupIfDue,
+  pickStaleBackups,
+  KEEP_AUTO_BACKUPS,
   DEFAULT_AUTO_BACKUP,
 } from './autoBackup'
 
@@ -36,9 +38,25 @@ describe('loadAutoBackup / saveAutoBackup', () => {
   })
 })
 
+describe('pickStaleBackups（桌面版轮换，0.3e）', () => {
+  const names = ['pwork-backup-20261001-0900.json', 'pwork-backup-20261008-0900.json', 'pwork-backup-20261015-0900.json', 'pwork-backup-20261022-0900.json', 'pwork-backup-20261029-0900.json', 'pwork-backup-20261105-0900.json']
+
+  it('超出保留数的最旧若干份被挑出（字典序=时间序）', () => {
+    expect(pickStaleBackups(names, 5)).toEqual(['pwork-backup-20261001-0900.json'])
+  })
+
+  it('不超过保留数时一张不删', () => {
+    expect(pickStaleBackups(names.slice(0, 3), 5)).toEqual([])
+  })
+
+  it('默认保留 5 份', () => {
+    expect(KEEP_AUTO_BACKUPS).toBe(5)
+    expect(pickStaleBackups(names)).toHaveLength(1)
+  })
+})
+
 describe('autoBackupDue', () => {
   const now = new Date('2026-10-04T12:00:00')
-
   it('关闭 → 永不到期', () => {
     expect(autoBackupDue({ enabled: false, everyDays: 7, lastAt: null }, now)).toBe(false)
   })

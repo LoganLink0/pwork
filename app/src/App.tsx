@@ -18,6 +18,8 @@ import { track, recordError } from './engine/errorLog'
 import { runAutoBackupIfDue } from './engine/autoBackup'
 import { applySourceCredit } from './engine/sourceCredit'
 import { autoRefreshInterestProfile } from './engine/interestProfile'
+import { requestPersistence } from './engine/storageHealth'
+import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
@@ -159,6 +161,20 @@ export default function App() {
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
+    // 存储耐久第一道闸（0.3a）：启动即静默申请持久化保护；结果不弹通知（设置 → 数据 可查状态）
+    track(requestPersistence(), '申请持久化存储')
+    // 数据不丢第三道闸（0.3f）：库打不开立即弹错误条给恢复指引，不静默带病运行
+    track(
+      runStartupHealthCheck().then((r) => {
+        if (!r.ok) {
+          void recordError({
+            where: 'App.启动健康检查', kind: 'app',
+            message: `数据库打开失败，数据可能损坏：${r.error}。${recoveryGuidance(isDesktopApp())}`,
+          })
+        }
+      }),
+      '启动数据健康检查',
+    )
     // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
     track(
       runAutoBackupIfDue().then((r) => {
@@ -168,6 +184,9 @@ export default function App() {
         }
         if (r.error) {
           void recordError({ where: 'App.自动备份', kind: 'app', message: `自动备份失败：${r.error}` }, { silent: true })
+        }
+        if (r.rotateError) {
+          void recordError({ where: 'App.自动备份', kind: 'app', message: r.rotateError }, { silent: true })
         }
       }),
       '自动备份',

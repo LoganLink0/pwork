@@ -9,6 +9,7 @@ import { downloadFile } from '../db/repo'
 import { exportSourcesJson } from '../db/collect'
 import { voteStatsBySource } from '../engine/sourceCredit'
 import { fmtLocal } from '../engine/datetime'
+import { sourcesToOpml, parseOpml } from '../engine/opml'
 import type { Source } from '../types/models'
 
 function tierCls(tier: number): string {
@@ -67,6 +68,21 @@ export function Sources() {
     downloadFile('pwork-sources.json', await exportSourcesJson(), 'application/json')
   }
 
+  const doExportOpml = async () => {
+    downloadFile('pwork-sources.opml', sourcesToOpml(sources), 'text/x-opml')
+  }
+
+  /** OPML 导入：解析后转成与「导入 JSON」相同的数组走同一条入库通道（URL 去重） */
+  const doImportOpml = async (file: File) => {
+    try {
+      const entries = parseOpml(await file.text())
+      const r = await importJson(JSON.stringify(entries))
+      setMsg(`从 OPML 导入 ${r.imported} 个源，跳过 ${r.skipped} 个（地址重复或字段缺失）`)
+    } catch (e) {
+      setMsg(`OPML 导入失败：${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   const doImport = async (file: File) => {
     let text: string
     try {
@@ -99,6 +115,7 @@ export function Sources() {
             {fetchState.running ? '抓取中…' : '立即抓取'}
           </button>
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>导出 JSON</button>
+          <button type="button" className="btn-ghost" title="导出为 RSS 阅读器通用格式（Feedly/Inoreader 等可直接订阅）" onClick={() => void doExportOpml()}>导出 OPML</button>
           <label className="btn-ghost" style={{ cursor: 'pointer' }} title="JSON 数组文件，每项含名称与地址；重复地址自动跳过。格式说明见 帮助 → 排错">
             导入 JSON
             <input
@@ -108,6 +125,19 @@ export function Sources() {
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) void doImport(f)
+                e.target.value = ''
+              }}
+            />
+          </label>
+          <label className="btn-ghost" style={{ cursor: 'pointer' }} title="从其他 RSS 阅读器导出的 OPML 文件迁入订阅；重复地址自动跳过">
+            导入 OPML
+            <input
+              type="file"
+              accept=".opml,.xml,text/x-opml,application/xml,text/xml"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) void doImportOpml(f)
                 e.target.value = ''
               }}
             />

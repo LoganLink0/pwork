@@ -207,17 +207,24 @@ export interface SyncPullResult {
   error?: string
 }
 
-export async function pullChangedRecords(): Promise<SyncPullResult> {
+export async function pullChangedRecords(opts?: { full?: boolean }): Promise<SyncPullResult> {
+  const full = opts?.full === true
   const cloud = requireD1()
   await d1Query(cloud, TABLE_DDL, [])
-  const since = localStorage.getItem(PULL_SINCE) ?? ''
+  const since = full ? '' : (localStorage.getItem(PULL_SINCE) ?? '')
   type Row = { entity: string; id: string; updated_at: string; device: string; payload: string }
   const all: Row[] = []
   let cursor = since
   for (;;) {
-    const rows = (await d1Query(cloud, 'SELECT entity, id, updated_at, device, payload FROM pwork_sync_records WHERE updated_at > ? ORDER BY updated_at LIMIT 1000', [cursor])) as unknown as Row[]
+    const rows = (await d1Query(
+      cloud,
+      full
+        ? 'SELECT entity, id, updated_at, device, payload FROM pwork_sync_records ORDER BY updated_at LIMIT 1000'
+        : 'SELECT entity, id, updated_at, device, payload FROM pwork_sync_records WHERE updated_at > ? ORDER BY updated_at LIMIT 1000',
+      full ? [] : [cursor],
+    )) as unknown as Row[]
     all.push(...rows)
-    if (rows.length < 1000) break
+    if (full || rows.length < 1000) break
     cursor = rows[rows.length - 1]!.updated_at
   }
   if (all.length === 0) return { ok: true, pulled: 0, configApplied: false }

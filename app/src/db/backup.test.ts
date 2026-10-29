@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import fixtureRaw from './__fixtures__/backup-0.1.10-sample.json?raw'
 import { buildBackupBundle } from '../store/collect'
 import { importBundle, savePreImportSnapshot, getPreImportSnapshot, restorePreImportSnapshot } from './backup'
 import { db } from './schema'
@@ -96,5 +97,21 @@ describe('导入前快照（2026-10-29 安全网热修）', () => {
 
   it('没有快照时恢复就地报错（fast-fail）', async () => {
     await expect(restorePreImportSnapshot()).rejects.toThrow('没有可恢复的导入前快照')
+  })
+})
+
+describe('升级链夹具（0.3g）：0.1.10 真实备份形态 × 当前导入链', () => {
+  it('v0.1.10 样本全表导入成功，字段原样入库', async () => {
+    const r = await importBundle(fixtureRaw)
+    expect(r.format).toBe('pwork-v2')
+    expect(r.detail.notes).toMatchObject({ added: 1, updated: 0 })
+    expect((await db.notes.toArray())[0]?.title).toBe('夹具：0.1.10 速记')
+    expect((await db.items.toArray())[0]?.fingerprint).toBe('fp-fixture-1')
+    expect((await db.tasks.toArray())[0]?.due).toBe('2026-11-01')
+    expect((await db.reviews.toArray())[0]?.summary).toEqual(['样本复盘'])
+    // 重复导入不产生重复（LWW 幂等），对账全部"保留本地"
+    const again = await importBundle(fixtureRaw)
+    expect(again.detail.notes).toMatchObject({ added: 0, updated: 0, skipped: 1 })
+    expect(await db.notes.count()).toBe(1)
   })
 })

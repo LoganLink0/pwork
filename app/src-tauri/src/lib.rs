@@ -229,6 +229,9 @@ pub fn run() {
       }
     }))
     .setup(|app| {
+      // 应用内更新（0.2）：更新包与签名清单挂 GitHub Releases，插件在设置页触发检查/下载/重启
+      app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+      app.handle().plugin(tauri_plugin_process::init())?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncFromCloud, pushSourcesToCloud, syncIngestBlocks, getScheduleHours, pushScheduleHours, type CloudConfig } from '../db/cloudSync'
-import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, type SyncConfig } from '../db/syncRecords'
+import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, pullChangedRecords, type SyncConfig } from '../db/syncRecords'
 import { fmtLocal } from '../engine/datetime'
 import { recordError } from '../engine/errorLog'
 import { useNotes } from '../store/notes'
@@ -95,6 +95,27 @@ export function CloudSyncCards({ active }: { active: boolean }) {
       const message = e instanceof Error ? e.message : String(e)
       setCloudMsg(`设备同步失败：${message}`)
       void recordError({ where: '云端同步.设备同步', kind: 'app', message: `设备同步失败：${message}` }, { silent: true })
+    } finally {
+      setSyncBusy(false)
+    }
+  }
+
+  // 全量拉取（0.3h）：无视水位线把云端同步记录全部拉一遍合并——设备重建/长时间未同步后的一次性兜底
+  const doFullPull = async () => {
+    setSyncBusy(true)
+    setCloudMsg(null)
+    try {
+      const pull = await pullChangedRecords({ full: true })
+      const changed = pull.merged ?? 0
+      if (changed > 0 || pull.configApplied) {
+        await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
+      }
+      setSync({ ...sync, lastSyncAt: new Date().toISOString(), lastPulled: pull.pulled })
+      setCloudMsg(`全量拉取完成：云端共 ${pull.pulled} 条，合并 ${changed} 条${pull.configApplied ? '，采集配置已更新' : ''}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      setCloudMsg(`全量拉取失败：${message}`)
+      void recordError({ where: '云端同步.全量拉取', kind: 'app', message: `全量拉取失败：${message}` }, { silent: true })
     } finally {
       setSyncBusy(false)
     }
@@ -284,6 +305,18 @@ export function CloudSyncCards({ active }: { active: boolean }) {
             <span className="val tnum">{deviceId()}</span>
             <button type="button" className="btn-primary" disabled={syncBusy} onClick={() => void doDeviceSync()} data-testid="device-sync">
               {syncBusy ? '同步中…' : '⇄ 立即同步'}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={syncBusy}
+              title="无视增量水位，把云端全部同步记录拉一遍合并。设备重建或怀疑漏数据时用；日常同步不必点"
+              onClick={() => {
+                if (!window.confirm('从云端全量拉取所有同步记录并合并？数据按修改时间新者为准，不会丢失本机较新的修改。')) return
+                void doFullPull()
+              }}
+            >
+              从云端全量拉取
             </button>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {sync.lastSyncAt ? `上次 ${fmtLocal(sync.lastSyncAt)}：拉 ${sync.lastPulled} / 推 ${sync.lastPushed} 条` : '还没同步过'}

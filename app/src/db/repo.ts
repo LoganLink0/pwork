@@ -207,8 +207,8 @@ export function noteToMarkdown(note: Note): string {
 }
 
 /** 触发浏览器下载（JSON / md 通用） */
-export function downloadFile(filename: string, content: string, mime: string): void {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` })
+export function downloadFile(filename: string, content: string | Blob | Uint8Array, mime: string): void {
+  const blob = content instanceof Blob ? content : new Blob([content as BlobPart], { type: `${mime};charset=utf-8` })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "exportedAt": "2026-10-28T20:00:00.000Z",
+  "entities": {
+    "notes": [
+      {
+        "id": "note_fixture01", "title": "夹具：0.1.10 速记", "body": "升级链回归用样本",
+        "tags": ["夹具"], "links": { "itemIds": [], "reviewIds": [], "taskIds": [] },
+        "source": "manual", "createdAt": "2026-10-20T08:00:00.000Z", "updatedAt": "2026-10-20T08:00:00.000Z",
+        "deletedAt": null, "schemaVersion": 1
+      }
+    ],
+    "sources": [
+      {
+        "id": "src_fixture01", "name": "夹具源", "url": "https://example.com/feed", "kind": "rss",
+        "domain": "ai", "tier": 1.5, "weight": 0.7, "checkEvery": "daily", "active": true,
+        "health": { "failStreak": 0, "lastOkAt": "2026-10-21T09:00:00.000Z", "lastError": null },
+        "deletedAt": null, "schemaVersion": 1,
+        "createdAt": "2026-10-01T00:00:00.000Z", "updatedAt": "2026-10-01T00:00:00.000Z"
+      }
+    ],
+    "items": [
+      {
+        "id": "item_fixture01", "sourceId": "src_fixture01", "sourceName": "夹具源", "url": "https://example.com/p/1",
+        "title": "夹具条目", "summary": "样本摘要", "fingerprint": "fp-fixture-1", "eventGroup": null,
+        "publishedAt": "2026-10-20T07:00:00.000Z", "fetchedAt": "2026-10-20T09:00:00.000Z", "stage": "kept",
+        "score": { "total": 80, "reasons": [] }, "scoreReason": "命中兴趣词", "aiBy": "rules",
+        "tags": [], "otFlag": null, "expiresAt": null,
+        "annotation": { "notes": "", "vote": "want", "keepForever": false, "linkedReviewId": null },
+        "createdAt": "2026-10-20T09:00:00.000Z", "updatedAt": "2026-10-20T09:00:00.000Z", "schemaVersion": 1
+      }
+    ],
+    "collectConfig": { "topN": 10, "interests": ["AI"], "dislikes": ["八卦"], "context": "技术动态" },
+    "tasks": [
+      {
+        "id": "task_fixture01", "title": "夹具任务", "status": "todo", "due": "2026-11-01", "lane": 2,
+        "origin": { "kind": "manual", "refId": null }, "closedAt": null,
+        "createdAt": "2026-10-20T00:00:00.000Z", "updatedAt": "2026-10-20T00:00:00.000Z",
+        "deletedAt": null, "schemaVersion": 1
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal_fixture01", "title": "夹具目标", "status": "active", "due": "2026-12-31",
+        "progressLog": [], "closedAt": null,
+        "createdAt": "2026-10-01T00:00:00.000Z", "updatedAt": "2026-10-01T00:00:00.000Z",
+        "deletedAt": null, "schemaVersion": 1
+      }
+    ],
+    "reviews": [
+      {
+        "id": "rev_fixture01", "type": "personal", "scenario": "weekly", "templateId": "weekly",
+        "title": "夹具复盘", "createdAt": "2026-10-19T00:00:00.000Z", "updatedAt": "2026-10-19T00:00:00.000Z",
+        "status": "archived", "quick": false, "clap": { "facts": "", "compare": "", "causes": [], "actions": [] },
+        "summary": ["样本复盘"]
+      }
+    ],
+    "actions": [
+      { "id": "act_fixture01", "reviewId": "rev_fixture01", "kind": "start", "text": "夹具行动项", "status": "open", "closedAt": null }
+    ],
+    "insights": [
+      {
+        "id": "ins_fixture01", "reviewId": "rev_fixture01", "text": "夹具洞察", "tags": [],
+        "kind": "inductive", "verified": false, "patternGroup": "gp1",
+        "createdAt": "2026-10-19T00:00:00.000Z", "revisit": []
+      }
+    ],
+    "snapshots": [
+      {
+        "id": "snap_2026-10-19", "day": "2026-10-19", "closureRate": 50, "closedCount": 2,
+        "openCount": 2, "overdueCount": 0, "goalsActive": 1, "insightsCount": 1, "notesCount": 1,
+        "createdAt": "2026-10-19T00:00:00.000Z"
+      }
+    ],
+    "blocks": [
+      { "id": "blk_fixture01", "title": "夹具数据块", "content": "23", "profileId": null, "createdAt": "2026-10-01T00:00:00.000Z", "updatedAt": "2026-10-01T00:00:00.000Z" }
+    ]
+  }
+}

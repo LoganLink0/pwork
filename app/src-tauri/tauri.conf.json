@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "个人工作�?PWORK",
+        "title": "个人工作台PWORK",
         "width": 1360,
         "height": 900,
         "minWidth": 1024,
@@ -28,6 +28,7 @@
     }
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": ["nsis"],
     "icon": [
@@ -59,6 +60,13 @@
     },
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhDRDczRjc0NzAzRkI1M0QKUldROXRUOXdkRC9YakxkT01qeEQvbE1OR0Z2R0kveWVzbFpQUnprZHpTcHRjN2MyTy8rbURiSGkK",
+      "endpoints": ["https://github.com/LoganLink0/pwork/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
     }
   }
 }
