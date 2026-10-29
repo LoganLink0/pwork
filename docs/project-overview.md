@@ -19,6 +19,7 @@ PWORK 是**本地优先**的个人工作台：速记、信息日报、任务目�
 - **内测期（版本 0.1.x，未到正式定版）**：四模块全量可用，app 406 项自动化测试全绿，五万条数据量级实测无性能恶化。
 - **分发全矩阵在线（2026-10-28）**：GitHub 公开仓库 `LoganLink0/pwork`（MIT）+ Gitee 大陆镜像；Release v0.1.10 双版安装包（联网 48MiB 默认 / 离线 254MiB 按需）；产品介绍页 https://loganlink0.github.io/pwork/ ；**在线演示版** https://loganlink0.github.io/pwork/demo/ （`npm run build:demo` 产物入 docs/demo/，push 即更新）；宣传图与截图资产在 docs/assets/（版本化命名）。
 - **下一主任务：macOS 版**（TODO 待办区六步规划：CI 出包→配置→平台分支→向导 macOS 化→真机验证→发布说明）。
+- **未来开发计划（2026-10-29 刷新）**：见 [05-路线图](./design/05-路线图.md)——0.2 平台与更新 → 0.3 数据主权 → 0.4 架构与体验 → 1.0 定版（门槛五条）。
 - **三种运行形态**：开发（`npm run dev`，AI 网关自动随启）/ 生产·浏览器（`build` + `serve` 零依赖静态服务，同样带网关）/ **桌面应用**（Tauri：内嵌 Rust AI 网关、应用内一键部署、自动备份写磁盘、单实例、中文安装器）。
 - 明确不做的：遥测/账号体系；代码签名证书（用户拍板不购，Windows/Apple 同口径）；自动更新（托管源已具备=GitHub Releases，实施待排期）。
 
