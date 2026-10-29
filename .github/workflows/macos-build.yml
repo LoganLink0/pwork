@@ -85,7 +85,7 @@ jobs:
             echo
             echo "| 资产 | 平台 | 说明 |"
             echo "|---|---|---|"
-            echo "| \`PWORK_${VERSION}_aarch64.dmg\` | macOS（Apple Silicon） | 首次打开右键 → 打开（绕 Gatekeeper） |"
+            echo "| \`PWORK_${VERSION}_aarch64.dmg\` | macOS（Apple Silicon） | 首次打开提示「已损坏」属 Gatekeeper 拦截未公证应用（macOS 15+）：双击一次后到 系统设置 → 隐私与安全性 点「仍要打开」，或终端执行 \`xattr -dr com.apple.quarantine /Applications/PWORK.app\` |"
             echo "| \`PWORK.app.tar.gz\` + \`latest.json\` | —— | 应用内自动更新的更新包与签名清单，手动安装用不到 |"
           } > release-notes.md
           gh release create "v${VERSION}" out/PWORK_${VERSION}_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
