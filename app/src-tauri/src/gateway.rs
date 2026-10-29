@@ -24,6 +24,9 @@ pub struct GatewayConfig {
     pub chat_url: String,
     pub chat_key: String,
     pub chat_model: String,
+    /// 按用途配模型（与 Node 版一致）：重活/轻活两组，映射表固定、组键未设则回落 chat_model
+    pub heavy_model: String,
+    pub light_model: String,
     pub search_url: String,
     pub search_model: String,
     pub search_key: String,
@@ -95,7 +98,27 @@ impl GatewayConfig {
             .or_else(|| if chat_key.is_empty() { None } else { Some(chat_key.clone()) })
             .unwrap_or_default();
         let usage_log = data_dir.join("gateway-usage.log");
-        Self { port, chat_url, chat_key, chat_model, search_url, search_model, search_key, usage_log }
+        let heavy_model = var_from(&vars, "PWORK_LLM_MODEL_HEAVY").unwrap_or_default();
+        let light_model = var_from(&vars, "PWORK_LLM_MODEL_LIGHT").unwrap_or_default();
+        Self { port, chat_url, chat_key, chat_model, heavy_model, light_model, search_url, search_model, search_key, usage_log }
+    }
+}
+
+/// 场景 → 轻重分组（与 Node 版 PURPOSE_GROUP 一致）：重活要推理与长输出，轻活短平快
+fn purpose_group(purpose: &str) -> Option<&'static str> {
+    match purpose {
+        "review-coach" | "research-ask" | "research-framework" | "article-analysis" | "ppt-outline" | "article-draft" => Some("heavy"),
+        "interest-profile" | "report-summary" | "review-reframe" | "research-web" => Some("light"),
+        _ => None,
+    }
+}
+
+/// 请求该用哪个模型：分组命中且组键已设 → 组模型；否则全局默认
+fn model_for<'a>(cfg: &'a GatewayConfig, purpose: Option<&str>) -> &'a str {
+    match purpose.and_then(purpose_group) {
+        Some("heavy") if !cfg.heavy_model.is_empty() => &cfg.heavy_model,
+        Some("light") if !cfg.light_model.is_empty() => &cfg.light_model,
+        _ => &cfg.chat_model,
     }
 }
 
@@ -388,6 +411,11 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                     "chatConfigured": !cfg.chat_key.is_empty(),
                     "searchConfigured": !cfg.search_key.is_empty(),
                     "model": if cfg.chat_model.is_empty() { Value::Null } else { json!(cfg.chat_model) },
+                    "models": {
+                        "default": if cfg.chat_model.is_empty() { Value::Null } else { json!(cfg.chat_model) },
+                        "heavy": if cfg.heavy_model.is_empty() { Value::Null } else { json!(cfg.heavy_model) },
+                        "light": if cfg.light_model.is_empty() { Value::Null } else { json!(cfg.light_model) },
+                    },
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
             } else if path == "/rss" && method == Method::Get {
@@ -600,8 +628,9 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                             Ok(mut v) => {
                                 if let Some(obj) = v.as_object_mut() {
                                     purpose = obj.remove("purpose").and_then(|p| p.as_str().map(String::from));
-                                    if !cfg.chat_model.is_empty() {
-                                        obj.insert("model".to_string(), json!(cfg.chat_model));
+                                    let m = model_for(&cfg, purpose.as_deref());
+                                    if !m.is_empty() {
+                                        obj.insert("model".to_string(), json!(m));
                                     }
                                 }
                                 v.to_string()

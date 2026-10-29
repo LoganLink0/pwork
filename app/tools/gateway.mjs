@@ -41,6 +41,15 @@ let CHAT_KEY = env.PWORK_LLM_API_KEY || ''
 // 模型固定（2026-10-19）：设了就以网关为准替换请求体里的 model——上游/模型是运维侧的事，
 // 浏览器里存的旧模型名（如换了厂商后的 glm-*）不该让用户手改。不设则原样透传。
 let CHAT_MODEL = env.PWORK_LLM_MODEL || ''
+// 按用途配模型（2026-10-29）：场景按"活儿轻重"归两组，映射表固定在这里（运维零配置起点）——
+// 只设了 PWORK_LLM_MODEL 时全部场景照旧走它；设了组键对应场景才分流。嵌入将来单独成组。
+const PURPOSE_GROUP = {
+  'review-coach': 'heavy', 'research-ask': 'heavy', 'research-framework': 'heavy',
+  'article-analysis': 'heavy', 'ppt-outline': 'heavy', 'article-draft': 'heavy',
+  'interest-profile': 'light', 'report-summary': 'light', 'review-reframe': 'light', 'research-web': 'light',
+}
+let HEAVY_MODEL = env.PWORK_LLM_MODEL_HEAVY || ''
+let LIGHT_MODEL = env.PWORK_LLM_MODEL_LIGHT || ''
 // 联网搜索（2026-10-19 起支持 DeepSeek 自研 Search API，默认跟随 LLM 上游——同一把 Key 的世界）：
 // 上游是 DeepSeek → POST /v1/tools/search {query,count}；是智谱 → tools 端点 web-search-pro。
 // 显式 PWORK_SEARCH_API_KEY/BASE_URL 优先；计费 DeepSeek ¥0.005/次（仅成功非空计费）/智谱 ¥0.03/次。
@@ -60,9 +69,19 @@ function applyEnv() {
   CHAT_URL = fresh.PWORK_LLM_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
   CHAT_KEY = fresh.PWORK_LLM_API_KEY || ''
   CHAT_MODEL = fresh.PWORK_LLM_MODEL || ''
+  HEAVY_MODEL = fresh.PWORK_LLM_MODEL_HEAVY || ''
+  LIGHT_MODEL = fresh.PWORK_LLM_MODEL_LIGHT || ''
   SEARCH_URL = fresh.PWORK_SEARCH_BASE_URL || defaultSearchUrl(CHAT_URL)
   SEARCH_MODEL = fresh.PWORK_SEARCH_MODEL || 'web-search-pro'
   SEARCH_KEY = fresh.PWORK_SEARCH_API_KEY || CHAT_KEY
+}
+
+/** 请求该用哪个模型：场景分组命中且组键已设 → 组模型；否则全局默认（未设则透传前端值） */
+export function modelFor(purpose) {
+  const group = PURPOSE_GROUP[purpose]
+  if (group === 'heavy' && HEAVY_MODEL) return HEAVY_MODEL
+  if (group === 'light' && LIGHT_MODEL) return LIGHT_MODEL
+  return CHAT_MODEL
 }
 
 /** 合并写入 .env.local：同名键整组重写（先删旧行再追加新值），其它行与注释保留 */
@@ -142,6 +161,7 @@ const server = http.createServer(async (req, res) => {
       chatConfigured: Boolean(CHAT_KEY),
       searchConfigured: Boolean(SEARCH_KEY),
       model: CHAT_MODEL || null,
+      models: { default: CHAT_MODEL || null, heavy: HEAVY_MODEL || null, light: LIGHT_MODEL || null },
       upstream: CHAT_URL.replace(/\/chat\/completions$/, ''),
     })
     return
@@ -323,8 +343,9 @@ const server = http.createServer(async (req, res) => {
         } catch {
           /* 非 JSON 原样透传，上游会拒 */
         }
+        const outModel = modelFor(purpose)
         const outBody = parsed
-          ? JSON.stringify(CHAT_MODEL ? { ...parsed, model: CHAT_MODEL } : parsed)
+          ? JSON.stringify(outModel ? { ...parsed, model: outModel } : parsed)
           : body
         const upstream = await fetch(normalizeUpstream(CHAT_URL), {
           method: 'POST',

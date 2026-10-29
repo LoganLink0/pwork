@@ -232,6 +232,8 @@ pub fn run() {
       // 应用内更新（0.2）：更新包与签名清单挂 GitHub Releases，插件在设置页触发检查/下载/重启
       app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
       app.handle().plugin(tauri_plugin_process::init())?;
+      // 系统通知（0.4）：待办到期/复盘节奏/日报就绪三类提醒（设置页可关）
+      app.handle().plugin(tauri_plugin_notification::init())?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

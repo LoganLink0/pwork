@@ -18,6 +18,7 @@ import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type Up
 import { buildReadableArchive } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
+import { loadNotifyConfig, saveNotifyConfig, type NotifyConfig } from '../engine/notify'
 import type { ImportResult } from '../db/backup'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
 import type { ErrorLogEntry } from '../types/models'
@@ -36,6 +37,7 @@ const SETTINGS_TABS = [
   { id: 'data', label: '数据', icon: 'data' },
   { id: 'collect', label: '采集偏好', icon: 'collect' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
+  { id: 'notify', label: '通知', icon: 'volume' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
   { id: 'cloud', label: '云端同步', icon: 'cloud' },
   { id: 'ai', label: 'AI', icon: 'ai' },
@@ -272,6 +274,25 @@ export function Settings() {
   const applyPersistence = async () => {
     await requestPersistence()
     await refreshStorage()
+  }
+
+  // 系统通知（0.4-1）：三样提醒的开关；浏览器版开启时借用户手势申请系统权限
+  const [notifyCfg, setNotifyCfg] = useState<NotifyConfig>(() => loadNotifyConfig())
+  const [notifyMsg, setNotifyMsg] = useState('')
+  const setNotify = async (patch: Partial<NotifyConfig>) => {
+    const next = { ...notifyCfg, ...patch }
+    setNotifyCfg(next)
+    saveNotifyConfig(next)
+    if (next.tasks || next.review || next.digest) {
+      if (!isDesktopApp() && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+        const p = await Notification.requestPermission()
+        setNotifyMsg(p === 'granted' ? '浏览器通知已授权' : '浏览器没有给通知权限——检查浏览器站点的通知设置')
+      } else if (isDesktopApp()) {
+        setNotifyMsg('桌面通知已就绪（首次发通知时系统可能再确认一次）')
+      }
+    } else {
+      setNotifyMsg('')
+    }
   }
 
   const doExport = async () => {
@@ -749,9 +770,14 @@ export function Settings() {
                       setAiTestMsg('')
                       try {
                         const r = await fetch('http://127.0.0.1:8788/health')
-                        const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean }
+                        const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean; models?: { default?: string | null; heavy?: string | null; light?: string | null } }
                         setAiTestOk(Boolean(j.ok && j.chatConfigured))
-                        setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效')
+                        const parts = [j.models?.default, j.models?.heavy && `重活 ${j.models.heavy}`, j.models?.light && `轻活 ${j.models.light}`].filter(Boolean)
+                        setAiTestMsg(
+                          j.ok && j.chatConfigured
+                            ? `网关在线，Key 已配置${parts.length ? `（模型：${parts.join(' · ')}）` : ''}`
+                            : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效',
+                        )
                       } catch {
                         setAiTestOk(false)
                         setAiTestMsg('无法连接网关——重启应用后再试')
@@ -787,9 +813,14 @@ export function Settings() {
                         try {
                           const base = (ai.gatewayUrl || 'http://127.0.0.1:8788').replace(/\/+$/, '')
                           const r = await fetch(`${base}/health`)
-                          const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean }
+                          const j = (await r.json()) as { ok?: boolean; chatConfigured?: boolean; models?: { default?: string | null; heavy?: string | null; light?: string | null } }
                           setAiTestOk(Boolean(j.ok && j.chatConfigured))
-                          setAiTestMsg(j.ok && j.chatConfigured ? '网关在线，Key 已配置' : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效')
+                          const parts = [j.models?.default, j.models?.heavy && `重活 ${j.models.heavy}`, j.models?.light && `轻活 ${j.models.light}`].filter(Boolean)
+                          setAiTestMsg(
+                            j.ok && j.chatConfigured
+                              ? `网关在线，Key 已配置${parts.length ? `（模型：${parts.join(' · ')}）` : ''}`
+                              : '网关在线，但还没配置 Key——用下面「配置 Key」直接填，立即生效',
+                          )
                         } catch {
                           setAiTestOk(false)
                           setAiTestMsg(isDesktopApp() ? '无法连接网关——重启应用后再试' : '无法连接网关——先在 app 目录运行 npm run gateway')
@@ -938,6 +969,38 @@ export function Settings() {
 
       <CloudSyncCards active={tab === 'cloud'} />
 
+      <div className="set-card" data-tab="notify" style={{ display: tab === 'notify' ? undefined : 'none' }}>
+        <h2>通知</h2>
+        <div className="desc">应用不在眼前时，把要紧事送到系统通知。每类每天最多提醒一次，不会变成噪音。</div>
+        <div className="set-body">
+          {([
+            ['tasks', '待办到期', '有过期未办的待办时早上提醒一次'],
+            ['review', '复盘节奏', '距上次复盘超过一周时提醒一次'],
+            ['digest', '日报就绪', '云端抓到当天新内容时提醒一次（需配置云端）'],
+          ] as [keyof NotifyConfig, string, string][]).map(([key, label, desc]) => (
+            <div className="set-row" key={key}>
+              <label>{label}</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{desc}</span>
+              <button
+                type="button"
+                className={notifyCfg[key] ? 'btn-primary' : 'btn-ghost'}
+                style={{ flex: 'none', minWidth: 64 }}
+                aria-pressed={notifyCfg[key]}
+                onClick={() => void setNotify({ [key]: !notifyCfg[key] })}
+              >
+                {notifyCfg[key] ? '已开启' : '已关闭'}
+              </button>
+            </div>
+          ))}
+          {notifyMsg && <div className="set-row"><label></label><span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{notifyMsg}</span></div>}
+          <div className="set-row">
+            <label>说明</label>
+            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+              {isDesktopApp() ? '桌面版通知走系统通知中心；未配置的项不会发任何通知。' : '网页版需要浏览器授权通知权限（点开关时申请）；关着网页就完全不发。'}
+            </span>
+          </div>
+        </div>
+      </div>
       <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
         <h2>关于</h2>
         <div className="desc">本地优先的个人工作台 · 数据只属于你</div>

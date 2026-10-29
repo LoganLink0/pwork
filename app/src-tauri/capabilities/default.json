@@ -10,6 +10,7 @@
     "fs:default",
     "updater:default",
     "process:allow-restart",
+    "notification:default",
     {
       "identifier": "fs:allow-mkdir",
       "allow": [{ "path": "$APPDATA/backups" }]

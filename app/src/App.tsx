@@ -20,6 +20,7 @@ import { applySourceCredit } from './engine/sourceCredit'
 import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
+import { runStartupNotifiesFromDb, notifyDigestReady } from './engine/notify'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
@@ -175,6 +176,8 @@ export default function App() {
       }),
       '启动数据健康检查',
     )
+    // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知 可关）
+    track(runStartupNotifiesFromDb(), '启动通知检查')
     // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
     track(
       runAutoBackupIfDue().then((r) => {
@@ -204,7 +207,10 @@ export default function App() {
             )
             return
           }
-          if (r.newCount > 0) await useCollect.getState().load()
+          if (r.newCount > 0) {
+            await useCollect.getState().load()
+            void notifyDigestReady(r.newCount)
+          }
         })
       }
       // 项目待办静默扫描（2026-10-14）：授权还在就自动拉新行；需要重新授权时不打扰，等用户点待办页按钮
