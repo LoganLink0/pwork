@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f5f4f1; color: #2b2622;
+    padding: 40px 56px 36px;
+    display: flex; flex-direction: column;
+  }
+  /* 顶部 */
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 11px; background: #b0500f;
+    color: #fff; font-size: 24px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand b { font-size: 26px; letter-spacing: 2px; }
+  .badge { font-size: 17px; font-weight: 600; color: #b0500f; }
+  .badge::before { content: "● "; font-size: 12px; vertical-align: 2px; }
+  /* 标题 */
+  h1 { font-size: 42px; line-height: 1.25; margin-top: 18px; letter-spacing: 1px; }
+  h1 em { font-style: normal; color: #e0862c; }
+  .sub { font-size: 20px; color: #6b635c; margin-top: 10px; }
+  .sub b { color: #2b2622; }
+  /* 中央实拍卡 */
+  .shot {
+    margin-top: 22px; background: #fff; border-radius: 14px;
+    border: 1px solid #e5e1da; box-shadow: 0 4px 14px rgba(43,38,34,.06);
+    overflow: hidden;
+  }
+  .shot img { display: block; width: 100%; }
+  /* 六亮点 */
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 22px; }
+  .cell {
+    background: #fff; border-radius: 10px; border: 1px solid #e8e4dd;
+    padding: 14px 18px 12px;
+  }
+  .cell h3 { font-size: 20px; display: flex; align-items: center; gap: 9px; }
+  .cell h3::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--dot); }
+  .cell p { font-size: 15px; color: #8a827a; margin-top: 4px; }
+  /* 页脚 */
+  .foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; }
+  .gh { display: flex; align-items: center; gap: 12px; }
+  .ring {
+    width: 38px; height: 38px; border-radius: 50%; border: 3px solid #b0500f;
+    color: #b0500f; font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gh b { font-size: 22px; color: #2b2622; }
+  .plat { font-size: 16px; color: #8a827a; }
+  .plat b { color: #4a443e; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand"><div class="logo">P</div><b>PWORK</b></div>
+    <div class="badge">开源免费 · 内测中</div>
+  </div>
+
+  <h1>我写了一个个人工作台软件，<em>数据只属于你</em></h1>
+  <div class="sub"><b>输入、处理、输出、复盘</b>，四步一个循环——全部在你自己的电脑上运行</div>
+
+  <div class="shot"><img src="promo-app-crop.png" alt=""></div>
+
+  <div class="grid">
+    <div class="cell" style="--dot:#4a7db5"><h3>四步闭环运转</h3><p>行动项自动回待办</p></div>
+    <div class="cell" style="--dot:#4d9e6a"><h3>信息自动找上门</h3><p>48 源每天筛 10 条</p></div>
+    <div class="cell" style="--dot:#d98e3a"><h3>成稿一键生成</h3><p>周报 PPT 自己汇</p></div>
+    <div class="cell" style="--dot:#4a7db5"><h3>数据只在本地</h3><p>不上传可随时搬</p></div>
+    <div class="cell" style="--dot:#4d9e6a"><h3>增强皆可选项</h3><p>AI 云端不配也全</p></div>
+    <div class="cell" style="--dot:#d98e3a"><h3>开源免费可查</h3><p>MIT 全码开放</p></div>
+  </div>
+
+  <div class="foot">
+    <div class="gh"><div class="ring">LINK</div><b>github.com/LoganLink0/pwork</b></div>
+    <div class="plat">支持 <b>Windows</b> 与 <b>macOS</b> 系统（网页 / 桌面应用）· v0.1.11</div>
+  </div>
+</body>
+</html>
