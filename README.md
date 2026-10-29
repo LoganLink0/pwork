@@ -43,6 +43,7 @@
 ## 文档
 
 - [发布说明.md](./发布说明.md)——安装、首用三步、数据怎么搬（使用者从这里进）
+- [CHANGELOG.md](./CHANGELOG.md)——每个版本的更新说明（最新在上；已发布版本同步挂 GitHub Releases）
 - [project-overview.md](./docs/project-overview.md)——项目整体说明与全量文档索引（想深入了解从这里进）
 - [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md)——架构与数据流 / 视觉规则
 - [development.md](./docs/development.md)——开发方式、回归清单、发布打包

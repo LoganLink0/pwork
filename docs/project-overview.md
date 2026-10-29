@@ -39,6 +39,7 @@ PWORK 是**本地优先**的个人工作台：速记、信息日报、任务目�
 |---|---|
 | 使用者 | [发布说明.md](../发布说明.md)（安装/首用/数据搬家）· 应用内「帮助」 |
 | 接手与规则 | [交接文档.md](./交接文档.md)（接手入口）· [AGENTS.md](../AGENTS.md)（协作规则+速览）· [TODO.md](./TODO.md)（任务队列） |
+| 使用者与版本 | [../发布说明.md](../发布说明.md)（当前版安装与说明）· [../CHANGELOG.md](../CHANGELOG.md)（各版本更新说明，最新在上） |
 | 工程说明 | [architecture.md](./architecture.md)（架构与数据流）· [DESIGN.md](./DESIGN.md)（视觉规则）· [development.md](./development.md)（开发方式与回归清单）· [component-api.md](./component-api.md)（组件与接口）· [user-guide.md](./user-guide.md)（功能说明） |
 | 设计基座 | [01-总体架构与决策](./design/01-总体架构与决策.md) · [02-数据治理规范](./design/02-数据治理规范.md) · [03-模块-回路-复盘工作台](./design/03-模块-回路-复盘工作台.md) · [04-模块-输入-信息采集系统](./design/04-模块-输入-信息采集系统.md) · [05-路线图](./design/05-路线图.md) · [06-个人工作台PRD](./design/06-个人工作台PRD.md)（附[低保真原型](./design/06-附件-低保真原型.html)）· [07-场景包设计](./design/07-场景包设计.md) |
 | 教训与遗留 | [开发复盘.md](./开发复盘.md)（踩坑实录）· [backlog.md](./backlog.md)（遗留分层） |

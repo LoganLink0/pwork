@@ -43,9 +43,10 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 3. 打离线版（约 254MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
 3a. 刷新在线演示版：`cd app && npm run build:demo` → 产物覆盖 `docs/demo/` → 提交推送（GitHub Pages 一两分钟自动上线；重引擎 64MB 不入演示构建，横幅已引导桌面版）。
 4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。
+4a. **CHANGELOG 同步**：发布说明定稿时，把本版变化清单同步进 [CHANGELOG.md](../CHANGELOG.md)（最新在上；GitHub Release 说明直接复用同一段）。
 5. Gitee 镜像同步（大陆下载通路，仓 gitee.com/LoganLink0/pwork，2026-10-27 由原 lsydy 空间改名）：`git push gitee master --tags` → Gitee API 建 Release（POST /repos/LoganLink0/pwork/releases，必填 target_commitish=master）→ 传附件（POST …/releases/{id}/attach_files，仅联网版，Gitee 附件上限 100MB 且匿名下载 403=平台规则需登录，入口文案已写明；仓库改路径会触发开源重新审核，期间匿名不可见属正常）。凭据已存 Windows 凭据管理器（gitee.com / LoganLink0）。
-5. 更新器（未启用）：签名密钥在 `app/.tauri/`（不入库，私钥丢失则永远无法推送更新）。启用：装 tauri-plugin-updater → conf 配 `plugins.updater.endpoints` 指向 GitHub Releases 的 latest.json → 构建带 `TAURI_SIGNING_PRIVATE_KEY`。当前无托管源故意不接。
-6. 代码签名（未购买）：无证书时 Windows 提示"未知发布者"属预期；正式分发可购证书后配 `bundle.windows.certificateThumbprint`。
+5. 更新器（0.1.11 起已启用）：签名密钥在 `app/.tauri/`（不入库，私钥丢失则永远无法推送更新）。已接 tauri-plugin-updater，conf 的 endpoints 指向 GitHub Releases 的 latest.json；构建带 `TAURI_SIGNING_PRIVATE_KEY`（本地构建命令与 CI 的仓库 Secrets 均已配）。**发版时须同时上传 latest.json 与安装包 .sig 到 Release 资产**（结构见官方文档：version + platforms.{target}.url/signature）。
+6. 代码签名（未购买）：无证书时 Windows 提示"未知发布者"属预期；正式分发可购证书后配 `bundle.windows.certificateThumbprint`。macOS 同口径（Gatekeeper 右键打开，见发布说明）。
 
 ## 开发约定
 
