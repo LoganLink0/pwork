@@ -1,12 +1,14 @@
-# macOS 构建工作流（macOS 版六步之①）：runner 上装 Rust + Node → tauri build → dmg/app 挂为构建工件。
-# 手动触发跑通出包（先验证管线，正式发版时再挂 Release 资产）。
+# macOS 构建工作流（macOS 版六步之①）：runner 上装 Rust + Node → tauri build →
+# dmg/app/tar.gz + 更新器签名挂为构建工件，并发布到 GitHub Release v0.1.11（runner 内网上传，不受本机带宽影响）。
 # 注意：tauri.conf.json 开了更新器工件（createUpdaterArtifacts），构建需要签名私钥——
-# 请在仓库 Settings → Secrets → Actions 配置 TAURI_SIGNING_PRIVATE_KEY（私钥内容）与
-# TAURI_SIGNING_PRIVATE_KEY_PASSWORD（无密码则留空字符串）。缺密钥时构建会在打包环节失败并明确报错。
+# 仓库 Secrets 已配 TAURI_SIGNING_PRIVATE_KEY（私钥内容）与 TAURI_SIGNING_PRIVATE_KEY_PASSWORD（未配置即空密码）。
 name: macos-build
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-macos:
@@ -42,6 +44,7 @@ jobs:
           mkdir -p out
           find src-tauri/target/release/bundle -name "*.dmg" -exec cp {} out/ \;
           find src-tauri/target/release/bundle -name "*.app" -maxdepth 2 -exec cp -R {} out/ \;
+          find src-tauri/target/release/bundle -name "*.tar.gz" -exec cp {} out/ \;
           find src-tauri/target/release/bundle -name "*.sig" -exec cp {} out/ \; || true
           ls -la out/
 
@@ -50,3 +53,30 @@ jobs:
           name: pwork-macos
           path: app/out/
           if-no-files-found: error
+
+  release:
+    needs: build-macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pwork-macos
+          path: out
+
+      - name: 生成更新器清单 latest.json 并发布 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./app/package.json').version")
+          SIG=$(cat out/PWORK.app.tar.gz.sig)
+          URL="https://github.com/LoganLink0/pwork/releases/download/v${VERSION}/PWORK.app.tar.gz"
+          printf '{ "version": "%s", "notes": "macOS 内测首包（Apple Silicon）。", "pub_date": "%s", "platforms": { "darwin-aarch64": { "signature": "%s", "url": "%s" } } }\n' \
+            "$VERSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SIG" "$URL" > latest.json
+          cat latest.json
+          gh release create "v${VERSION}" out/PWORK_0.1.11_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
+            --title "PWORK ${VERSION}（内测）" \
+            --notes-file ../发布说明.md \
+          || gh release upload "v${VERSION}" out/* latest.json --clobber
+
