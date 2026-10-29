@@ -20,10 +20,15 @@ const KEY = 'pwork-autobackup'
 
 export const DEFAULT_AUTO_BACKUP: AutoBackupConfig = { enabled: false, everyDays: 7, lastAt: null }
 
-export function loadAutoBackup(): AutoBackupConfig {
+/**
+ * desktop 参数可注入（测试用）。桌面版无配置时默认开启：备份写进自己的应用数据目录，
+ * 不打扰用户；浏览器版默认关闭（往下载文件夹写文件需用户同意），由首访引导末尾的
+ * 开关（默认勾选）代为开启。已存储的配置一律尊重，不被默认值覆盖。
+ */
+export function loadAutoBackup(desktop: boolean = isDesktopApp()): AutoBackupConfig {
   try {
     const raw = localStorage.getItem(KEY)
-    if (!raw) return { ...DEFAULT_AUTO_BACKUP }
+    if (!raw) return { ...DEFAULT_AUTO_BACKUP, enabled: desktop ? true : DEFAULT_AUTO_BACKUP.enabled }
     const p = JSON.parse(raw) as Partial<AutoBackupConfig>
     const everyDays = [7, 14, 30].includes(p.everyDays ?? 0) ? p.everyDays! : 7
     return {
@@ -32,7 +37,7 @@ export function loadAutoBackup(): AutoBackupConfig {
       lastAt: typeof p.lastAt === 'string' ? p.lastAt : null,
     }
   } catch {
-    return { ...DEFAULT_AUTO_BACKUP }
+    return { ...DEFAULT_AUTO_BACKUP, enabled: desktop ? true : DEFAULT_AUTO_BACKUP.enabled }
   }
 }
 

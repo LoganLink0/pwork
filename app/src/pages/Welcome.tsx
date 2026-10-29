@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MODULES } from '../content/help'
+import { SOURCE_CATALOG, DOMAINS } from '../content/collect'
 import { loadCloudConfig, saveCloudConfig, syncFromCloud, d1Query } from '../db/cloudSync'
 import { useCollect } from '../store/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import { KbdText } from '../components/shell/KbdText'
 import { isDesktopApp } from '../engine/platform'
+import { saveAutoBackup, loadAutoBackup } from '../engine/autoBackup'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen } from '@tauri-apps/api/event'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
@@ -39,7 +41,7 @@ const STEP_GUIDES: { title: string; desc: string; tips?: string[] }[] = [
   },
   {
     title: '挑你要读的',
-    desc: '11 个领域共 48 个实测可用的信源，勾选后一次导入。不选也行，以后在信源页随时加。',
+    desc: `推荐信源目录里有 ${SOURCE_CATALOG.reduce((n, g) => n + g.sources.length, 0)} 个实测可用的源（${DOMAINS.length} 个领域），勾选后一次导入。不选也行，以后在信源页随时从「推荐信源目录」添加。`,
     tips: ['默认预选了各领域的精选源', '已导入过的会标注出来', '按地址去重，重复导入安全'],
   },
   {
@@ -63,6 +65,9 @@ export function Welcome() {
   const navigate = useNavigate()
   const desktop = isDesktopApp()
   const [step, setStep] = useState(0)
+  // 自动备份开关（第 5 步，默认勾上）：点「开始使用」才代用户开启；「跳过引导」不动配置。
+  // 桌面版无配置时本就默认开启（见 loadAutoBackup），这个开关主要给浏览器版一个知情入口。
+  const [autoBkOn, setAutoBkOn] = useState(true)
   const [cloud, setCloud] = useState(() => loadCloudConfig())
   const [msg, setMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
@@ -141,7 +146,11 @@ export function Welcome() {
   }, [desktop])
 
   /** 走完或跳过都算完成（成熟实践：skippable，不再打扰），进入主界面或所选模块页 */
-  const finish = (to = '/') => {
+  const finish = (to = '/', persistBackup = false) => {
+    if (persistBackup) {
+      // 走完引导的用户按开关勾选态落地自动备份（默认开）；跳过引导的人没见过开关，不动配置
+      saveAutoBackup({ ...loadAutoBackup(), enabled: autoBkOn })
+    }
     localStorage.setItem('pwork-welcomed', '1')
     navigate(to)
   }
@@ -439,6 +448,14 @@ export function Welcome() {
               {step === 4 && (
                 <>
                   <div className="wgroup">
+                    <div className="wgroup-title">自动备份<span className="sub">防丢数据的安全网，建议保持开启</span></div>
+                    <label className="key-row" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={autoBkOn} onChange={(e) => setAutoBkOn(e.target.checked)} />
+                      <span>每周自动备份一次（周期随时可在 设置 → 数据 调整）</span>
+                    </label>
+                    <p className="caption">备份内容是全部数据的完整副本：{desktop ? '存在应用数据目录的 backups 文件夹，不联网。' : '存到浏览器下载文件夹，可再在 设置 → 数据 授权一个固定文件夹。'}</p>
+                  </div>
+                  <div className="wgroup">
                     <div className="wgroup-title">一键部署<span className="sub">全程约 10 分钟，在应用里直接跑</span></div>
                     {desktop ? (
                       <>
@@ -540,7 +557,7 @@ export function Welcome() {
                 <button type="button" className="btn-ghost" onClick={() => setStep((s) => s - 1)}>上一步</button>
               )}
               {last ? (
-                <button type="button" className="btn-primary" onClick={() => finish()}>开始使用 →</button>
+                <button type="button" className="btn-primary" onClick={() => finish('/', true)}>开始使用 →</button>
               ) : (
                 <button type="button" className="btn-primary" onClick={() => setStep((s) => s + 1)}>下一步</button>
               )}

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { Icon } from '../components/shell/icons'
-import { DOMAINS, TIER_LABEL, TIER_WEIGHT } from '../content/collect'
+import { DOMAINS, TIER_LABEL, TIER_WEIGHT, SOURCE_CATALOG } from '../content/collect'
 import { SourceCatalog } from '../components/collect/SourceCatalog'
 import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
@@ -42,7 +43,10 @@ export function Sources() {
   const credit = useMemo(() => voteStatsBySource(items), [items])
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
-  const [catalogOpen, setCatalogOpen] = useState(false)
+  // 信息日报空态「去挑推荐信源」带 ?catalog=1 直达展开态
+  const [searchParams] = useSearchParams()
+  const [catalogOpen, setCatalogOpen] = useState(() => searchParams.get('catalog') === '1')
+  const catalogTotal = useMemo(() => SOURCE_CATALOG.reduce((n, g) => n + g.sources.length, 0), [])
 
   const autoStopped = fetchState.summary?.results.filter((r) => r.autoStopped) ?? []
   const inactiveFail = sources.filter((s) => !s.active && s.health.failStreak >= 3)
@@ -95,11 +99,6 @@ export function Sources() {
             {fetchState.running ? '抓取中…' : '立即抓取'}
           </button>
           <button type="button" className="btn-ghost" onClick={() => void doExport()}>导出 JSON</button>
-          {sources.length > 0 && (
-            <button type="button" className="btn-ghost" onClick={() => setCatalogOpen((v) => !v)}>
-              {catalogOpen ? '收起目录' : '从目录挑选'}
-            </button>
-          )}
           <label className="btn-ghost" style={{ cursor: 'pointer' }} title="JSON 数组文件，每项含名称与地址；重复地址自动跳过。格式说明见 帮助 → 排错">
             导入 JSON
             <input
@@ -113,6 +112,16 @@ export function Sources() {
               }}
             />
           </label>
+          {sources.length > 0 && (
+            <button
+              type="button"
+              className="btn-ghost"
+              title={`推荐信源目录：${catalogTotal} 个实测可用的源按领域分组，勾选导入；可反复打开，已导入的源会标注，重复导入安全`}
+              onClick={() => setCatalogOpen((v) => !v)}
+            >
+              {catalogOpen ? '收起目录' : `从目录添加（${catalogTotal} 个推荐源）`}
+            </button>
+          )}
           {form === null && (
             <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加信源</button>
           )}
@@ -155,7 +164,7 @@ export function Sources() {
 
       {catalogOpen && sources.length > 0 && (
         <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
-          <h2>信源目录</h2>
+          <h2>推荐信源目录</h2>
           <div className="set-body">
             <SourceCatalog onDone={setMsg} />
           </div>
@@ -211,7 +220,7 @@ export function Sources() {
             </div>
           </div>
           <div className="set-card">
-            <h2>信源目录</h2>
+            <h2>推荐信源目录</h2>
             <div className="set-body">
               <SourceCatalog onDone={setMsg} />
             </div>

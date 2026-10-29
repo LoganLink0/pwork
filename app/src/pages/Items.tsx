@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
@@ -109,6 +110,12 @@ export function Items() {
         <div className="empty">
           <div className="e-ico" aria-hidden>🗂</div>
           <p>{!loaded ? '正在读取条目…' : recent.length === 0 ? '还没有条目。去信息日报抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
+          {loaded && recent.length === 0 && (
+            <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
+              <Link to="/input/digest" className="btn-ghost">去信息日报 →</Link>
+              <Link to="/input/sources?catalog=1" className="btn-ghost">去推荐信源目录挑几个 →</Link>
+            </div>
+          )}
         </div>
       ) : (
         filtered.map((item: Item) => (

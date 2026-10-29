@@ -19,6 +19,17 @@ describe('loadAutoBackup / saveAutoBackup', () => {
     expect(loadAutoBackup()).toEqual(DEFAULT_AUTO_BACKUP)
   })
 
+  it('桌面版无记录 → 默认开启（备份写应用数据目录，不打扰用户）', () => {
+    const cfg = loadAutoBackup(true)
+    expect(cfg.enabled).toBe(true)
+    expect(cfg).toMatchObject({ everyDays: 7, lastAt: null })
+  })
+
+  it('已存储的配置不被平台默认覆盖（用户显式关过就保持关）', () => {
+    saveAutoBackup({ ...DEFAULT_AUTO_BACKUP, enabled: false })
+    expect(loadAutoBackup(true).enabled).toBe(false)
+  })
+
   it('非法周期回退 7 天（读取防御，铁律 2）', () => {
     localStorage.setItem('pwork-autobackup', JSON.stringify({ enabled: true, everyDays: 3 }))
     expect(loadAutoBackup()).toMatchObject({ enabled: true, everyDays: 7 })

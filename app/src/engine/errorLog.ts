@@ -13,6 +13,7 @@
 import { create } from 'zustand'
 import { db } from '../db/schema'
 import { newId } from '../db/repo'
+import { isDesktopApp } from './platform'
 import type { ErrorLogEntry } from '../types/models'
 
 const MAX_ROWS = 300
@@ -73,6 +74,9 @@ export async function recordError(input: RecordInput, opts?: { silent?: boolean 
     message: clip(input.message, 500) ?? '(空消息)',
     stack: clip(input.stack, MAX_STACK),
     detail: stringifyDetail(input.detail),
+    // 版本与环境（2026-10-29 补齐）：导出日志可定位来自哪个版本、桌面还是网页
+    version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : undefined,
+    platform: isDesktopApp() ? 'desktop' : 'web',
   }
   if (!opts?.silent) useErrorBar.getState().show(entry)
   try {
@@ -126,6 +130,8 @@ export function formatErrorLog(entries: ErrorLogEntry[]): string {
   const lines = ['# PWORK 错误日志', '', `导出时间：${new Date().toLocaleString('zh-CN')}`, `条数：${entries.length}`, '']
   for (const e of entries) {
     lines.push(`## ${e.at.replace('T', ' ').slice(0, 19)} · ${kindLabel[e.kind]} · ${e.where}`)
+    const env = [e.version ? `版本 ${e.version}` : null, e.platform ? (e.platform === 'desktop' ? '桌面版' : '网页版') : null].filter(Boolean).join(' · ')
+    if (env) lines.push(``, `- 环境：${env}`)
     lines.push('', `- 消息：${e.message}`)
     if (e.detail) lines.push(`- 上下文：${e.detail}`)
     if (e.stack) lines.push('', '```', e.stack, '```')

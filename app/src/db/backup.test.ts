@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { buildBackupBundle } from '../store/collect'
-import { importBundle } from './backup'
+import { importBundle, savePreImportSnapshot, getPreImportSnapshot, restorePreImportSnapshot } from './backup'
 import { db } from './schema'
 import { createGoal } from './goalsRepo'
 import { saveBlock } from './blocksRepo'
 import { saveProfile } from './profilesRepo'
 import { addCaseFile } from './caseFilesRepo'
+import type { Note } from '../types/models'
 
 /**
  * 备份全量回归（铁律 6）：v2 包裹必须带上后来新增的五张表
@@ -58,5 +59,42 @@ describe('buildBackupBundle + importBundle（v2 全表回路）', () => {
     const r = await importBundle(JSON.stringify({ version: 2, exportedAt: '2026-09-01T00:00:00.000Z', entities: { notes: [] } }))
     expect(r.format).toBe('pwork-v2')
     expect(r.counts.notes ?? 0).toBe(0)
+  })
+})
+
+describe('导入前快照（2026-10-29 安全网热修）', () => {
+  const note = (id: string, title: string, updatedAt: string): Note => ({
+    id, title, body: '正文', tags: [], links: { itemIds: [], reviewIds: [], taskIds: [] }, source: 'manual',
+    createdAt: updatedAt, updatedAt, deletedAt: null, schemaVersion: 1,
+  })
+
+  it('存快照 → 可读回时间与内容', async () => {
+    await db.notes.put(note('n1', '原始', '2026-10-01T00:00:00.000Z'))
+    await savePreImportSnapshot(await buildBackupBundle())
+    const snap = await getPreImportSnapshot()
+    expect(snap).not.toBeNull()
+    expect(typeof snap!.at).toBe('string')
+    const entities = (snap!.bundle as { entities: { notes: Note[] } }).entities
+    expect(entities.notes).toHaveLength(1)
+    expect(entities.notes[0]!.title).toBe('原始')
+  })
+
+  it('误导入后恢复：清掉导入进来的记录，回到快照状态', async () => {
+    await importBundle(JSON.stringify({ version: 2, entities: { notes: [note('n1', '原始', '2026-10-01T00:00:00.000Z')] } }))
+    await savePreImportSnapshot(await buildBackupBundle())
+    // 模拟误导入：覆盖原笔记（更晚 updatedAt）+ 多进一条别人的笔记
+    await importBundle(JSON.stringify({
+      version: 2,
+      entities: { notes: [note('n1', '被覆盖', '2026-10-29T00:00:00.000Z'), note('junk1', '误导入', '2026-10-29T00:00:00.000Z')] },
+    }))
+    expect(await db.notes.count()).toBe(2)
+    const r = await restorePreImportSnapshot()
+    expect(await db.notes.count()).toBe(1)
+    expect((await db.notes.toArray())[0]?.title).toBe('原始')
+    expect(r.counts.notes).toBe(1)
+  })
+
+  it('没有快照时恢复就地报错（fast-fail）', async () => {
+    await expect(restorePreImportSnapshot()).rejects.toThrow('没有可恢复的导入前快照')
   })
 })

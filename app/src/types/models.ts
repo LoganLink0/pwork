@@ -137,6 +137,10 @@ export interface ErrorLogEntry {
   stack?: string
   /** 附加上下文（JSON 字符串，截断 800） */
   detail?: string
+  /** 记录时的应用版本（如 0.1.10）；导出日志定位来源用（2026-10-29 补齐） */
+  version?: string
+  /** 记录时的运行环境：桌面版 / 网页版 */
+  platform?: 'desktop' | 'web'
 }
 
 /**

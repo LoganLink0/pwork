@@ -108,3 +108,40 @@ export async function importBundle(text: string): Promise<ImportResult> {
   }
   return { format: data.version === 2 ? 'pwork-v2' : 'pwork-v1', counts }
 }
+
+/* --------------------- 导入前快照（2026-10-29 安全网热修） ---------------------
+ * 导入按新者为准合并、不可逆：误导入的记录会以更晚的 updatedAt 压住旧数据，
+ * 事后再导入旧备份救不回来。每次导入前把当前库全量存进 kv（只留最近一份，
+ * 下次导入覆盖），出问题可在 设置 → 数据 一键恢复到导入前。 */
+
+const PRE_IMPORT_KEY = 'pwork-pre-import-snapshot'
+
+export interface PreImportSnapshot {
+  at: string
+  bundle: unknown
+}
+
+/** 存导入前快照（覆盖上一份）。bundle 由调用方用 buildBackupBundle 构建 */
+export async function savePreImportSnapshot(bundle: unknown): Promise<void> {
+  await db.kv.put({ key: PRE_IMPORT_KEY, value: { at: new Date().toISOString(), bundle } satisfies PreImportSnapshot })
+}
+
+/** 当前快照（没有返回 null；设置页展示恢复入口用） */
+export async function getPreImportSnapshot(): Promise<PreImportSnapshot | null> {
+  const row = await db.kv.get(PRE_IMPORT_KEY)
+  const v = row?.value as PreImportSnapshot | undefined
+  return v && typeof v.at === 'string' && v.bundle ? v : null
+}
+
+/**
+ * 恢复到导入前：先清空全部业务表（含软删除记录——快照里原样带着，恢复后一致），
+ * 再按包裹整体导回。恢复路径必须在同一事务语义下先清后导，半途失败会抛给调用方入错误日志。
+ */
+export async function restorePreImportSnapshot(): Promise<ImportResult> {
+  const snap = await getPreImportSnapshot()
+  if (!snap) throw new Error('没有可恢复的导入前快照')
+  await Promise.all(
+    [db.notes, db.sources, db.items, db.tasks, db.reviews, db.actions, db.insights, db.goals, db.blocks, db.profiles, db.caseFiles, db.snapshots].map((t) => t.clear()),
+  )
+  return importBundle(JSON.stringify(snap.bundle))
+}

@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
-import { importBundle } from '../db/backup'
+import { importBundle, savePreImportSnapshot, getPreImportSnapshot, restorePreImportSnapshot } from '../db/backup'
 import { pushCloudPrefs } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
@@ -62,7 +62,13 @@ export function Settings() {
   const [interestDraft, setInterestDraft] = useState('')
   const [dislikeDraft, setDislikeDraft] = useState('')
   const [importMsg, setImportMsg] = useState<string | null>(null)
+  const [importBusy, setImportBusy] = useState(false)
+  // 导入前快照（2026-10-29 安全网）：有快照才显示恢复入口
+  const [preSnapAt, setPreSnapAt] = useState<string | null>(null)
   const [prefsMsg, setPrefsMsg] = useState<string | null>(null)
+  useEffect(() => {
+    void getPreImportSnapshot().then((s) => setPreSnapAt(s?.at ?? null))
+  }, [])
 
   // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）——默认只看最近 5 条，其余折叠
   const [errors, setErrors] = useState<ErrorLogEntry[]>([])
@@ -153,14 +159,34 @@ export function Settings() {
   }
 
   const doImport = async (file: File) => {
+    if (importBusy) return
+    setImportBusy(true)
     try {
-      const r = await importBundle(await file.text())
+      const text = await file.text()
+      JSON.parse(text) // 先校验合法再存快照——坏文件不该覆盖上一份可用快照
+      // 导入按新者为准合并、不可逆——导入前把当前库存为快照（只留最近一份），出问题可一键恢复
+      await savePreImportSnapshot(await buildBackupBundle())
+      setPreSnapAt(new Date().toISOString())
+      const r = await importBundle(text)
       // 各域重新加载（导入可能影响所有模块；与设备同步同口径含目标库）
       await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
       const detail = Object.entries(r.counts).map(([k, v]) => `${k} ${v}`).join(' · ')
-      setImportMsg(`导入成功（${r.format}）：${detail || '无变化'}`)
+      setImportMsg(`导入成功（${r.format}）：${detail || '无变化'}。导入前的数据已存快照，下方可一键恢复`)
     } catch (e) {
       setImportMsg(`导入失败：${e instanceof Error ? e.message : '不是合法的 JSON'}`)
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
+  const doRestoreSnapshot = async () => {
+    try {
+      const r = await restorePreImportSnapshot()
+      await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
+      const detail = Object.entries(r.counts).map(([k, v]) => `${k} ${v}`).join(' · ')
+      setImportMsg(`已恢复到导入前的状态：${detail || '无变化'}`)
+    } catch (e) {
+      setImportMsg(`恢复失败：${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
@@ -236,6 +262,26 @@ export function Settings() {
               {lastBackup ? `上次导出：${fmtLocal(lastBackup)}` : '还没有导出过'}
             </span>
           </div>
+          {preSnapAt && (
+            <div className="set-row">
+              <label>导入前快照</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                {fmtLocal(preSnapAt)} 导入前的完整数据（只保留最近一份，下次导入时覆盖）
+              </span>
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ flex: 'none' }}
+                title="清空当前数据，恢复到这份快照保存时的状态"
+                onClick={() => {
+                  if (!window.confirm(`确定恢复到 ${fmtLocal(preSnapAt)} 导入前的状态？当前数据会先被清掉，再由快照导回。`)) return
+                  void doRestoreSnapshot()
+                }}
+              >
+                恢复到导入前
+              </button>
+            </div>
+          )}
           <div className="set-row">
             <label>库内数据</label>
             <span className="val tnum">
@@ -429,6 +475,11 @@ export function Settings() {
                   <summary>
                     <span className="errlog-time tnum">{fmtLocal(e.at)}</span>
                     <span className="errlog-kind">{ERR_KIND_LABEL[e.kind]}</span>
+                    {e.platform && (
+                      <span className="errlog-kind">
+                        {e.platform === 'desktop' ? '桌面版' : '网页版'}{e.version ? ` · v${e.version}` : ''}
+                      </span>
+                    )}
                     <span className="errlog-where">{e.where}</span>
                     <span className="errlog-msg">{e.message}</span>
                   </summary>

@@ -38,6 +38,16 @@ describe('recordError / listErrors / clearErrors', () => {
     expect(list[0]!.detail).toContain('activeSources')
   })
 
+  it('记录带版本与运行环境（导出日志可定位来源）', async () => {
+    await recordError({ where: '测试', kind: 'app', message: '带环境信息' })
+    const [e] = await listErrors()
+    expect(e!.platform).toBe('web') // vitest jsdom 无 Tauri 标记
+    expect(typeof e!.version).toBe('string')
+    const md = formatErrorLog([e!])
+    expect(md).toContain('网页版')
+    expect(md).toContain(`版本 ${e!.version}`)
+  })
+
   it('记录即顶出错误条；关闭后清空', async () => {
     await recordError({ where: '测试', kind: 'app', message: '出错啦' })
     expect(useErrorBar.getState().entry?.message).toBe('出错啦')
