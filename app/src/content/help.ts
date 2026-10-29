@@ -60,14 +60,17 @@ export const MODULES: ModuleIntro[] = [
 export interface Shortcut {
   keys: string
   desc: string
+  /** 可自定义键位的动作名：渲染侧用键位配置的当前值替换 keys（0.4-3 键位中心） */
+  bind?: 'quickNote' | 'palette' | 'help' | 'settings' | 'wheel'
 }
 
 export const SHORTCUTS: Shortcut[] = [
-  { keys: 'N', desc: '速记浮层' },
-  { keys: 'Ctrl K 或 /', desc: '命令面板' },
-  { keys: '?', desc: '帮助页' },
+  { keys: 'N', desc: '速记浮层', bind: 'quickNote' },
+  { keys: 'Ctrl K 或 /', desc: '命令面板（Ctrl+K 可在设置里改，/ 永远可用）', bind: 'palette' },
+  { keys: '?', desc: '帮助页', bind: 'help' },
   { keys: '← →', desc: '复盘向导切步' },
   { keys: 'Esc', desc: '关闭浮层与面板' },
+  { keys: 'Ctrl+Alt+Q', desc: '工具轮盘（桌面版全局呼出，可在 设置 → 工具轮盘 改）', bind: 'wheel' },
 ]
 
 export interface GlossaryEntry {

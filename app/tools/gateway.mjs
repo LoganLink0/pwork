@@ -46,6 +46,7 @@ let CHAT_MODEL = env.PWORK_LLM_MODEL || ''
 const PURPOSE_GROUP = {
   'review-coach': 'heavy', 'research-ask': 'heavy', 'research-framework': 'heavy',
   'article-analysis': 'heavy', 'ppt-outline': 'heavy', 'article-draft': 'heavy',
+  'library-ask': 'heavy',
   'interest-profile': 'light', 'report-summary': 'light', 'review-reframe': 'light', 'research-web': 'light',
 }
 let HEAVY_MODEL = env.PWORK_LLM_MODEL_HEAVY || ''

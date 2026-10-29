@@ -24,6 +24,7 @@ import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestPro
 import type { ErrorLogEntry } from '../types/models'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { WheelSettingsCard } from '../components/shell/WheelSettingsCard'
+import { KeybindsCard } from '../components/shell/KeybindsCard'
 import { CloudSyncCards } from './CloudSync'
 
 const ERR_KIND_LABEL: Record<ErrorKind, string> = {
@@ -965,6 +966,7 @@ export function Settings() {
         </div>
       </div>
 
+      <KeybindsCard active={tab === 'wheel'} />
       <WheelSettingsCard active={tab === 'wheel'} />
 
       <CloudSyncCards active={tab === 'cloud'} />

@@ -4,9 +4,84 @@ use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// 工具轮盘的全局呼出键（应用外任何地方可呼出）。键位自定义规划在下个版本统一做
+/// 工具轮盘的全局呼出键（应用外任何地方可呼出）。默认 Ctrl+Alt+Q；键位自定义（0.4-3）
+/// 由前端存配置、经 register_wheel_shortcut 在启动时/改动时重注册
 const WHEEL_KEY: Code = Code::KeyQ;
 const WHEEL_LABEL: &str = "Ctrl+Alt+Q";
+
+/// 解析归一化键位串（如 "ctrl+alt+q"）为修饰键 + 主键码。主键限字母/数字/F 键
+/// （与前端 wheelComboAllowed 同一口径）；解析失败返回人话错误
+fn parse_wheel_combo(combo: &str) -> Result<(Modifiers, Code), String> {
+  let mut mods = Modifiers::empty();
+  let mut main: Option<Code> = None;
+  for part in combo.split('+').filter(|s| !s.is_empty()) {
+    match part {
+      "ctrl" => mods |= Modifiers::CONTROL,
+      "shift" => mods |= Modifiers::SHIFT,
+      "alt" => mods |= Modifiers::ALT,
+      _ => {
+        if main.is_some() {
+          return Err(format!("键位串有多个主键：{}", combo));
+        }
+        main = Some(parse_main_key(part)?);
+      }
+    }
+  }
+  let code = main.ok_or_else(|| format!("键位串缺少主键：{}", combo))?;
+  if mods.is_empty() {
+    return Err("全局键必须带 Ctrl/Alt/Shift 修饰键（单键会劫持正常输入）".to_string());
+  }
+  Ok((mods, code))
+}
+
+/// 主键码：字母 / 数字 / F1–F12
+fn parse_main_key(part: &str) -> Result<Code, String> {
+  let code = match part {
+    "a" => Code::KeyA, "b" => Code::KeyB, "c" => Code::KeyC, "d" => Code::KeyD,
+    "e" => Code::KeyE, "f" => Code::KeyF, "g" => Code::KeyG, "h" => Code::KeyH,
+    "i" => Code::KeyI, "j" => Code::KeyJ, "k" => Code::KeyK, "l" => Code::KeyL,
+    "m" => Code::KeyM, "n" => Code::KeyN, "o" => Code::KeyO, "p" => Code::KeyP,
+    "q" => Code::KeyQ, "r" => Code::KeyR, "s" => Code::KeyS, "t" => Code::KeyT,
+    "u" => Code::KeyU, "v" => Code::KeyV, "w" => Code::KeyW, "x" => Code::KeyX,
+    "y" => Code::KeyY, "z" => Code::KeyZ,
+    "0" => Code::Digit0, "1" => Code::Digit1, "2" => Code::Digit2, "3" => Code::Digit3,
+    "4" => Code::Digit4, "5" => Code::Digit5, "6" => Code::Digit6, "7" => Code::Digit7,
+    "8" => Code::Digit8, "9" => Code::Digit9,
+    "f1" => Code::F1, "f2" => Code::F2, "f3" => Code::F3, "f4" => Code::F4,
+    "f5" => Code::F5, "f6" => Code::F6, "f7" => Code::F7, "f8" => Code::F8,
+    "f9" => Code::F9, "f10" => Code::F10, "f11" => Code::F11, "f12" => Code::F12,
+    _ => return Err(format!("全局键主键只支持字母/数字/F1–F12：{}", part)),
+  };
+  Ok(code)
+}
+
+/// 键位自定义（0.4-3）：前端在启动/改键时调用——注销旧的全局键，注册新的。
+/// 与 setup 里的默认注册共用同一套全局快捷键通道，重复启动调用幂等（先注销再注册）
+#[tauri::command]
+fn register_wheel_shortcut(app: tauri::AppHandle, combo: String) -> Result<String, String> {
+  let (mods, code) = parse_wheel_combo(&combo)?;
+  let shortcuts = app.global_shortcut();
+  shortcuts.unregister_all().map_err(|e| format!("注销旧键位失败：{}", e))?;
+  shortcuts
+    .register(Shortcut::new(Some(mods), code))
+    .map_err(|e| format!("注册键位失败（可能被其他应用占用）：{}", e))?;
+  Ok(display_combo(&combo))
+}
+
+/// 前端展示用：归一化串转显示格式（与 engine/keybinds displayCombo 一致）
+fn display_combo(combo: &str) -> String {
+  combo
+    .split('+')
+    .map(|p| {
+      let mut c = p.chars();
+      match c.next() {
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+        None => String::new(),
+      }
+    })
+    .collect::<Vec<_>>()
+    .join("+")
+}
 
 /// 引导页/设置页写入网关 Key：合并进 gateway.env（保留用户手写的其它行），并热更新运行中的网关——
 /// 无需重启应用，写完即可发起连接测试
@@ -255,7 +330,7 @@ pub fn run() {
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url, deploy_cloud])
+    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url, deploy_cloud, register_wheel_shortcut])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }

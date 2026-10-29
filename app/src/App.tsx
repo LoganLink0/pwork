@@ -21,6 +21,7 @@ import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
 import { runStartupNotifiesFromDb, notifyDigestReady } from './engine/notify'
+import { loadKeybinds } from './engine/keybinds'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
@@ -178,6 +179,16 @@ export default function App() {
     )
     // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知 可关）
     track(runStartupNotifiesFromDb(), '启动通知检查')
+    // 键位中心（0.4-3）：轮盘全局键按用户配置重注册（默认键 Rust 侧已注册；改动/占用失败会弹错误条）
+    if (isDesktopApp()) {
+      const kb = loadKeybinds()
+      track(
+        tauriInvoke<string>('register_wheel_shortcut', { combo: kb.wheel }).then((label) => {
+          if (label && label.toUpperCase() !== 'CTRL+ALT+Q') toast('ok', `工具轮盘全局键已设为 ${label}`)
+        }),
+        '注册轮盘全局键',
+      )
+    }
     // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
     track(
       runAutoBackupIfDue().then((r) => {

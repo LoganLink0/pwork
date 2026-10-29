@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, SHORTCUTS } from '../content/help'
+import { loadKeybinds, displayCombo } from '../engine/keybinds'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { KbdText } from '../components/shell/KbdText'
 
@@ -67,16 +68,26 @@ export function Help() {
       <div className="set-card" data-tab="shortcuts" style={{ display: tab === 'shortcuts' ? undefined : 'none' }}>
         <h2>快捷键</h2>
         <div className="set-body">
-          {SHORTCUTS.map((s) => (
-            <div className="set-row" key={s.keys}>
-              <label style={{ display: 'flex', gap: 4 }}>
-                {s.keys.split(' 或 ').map((k) => (
-                  <kbd key={k}>{k}</kbd>
-                ))}
-              </label>
-              <span className="val">{s.desc}</span>
-            </div>
-          ))}
+          {SHORTCUTS.map((s) => {
+            // 键位中心（0.4-3）：可自定义条目按用户当前配置显示；命令面板额外固定显示别名 /
+            const kb = loadKeybinds()
+            const shown = s.bind ? displayCombo(kb[s.bind]) : s.keys
+            return (
+              <div className="set-row" key={s.keys + s.desc}>
+                <label style={{ display: 'flex', gap: 4 }}>
+                  {s.bind === 'palette' ? (
+                    <>
+                      <kbd>{shown}</kbd>
+                      <kbd>/</kbd>
+                    </>
+                  ) : (
+                    <kbd>{shown}</kbd>
+                  )}
+                </label>
+                <span className="val">{s.desc}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 

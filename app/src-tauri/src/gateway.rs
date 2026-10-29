@@ -107,7 +107,7 @@ impl GatewayConfig {
 /// 场景 → 轻重分组（与 Node 版 PURPOSE_GROUP 一致）：重活要推理与长输出，轻活短平快
 fn purpose_group(purpose: &str) -> Option<&'static str> {
     match purpose {
-        "review-coach" | "research-ask" | "research-framework" | "article-analysis" | "ppt-outline" | "article-draft" => Some("heavy"),
+        "review-coach" | "research-ask" | "research-framework" | "article-analysis" | "ppt-outline" | "article-draft" | "library-ask" => Some("heavy"),
         "interest-profile" | "report-summary" | "review-reframe" | "research-web" => Some("light"),
         _ => None,
     }

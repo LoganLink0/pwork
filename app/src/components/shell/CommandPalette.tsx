@@ -5,6 +5,7 @@ import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
+import { askLibrary, type AskAiSource } from '../../engine/askAi'
 import { relTime } from '../../engine/datetime'
 
 interface PaletteItem {
@@ -16,10 +17,13 @@ interface PaletteItem {
   run: () => void
 }
 
+type AskPhase = 'idle' | 'asking' | 'done' | 'error'
+
 /**
  * 命令面板（PRD §5.4）：⌘K 全局混合搜索——快速动作 + 页面 + 速记 + 全库检索。
  * 关闭时整体卸载、打开时重新挂载内部对话框，天然获得干净初始态。
- * AI 全库问答入口暂停（上下文深度与检索升级前不达预期，2026-10-23 用户拍板；见 TODO）。
+ * AI 全库问答（0.4-4 重启）：输入问题后选「问 AI」——检索与上下文都已升到正文级
+ * （2026-10-23 回撤的根因），回答带来源链接，可点跳原文。
  */
 export function CommandPalette() {
   const open = useUi((s) => s.paletteOpen)
@@ -36,6 +40,18 @@ function PaletteDialog() {
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const [libraryHits, setLibraryHits] = useState<SearchHit[]>([])
+  const [ask, setAsk] = useState<{ phase: AskPhase; answer?: string; sources?: AskAiSource[]; error?: string }>({ phase: 'idle' })
+  const askRef = useRef(ask)
+  askRef.current = ask
+
+  const runAsk = () => {
+    const q = query.trim()
+    if (!q) return
+    setAsk({ phase: 'asking' })
+    askLibrary(q)
+      .then((r) => setAsk({ phase: 'done', answer: r.answer, sources: r.sources }))
+      .catch((e: unknown) => setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) }))
+  }
 
   // C-4 落地：跨模块全库检索（防抖；任务/条目/复盘/洞察——速记已在下方独立分组）
   useEffect(() => {
@@ -60,7 +76,9 @@ function PaletteDialog() {
     const onWinKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        close()
+        // 回答视图里第一下 Esc 先回到搜索列表，再按才关面板（与页脚提示一致）
+        setAsk((s) => (s.phase === 'idle' ? s : { phase: 'idle' }))
+        if (askRef.current.phase === 'idle') close()
       }
     }
     window.addEventListener('keydown', onWinKey)
@@ -128,7 +146,7 @@ function PaletteDialog() {
   }, [query, notes, close, openQuick, navigate])
 
   // 使用处夹紧（代替 effect 内 setState）
-  // 统一可导航列表：主列表 + 全库检索结果——↑↓/Enter 覆盖全部条目
+  // 统一可导航列表：主列表 + 全库检索结果 + AI 问答入口——↑↓/Enter 覆盖全部条目
   const flat = useMemo(
     () => [
       ...items.map((it) => ({
@@ -152,8 +170,20 @@ function PaletteDialog() {
           navigate(h.to)
         },
       })),
+      ...(query.trim()
+        ? [{
+            key: 'ask-ai',
+            group: 'AI 问答',
+            icon: 'zap',
+            label: `问 AI：「${query.trim().slice(0, 30)}」`,
+            sub: '速记、条目、洞察里找答案',
+            accent: true,
+            run: runAsk,
+          }]
+        : []),
     ],
-    [items, libraryHits, close, navigate],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runAsk 由 query 派生（闭包读取最新 query）
+    [items, libraryHits, query, close, navigate],
   )
   const cur = flat.length ? Math.min(sel, flat.length - 1) : 0
 
@@ -192,6 +222,7 @@ function PaletteDialog() {
             onChange={(e) => {
               setQuery(e.target.value)
               setSel(0)
+              setAsk({ phase: 'idle' })
             }}
             onKeyDown={onKeyDown}
             aria-label="搜索"
@@ -199,32 +230,69 @@ function PaletteDialog() {
           <kbd>Esc</kbd>
         </div>
         <div className="p-list">
-          {flat.length === 0 && (
-            <div className="p-group" style={{ padding: 'var(--sp-4)' }}>没有匹配「{query}」的结果</div>
+          {ask.phase === 'asking' && (
+            <div className="p-group" style={{ padding: 'var(--sp-4)' }}>正在全库里找（速记正文、条目摘要与批注、洞察全文）…</div>
           )}
-          {flat.map((item, i) => {
-            const header = item.group !== lastGroup ? <div className="p-group">{item.group}</div> : null
-            lastGroup = item.group
-            return (
-              <div key={item.key}>
-                {header}
-                <div
-                  className={`p-item${i === cur ? ' sel' : ''}`}
-                  onClick={() => runItem(item)}
-                  onMouseEnter={() => setSel(i)}
-                >
-                  <span className={item.accent ? 'mark-act' : ''} aria-hidden><Icon name={item.icon} size={14} /></span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                  {item.sub && <span className="p-sub">{item.sub}</span>}
+          {ask.phase === 'error' && (
+            <div className="p-group" style={{ padding: 'var(--sp-4)', color: 'var(--danger)' }}>问失败了：{ask.error}</div>
+          )}
+          {ask.phase === 'done' && (
+            <div style={{ padding: 'var(--sp-3) var(--sp-4)' }}>
+              <div className="p-group">AI 回答（基于你库里的内容）</div>
+              <div style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--fs-sm)', lineHeight: 1.7, padding: 'var(--sp-2) 0' }}>{ask.answer}</div>
+              {(ask.sources?.length ?? 0) > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)', paddingTop: 'var(--sp-2)' }}>
+                  {ask.sources!.map((s, i) => (
+                    <button
+                      key={`${s.kind}-${s.title}-${i}`}
+                      type="button"
+                      className="btn-ghost"
+                      style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px' }}
+                      onClick={() => { close(); navigate(s.to) }}
+                    >
+                      {KIND_LABEL[s.kind]} · {s.title.slice(0, 20)} →
+                    </button>
+                  ))}
                 </div>
-              </div>
-            )
-          })}
+              )}
+            </div>
+          )}
+          {ask.phase === 'idle' && (
+            <>
+              {flat.length === 0 && (
+                <div className="p-group" style={{ padding: 'var(--sp-4)' }}>没有匹配「{query}」的结果</div>
+              )}
+              {flat.map((item, i) => {
+                const header = item.group !== lastGroup ? <div className="p-group">{item.group}</div> : null
+                lastGroup = item.group
+                return (
+                  <div key={item.key}>
+                    {header}
+                    <div
+                      className={`p-item${i === cur ? ' sel' : ''}`}
+                      onClick={() => runItem(item)}
+                      onMouseEnter={() => setSel(i)}
+                    >
+                      <span className={item.accent ? 'mark-act' : ''} aria-hidden><Icon name={item.icon} size={14} /></span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                      {item.sub && <span className="p-sub">{item.sub}</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
         </div>
         <div className="p-foot">
-          <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
-          <span><kbd>↵</kbd> 跳转</span>
-          <span><kbd>Esc</kbd> 关闭</span>
+          {ask.phase === 'idle' ? (
+            <>
+              <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+              <span><kbd>↵</kbd> 跳转</span>
+              <span><kbd>Esc</kbd> 关闭</span>
+            </>
+          ) : (
+            <span><kbd>Esc</kbd> 返回搜索（再按关闭）</span>
+          )}
         </div>
       </div>
     </div>
