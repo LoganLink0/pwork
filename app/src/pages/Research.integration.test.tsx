@@ -114,6 +114,8 @@ describe('调研分析页（任务式）', () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('heading', { name: '① 调研目标' })
+    // 任务按钮由 Dexie 异步载入——findBy 等待出现（同步 getBy 在慢环境必 flaky，CI 首跑实测）
+    await screen.findByRole('button', { name: '饿死' })
     await user.click(screen.getByRole('button', { name: '饿死' }))
     expect(await screen.findByTestId('gen-framework')).toBeInTheDocument()
 
