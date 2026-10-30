@@ -48,6 +48,13 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 5. 更新器（0.1.11 起已启用）：签名密钥在 `app/.tauri/`（不入库，私钥丢失则永远无法推送更新）。已接 tauri-plugin-updater，conf 的 endpoints 指向 GitHub Releases 的 latest.json；构建带 `TAURI_SIGNING_PRIVATE_KEY`（本地构建命令与 CI 的仓库 Secrets 均已配）。**发版时须同时上传 latest.json 与安装包 .sig 到 Release 资产**（结构见官方文档：version + platforms.{target}.url/signature）。
 6. 代码签名（未购买）：无证书时 Windows 提示"未知发布者"属预期；正式分发可购证书后配 `bundle.windows.certificateThumbprint`。macOS 同口径（Gatekeeper 右键打开，见发布说明）。
 
+## 宣传物料（朋友圈分享图，一条命令出图）
+
+1. 源都在 `docs/assets/`：`promo-1080.html`（版式模板，亮点/标题文案在这里改；版本与平台行是 `__PWORK_VER__` / `__PWORK_PLATFORM__` 占位符）、`promo-app-crop.png`（中央实拍素材）。
+2. 合成：`node tools/make-promo.mjs`——版本号自动取 `app/package.json`（`--ver` 可覆盖）、平台行默认「Windows 与 macOS」（`--platform` 可改）、输出自动递增 `promo-1080-vN.png`；自动校验 1080×1080 与非空并打印 sha256。
+3. 验收：出图后**必须人工看图**（Read/看图确认版式与文案），自动校验只是防线之一（复盘 3.37：哈希一致 ≠ 内容正确）。
+4. 换中央实拍图：从**正在运行的桌面应用**截屏（WebView2 调试端口 CDP）裁切替换 `promo-app-crop.png` 入仓——截图禁止取自 dev 服务或临时目录（真源原则，3.37/3.38）。
+
 ## 开发约定
 
 - 改完必须 **curl 验证 served 内容**（Vite watcher 竞态是本项目最高频坑：现象"改了不生效"，解法 curl→touch→按端口重启；复盘 3.1）。

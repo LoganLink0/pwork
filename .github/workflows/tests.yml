@@ -1,0 +1,52 @@
+# 测试流水线（0.2 质量节）：push 与 PR 都跑全量回归——app（vitest + tsc + lint）与 worker（vitest）。
+# 本地产物环境是 Windows，CI 用 Ubuntu（测试全部为 jsdom/Node 层，无平台依赖）。
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: 安装依赖
+        run: npm ci
+      - name: 单元与集成测试（vitest）
+        run: npx vitest run
+      - name: 类型检查（tsc）
+        run: npx tsc -b
+      - name: Lint（oxlint）
+        run: npm run lint
+
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: 安装依赖
+        run: npm ci
+      - name: worker 测试（vitest）
+        run: npx vitest run
