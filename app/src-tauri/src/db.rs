@@ -13,7 +13,7 @@ use tauri::{AppHandle, Manager, State};
 pub struct DbState(pub Mutex<Option<Connection>>);
 
 const DDL: &str = r#"
-CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, "source" TEXT, "deletedAt" TEXT, "updatedAt" TEXT, payload TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_notes_source ON notes("source");
 CREATE INDEX IF NOT EXISTS idx_notes_deletedAt ON notes("deletedAt");
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_aiCache_createdAt ON aiCache("createdAt");
 CREATE TABLE IF NOT EXISTS errorLog (id TEXT PRIMARY KEY, "at" TEXT, payload TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_errorLog_at ON errorLog("at");
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
-INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
+INSERT OR IGNORE INTO meta (key, payload) VALUES ('schema_version', '1');
 "#;
 
 /// 每表除主键外的索引列（写入时从记录提取这些列；与 DDL 一一对应）。
