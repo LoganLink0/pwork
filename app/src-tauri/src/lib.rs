@@ -1,3 +1,4 @@
+mod db;
 mod gateway;
 
 use std::thread;
@@ -365,7 +366,27 @@ pub fn run() {
       log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![save_gateway_key, open_deploy_wizard, open_external_url, deploy_cloud, register_wheel_shortcut])
+    .manage(db::DbState(std::sync::Mutex::new(None)))
+    .invoke_handler(tauri::generate_handler![
+      save_gateway_key,
+      open_deploy_wizard,
+      open_external_url,
+      deploy_cloud,
+      register_wheel_shortcut,
+      db::db_probe,
+      db::db_open,
+      db::db_select,
+      db::db_write,
+      db::db_exec,
+      db::db_begin,
+      db::db_commit,
+      db::db_rollback,
+      db::db_destroy,
+      db::db_migrate_batch,
+      db::db_migrate_finish,
+      db::db_vacuum_into,
+      db::db_columns,
+    ])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }

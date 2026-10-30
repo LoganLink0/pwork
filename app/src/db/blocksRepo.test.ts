@@ -11,6 +11,8 @@ beforeEach(async () => {
 describe('blocksRepo', () => {
   it('保存→列表→更新→软删除 全回路', async () => {
     const b1 = await saveBlock({ title: '销售周数据', content: '新增线索: 23' })
+    // 两条记录的更新时间隔开（同毫秒保存的先后顺序是不确定的，倒序断言需要可比较的时间戳）
+    await new Promise((r) => setTimeout(r, 2))
     await saveBlock({ title: '客服工单', content: '本周闭环: 41' })
     expect((await listBlocks()).map((x) => x.title)).toEqual(['客服工单', '销售周数据']) // 按更新时间倒序
 

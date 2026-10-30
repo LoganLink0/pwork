@@ -15,6 +15,8 @@ beforeEach(async () => {
 describe('profilesRepo', () => {
   it('保存→列表（按更新时间倒序）→更新保留未传字段', async () => {
     const p1 = await saveProfile({ name: '张三 · XX银行信贷岗', kind: '简历辅导', clientName: '张三', targetRole: '信贷岗' })
+    // 两条记录的更新时间隔开（同毫秒保存的先后顺序是不确定的，倒序断言需要可比较的时间戳）
+    await new Promise((r) => setTimeout(r, 2))
     await saveProfile({ name: 'YY 科技售前', kind: '售前调研' })
     expect((await listProfiles()).map((p) => p.name)).toEqual(['YY 科技售前', '张三 · XX银行信贷岗'])
 

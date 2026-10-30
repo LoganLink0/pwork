@@ -34,3 +34,5 @@ url = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-notification = "2"
+# 主库文件化（08 设计 S2）：桌面版 SQLite 存储，bundled 自带编译无需系统库
+rusqlite = { version = "0.32", features = ["bundled"] }

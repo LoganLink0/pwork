@@ -117,19 +117,93 @@ export interface KvRow {
 
 export const pworkDb = new PworkDB()
 
-/** 存储委托（08 设计 S1）：业务层经 db 访问，实际后端可切换（Dexie / 内存 / 未来 SQLite） */
+/** 存储委托（08 设计 S1）：业务层经 db 访问，实际后端可切换（Dexie / 内存 / 桌面版 SQLite） */
+import { invoke } from '@tauri-apps/api/core'
 import { bindDexieBackend, setBackend } from './delegate'
 import { createMemoryBackend } from './storage/memory'
+import { isDesktopApp } from '../engine/platform'
+import type { Key, TableStore } from './delegate'
 
 bindDexieBackend(pworkDb as never)
 
 export { db } from './delegate'
 
-/** 应用入口在渲染前调用：不可用则切内存后端再继续（08 S1：降级不再依赖 fake-indexeddb） */
-export async function initStorage(): Promise<void> {
-  await ensureIndexedDB()
-  if (usingMemoryFallback) {
-    setBackend(createMemoryBackend({ keyFields: { kv: 'key' } }))
-    usingMemoryFallback = true
-  }
+/** 后端选择结果：needs-migration = 桌面版检测到旧数据待迁移（当前仍跑在 Dexie 上） */
+export type StorageChoice = 'dexie' | 'sqlite' | 'needs-migration'
+export interface MigrationProbeResult {
+  choice: StorageChoice
+  idbHasData: boolean
 }
+
+/** 业务表名清单（判定旧库是否有数据、clearAll 遍历共用） */
+export const BUSINESS_TABLES = [
+  'notes', 'sources', 'items', 'tasks', 'goals', 'reviews', 'actions', 'insights',
+  'snapshots', 'blocks', 'profiles', 'caseFiles',
+] as const
+
+async function idbHasBusinessData(): Promise<boolean> {
+  for (const t of BUSINESS_TABLES) {
+    const n = await (pworkDb as unknown as { [k: string]: { count(): Promise<number> } })[t].count()
+    if (n > 0) return true
+  }
+  return false
+}
+
+/** 迁移完成后的 SQLite 模式切换（供迁移模块调用；桌面版专用） */
+export async function switchToSqliteBackend(): Promise<void> {
+  const { createSqliteBackend } = await import('./storage/sqlite-backend')
+  setBackend(await createSqliteBackend())
+}
+
+/** 桌面版探查：pwork.db 就绪 / 需要迁移 /（网页版）维持 Dexie。不可用时降级内存模式 */
+export async function initStorage(): Promise<MigrationProbeResult> {
+  if (!isDesktopApp()) {
+    await ensureIndexedDB()
+    if (usingMemoryFallback) {
+      setBackend(createMemoryBackend({ keyFields: { kv: 'key' } }))
+    }
+    return { choice: 'dexie', idbHasData: false }
+  }
+  const { createSqliteBackend } = await import('./storage/sqlite-backend')
+  const probe = await invoke<{ exists: boolean }>('db_probe').catch((e: unknown) => {
+    throw new Error(`探查本地数据库失败：${e instanceof Error ? e.message : String(e)}`)
+  })
+  if (probe.exists) {
+    // 打开（同时检测迁移中断：08 §R9——有开始无完成 = 半成品，销毁重来）
+    let open = await invoke<{ incompleteMigration: boolean }>('db_open').catch((e: unknown) => {
+      throw new Error(`打开本地数据库失败：${e instanceof Error ? e.message : String(e)}`)
+    })
+    if (open.incompleteMigration) {
+      await invoke('db_destroy')
+      if (await idbHasBusinessData()) return { choice: 'needs-migration', idbHasData: true }
+      open = await invoke('db_open')
+    }
+    setBackend(await createSqliteBackend())
+    return { choice: 'sqlite', idbHasData: false }
+  }
+  // 库文件不存在：老用户（IndexedDB 有数据）→ 迁移窗口；全新安装 → 直接 SQLite
+  if (await idbHasBusinessData()) return { choice: 'needs-migration', idbHasData: true }
+  setBackend(await createSqliteBackend())
+  return { choice: 'sqlite', idbHasData: false }
+}
+
+/** 存储选择就绪的共享 Promise（main.tsx 触发一次；App 与迁移模块共用结果） */
+let choiceResult: MigrationProbeResult = { choice: 'dexie', idbHasData: false }
+export function currentMigrationNeeded(): boolean {
+  return choiceResult.choice === 'needs-migration'
+}
+export const storageReady: Promise<MigrationProbeResult> = initStorage().then((r) => {
+  choiceResult = r
+  return r
+})
+
+/** 迁移模块读写旧库（Dexie）与主键清单用 */
+export function dexieTables(): { name: string; store: TableStore<Record<string, unknown>> }[] {
+  return BUSINESS_TABLES.map((name) => ({ name, store: (pworkDb as unknown as { [k: string]: TableStore<Record<string, unknown>> })[name] }))
+}
+
+export function kvStore(): TableStore<KvRow> {
+  return pworkDb.kv as unknown as TableStore<KvRow>
+}
+
+export type { Key, TableStore }

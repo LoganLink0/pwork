@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './components/shell/Sidebar'
 import { Topbar } from './components/shell/Topbar'
@@ -22,6 +22,8 @@ import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
 import { runStartupNotifiesFromDb, notifyDigestReady } from './engine/notify'
 import { loadKeybinds } from './engine/keybinds'
+import { MigrationModal } from './components/shell/MigrationModal'
+import { storageReady } from './db/schema'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
@@ -144,8 +146,12 @@ export default function App() {
   const load = useNotes((s) => s.load)
   const loadCollect = useCollect((s) => s.load)
   const loadTasks = useTasks((s) => s.load)
+  // 数据存储升级窗口（08 S2）：桌面版检测到旧数据待迁移时展示；完成自动重开 / 暂不则本会话继续旧存储
+  const [migrationPending, setMigrationPending] = useState(false)
+  const startServicesRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    const startServices = () => {
     track(load(), '应用启动加载速记库')
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
@@ -262,6 +268,17 @@ export default function App() {
       // AI 兴趣画像：攒够「多推」投票自动归纳（阈值与防重见 engine/interestProfile.ts）
       void autoRefreshInterestProfile()
     }
+    }
+    startServicesRef.current = startServices
+
+    // 存储后端选择就绪后才启动服务（08 S2：桌面版等 SQLite/迁移决策，网页版等存储探针）
+    void storageReady.then((choice) => {
+      if (choice.choice === 'needs-migration') {
+        setMigrationPending(true)
+        return
+      }
+      startServices()
+    })
   }, [load, loadCollect, loadTasks])
 
   // 窗口重新可见/聚焦 + 每 15 分钟定时：拉一轮云端增量
@@ -327,6 +344,14 @@ export default function App() {
       <CommandPalette />
       <QuickNote />
       {isDesktopApp() && <WheelMenu />}
+      {migrationPending && (
+        <MigrationModal
+          onSkip={() => {
+            setMigrationPending(false)
+            startServicesRef.current()
+          }}
+        />
+      )}
       </RoutedBoundary>
     </HashRouter>
   )
