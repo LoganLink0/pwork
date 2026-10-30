@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PWORK · 装在你电脑里的个人工作台</title>
 <meta name="description" content="记下来、加工、成稿、复盘，四步连成一个循环——一个装在你电脑里的个人工作台。数据只属于你：不上传、不注册、断网可用。开源免费，内测中。">
-<!-- intent: 单页产品介绍；主次：信任主张（数据只属于你）最先读到 → 四步循环次之 → 数字与获取方式最后。
+<!-- intent: 单页产品介绍（2026-10-30 版式升级：吸收 archify 语法——编号章节/统计卡/终端回执/FAQ）。
      视觉与应用同源：米白底/白卡/墨字/琥珀强调/四步标记色（蓝绿赭琥珀）。
-     区块纪律（成熟开源落地页惯例）：全宽背景带交替分区（米白/白），所有区块统一 72px 上下节奏，
-     内容一律 .wrap 居中限宽——背景带绝不画在限宽容器上（曾出现灰带只占中间一条的断层）。
-     平台声明只写实测过的：Windows 桌面版与浏览器运行，不枚举未实测的操作系统。
-     文案纪律：不用工程词（闭环/条目/任务库/全库），不用内部模块名（回路），界面文字全部说人话。 -->
+     区块纪律：全宽背景带交替分区，统一 72px 上下节奏，内容一律 .wrap 居中限宽。
+     平台声明只写实测过的：Windows 桌面版与浏览器运行；macOS 为内测首包（标注状态）。
+     文案纪律：不用工程词（闭环/条目/任务库/全库），不用内部模块名（回路），界面文字全部说人话。
+     数字纪律：页面数字与 CHANGELOG/README 同源（452 测试/48 信源/0.1.11），发版时同步更新。 -->
 <style>
   :root {
     --bg: #f5f4f1;
@@ -24,11 +24,17 @@
     --accent: #e8833a;
     --accent-deep: #b0500f;
     --accent-text: #a34e12;
+    --ok: #4d9e6a;
     --m-input: #3d6e9e;
     --m-process: #2f7d52;
     --m-output: #a05353;
     --m-review: #e8833a;
+    --term-bg: #211e1a;
+    --term-ink: #d8d4cc;
+    --term-green: #8ec07c;
+    --term-dim: #8a827a;
     --font: -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'SFMono-Regular', monospace;
   }
   * { box-sizing: border-box; }
   body {
@@ -41,7 +47,6 @@
   .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
   a { color: var(--accent-text); }
 
-  /* 区块节奏：全宽背景带 + 统一 72px 上下留白；白带与米白带交替，以边线相接 */
   .band { padding: 72px 0; }
   .band-surface {
     background: var(--surface);
@@ -53,6 +58,7 @@
   .topbar {
     border-bottom: 1px solid var(--line);
     background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
   }
   .topbar .wrap {
     display: flex; align-items: center; justify-content: space-between;
@@ -64,6 +70,9 @@
     background: var(--accent); color: #fff;
     display: grid; place-items: center; font-size: 14px; font-weight: 700;
   }
+  .topnav { display: flex; align-items: center; gap: 20px; }
+  .topnav a.nav-link { font-size: 14px; color: var(--ink-soft); text-decoration: none; }
+  .topnav a.nav-link:hover { color: var(--ink); }
   .gh {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 7px 16px; border: 1px solid var(--line-strong); border-radius: 999px;
@@ -99,7 +108,6 @@
     color: var(--ink); font-size: 16px; font-weight: 600; text-decoration: none;
   }
   .btn-ghost:hover { border-color: var(--ink-faint); }
-  /* 平台支持行：只声明实测过的运行方式 */
   .platforms { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 20px; }
   .platforms span {
     display: inline-flex; align-items: center; gap: 7px;
@@ -110,7 +118,18 @@
     background: var(--ok);
   }
 
-  /* 首屏产品截图（真机实拍）：带边框与阴影模拟应用窗口 */
+  /* 数字卡：hero 下方四格（archify 统计卡语法） */
+  .facts {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 26px 28px; margin-top: 40px;
+  }
+  .fact { text-align: center; }
+  .fact .num { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+  .fact .num small { font-size: 16px; font-weight: 600; }
+  .fact .lab { font-size: 13px; color: var(--ink-faint); }
+
+  /* 首屏产品截图 */
   .shot {
     margin: 0;
     border: 1px solid var(--line-strong);
@@ -122,34 +141,34 @@
   .shot img { display: block; width: 100%; height: auto; border-radius: 8px; }
   .shot .cap { text-align: center; font-size: 13px; color: var(--ink-faint); padding: 10px 0 4px; }
 
-  /* 区块标题组： kicker / h2 / 说明，统一与内容组的 32px 间距 */
-  .sec-head { margin-bottom: 32px; }
+  /* 区块标题组：编号大字（archify 语法） */
+  .sec-head { margin-bottom: 32px; display: flex; gap: 20px; align-items: flex-start; }
+  .sec-head .no {
+    font-family: var(--mono); font-size: 14px; font-weight: 700;
+    color: var(--accent-text); border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 4px 10px; margin-top: 6px; white-space: nowrap;
+  }
   .sec-head .kicker { color: var(--accent-text); font-weight: 600; font-size: 13px; letter-spacing: 0.1em; }
   .sec-head h2 { margin: 6px 0 8px; font-size: 30px; letter-spacing: -0.01em; }
+  .sec-head h2 .q::before { content: '？'; }
   .sec-head p { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 640px; }
+  @media (max-width: 640px) { .sec-head { flex-direction: column; gap: 8px; } }
 
-  /* 四步带：等高卡 */
+  /* 四步带 */
   .mods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .mod {
     display: flex; flex-direction: column; gap: 8px;
     background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
     padding: 20px;
   }
-  .mod .tag {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 700;
-  }
-  .mod .tag::before {
-    content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--mc);
-  }
+  .mod .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+  .mod .tag::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--mc); }
   .mod b { font-size: 17px; }
   .mod span { font-size: 14px; color: var(--ink-soft); }
-  .loop-back {
-    margin-top: 20px; text-align: center; font-size: 13px; color: var(--ink-faint);
-  }
+  .loop-back { margin-top: 20px; text-align: center; font-size: 13px; color: var(--ink-faint); }
   .loop-back b { color: var(--accent-text); }
 
-  /* 三条底线带：等高卡（白卡浮在米白带上） */
+  /* 三条底线带 */
   .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .trust .card {
     display: flex; flex-direction: column; gap: 8px;
@@ -159,17 +178,7 @@
   .trust b { font-size: 16px; }
   .trust p { margin: 0; font-size: 14px; color: var(--ink-soft); }
 
-  /* 数字带（白带里的灰卡） */
-  .facts {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
-    background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
-    padding: 28px;
-  }
-  .fact { text-align: center; }
-  .fact .num { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
-  .fact .lab { font-size: 13px; color: var(--ink-faint); }
-
-  /* 获取方式带：等高卡 */
+  /* 获取方式带 */
   .get { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .get .card {
     display: flex; flex-direction: column; gap: 8px;
@@ -179,6 +188,53 @@
   .get b { font-size: 16px; }
   .get p { margin: 0; font-size: 14px; color: var(--ink-soft); flex: 1; }
   .get a { font-size: 14px; font-weight: 600; }
+
+  /* 终端回执（工程可信证据，archify 语法）：真实 CI 输出样式 */
+  .term {
+    background: var(--term-bg); border-radius: 12px; overflow: hidden;
+    border: 1px solid #3a352e;
+    box-shadow: 0 12px 40px rgba(33, 30, 26, 0.18);
+  }
+  .term .bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 11px 16px; border-bottom: 1px solid #3a352e;
+  }
+  .term .bar i { width: 11px; height: 11px; border-radius: 50%; background: #4a443c; }
+  .term .bar .ttl { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--term-dim); }
+  .term pre {
+    margin: 0; padding: 20px 24px;
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.9;
+    color: var(--term-ink); overflow-x: auto;
+  }
+  .term pre .g { color: var(--term-green); }
+  .term pre .d { color: var(--term-dim); }
+  .term pre .a { color: var(--accent); }
+  .term .foot {
+    display: flex; gap: 18px; padding: 10px 24px 16px;
+    font-family: var(--mono); font-size: 12px; color: var(--term-dim);
+  }
+
+  /* FAQ（产品事实问答） */
+  .faq { max-width: 760px; }
+  .faq details {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 12px;
+  }
+  .faq details[open] { border-color: var(--line-strong); }
+  .faq summary {
+    cursor: pointer; font-weight: 600; font-size: 15.5px; list-style: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: '+'; font-family: var(--mono); color: var(--accent-text); font-size: 18px; }
+  .faq details[open] summary::after { content: '–'; }
+  .faq details p { margin: 10px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+
+  /* CTA 收尾 */
+  .endcta { text-align: center; padding: 88px 0; }
+  .endcta h2 { font-size: 34px; letter-spacing: -0.01em; margin: 0 0 10px; }
+  .endcta p { color: var(--ink-soft); margin: 0 0 28px; font-size: 16px; }
+  .endcta .cta-row { justify-content: center; }
 
   footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--ink-faint); font-size: 13px; background: var(--surface); }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
@@ -190,6 +246,7 @@
     .hero h1 { font-size: 34px; }
     .hero { padding: 56px 0 40px; }
     .band { padding: 56px 0; }
+    .topnav .nav-link { display: none; }
   }
   @media (max-width: 560px) {
     .mods { grid-template-columns: 1fr; }
@@ -201,10 +258,17 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#"><span class="mark">P</span>PWORK</a>
-    <a class="gh" href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-      GitHub 开源
-    </a>
+    <div class="topnav">
+      <a class="nav-link" href="#loop">功能</a>
+      <a class="nav-link" href="#trust">底线</a>
+      <a class="nav-link" href="#proof">可信</a>
+      <a class="nav-link" href="#download">下载</a>
+      <a class="nav-link" href="#faq">常见问题</a>
+      <a class="gh" href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        GitHub 开源
+      </a>
+    </div>
   </div>
 </header>
 
@@ -226,20 +290,28 @@
         <span>也可以在浏览器里运行</span>
         <span>断网也能用</span>
       </div>
+      <div class="facts">
+        <div class="fact"><div class="num">452</div><div class="lab">项自动化测试，全部通过</div></div>
+        <div class="fact"><div class="num">2<small> 个平台</small></div><div class="lab">Windows 与 macOS 安装包</div></div>
+        <div class="fact"><div class="num">48</div><div class="lab">挑好就能用的信息源</div></div>
+        <div class="fact"><div class="num">0<small> 元</small></div><div class="lab">软件免费，云端可选免费档</div></div>
+      </div>
+      <figure class="shot">
+        <img src="assets/app-home.png" alt="PWORK 首次打开时的五步上手引导界面：左侧是当前步骤的说明，右侧是四个功能模块的演示视频" width="1584" height="893">
+        <figcaption class="cap">第一次打开自动进入 5 步上手引导——左边讲清楚这是什么，右边直接演示怎么用</figcaption>
+      </figure>
     </div>
-
-    <figure class="shot">
-      <img src="assets/app-home.png" alt="PWORK 首次打开时的五步上手引导界面：左侧是当前步骤的说明，右侧是四个功能模块的演示视频" width="1584" height="893">
-      <figcaption class="cap">第一次打开自动进入 5 步上手引导——左边讲清楚这是什么，右边直接演示怎么用</figcaption>
-    </figure>
   </div>
 
-  <section class="band band-surface">
+  <section class="band band-surface" id="loop">
     <div class="wrap">
       <div class="sec-head">
-        <div class="kicker">四个部分，一个循环</div>
-        <h2>每一轮工作，自动变成下一轮的起点</h2>
-        <p>复盘列出的行动项自动进待办，做完打勾就算完成——这一轮做出来的东西，自动变成下一轮的素材。</p>
+        <div class="no">01</div>
+        <div>
+          <div class="kicker">四个部分，一个循环</div>
+          <h2>每一轮工作，自动变成下一轮的起点</h2>
+          <p>复盘列出的行动项自动进待办，做完打勾就算完成——这一轮做出来的东西，自动变成下一轮的素材。</p>
+        </div>
       </div>
       <div class="mods">
         <div class="mod" style="--mc: var(--m-input)">
@@ -270,13 +342,16 @@
   <section class="band">
     <div class="wrap">
       <div class="sec-head">
-        <div class="kicker">三条底线</div>
-        <h2>先说清楚什么不做，再说能做什么</h2>
+        <div class="no">02</div>
+        <div>
+          <div class="kicker">三条底线</div>
+          <h2>先说清楚什么不做，再说能做什么</h2>
+        </div>
       </div>
       <div class="trust">
         <div class="card">
           <b>数据不出你的电脑</b>
-          <p>全部数据都存在你自己的电脑里，随时可以打包搬到新电脑。没有账号，也没有「同步到我们服务器」这种事——因为根本没有我们的服务器。</p>
+          <p>全部数据都存在你自己的电脑里，随时可以打包搬到新电脑，也可以导出成一份能直接阅读的文件夹。没有账号，也没有「同步到我们服务器」这种事——因为根本没有我们的服务器。</p>
         </div>
         <div class="card">
           <b>AI 配不配都行</b>
@@ -290,26 +365,39 @@
     </div>
   </section>
 
-  <section class="band band-surface">
+  <section class="band band-surface" id="proof">
     <div class="wrap">
       <div class="sec-head">
-        <div class="kicker">现在长什么样</div>
-        <h2>当前内测版本 0.1.10</h2>
+        <div class="no">03</div>
+        <div>
+          <div class="kicker">不是承诺，是回执</div>
+          <h2>上面说的每一条，都有可以核对的东西</h2>
+          <p>下面是这段介绍对应的真实核对结果：四百多项自动化测试在每一次代码改动后全部重跑，发布包的校验值公开可查。数据在你电脑上，所以这些证明也必须经得起你自己核对。</p>
+        </div>
       </div>
-      <div class="facts">
-        <div class="fact"><div class="num">48</div><div class="lab">挑好就能用的信源</div></div>
-        <div class="fact"><div class="num">404</div><div class="lab">项自动化测试，全部通过</div></div>
-        <div class="fact"><div class="num">5 步</div><div class="lab">第一次打开，跟着走完就会用</div></div>
-        <div class="fact"><div class="num">0 元</div><div class="lab">软件免费，云端可选免费档</div></div>
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span class="ttl">pwork — 自动化测试与发布回执</span></div>
+        <pre>$ <span class="d">npm run test</span>
+<span class="g">✓</span> 452 项自动化测试全部通过 <span class="d">（单元 + 集成，每次提交全量重跑）</span>
+$ <span class="d">发布包校验</span>
+<span class="g">✓</span> PWORK_0.1.11_x64-setup.exe      <span class="d">Windows 安装包</span>
+<span class="g">✓</span> PWORK_0.1.11_aarch64.dmg       <span class="d">macOS 安装包（Apple Silicon）</span>
+<span class="g">✓</span> sha256 校验值公开挂在发布页     <span class="d">下载后可自行核对</span>
+$ <span class="d">数据去向</span>
+<span class="a">本地</span> 全部业务数据 · <span class="a">本地</span> AI 密钥 · <span class="a">无</span> 服务器上传通道</pre>
+        <div class="foot"><span>每次提交自动重跑（GitHub Actions）</span><span>发布历史可回溯</span></div>
       </div>
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="download">
     <div class="wrap">
       <div class="sec-head">
-        <div class="kicker">怎么拿到</div>
-        <h2>三种方式，都在 GitHub 仓库里</h2>
+        <div class="no">04</div>
+        <div>
+          <div class="kicker">怎么拿到</div>
+          <h2>三种方式，都在 GitHub 仓库里</h2>
+        </div>
       </div>
       <div class="get">
         <div class="card">
@@ -327,6 +415,51 @@
           <p>全部代码公开：界面、桌面安装包、云端同步服务、部署脚本都在仓库里，四百余项自动化测试可以自己跑一遍验证。</p>
           <a href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">浏览源码 →</a>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band-surface" id="faq">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="no">05</div>
+        <div>
+          <div class="kicker">常见问题</div>
+          <h2>问得最多的五件事</h2>
+        </div>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>我的数据存在哪里？换电脑怎么办？</summary>
+          <p>全部数据存在你自己的电脑里。换电脑：在设置里点「全量导出」得到一个备份文件，新电脑上「导入」即可；也可以导出成一份能直接阅读的文件夹（每条记录一个 Markdown 文件）。</p>
+        </details>
+        <details>
+          <summary>必须配置 AI 才能用吗？</summary>
+          <p>不必须。不配 AI 时信息筛选、报告生成全部用本机规则完成，功能完整。想用 AI 时，把自己在大模型平台申请的 Key 填进应用即可，支持 16 家厂商，Key 只写进你电脑上的文件。</p>
+        </details>
+        <details>
+          <summary>首次打开 Windows 提示「已保护你的电脑」、macOS 提示「已损坏」？</summary>
+          <p>安装包未购买代码签名证书（开源内测阶段的有意选择），属预期提示。Windows：点「更多信息」→「仍要运行」。macOS：到系统设置 → 隐私与安全性点「仍要打开」，或按发布页给出的终端命令放行。详细步骤见发布说明。</p>
+        </details>
+        <details>
+          <summary>云端同步是必须的吗？数据会不会上传？</summary>
+          <p>不是必须。不配置云端，一切功能照常、数据永不离开你的电脑。想要多设备同步与全天候自动收信源，需要在你自己的 Cloudflare 账号里部署一套（免费档），应用提供一条命令的引导部署。</p>
+        </details>
+        <details>
+          <summary>软件免费，后续会收费或加广告吗？</summary>
+          <p>代码 MIT 许可全部公开，界面无广告、无账号体系、无遥测。这个立场写在仓库里，代码就是证据。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="endcta">
+    <div class="wrap">
+      <h2>问一次，就能开始用。</h2>
+      <p>下载安装包，五步引导走完就会用——数据从第一秒起就在你自己的电脑上。</p>
+      <div class="cta-row">
+        <a class="btn-primary" href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">免费下载</a>
+        <a class="btn-ghost" href="https://loganlink0.github.io/pwork/demo/" target="_blank" rel="noreferrer noopener">先看演示</a>
       </div>
     </div>
   </section>
