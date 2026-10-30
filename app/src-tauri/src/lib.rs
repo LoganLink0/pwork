@@ -1,5 +1,6 @@
 mod db;
 mod gateway;
+mod mirror;
 
 use std::thread;
 use tauri::{Emitter, Manager};
@@ -386,6 +387,10 @@ pub fn run() {
       db::db_migrate_finish,
       db::db_vacuum_into,
       db::db_columns,
+      mirror::mirror_write_file,
+      mirror::mirror_remove_file,
+      mirror::mirror_list_dir,
+      mirror::mirror_remove_dir,
     ])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");

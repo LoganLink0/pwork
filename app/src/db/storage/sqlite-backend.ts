@@ -5,6 +5,7 @@
  * 每条记录 = id 主键 + 索引列 + payload（完整记录 JSON）。
  */
 import { invoke } from '@tauri-apps/api/core'
+import { markMirrorDirty } from './mirror'
 import type { Key, OrderedRows, StorageBackend, TableStore, WhereClause } from './types'
 
 interface TableMeta {
@@ -70,6 +71,7 @@ class SqliteTable<T> implements TableStore<T> {
     const kf = await this.keyField()
     const key = String((value as Record<string, unknown>)[kf])
     await invoke('db_write', { ops: [{ kind: 'put', table: this.name, record: value }] })
+    markMirrorDirty(this.name, key)
     return key
   }
 
@@ -77,6 +79,10 @@ class SqliteTable<T> implements TableStore<T> {
     await inChunks(values, CHUNK, async (chunk) => {
       await invoke('db_write', { ops: chunk.map((record) => ({ kind: 'put', table: this.name, record })) })
     })
+    for (const v of values) {
+      const kf = await this.keyField()
+      markMirrorDirty(this.name, String((v as Record<string, unknown>)[kf]))
+    }
   }
 
   async bulkAdd(values: T[]): Promise<void> {
@@ -87,14 +93,17 @@ class SqliteTable<T> implements TableStore<T> {
     await inChunks(keys, CHUNK, async (chunk) => {
       await invoke('db_write', { ops: chunk.map((id) => ({ kind: 'del', table: this.name, id })) })
     })
+    for (const k of keys) markMirrorDirty(this.name, k)
   }
 
   async delete(key: Key): Promise<void> {
     await invoke('db_write', { ops: [{ kind: 'del', table: this.name, id: key }] })
+    markMirrorDirty(this.name, key)
   }
 
   async clear(): Promise<void> {
     await invoke('db_write', { ops: [{ kind: 'clear', table: this.name }] })
+    markMirrorDirty(this.name, null)
   }
 
   async count(): Promise<number> {
@@ -110,7 +119,7 @@ class SqliteTable<T> implements TableStore<T> {
   async update(key: Key, changes: Partial<T>): Promise<number> {
     const current = await this.get(key)
     if (!current) return 0
-    await this.put({ ...current, ...changes })
+    await this.put({ ...current, ...changes }) // put 内已登记镜像脏键
     return 1
   }
 

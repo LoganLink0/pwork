@@ -18,6 +18,7 @@ import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type Up
 import { buildReadableArchive } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
+import { rebuildMirror } from '../db/storage/mirror'
 import { loadNotifyConfig, saveNotifyConfig, type NotifyConfig } from '../engine/notify'
 import type { ImportResult } from '../db/backup'
 import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../engine/interestProfile'
@@ -277,6 +278,18 @@ export function Settings() {
     await refreshStorage()
   }
 
+  // vault 镜像重建（08 S3 自愈入口；桌面版 SQLite 模式下可用）
+  const [mirrorMsg, setMirrorMsg] = useState('')
+  const doRebuildMirror = async () => {
+    try {
+      setMirrorMsg('正在重建镜像文件夹……')
+      await rebuildMirror()
+      setMirrorMsg('镜像文件夹已按当前数据重建完成')
+    } catch (e) {
+      setMirrorMsg(`重建失败：${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   // 系统通知（0.4-1）：三样提醒的开关；浏览器版开启时借用户手势申请系统权限
   const [notifyCfg, setNotifyCfg] = useState<NotifyConfig>(() => loadNotifyConfig())
   const [notifyMsg, setNotifyMsg] = useState('')
@@ -393,6 +406,16 @@ export function Settings() {
             <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="每条数据一个 Markdown 文件的压缩包：可直接阅读、可导入其他工具，也可原样导回" onClick={() => void doExportArchive()}>
               导出可读档案
             </button>
+            {isDesktopApp() && (
+              <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="清空并按当前数据重建 vault 镜像文件夹（AppData\\vault）——镜像损坏或文件缺失时使用" onClick={() => void doRebuildMirror()}>
+                重建镜像文件夹
+              </button>
+            )}
+            {mirrorMsg && (
+              <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+                {mirrorMsg}
+              </span>
+            )}
             <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择解压后的档案文件夹（或多选 .md 文件），数据按修改时间新者为准合并进来">
               导入可读档案
               <input

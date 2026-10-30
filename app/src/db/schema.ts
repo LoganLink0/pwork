@@ -149,10 +149,12 @@ async function idbHasBusinessData(): Promise<boolean> {
   return false
 }
 
-/** 迁移完成后的 SQLite 模式切换（供迁移模块调用；桌面版专用） */
+/** 迁移完成后的 SQLite 模式切换（供迁移模块调用；桌面版专用）；切换即启用 vault 镜像 */
 export async function switchToSqliteBackend(): Promise<void> {
   const { createSqliteBackend } = await import('./storage/sqlite-backend')
   setBackend(await createSqliteBackend())
+  const { enableMirror } = await import('./storage/mirror')
+  await enableMirror()
 }
 
 /** 桌面版探查：pwork.db 就绪 / 需要迁移 /（网页版）维持 Dexie。不可用时降级内存模式 */
@@ -179,11 +181,13 @@ export async function initStorage(): Promise<MigrationProbeResult> {
       open = await invoke('db_open')
     }
     setBackend(await createSqliteBackend())
+    const { enableMirror } = await import('./storage/mirror')
+    await enableMirror()
     return { choice: 'sqlite', idbHasData: false }
   }
   // 库文件不存在：老用户（IndexedDB 有数据）→ 迁移窗口；全新安装 → 直接 SQLite
   if (await idbHasBusinessData()) return { choice: 'needs-migration', idbHasData: true }
-  setBackend(await createSqliteBackend())
+  await switchToSqliteBackend()
   return { choice: 'sqlite', idbHasData: false }
 }
 

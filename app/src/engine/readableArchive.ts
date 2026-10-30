@@ -66,6 +66,46 @@ function itemBody(i: Item): string {
   return lines.join('\n')
 }
 
+/** 单条记录 → { 文件相对路径, Markdown 内容 }；archive（zip）与 vault 镜像共用同一格式（防漂移） */
+export function recordMarkdown(table: string, raw: unknown): { file: string; content: string } | null {
+  switch (table) {
+    case 'notes': {
+      const n = raw as Note
+      return { file: `速记/${safeName(n.title || n.body.slice(0, 20))}-${idTag(n.id)}.md`, content: mdFile({ ...n, body: undefined }, noteBody(n)) }
+    }
+    case 'tasks': {
+      const t = raw as TaskItem
+      return { file: `任务/${t.due ?? '无期限'}-${safeName(t.title)}-${idTag(t.id)}.md`, content: mdFile(t, taskBody(t)) }
+    }
+    case 'goals': {
+      const g = raw as Goal
+      return { file: `目标/${safeName(g.title)}-${idTag(g.id)}.md`, content: mdFile(g, goalBody(g)) }
+    }
+    case 'insights': {
+      const i = raw as InsightRecord
+      return { file: `洞察/${i.createdAt.slice(0, 10)}-${idTag(i.id)}.md`, content: mdFile({ ...i, text: undefined }, i.text) }
+    }
+    case 'reviews': {
+      const r = raw as ReviewRecord
+      return { file: `复盘/${r.createdAt.slice(0, 10)}-${safeName(r.title)}-${idTag(r.id)}.md`, content: mdFile(r, reviewBody(r)) }
+    }
+    case 'actions': {
+      const a = raw as ActionItem
+      return { file: `行动项/${a.status}-${safeName(a.text.slice(0, 30))}-${idTag(a.id)}.md`, content: mdFile(a, `# ${a.text}\n`) }
+    }
+    case 'sources': {
+      const s = raw as Source
+      return { file: `信源/${safeName(s.name)}-${idTag(s.id)}.md`, content: mdFile(s, `# ${s.name}\n\n${s.url}\n`) }
+    }
+    case 'items': {
+      const i = raw as Item
+      return { file: `条目/${(i.fetchedAt ?? i.createdAt).slice(0, 10)}-${safeName(i.title)}-${idTag(i.id)}.md`, content: mdFile(i, itemBody(i)) }
+    }
+    default:
+      return null
+  }
+}
+
 /** 导出为 zip（Uint8Array，调用方负责落盘/下载） */
 export async function buildReadableArchive(data: ArchiveInput): Promise<Uint8Array> {
   const zip = new JSZip()
@@ -76,13 +116,11 @@ export async function buildReadableArchive(data: ArchiveInput): Promise<Uint8Arr
     '导回方法：设置 → 数据 → 导入可读档案，选择本压缩包即可；相同内容按修改时间新者为准。',
     '本档案覆盖速记/任务/目标/洞察/复盘/行动项/信源/条目；采集偏好与外部数据块在「全量导出」的 JSON 备份里。',
   ].join('\n'))
-  for (const n of data.notes) zip.file(`速记/${safeName(n.title || n.body.slice(0, 20))}-${idTag(n.id)}.md`, mdFile({ ...n, body: undefined }, noteBody(n)))
-  for (const t of data.tasks) zip.file(`任务/${t.due ?? '无期限'}-${safeName(t.title)}-${idTag(t.id)}.md`, mdFile(t, taskBody(t)))
-  for (const g of data.goals) zip.file(`目标/${safeName(g.title)}-${idTag(g.id)}.md`, mdFile(g, goalBody(g)))
-  for (const i of data.insights) zip.file(`洞察/${i.createdAt.slice(0, 10)}-${idTag(i.id)}.md`, mdFile({ ...i, text: undefined }, i.text))
-  for (const r of data.reviews) zip.file(`复盘/${r.createdAt.slice(0, 10)}-${safeName(r.title)}-${idTag(r.id)}.md`, mdFile(r, reviewBody(r)))
-  for (const a of data.actions) zip.file(`行动项/${a.status}-${safeName(a.text.slice(0, 30))}-${idTag(a.id)}.md`, mdFile(a, `# ${a.text}\n`))
-  for (const s of data.sources) zip.file(`信源/${safeName(s.name)}-${idTag(s.id)}.md`, mdFile(s, `# ${s.name}\n\n${s.url}\n`))
-  for (const i of data.items) zip.file(`条目/${(i.fetchedAt ?? i.createdAt).slice(0, 10)}-${safeName(i.title)}-${idTag(i.id)}.md`, mdFile(i, itemBody(i)))
+  for (const [table, rows] of Object.entries(data)) {
+    for (const row of rows) {
+      const md = recordMarkdown(table, row)
+      if (md) zip.file(md.file, md.content)
+    }
+  }
   return zip.generateAsync({ type: 'uint8array' })
 }

@@ -54,7 +54,8 @@ const cdp = await connect(await pageWs())
 const queries = [
   ['notes', "SELECT id, payload FROM notes"],
   ['tasks', "SELECT id, payload FROM tasks"],
-  ['meta', "SELECT key, value FROM meta"],
+  ['meta', "SELECT key, payload FROM meta"],
+  ['镜像错误', "SELECT message FROM errorLog WHERE message LIKE '%镜像%' ORDER BY at DESC LIMIT 3"],
 ]
 for (const [label, sql] of queries) {
   try {
