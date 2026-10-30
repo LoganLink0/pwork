@@ -20,6 +20,7 @@
 
 - [x] **自动更新接入（0.2 批，2026-10-29 完成 f5bee03）**：tauri-plugin-updater + tauri-plugin-process 接入（lib.rs 注册、capabilities updater:default 与 process:allow-restart）；tauri.conf.json 开 createUpdaterArtifacts + 公钥内嵌 + 端点 `github.com/LoganLink0/pwork/releases/latest/download/latest.json`（恒指最新资产）+ Windows passive 静默安装；设置 → 关于「检查更新 → 下载安装（进度）→ 重启生效」，手动触发不后台拉取，拿不到更新信息如实提示（首次可用要等发过带 latest.json 的版本）；构建签名走 TAURI_SIGNING_PRIVATE_KEY 环境变量（development.md 待补发布流程）。**遗留：发布第一版带 latest.json+签名资产的 Release 后真机验证升级链（用户动作）**
 - [ ] **检查更新真实命中验证（用户动作，任意一台装着 0.1.10 的电脑）**：latest.json 已含 darwin+windows 双平台条目且 v0.1.11 为最新 Release——装着 0.1.10 的电脑打开应用，设置 → 关于 → 检查更新，应提示发现 0.1.11 并可下载安装（通过即更新器全链路验证完毕）
+- [ ] **CI 测试流水线（0.2 质量节未兑现的尾巴，我可做）**：macos-build 与 catalog-check 两个工作流已在，但 vitest/tsc 全量回归仍只在本地跑——加一个 push/PR 触发的 test 工作流（Node 22 → npm ci → vitest + tsc + lint，含 worker 目录），跑通一次即闭环
 - [ ] **Gitee v0.1.11 Release 补 dmg 附件（网络窗口制，2026-10-30 多轮下载超时挂起）**：Release 已建（说明为中文并指 GitHub 下载），dmg 附件多次下载超时未传成——网络通时 `curl -L` 直链下载（校验 sha256=c20b701b09fad550fc0c0bd21d1397bb4b0631e862fcb3570f61f3f70cb31120）后走 attach_files API 传附件即闭环
 - [ ] **macOS⑤ 真机验证（进行中，2026-10-30 用户实测首反馈）**：真机已到「已损坏」拦截一步（Gatekeeper 未公证拦截，**macOS 15+ 右键放行已失效**，发布说明已改为「仍要打开」/`xattr -dr` 指引并同步 GitHub Release notes；产物完整性已验证 tar.gz digest 一致、.app 结构齐全）——待用户按新指引放行后继续验证：应用可启动 / 轮盘 ⌘Option+Q 与 META 语义 / 网关 / 一键部署 / 备份写盘 / 通知权限 / WKWebView 存储耐久（persist 申请在 macOS 的实际行为待验）
 
