@@ -56,7 +56,7 @@ export async function applySourceCredit(minSample = 8): Promise<CreditChange[]> 
   })
   if (dirty.length === 0) return changes
   const now = new Date().toISOString()
-  await db.transaction('rw', db.sources, async () => {
+  await db.transaction('rw', ['sources'], async () => {
     for (const src of dirty) {
       const st = stats.get(src.id)!
       const toTier = tierFromRate(st.want / st.rated)

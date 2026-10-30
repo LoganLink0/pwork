@@ -15,9 +15,7 @@ import type { Note } from '../types/models'
  */
 
 beforeEach(async () => {
-  await Promise.all(
-    db.tables.map((t) => t.clear()),
-  )
+  await db.clearAll()
 })
 
 describe('buildBackupBundle + importBundle（v2 全表回路）', () => {
@@ -39,7 +37,7 @@ describe('buildBackupBundle + importBundle（v2 全表回路）', () => {
     }
 
     // 模拟换机恢复：清空全部表后导入备份
-    await Promise.all(db.tables.map((t) => t.clear()))
+    await db.clearAll()
     const r = await importBundle(JSON.stringify(bundle))
     expect(r.format).toBe('pwork-v2')
     expect(r.counts.goals).toBe(1)

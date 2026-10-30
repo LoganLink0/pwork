@@ -21,7 +21,7 @@ import type { Item } from '../types/models'
 const NOW = '2026-10-11T10:00:00.000Z'
 
 beforeEach(async () => {
-  await Promise.all(db.tables.map((t) => t.clear()))
+  await db.clearAll()
 })
 
 describe('备份恢复演练：12 张表全量回路', () => {
@@ -125,7 +125,7 @@ describe('备份恢复演练：12 张表全量回路', () => {
     }
 
     // ---- 模拟丢库：清空全部 ----
-    await Promise.all(db.tables.map((t) => t.clear()))
+    await db.clearAll()
     expect(await db.notes.count()).toBe(0)
 
     // ---- 恢复 ----

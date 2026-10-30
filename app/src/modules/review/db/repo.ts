@@ -27,7 +27,7 @@ export async function listReviews(): Promise<ReviewRecord[]> {
 }
 
 export async function deleteReview(id: string): Promise<void> {
-  await db.transaction('rw', db.reviews, db.actions, db.insights, db.notes, db.tasks, async () => {
+  await db.transaction('rw', ['reviews', 'actions', 'insights', 'notes', 'tasks'], async () => {
     await db.reviews.delete(id)
     const actions = await db.actions.where('reviewId').equals(id).toArray()
     await db.actions.bulkDelete(actions.map((a) => a.id))
@@ -151,7 +151,7 @@ export async function exportAll(): Promise<BackupBundle> {
 
 export async function importAll(bundle: BackupBundle, mode: 'merge' | 'overwrite' = 'merge'): Promise<void> {
   if (bundle.version !== 1) throw new Error(`不支持的备份版本：${bundle.version}`)
-  await db.transaction('rw', db.reviews, db.actions, db.insights, async () => {
+  await db.transaction('rw', ['reviews', 'actions', 'insights'], async () => {
     if (mode === 'overwrite') {
       await Promise.all([db.reviews.clear(), db.actions.clear(), db.insights.clear()])
     }

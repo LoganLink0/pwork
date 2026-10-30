@@ -12,7 +12,7 @@ describe('调研分析页（任务式）', () => {
   beforeEach(async () => {
     localStorage.setItem('pwork-welcomed', '1')
     window.location.hash = '#/output/research'
-    await Promise.all(db.tables.map((t) => t.clear()))
+    await db.clearAll()
   })
 
   it('空态：输入目标开始调研 → 内置模板框架出现（无 AI 也完整可用）', async () => {

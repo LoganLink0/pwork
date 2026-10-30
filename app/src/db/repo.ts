@@ -82,7 +82,7 @@ export async function saveNote(note: Note): Promise<void> {
  */
 /** 反向挂接维护：复盘 id 写入 note.links.reviewIds（去重） */
 export async function attachReviewToNote(noteId: string, reviewId: string): Promise<void> {
-  await db.transaction('rw', db.notes, async () => {
+  await db.transaction('rw', ['notes'], async () => {
     const raw = await db.notes.get(noteId)
     if (!raw) return
     const note = normalizeNote(raw)
@@ -94,7 +94,7 @@ export async function attachReviewToNote(noteId: string, reviewId: string): Prom
 
 /** 反向挂接维护：任务 id 写入 note.links.taskIds（去重） */
 export async function attachTaskToNote(noteId: string, taskId: string): Promise<void> {
-  await db.transaction('rw', db.notes, async () => {
+  await db.transaction('rw', ['notes'], async () => {
     const raw = await db.notes.get(noteId)
     if (!raw) return
     const note = normalizeNote(raw)
@@ -108,7 +108,7 @@ export async function updateNoteFields(
   id: string,
   patch: Partial<Pick<Note, 'body' | 'title' | 'tags' | 'links'>>,
 ): Promise<void> {
-  await db.transaction('rw', db.notes, async () => {
+  await db.transaction('rw', ['notes'], async () => {
     const raw = await db.notes.get(id)
     if (!raw) return
     const current = normalizeNote(raw)

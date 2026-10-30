@@ -27,7 +27,7 @@ export async function runStartupHealthCheck(): Promise<DbHealthResult> {
   }
   const counts: Record<string, number> = {}
   for (const t of CORE_TABLES) {
-    counts[t] = await db.table(t).count()
+    counts[t] = await db.table<Record<string, unknown>>(t).count()
   }
   try {
     await db.kv.put({ key: COUNTS_KEY, value: { at: new Date().toISOString(), counts } })

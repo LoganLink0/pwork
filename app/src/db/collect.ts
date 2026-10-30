@@ -255,7 +255,7 @@ export async function updateAnnotation(
   id: string,
   patch: Partial<Item['annotation']> & { otFlag?: Item['otFlag'] },
 ): Promise<void> {
-  await db.transaction('rw', db.items, async () => {
+  await db.transaction('rw', ['items'], async () => {
     const raw = await db.items.get(id)
     if (!raw) return
     const item = normalizeItem(raw)
@@ -272,7 +272,7 @@ export async function updateAnnotation(
 
 /** 将进 Top N 的条目标记 kept（04 §3.2 状态机：scored --进TopN--> kept） */
 export async function markKept(ids: string[]): Promise<void> {
-  await db.transaction('rw', db.items, async () => {
+  await db.transaction('rw', ['items'], async () => {
     for (const id of ids) {
       const raw = await db.items.get(id)
       if (raw && raw.stage === 'scored') {

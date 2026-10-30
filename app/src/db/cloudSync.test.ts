@@ -3,7 +3,7 @@ import { cloudConfigured, loadCloudConfig, saveCloudConfig, syncFromCloud } from
 import { db } from './schema'
 
 beforeEach(async () => {
-  await Promise.all(db.tables.map((t) => t.clear()))
+  await db.clearAll()
   localStorage.clear()
   vi.unstubAllGlobals()
 })

@@ -33,7 +33,7 @@ function mkItem(sourceId: string, vote: 'want' | 'meh' | 'no' | null, dayOffset 
 }
 
 beforeEach(async () => {
-  await Promise.all(db.tables.map((t) => t.clear()))
+  await db.clearAll()
 })
 
 describe('tierFromRate（want 率 → 档位刻度）', () => {

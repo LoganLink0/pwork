@@ -110,20 +110,26 @@ export interface KvRow {
   value: unknown
 }
 
-export const db = new PworkDB()
+export interface KvRow {
+  key: string
+  value: unknown
+}
 
-/** 应用入口在渲染前调用：不可用则先切内存实现再继续 */
+export const pworkDb = new PworkDB()
+
+/** 存储委托（08 设计 S1）：业务层经 db 访问，实际后端可切换（Dexie / 内存 / 未来 SQLite） */
+import { bindDexieBackend, setBackend } from './delegate'
+import { createMemoryBackend } from './storage/memory'
+
+bindDexieBackend(pworkDb as never)
+
+export { db } from './delegate'
+
+/** 应用入口在渲染前调用：不可用则切内存后端再继续（08 S1：降级不再依赖 fake-indexeddb） */
 export async function initStorage(): Promise<void> {
   await ensureIndexedDB()
   if (usingMemoryFallback) {
-    // Dexie 已在构造时绑定原生 indexedDB；重开一次让它捡到 polyfill
-    try {
-      db.close()
-    } catch {
-      /* ignore */
-    }
-    db.open().catch(() => {
-      /* 打开失败也继续——内存实现下 Dexie 会用 polyfill 的 indexedDB */
-    })
+    setBackend(createMemoryBackend({ keyFields: { kv: 'key' } }))
+    usingMemoryFallback = true
   }
 }

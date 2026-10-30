@@ -64,7 +64,7 @@ export async function listProfiles(): Promise<Profile[]> {
 
 /** 勾选/取消一件交付物（事务化读改写——连点不互相覆盖，复盘 1.1） */
 export async function toggleProfileDeliverable(id: string, deliverableId: string): Promise<void> {
-  await db.transaction('rw', db.profiles, async () => {
+  await db.transaction('rw', ['profiles'], async () => {
     const raw = await db.profiles.get(id)
     if (!raw || raw.deletedAt) return
     const p = normalizeProfile(raw)
