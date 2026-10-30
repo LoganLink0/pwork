@@ -79,7 +79,8 @@ describe('nextCalendarDay（日报日期导航：日历口径，不被"有数据
 describe('fmtCompact（条目卡入库时间）', () => {
   it('同一天只显 HH:mm；跨天显 MM-DD HH:mm；非法输入空串', () => {
     const now = new Date(2026, 9, 21, 12, 0)
-    expect(fmtCompact('2026-10-21T09:14:00.000Z'.replace('T09', 'T02'), now)).toBe('10:14') // 本地 10:14
+    // 时间戳用本地分量构造再 toISOString 往返——期望值即本地时刻，测试不依赖运行时区（CI 在 UTC 跑同理）
+    expect(fmtCompact(new Date(2026, 9, 21, 2, 14).toISOString(), now)).toBe('02:14')
     expect(fmtCompact(new Date(2026, 9, 19, 8, 5).toISOString(), now)).toBe('10-19 08:05')
     expect(fmtCompact('not-a-date')).toBe('')
   })
