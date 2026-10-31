@@ -4,8 +4,9 @@ import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { ItemCard } from '../components/collect/ItemCard'
 import { Icon } from '../components/shell/icons'
-import { todayLocal, nextCalendarDay } from '../engine/datetime'
+import { todayLocal, nextCalendarDay, localDateOf } from '../engine/datetime'
 import { alignmentStats } from '../engine/itemTier'
+import { topicAnomalies } from '../engine/digestAnomaly'
 import { obsidianDaily } from '../engine/obsidian'
 import { downloadFile } from '../db/repo'
 import { cloudConfigured, syncFromCloud } from '../db/cloudSync'
@@ -141,6 +142,21 @@ export function Digest() {
           抓取中断：{fetchState.error}。按钮已恢复，可重试；<Link to="/settings">错误日志</Link>里有详情。
         </div>
       )}
+
+      {/* 主题异动（信源主动识别·第三层）：当日命中 ≥ 平时 3 倍才点名——从"什么最多"到"什么反常" */}
+      {(() => {
+        const anomalies = topicAnomalies(items, config.interests, digestDate, localDateOf)
+        if (anomalies.length === 0) return null
+        return (
+          <div className="run-banner" data-testid="topic-anomaly" role="status">
+            <Icon name="alert" size={13} /> <b>主题异动</b>：
+            {anomalies
+              .map((a) => `「${a.topic}」今天 ${a.today} 条（平时约 ${a.baseline.toFixed(1)} 条/天，${a.ratio.toFixed(0)} 倍）`)
+              .join('；')}
+            ——这几个话题今天的声量明显反常，值得留意。
+          </div>
+        )
+      })()}
 
       {digest.length === 0 ? (
         <div className="empty">

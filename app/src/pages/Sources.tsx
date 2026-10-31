@@ -8,6 +8,8 @@ import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
 import { exportSourcesJson } from '../db/collect'
 import { voteStatsBySource } from '../engine/sourceCredit'
+import { auditSources, verdictLabel } from '../engine/sourceAudit'
+import { discoverLeads } from '../engine/sourceDiscover'
 import { fmtLocal } from '../engine/datetime'
 import { sourcesToOpml, parseOpml } from '../engine/opml'
 import type { Source } from '../types/models'
@@ -191,6 +193,75 @@ export function Sources() {
         </div>
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
+
+      {/* 信源自检（主动识别·第一层）：30 天产出四指标 → 健康画像；只提示不动档位（升降由信用引擎自动做） */}
+      {(() => {
+        const audits = auditSources(items, sources)
+        const issues = audits.filter((a) => a.verdict === 'noisy' || a.verdict === 'idle')
+        const goods = audits.filter((a) => a.verdict === 'good')
+        if (audits.length === 0 || sources.length === 0) return null
+        return (
+          <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }} data-testid="source-audit">
+            <h2>信源自检（近 30 天）</h2>
+            <div className="set-body">
+              <div className="set-row">
+                <label>总体</label>
+                <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                  产出健康 {goods.length} 个 ｜ 噪声偏高 {audits.filter((a) => a.verdict === 'noisy').length} 个 ｜ 零命中 {audits.filter((a) => a.verdict === 'idle').length} 个 ｜ 观察中 {audits.filter((a) => a.verdict === 'young').length} 个
+                </span>
+              </div>
+              {issues.map((a) => (
+                <div className="set-row" key={a.sourceId}>
+                  <label style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : 'var(--ink-soft)' }}>
+                    {verdictLabel(a.verdict)}
+                  </label>
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                    <b>{a.name}</b>：{a.advice}
+                  </span>
+                </div>
+              ))}
+              {issues.length === 0 && (
+                <div className="set-row">
+                  <label></label>
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                    没有需要处理的信源——降档与升档由投票信用自动完成，这里只报告健康状态。
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* 引用发现（主动识别·第二层）：非订阅域名近 30 天被反复转引 → 值得直接订阅的源头。
+          只发现不添加——feed 地址猜不出来，「编辑后添加」预填名称与主站地址，补全 feed 后入库 */}
+      {(() => {
+        const leads = discoverLeads(items, sources)
+        if (leads.length === 0) return null
+        return (
+          <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }} data-testid="source-leads">
+            <h2>可能值得订阅的源头（近 30 天被你的信源反复转引）</h2>
+            <div className="set-body">
+              {leads.map((l) => (
+                <div className="set-row" key={l.domain}>
+                  <label>{l.domain}</label>
+                  <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                    被引用 {l.count} 次，如：{l.samples.map((s) => s.title).join('；')}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ flex: 'none' }}
+                    onClick={() => { setForm({ name: l.domain, url: `https://${l.domain}`, domain: 'ai', tier: 1.5 }); setEditId(null) }}
+                  >
+                    编辑后添加
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {catalogOpen && sources.length > 0 && (
         <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
