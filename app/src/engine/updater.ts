@@ -22,10 +22,34 @@ export type UpdateState =
 
 let pending: Update | null = null
 
+const PROXY_KEY = 'pwork-update-proxy'
+
+/** 读取更新代理地址（设置 → 关于 配置；空串 = 直连）。
+ *  GitHub 资产域名在国内网络时好时坏，配了代理后检查与下载全链路都走它 */
+export function loadUpdateProxy(): string {
+  return localStorage.getItem(PROXY_KEY) ?? ''
+}
+
+export function saveUpdateProxy(url: string): void {
+  localStorage.setItem(PROXY_KEY, url.trim())
+}
+
 /** 检查更新。任何失败都原样抛出（fast-fail），由调用方展示人话错误 */
 export async function checkForUpdate(): Promise<UpdateState> {
   if (!isDesktopApp()) throw new Error('浏览器版没有安装包，无需检查更新')
-  const update = await check()
+  // 代理传一次即可：Rust 侧 Updater 实例持有它，后续下载安装包复用同一实例
+  const proxy = loadUpdateProxy()
+  let update: Update | null
+  try {
+    update = await check(proxy ? { proxy } : undefined)
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      loadUpdateProxy()
+        ? `${raw}——代理也没连上更新源，确认代理软件在运行、节点可用后再试`
+        : `${raw}——更新源访问不了。如果你的网络需要代理才能上 GitHub，在下方「更新代理」填入代理地址后重试；也可能只是网络波动，稍后再试一次`,
+    )
+  }
   if (!update) {
     pending = null
     return { phase: 'latest' }

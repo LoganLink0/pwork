@@ -14,7 +14,7 @@ import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, recordError, type ErrorKind } from '../engine/errorLog'
 import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
-import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
+import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, loadUpdateProxy, saveUpdateProxy, type UpdateState } from '../engine/updater'
 import { buildReadableArchive } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
@@ -89,6 +89,9 @@ export function Settings() {
   const [importBusy, setImportBusy] = useState(false)
   // 应用内更新（桌面版专属；0.2 批）：检查 → 下载安装 → 重启生效
   const [upd, setUpd] = useState<UpdateState>({ phase: 'idle' })
+  // 更新代理（GitHub 资产域名在国内网络时好时坏）：填写后检查与下载都走它
+  const [proxyDraft, setProxyDraft] = useState(() => loadUpdateProxy())
+  const [proxyMsg, setProxyMsg] = useState('')
   const doCheckUpdate = async () => {
     try {
       setUpd({ phase: 'checking' })
@@ -1085,6 +1088,40 @@ export function Settings() {
               {upd.phase === 'ready' && (
                 <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void restartToUpdate()}>重启应用</button>
               )}
+            </div>
+          )}
+          {isDesktopApp() && (
+            <div className="set-row">
+              <label>更新代理</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                检查更新与下载更新包走这个代理（GitHub 访问不稳时用）。格式如 http://127.0.0.1:7890；留空 = 直连。保存后重新点「检查更新」生效。
+                <br />
+                <input
+                  type="text"
+                  value={proxyDraft}
+                  placeholder="http://127.0.0.1:7890"
+                  style={{ width: '100%', maxWidth: 320, marginTop: 4 }}
+                  onChange={(e) => { setProxyDraft(e.target.value); setProxyMsg('') }}
+                />
+                <br />
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ flex: 'none', marginTop: 4 }}
+                  onClick={() => {
+                    const v = proxyDraft.trim()
+                    if (v && !/^https?:\/\//.test(v)) {
+                      setProxyMsg('代理地址要以 http:// 或 https:// 开头')
+                      return
+                    }
+                    saveUpdateProxy(v)
+                    setProxyMsg(v ? '代理已保存，重新检查更新即生效' : '已清空——恢复直连')
+                  }}
+                >
+                  保存
+                </button>
+                {proxyMsg && <span style={{ marginLeft: 8 }}>{proxyMsg}</span>}
+              </span>
             </div>
           )}
           <div className="set-row">
