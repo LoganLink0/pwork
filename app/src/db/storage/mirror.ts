@@ -92,6 +92,25 @@ async function flush(): Promise<void> {
       await projectTable(table, keys)
     }
     failStreak = 0
+    // 全量标记在成功 flush 的末尾写（部分投影 + 标记并存 = 永久残缺，08 §S3 自检修正）
+    if (!(await mirrorBuilt())) {
+      await invoke('db_write', {
+        ops: [{ kind: 'put', table: 'meta', record: { key: 'mirror_built', value: new Date().toISOString() } }],
+      })
+      await invoke('mirror_write_file', {
+        dir: '根目录',
+        name: 'README.md',
+        content: [
+          '# PWORK 数据镜像',
+          '',
+          '这个文件夹是 PWORK 数据库的只读镜像：每条数据一个 Markdown 文件，供你直接阅读或用其他工具查看。',
+          '',
+          '- 请勿手动编辑这里的文件——修改不会写回数据库，且会在下次同步时被覆盖。',
+          '- 要修改数据，请在 PWORK 应用内操作；删除这里的文件没有意义，应用会自动重建。',
+          '- 原始数据库是同目录下的 pwork.db。',
+        ].join('\n'),
+      })
+    }
   } catch (e) {
     failStreak++
     // R8：失败批次重新入队退避重试（最多 3 次），超过后静默入错误日志、等新脏键触发
@@ -131,9 +150,7 @@ async function flush(): Promise<void> {
 
 async function projectTable(table: string, keys: Set<string | null>): Promise<void> {
   const dir = DIRS[table]
-  const backend = getBackend()
-  const store = backend.table<Record<string, unknown>>(table)
-  const all = await store.toArray()
+  const store = getBackend().table<Record<string, unknown>>(table)
   const full = keys.has(null)
   // 现有文件按 id 尾标索引（文件名含标题，标题变更后旧文件要清掉）
   const entries = await invoke<Array<{ name: string }>>('mirror_list_dir', { dir })
@@ -142,45 +159,40 @@ async function projectTable(table: string, keys: Set<string | null>): Promise<vo
     const m = e.name.match(/-([A-Za-z0-9_-]+)\.md$/)
     if (m) byTag.set(m[1]!, e.name)
   }
-  const touched = new Set<string>()
-  for (const row of all) {
-    const id = String(row.id)
-    const tag = id.slice(-8)
-    if (!full && !keys.has(id)) continue
-    if (isHidden(row)) {
-      const stale = byTag.get(tag)
-      if (stale) await invoke('mirror_remove_file', { dir, name: stale })
-      continue
-    }
+  const removeStale = async (tag: string): Promise<void> => {
+    const stale = byTag.get(tag)
+    if (stale) await invoke('mirror_remove_file', { dir, name: stale })
+  }
+  const writeRow = async (row: Record<string, unknown>): Promise<void> => {
     const md = recordMarkdown(table, row)
-    if (!md) continue
-    const fileName = md.file.split('/').pop()!
-    await invoke('mirror_write_file', { dir, name: fileName, content: md.content })
-    touched.add(tag)
+    if (!md) return
+    await invoke('mirror_write_file', { dir, name: md.file.split('/').pop()!, content: md.content })
   }
   if (full) {
-    // 整表投影后清掉库里已不存在的旧文件
+    // 整表投影（首次全量/清库后）：全部可见行重写 + 清掉库里已不存在的旧文件
+    const all = await store.toArray()
+    const touched = new Set<string>()
+    for (const row of all) {
+      const tag = String(row.id).slice(-8)
+      await writeRow(row)
+      if (!isHidden(row)) touched.add(tag)
+    }
     for (const [tag, name] of byTag) {
       if (!touched.has(tag)) await invoke('mirror_remove_file', { dir, name })
     }
-    if (!(await mirrorBuilt())) {
-      await invoke('db_write', {
-        ops: [{ kind: 'put', table: 'meta', record: { key: 'mirror_built', value: new Date().toISOString() } }],
-      })
-      await invoke('mirror_write_file', {
-        dir: '根目录',
-        name: 'README.md',
-        content: [
-          '# PWORK 数据镜像',
-          '',
-          '这个文件夹是 PWORK 数据库的只读镜像：每条数据一个 Markdown 文件，供你直接阅读或用其他工具查看。',
-          '',
-          '- 请勿手动编辑这里的文件——修改不会写回数据库，且会在下次同步时被覆盖。',
-          '- 要修改数据，请在 PWORK 应用内操作；删除这里的文件没有意义，应用会自动重建。',
-          '- 原始数据库是同目录下的 pwork.db。',
-        ].join('\n'),
-      })
+    return
+  }
+  // 键级投影：只读脏键（08 §R10——单条编辑绝不触发全表读取）
+  const keyed = [...keys].filter((k): k is string => k != null)
+  for (const key of keyed) {
+    const tag = key.slice(-8)
+    const row = await store.get(key)
+    if (!row || isHidden(row)) {
+      await removeStale(tag)
+      continue
     }
+    await removeStale(tag)
+    await writeRow(row)
   }
 }
 

@@ -52,13 +52,13 @@ Cloudflare cron 定时抓源 → D1 累积 → 本地 `syncFromCloud` 拉取合�
 **错误流**（全应用）：
 index.html 内联钩子（应用加载前单槽记录）→ `installErrorCapture` 接管 window error/unhandledrejection + 引导期记录静默搬运 → `recordError`（errorLog 表，上限 300 条最旧先删）→ ErrorBar 即时弹条 / ErrorBoundary 渲染崩溃页 / 设置页日志卡查看导出。
 
-## 数据库（Dexie/IndexedDB `pwork-workbench`，schema v12）
+## 数据库（桌面版 SQLite `pwork.db` / 网页版 Dexie IndexedDB）
 
-notes / sources / items / reviews / actions / insights / tasks / goals / snapshots / blocks / profiles / caseFiles / aiCache / errorLog。约束：字段只增不删、读取侧防御缺字段（铁律 2）；实体必备 id/createdAt/updatedAt/schemaVersion（铁律 1）；日志/缓存类属 Raw 暂存层（上限清理，不进备份）。
+08 设计（主库文件化 S1–S3，2026-10-30）后的存储分层：业务代码经 `db/delegate.ts` 访问，实际后端可切换——桌面版默认 **SQLite**（`pwork.db` 落应用数据目录，Rust rusqlite 经命令层执行，事务跨命令共享连接），网页版维持 **Dexie/IndexedDB**（`pwork-workbench`，schema v13），测试跑内存后端。表清单两态一致（15 张：notes/sources/items/reviews/actions/insights/tasks/goals/snapshots/blocks/profiles/caseFiles/aiCache/errorLog/kv + meta）。约束不变：字段只增不删、读取侧防御缺字段（铁律 2）；实体必备 id/createdAt/updatedAt/schemaVersion（铁律 1）；日志/缓存类属 Raw 暂存层（上限清理，不进备份）。桌面版另有 `vault/` 只读镜像（每条数据一个 Markdown 文件，recordMarkdown 与可读档案同源，投影失败重试三次后暂停并静默入错误日志）。
 
 ## 桌面壳（src-tauri）
 
-tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900 最小 1024×680，NSIS 中文安装器。Rust 侧三件：单实例锁（重复启动聚焦主窗）、内嵌网关（gateway.rs，约 300 行，行为与 Node 版对齐）、fs 权限收窄至 AppData 读写（capabilities/default.json）。更新器签名密钥已备（app/.tauri/，不入库），插件待托管源再接。
+tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900 最小 1024×680，NSIS 中文安装器。Rust 侧：单实例锁（重复启动聚焦主窗）、内嵌网关（gateway.rs，行为与 Node 版对齐）、SQLite 主库命令层（db.rs：通用执行器/事务/迁移分批/VACUUM 快照）、vault 镜像命令层（mirror.rs：目录白名单+文件名穿越防护+原子写入）、fs 权限收窄至 AppData 读写（capabilities/default.json）。更新器已接入（签名密钥在 app/.tauri/，不入库；发布流程见 development.md）。
 
 ## 已知架构边界
 
