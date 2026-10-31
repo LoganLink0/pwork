@@ -1,7 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
-import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { fork } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -65,22 +64,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     pworkGatewayAutostart(),
-    // 本地引擎资源（安全审计 2026-10-26 A-3：FFmpeg/OCR 不再运行时从 CDN 取代码）。
-    // 资源以 npm 依赖安装、构建时拷进 dist（版本由 lock 锁定；esm 版 core 是 module worker
-    // 动态 import 的正确形态）；src/engine/ffmpegClient.ts 与 OcrTool.tsx 按这些目标路径加载。
-    // 演示模式剔除 ffmpeg/tesseract 共约 64MB（入仓体积考虑，演示横幅已引导桌面版拿完整功能）
-    viteStaticCopy({
-      targets: mode === 'demo' ? [] : [
-        { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.js', stripBase: true } },
-        { src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm', dest: 'ffmpeg', rename: { name: 'ffmpeg-core.wasm', stripBase: true } },
-        { src: 'node_modules/tesseract.js/dist/worker.min.js', dest: 'tesseract', rename: { name: 'worker.min.js', stripBase: true } },
-        { src: 'node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-lstm.wasm.js', stripBase: true } },
-        { src: 'node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-simd-lstm.wasm.js', stripBase: true } },
-        { src: 'node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js', dest: 'tesseract/core', rename: { name: 'tesseract-core-relaxedsimd-lstm.wasm.js', stripBase: true } },
-        { src: 'node_modules/@tesseract.js-data/chi_sim/4.0.0/chi_sim.traineddata.gz', dest: 'tesseract/lang', rename: { name: 'chi_sim.traineddata.gz', stripBase: true } },
-        { src: 'node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz', dest: 'tesseract/lang', rename: { name: 'eng.traineddata.gz', stripBase: true } },
-      ],
-    }),
+    // FFmpeg/OCR 引擎随 0.1.13 精简移除（功能与系统级工具重复、占安装包 93% 体积），
+    // viteStaticCopy 一并下线；工具箱的音视频转换改为外部工具跳转
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],

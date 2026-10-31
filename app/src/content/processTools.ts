@@ -8,8 +8,6 @@ export type ToolCategory = 'text' | 'audio' | 'image' | 'video'
 export type ToolEngine =
   | 'local-webspeech-tts'
   | 'local-webspeech-asr'
-  | 'local-tesseract'
-  | 'local-ffmpeg'
   | 'local-canvas'
   | 'external'
   | 'byok'
@@ -45,8 +43,6 @@ export const CATEGORY_META: Record<ToolCategory, { name: string; icon: string; m
 export const ENGINE_LABEL: Record<ToolEngine, string> = {
   'local-webspeech-tts': '本地 · 浏览器语音',
   'local-webspeech-asr': '本地 · 浏览器识别',
-  'local-tesseract': '本地 · Tesseract',
-  'local-ffmpeg': '本地 · FFmpeg',
   'local-canvas': '本地 · Canvas',
   external: '外部工具 ↗',
   byok: 'BYOK 云端',
@@ -101,15 +97,6 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     note: '使用浏览器内置识别（Chrome/Edge 支持最好；识别在云端引擎完成但免费无 Key）',
   },
   {
-    id: 'audio-convert',
-    category: 'audio',
-    name: '音频格式转换 / 压缩',
-    desc: 'mp3 / wav 等音频互转、压缩体积，本地处理不上传',
-    engine: 'local-ffmpeg',
-    status: 'ready',
-    note: '建议单文件 ≤100MB；引擎已内置在应用里，全程离线可用',
-  },
-  {
     id: 'asr-high',
     category: 'audio',
     name: '高质量语音识别',
@@ -136,18 +123,9 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     engine: 'external',
     status: 'ready',
     externalUrl: 'https://www.capcut.cn/',
-    note: '外部工具；重度视频处理推荐用它，本工作台的 wasm 转换适合轻量场景',
+    note: '外部工具；重度视频剪辑与文字成片推荐用它',
   },
   // ── 图片 ──
-  {
-    id: 'ocr',
-    category: 'image',
-    name: '图片识别文字',
-    desc: '从截图、照片里提取文字（中英文），识别结果可存为速记',
-    engine: 'local-tesseract',
-    status: 'ready',
-    note: '引擎与中文语言包已内置，全程离线可用；印刷体效果好，手写体较弱',
-  },
   {
     id: 'image-process',
     category: 'image',
@@ -168,13 +146,14 @@ export const PROCESS_TOOLS: ProcessTool[] = [
   },
   // ── 视频 ──
   {
-    id: 'video-convert',
+    id: 'ext-handbrake',
     category: 'video',
-    name: '视频转换 / 压缩 / 抽音频 / 转 GIF',
-    desc: 'mp4/webm 互转、压缩体积、提取音轨、截取片段转 GIF，本地处理不上传',
-    engine: 'local-ffmpeg',
+    name: 'HandBrake 视频转换',
+    desc: '开源免费的视频转码工具：mp4/webm 互转、压缩体积、提取音轨（外部工具，跳转官网）',
+    engine: 'external',
     status: 'ready',
-    note: 'wasm 软编码，适合短视频（建议 ≤5 分钟或 ≤100MB）；长视频建议用剪映等本地工具',
+    externalUrl: 'https://handbrake.fr/',
+    note: '外部工具，与本工作台无数据互通；轻量格式转换与压缩用它比浏览器内转码快得多',
   },
   {
     id: 'ext-removebg',

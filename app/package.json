@@ -10,15 +10,13 @@
     "build": "tsc -b && vite build",
     "build:demo": "tsc -b && vite build --mode demo",
     "serve": "node scripts/serve.mjs",
-    "lint": "oxlint --ignore-pattern public/ffmpeg --ignore-pattern public/tesseract",
+    "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "audit:classes": "node scripts/audit-classes.mjs"
   },
   "dependencies": {
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "@tauri-apps/plugin-fs": "^2.7.0",
@@ -36,15 +34,11 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
-    "tesseract.js": "^7.0.0",
     "yaml": "^2.9.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@ffmpeg/core": "^0.12.10",
     "@tauri-apps/cli": "^2.12.2",
-    "@tesseract.js-data/chi_sim": "^1.0.0",
-    "@tesseract.js-data/eng": "^1.0.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
@@ -56,11 +50,9 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "oxlint": "^1.79.0",
-    "tesseract.js-core": "^7.0.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
     "vite-plugin-pwa": "^1.3.0",
-    "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^4.1.12"
   },
   "overrides": {

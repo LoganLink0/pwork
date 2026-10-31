@@ -10,6 +10,8 @@ import { runMigration } from '../../db/storage/migration'
 export function MigrationModal({ onSkip }: { onSkip: () => void }) {
   const [phase, setPhase] = useState<'confirm' | 'running' | 'done' | 'fail'>('confirm')
   const [lines, setLines] = useState<string[]>([])
+  const [overall, setOverall] = useState({ done: 0, total: 0 })
+  const [currentTable, setCurrentTable] = useState('')
   const [failMsg, setFailMsg] = useState('')
   const [snapshotFile, setSnapshotFile] = useState('')
 
@@ -18,7 +20,10 @@ export function MigrationModal({ onSkip }: { onSkip: () => void }) {
     setLines([])
     try {
       const r = await runMigration((p) => {
+        setOverall({ done: p.overallDone, total: p.overallTotal })
+        setCurrentTable(TABLE_LABEL[p.table] ?? p.table)
         const label = TABLE_LABEL[p.table] ?? p.table
+        if (p.total === 0) return // 空表不占明细行
         setLines((prev) => [
           ...prev.filter((l) => !l.startsWith(`${label}（`)),
           `${label}（${p.done.toLocaleString()} / ${p.total.toLocaleString()} 条）`,
@@ -38,7 +43,7 @@ export function MigrationModal({ onSkip }: { onSkip: () => void }) {
   }
 
   return (
-    <div className="welcome-veil" role="dialog" aria-label="数据存储升级">
+    <div className="welcome-veil mig-veil" role="dialog" aria-label="数据存储升级">
       <div className="mig-modal">
         <h2>
           {phase === 'fail' ? '迁移失败——数据没有受影响' : '数据存储升级'}
@@ -69,6 +74,16 @@ export function MigrationModal({ onSkip }: { onSkip: () => void }) {
         {phase === 'running' && (
           <>
             <p className="mig-lead">正在迁移，请不要关闭应用……</p>
+            <div className="mig-meter">
+              <div className="mig-meter-head">
+                <b>{overall.total > 0 ? Math.round((overall.done / overall.total) * 100) : 0}%</b>
+                <span>{overall.done.toLocaleString()} / {overall.total.toLocaleString()} 条</span>
+              </div>
+              <div className="mig-meter-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={overall.total > 0 ? Math.round((overall.done / overall.total) * 100) : 0}>
+                <div className="mig-meter-fill" style={{ width: `${overall.total > 0 ? (overall.done / overall.total) * 100 : 0}%` }} />
+              </div>
+              {currentTable && <div className="mig-meter-table">正在迁移：{currentTable}</div>}
+            </div>
             <div className="mig-progress">
               {lines.map((l) => (
                 <div key={l}>{l}</div>

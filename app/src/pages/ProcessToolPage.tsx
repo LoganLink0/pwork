@@ -3,21 +3,15 @@ import { Icon } from '../components/shell/icons'
 import { CATEGORY_META, ENGINE_LABEL, getTool } from '../content/processTools'
 import { TtsTool } from '../components/process/TtsTool'
 import { AsrTool } from '../components/process/AsrTool'
-import { OcrTool } from '../components/process/OcrTool'
 import { CardTool } from '../components/process/CardTool'
 import { ImageProcessTool } from '../components/process/ImageProcessTool'
-import { ConvertTool } from '../components/process/ConvertTool'
-import { AUDIO_PRESET, VIDEO_PRESET } from '../components/process/convertPresets'
 
 function ToolBody({ id }: { id: string }) {
   switch (id) {
     case 'tts': return <TtsTool />
     case 'asr': return <AsrTool />
-    case 'ocr': return <OcrTool />
     case 'card': return <CardTool />
     case 'image-process': return <ImageProcessTool />
-    case 'audio-convert': return <ConvertTool preset={AUDIO_PRESET} kindLabel="音频文件" />
-    case 'video-convert': return <ConvertTool preset={VIDEO_PRESET} kindLabel="视频文件" />
     default: return null
   }
 }

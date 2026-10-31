@@ -15,6 +15,9 @@ export interface MigrationProgress {
   table: string
   done: number
   total: number
+  /** 全部表合计的进度（进度条用）：overallDone / overallTotal */
+  overallDone: number
+  overallTotal: number
 }
 
 export interface MigrationResult {
@@ -58,10 +61,15 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
     ops: [{ kind: 'put', table: 'meta', record: { key: 'migration_started', value: new Date().toISOString() } }],
   })
 
+  // 一次性加载全部旧表（总量先知，进度条才有分母）；后续对账复用这份行数
+  const tables = dexieTables().map(({ name, store }) => ({ name, store }))
+  const loaded = await Promise.all(tables.map(async ({ name, store }) => ({ name, rows: await store.toArray() })))
+  const overallTotal = loaded.reduce((sum, t) => sum + t.rows.length, 0)
+  let overallDone = 0
+
   // 按表分批写入
   let skippedKv = 0
-  for (const { name, store } of dexieTables()) {
-    const rows = await store.toArray()
+  for (const { name, rows } of loaded) {
     const total = rows.length
     let done = 0
     if (name === 'kv') {
@@ -79,22 +87,26 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
         await invoke('db_migrate_batch', { table: name, rows: chunk })
       })
       done = serializable.length
-      onProgress({ table: name, done, total })
+      overallDone += done
+      onProgress({ table: name, done, total, overallDone, overallTotal })
       continue
     }
     await inBatches(rows, 500, async (chunk) => {
       await invoke('db_migrate_batch', { table: name, rows: chunk })
       done = Math.min(done + chunk.length, total)
-      onProgress({ table: name, done, total })
+      overallDone = Math.min(overallDone + chunk.length, overallTotal)
+      // 让出一拍宏任务：确保界面在批次之间真的绘制出来（大批量时进度肉眼可见）
+      await new Promise((r) => setTimeout(r, 0))
+      onProgress({ table: name, done, total, overallDone, overallTotal })
     })
-    if (total === 0) onProgress({ table: name, done: 0, total: 0 })
+    if (total === 0) onProgress({ table: name, done: 0, total: 0, overallDone, overallTotal })
   }
 
   // 收尾对账（铁律 4：写库前后对账）
   const counts = await invoke<Record<string, number>>('db_migrate_finish')
-  for (const { name, store } of dexieTables()) {
+  for (const { name, rows } of loaded) {
     if (name === 'kv') continue // kv 有跳过行，对账口径不同
-    const expected = (await store.toArray()).length
+    const expected = rows.length
     const got = counts[name] ?? 0
     if (got !== expected) {
       await invoke('db_destroy')

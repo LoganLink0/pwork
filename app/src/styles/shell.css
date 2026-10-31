@@ -2513,7 +2513,14 @@ a.mcard .m-link:hover {
 }
 .demo-banner a { color: #fff; font-weight: 700; text-decoration: underline; }
 
-/* 数据存储升级窗口（08 S2 迁移向导）：紧凑居中卡，复用 welcome-veil 遮罩体系 */
+/* 数据存储升级窗口（08 S2 迁移向导）：全屏遮罩正中居中卡（复用 welcome-veil 的
+   fixed 遮罩与快捷键屏蔽，叠加 flex 居中——迁移是独占时刻，视视觉重中心给足） */
+.mig-veil {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+}
 .mig-modal {
   width: min(620px, 92vw);
   max-height: 86vh;
@@ -2555,6 +2562,42 @@ a.mcard .m-link:hover {
   font-size: 13px;
   color: var(--ink-soft);
   margin-bottom: 14px;
+}
+/* 迁移总进度条：百分比大字 + 分段填充条 + 当前表名——迁移快时也有连续的视觉反馈 */
+.mig-meter {
+  margin-bottom: 14px;
+}
+.mig-meter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mig-meter-head b {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.mig-meter-head span {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.mig-meter-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.mig-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 120ms var(--ease);
+}
+.mig-meter-table {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
 }
 .mig-actions {
   display: flex;
