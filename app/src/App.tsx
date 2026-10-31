@@ -8,6 +8,7 @@ import { QuickNote } from './components/shell/QuickNote'
 import { WheelMenu } from './components/shell/WheelMenu'
 import { isDesktopApp } from './engine/platform'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
+import { listen as tauriListen } from '@tauri-apps/api/event'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
 import { PAGE_REGISTRY } from './registry'
 import { useNotes } from './store/notes'
@@ -176,10 +177,10 @@ export default function App() {
     if (isDesktopApp()) {
       const kb = loadKeybinds()
       track(
-        tauriInvoke<string>('register_wheel_shortcut', { combo: kb.wheel }).then((label) => {
-          if (label && label.toUpperCase() !== 'CTRL+ALT+Q') toast('ok', `工具轮盘全局键已设为 ${label}`)
+        tauriInvoke<Record<string, string>>('register_global_hotkeys', { wheel: kb.wheel, topmost: kb.topmost }).then((labels) => {
+          if (labels.wheel && labels.wheel.toUpperCase() !== 'CTRL+ALT+Q') toast('ok', `工具轮盘全局键已设为 ${labels.wheel}`)
         }),
-        '注册轮盘全局键',
+        '注册全局热键',
       )
     }
     // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
@@ -307,6 +308,21 @@ export default function App() {
         window.alert('端口 8788 已被其他进程占用，应用内嵌 AI 网关没有启动。\n若不是你自己起的开发版网关，请检查占用 8788 的进程（可能截获对话内容）。')
         void recordError({ where: 'App.网关冲突', kind: 'app', message: '端口 8788 被其他进程占用，内嵌网关未启动——AI 与抓取网关通路不可用' })
       }))
+      .then((fn) => {
+        unlisten = fn
+      })
+      .catch(() => {})
+    return () => unlisten?.()
+  }, [])
+
+  // 桌面版：置顶热键切换结果 → toast（系统工具台第一批，08 后增）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    let unlisten: (() => void) | null = null
+    tauriListen<string>('topmost-toggled', (e) => {
+      const msg = e.payload
+      toast(msg.startsWith('失败') ? 'error' : 'ok', msg)
+    })
       .then((fn) => {
         unlisten = fn
       })

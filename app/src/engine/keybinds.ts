@@ -1,8 +1,9 @@
 /**
- * 键位中心（0.4-3，2026-10-29）：五个可自定义键位的配置、归一化、冲突校验与录制。
- * 键位串统一归一化形态：修饰键固定顺序 ctrl+shift+alt，主键小写字母/数字或原样符号，
- * 如 "n" / "?" / "ctrl+k" / "ctrl+alt+q"。命令面板保留 "/" 作为固定别名（不可改，
- * 延续习惯）；桌面轮盘键的重注册走 Rust 命令（见 lib.rs register_wheel_shortcut）。
+ * 键位中心（0.4-3，2026-10-29；系统工具台 2026-10-31 增第 6 键位）：六个可自定义键位的
+ * 配置、归一化、冲突校验与录制。键位串统一归一化形态：修饰键固定顺序 ctrl+shift+alt，
+ * 主键小写字母/数字或原样符号，如 "n" / "?" / "ctrl+k" / "ctrl+alt+q"。命令面板保留 "/"
+ * 作为固定别名（不可改，延续习惯）；桌面全局键（轮盘/置顶）的重注册走 Rust 命令
+ * （见 lib.rs register_global_hotkeys）。
  */
 import type { KeybindAction } from '../types/keybinds'
 
@@ -16,6 +17,7 @@ export interface Keybinds {
   help: string
   settings: string
   wheel: string
+  topmost: string
 }
 
 export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string }[] = [
@@ -24,9 +26,11 @@ export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string 
   { key: 'help', label: '帮助页', desc: '打开帮助' },
   { key: 'settings', label: '设置页', desc: '打开设置' },
   { key: 'wheel', label: '工具轮盘', desc: '桌面版全局呼出（其他应用在前台也生效）' },
+  { key: 'topmost', label: '置顶窗口', desc: '切换当前窗口置顶（Windows，任何应用在前台都生效）' },
 ]
 
-/** 平台默认键位：轮盘全局键 Windows 用 Ctrl，macOS 用 ⌘（键位中心 0.4-3 的 macOS 补全） */
+/** 平台默认键位：轮盘全局键 Windows 用 Ctrl，macOS 用 ⌘（键位中心 0.4-3 的 macOS 补全）；
+ *  置顶（系统工具台）默认 Ctrl+Alt+T（Windows；macOS 对应实现在后续批次） */
 export function defaultKeybinds(): Keybinds {
   return {
     quickNote: 'n',
@@ -34,6 +38,7 @@ export function defaultKeybinds(): Keybinds {
     help: '?',
     settings: 'ctrl+,',
     wheel: isMac() ? 'meta+alt+q' : 'ctrl+alt+q',
+    topmost: isMac() ? 'meta+ctrl+t' : 'ctrl+alt+t',
   }
 }
 

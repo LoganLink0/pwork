@@ -1,15 +1,17 @@
 import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import {
   KEYBIND_ACTIONS, defaultKeybinds, loadKeybinds, saveKeybinds,
   comboFromEvent, findConflict, displayCombo, wheelComboAllowed, type Keybinds,
 } from '../../engine/keybinds'
 import type { KeybindAction } from '../../types/keybinds'
+import { isDesktopApp } from '../../engine/platform'
 
 /**
  * 键盘快捷键设置卡（0.4-3，放 设置 → 工具轮盘 选项卡——同属快捷操作）：
  * 每行点击「改键」进入录制态，按下任意键完成；Esc 取消。
- * 保存前做冲突校验（与其他动作撞键则拒绝并提示）；轮盘键额外要求组合键
- * （单键会劫持一切输入，Rust 侧同样把关）。
+ * 保存前做冲突校验（与其他动作撞键则拒绝并提示）；轮盘/置顶为全局键，额外要求组合键
+ * （单键会劫持一切输入，Rust 侧同样把关）；改键即经 register_global_hotkeys 重注册，立即生效。
  */
 export function KeybindsCard({ active }: { active: boolean }) {
   const [kb, setKb] = useState<Keybinds>(() => loadKeybinds())
@@ -25,14 +27,22 @@ export function KeybindsCard({ active }: { active: boolean }) {
       setMsg({ ok: false, text: `${displayCombo(combo)} 已被「${occupied?.label}」占用——先改走那个键位，或换个键` })
       return
     }
-    if (action === 'wheel' && !wheelComboAllowed(combo)) {
-      setMsg({ ok: false, text: '工具轮盘是全局键：需要 Ctrl/Alt/Shift 组合键 + 字母/数字/F 键（单键会劫持其他应用的输入）' })
+    const isGlobalKey = action === 'wheel' || action === 'topmost'
+    if (isGlobalKey && !wheelComboAllowed(combo)) {
+      setMsg({ ok: false, text: '全局键需要 Ctrl/Alt/Shift 组合键 + 字母/数字/F 键（单键会劫持其他应用的输入）' })
       return
     }
     const next = { ...kb, [action]: combo }
     setKb(next)
     saveKeybinds(next)
-    setMsg({ ok: true, text: action === 'wheel' ? `工具轮盘键已改为 ${displayCombo(combo)}，桌面版立即生效（网页版重启后生效）` : `「${KEYBIND_ACTIONS.find((a) => a.key === action)?.label}」已改为 ${displayCombo(combo)}` })
+    const label = KEYBIND_ACTIONS.find((a) => a.key === action)?.label ?? ''
+    if (isDesktopApp() && isGlobalKey) {
+      invoke('register_global_hotkeys', { wheel: next.wheel, topmost: next.topmost })
+        .then(() => setMsg({ ok: true, text: `「${label}」已改为 ${displayCombo(combo)}，立即生效` }))
+        .catch((e: unknown) => setMsg({ ok: false, text: `配置已保存，但热键注册失败（可能被其他应用占用）：${e instanceof Error ? e.message : String(e)}` }))
+      return
+    }
+    setMsg({ ok: true, text: `「${label}」已改为 ${displayCombo(combo)}` })
   }
 
   return (

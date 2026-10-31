@@ -36,3 +36,6 @@ tauri-plugin-process = "2"
 tauri-plugin-notification = "2"
 # 主库文件化（08 设计 S2）：桌面版 SQLite 存储，bundled 自带编译无需系统库
 rusqlite = { version = "0.32", features = ["bundled"] }
+# 系统工具台（置顶窗口等，Windows 专用 Win32 调用）
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

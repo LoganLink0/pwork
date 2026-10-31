@@ -1,10 +1,19 @@
 mod db;
 mod gateway;
 mod mirror;
+mod system;
 
+use std::sync::Mutex;
 use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+/// 全局热键状态：当前生效的轮盘/置顶快捷键（事件分发判断用）
+pub struct HotkeyState {
+  pub wheel: Mutex<Option<Shortcut>>,
+  #[cfg(windows)]
+  pub topmost: Mutex<Option<Shortcut>>,
+}
 
 /// 工具轮盘的全局呼出键（应用外任何地方可呼出）。默认 Windows Ctrl+Alt+Q / macOS ⌘+Option+Q；
 /// 键位自定义（0.4-3）由前端存配置、经 register_wheel_shortcut 在启动时/改动时重注册
@@ -16,7 +25,7 @@ const WHEEL_KEY: Code = Code::KeyQ;
 
 /// 解析归一化键位串（如 "ctrl+alt+q"）为修饰键 + 主键码。主键限字母/数字/F 键
 /// （与前端 wheelComboAllowed 同一口径）；解析失败返回人话错误
-fn parse_wheel_combo(combo: &str) -> Result<(Modifiers, Code), String> {
+fn parse_hotkey_combo(combo: &str) -> Result<(Modifiers, Code), String> {
   let mut mods = Modifiers::empty();
   let mut main: Option<Code> = None;
   for part in combo.split('+').filter(|s| !s.is_empty()) {
@@ -65,14 +74,36 @@ fn parse_main_key(part: &str) -> Result<Code, String> {
 /// 键位自定义（0.4-3）：前端在启动/改键时调用——注销旧的全局键，注册新的。
 /// 与 setup 里的默认注册共用同一套全局快捷键通道，重复启动调用幂等（先注销再注册）
 #[tauri::command]
-fn register_wheel_shortcut(app: tauri::AppHandle, combo: String) -> Result<String, String> {
-  let (mods, code) = parse_wheel_combo(&combo)?;
+fn register_global_hotkeys(
+  app: tauri::AppHandle,
+  state: tauri::State<HotkeyState>,
+  wheel: String,
+  topmost: String,
+) -> Result<serde_json::Value, String> {
   let shortcuts = app.global_shortcut();
   shortcuts.unregister_all().map_err(|e| format!("注销旧键位失败：{}", e))?;
+  let (wheel_mods, wheel_code) = parse_hotkey_combo(&wheel).map_err(|e| format!("轮盘键位：{}", e))?;
   shortcuts
-    .register(Shortcut::new(Some(mods), code))
-    .map_err(|e| format!("注册键位失败（可能被其他应用占用）：{}", e))?;
-  Ok(display_combo(&combo))
+    .register(Shortcut::new(Some(wheel_mods), wheel_code))
+    .map_err(|e| format!("注册轮盘键位失败（可能被其他应用占用）：{}", e))?;
+  let mut topmost_label = String::new();
+  #[cfg(windows)]
+  {
+    let (topmost_mods, topmost_code) = parse_hotkey_combo(&topmost).map_err(|e| format!("置顶键位：{}", e))?;
+    shortcuts
+      .register(Shortcut::new(Some(topmost_mods), topmost_code))
+      .map_err(|e| format!("注册置顶键位失败（可能被其他应用占用）：{}", e))?;
+    topmost_label = display_combo(&topmost);
+  }
+  *state.wheel.lock().map_err(|_| "状态锁不可用")? = Some(Shortcut::new(Some(wheel_mods), wheel_code));
+  #[cfg(windows)]
+  {
+    let (topmost_mods, topmost_code) = parse_hotkey_combo(&topmost).map_err(|e| format!("置顶键位：{}", e))?;
+    *state.topmost.lock().map_err(|_| "状态锁不可用")? = Some(Shortcut::new(Some(topmost_mods), topmost_code));
+  }
+  #[cfg(not(windows))]
+  let _ = topmost;
+  Ok(serde_json::json!({ "wheel": display_combo(&wheel), "topmost": topmost_label }))
 }
 
 /// 前端展示用：归一化串转显示格式（与 engine/keybinds displayCombo 一致）
@@ -294,11 +325,39 @@ fn deploy_cloud(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(HotkeyState {
+      wheel: Mutex::new(None),
+      #[cfg(windows)]
+      topmost: Mutex::new(None),
+    })
     .plugin(tauri_plugin_fs::init())
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
-        .with_handler(|app, _shortcut, event| {
+        .with_handler(|app, shortcut, event| {
           if event.state != ShortcutState::Pressed {
+            return;
+          }
+          // 热键分发：先判置顶（Windows），再走轮盘（现有逻辑）
+          let state = app.state::<HotkeyState>();
+          let is_topmost = state
+            .topmost
+            .lock()
+            .map(|t| t.as_ref() == Some(shortcut))
+            .unwrap_or(false);
+          if is_topmost {
+            let r = system::toggle_topmost_window();
+            let _ = app.emit(
+              "topmost-toggled",
+              r.unwrap_or_else(|e| format!("失败：{}", e)),
+            );
+            return;
+          }
+          let is_wheel = state
+            .wheel
+            .lock()
+            .map(|w| w.as_ref() == Some(shortcut))
+            .unwrap_or(true); // 状态缺失时按轮盘处理（兼容默认注册路径）
+          if !is_wheel {
             return;
           }
           // 单键直达：最小化时先唤起窗口，等 WebView 真正恢复后再发轮盘事件
@@ -359,12 +418,26 @@ pub fn run() {
       app.manage(shared_gw);
 
       // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走命令面板）；macOS 默认 ⌘+Option，其余 Ctrl+Alt
+      // 置顶窗口（系统工具台第一批，Windows）：默认 Ctrl+Alt+T，键位中心可改
       #[cfg(target_os = "macos")]
       let mods = Modifiers::META | Modifiers::ALT;
       #[cfg(not(target_os = "macos"))]
       let mods = Modifiers::CONTROL | Modifiers::ALT;
       app.global_shortcut().register(Shortcut::new(Some(mods), WHEEL_KEY))?;
-      log::info!("工具轮盘全局快捷键已注册：{}", WHEEL_LABEL);
+      #[cfg(windows)]
+      {
+        let topmost_mods = Modifiers::CONTROL | Modifiers::ALT;
+        app.global_shortcut().register(Shortcut::new(Some(topmost_mods), Code::KeyT))?;
+        if let Some(s) = app.try_state::<HotkeyState>() {
+          *s.topmost.lock().map_err(|_| "热键状态锁不可用")? =
+            Some(Shortcut::new(Some(topmost_mods), Code::KeyT));
+        }
+      }
+      if let Some(s) = app.try_state::<HotkeyState>() {
+        *s.wheel.lock().map_err(|_| "热键状态锁不可用")? =
+          Some(Shortcut::new(Some(mods), WHEEL_KEY));
+      }
+      log::info!("全局热键已注册：{} / 置顶切换（Windows）", WHEEL_LABEL);
       Ok(())
     })
     .manage(db::DbState(std::sync::Mutex::new(None)))
@@ -373,7 +446,8 @@ pub fn run() {
       open_deploy_wizard,
       open_external_url,
       deploy_cloud,
-      register_wheel_shortcut,
+      register_global_hotkeys,
+      system::toggle_topmost,
       db::db_probe,
       db::db_open,
       db::db_select,
