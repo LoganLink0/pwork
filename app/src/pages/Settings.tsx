@@ -35,6 +35,9 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   app: '内部错误',
 }
 
+/** Shell 通知桥示例命令（系统工具台第二批）：设置页展示与复制共用同一份 */
+const SHELL_BRIDGE_CMD = `curl -s http://127.0.0.1:8788/notify -H "Content-Type: application/json" -d '{"title":"构建完成","body":"耗时 3 分"}'`
+
 const SETTINGS_TABS = [
   { id: 'data', label: '数据', icon: 'data' },
   { id: 'collect', label: '采集偏好', icon: 'collect' },
@@ -293,6 +296,8 @@ export function Settings() {
   // 系统通知（0.4-1）：三样提醒的开关；浏览器版开启时借用户手势申请系统权限
   const [notifyCfg, setNotifyCfg] = useState<NotifyConfig>(() => loadNotifyConfig())
   const [notifyMsg, setNotifyMsg] = useState('')
+  // Shell 通知桥示例命令的复制反馈（系统工具台第二批）
+  const [bridgeCopied, setBridgeCopied] = useState(false)
   const setNotify = async (patch: Partial<NotifyConfig>) => {
     const next = { ...notifyCfg, ...patch }
     setNotifyCfg(next)
@@ -1018,6 +1023,31 @@ export function Settings() {
             </div>
           ))}
           {notifyMsg && <div className="set-row"><label></label><span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{notifyMsg}</span></div>}
+          {isDesktopApp() && (
+            <div className="set-row" style={{ alignItems: 'flex-start' }}>
+              <label>Shell 通知桥</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                在耗时的命令后面挂一行，命令一结束 PWORK 就弹通知——不用盯着终端等。
+                先复制下面的示例命令，把里面的标题和正文换成你自己的：
+                <br />
+                <code style={{ wordBreak: 'break-all' }}>{SHELL_BRIDGE_CMD}</code>
+                <br />
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ flex: 'none', marginTop: 4 }}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(SHELL_BRIDGE_CMD).then(() => {
+                      setBridgeCopied(true)
+                      window.setTimeout(() => setBridgeCopied(false), 2000)
+                    })
+                  }}
+                >
+                  {bridgeCopied ? '已复制' : '复制示例命令'}
+                </button>
+              </span>
+            </div>
+          )}
           <div className="set-row">
             <label>说明</label>
             <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>

@@ -379,7 +379,7 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
-            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query";
+            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query" || path == "/notify";
             const MAX_BODY: usize = 1_048_576;
             let content_length = req
                 .headers()
@@ -418,6 +418,29 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                     },
                     "upstream": normalize_upstream(&cfg.chat_url).trim_end_matches("/chat/completions"),
                 }))
+            } else if path == "/notify" && method == Method::Post {
+                // Shell 通知桥（系统工具台第二批）：长命令结束后一行 curl 弹通知，不用盯着终端。
+                // 只进不出——把 {title, body} 转成前端事件（toast + 系统通知），不接触任何上游
+                match body.as_deref() {
+                    Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                    Ok("") => (
+                        400,
+                        json!({ "ok": false, "error": "请求体为空——用法：curl -s http://127.0.0.1:8788/notify -H \"Content-Type: application/json\" -d '{\"title\":\"构建完成\",\"body\":\"耗时 3 分\"}'" }),
+                    ),
+                    Ok(b) => match serde_json::from_str::<Value>(b) {
+                        Err(_) => (400, json!({ "ok": false, "error": "请求体不是 JSON" })),
+                        Ok(v) => {
+                            let title = v.get("title").and_then(|x| x.as_str()).unwrap_or("命令结束").trim().to_string();
+                            let text = v.get("body").and_then(|x| x.as_str()).unwrap_or("").trim().to_string();
+                            if title.is_empty() && text.is_empty() {
+                                (400, json!({ "ok": false, "error": "title 与 body 至少写一个" }))
+                            } else {
+                                let _ = app.emit("shell-notify", json!({ "title": title, "body": text }));
+                                (200, json!({ "ok": true }))
+                            }
+                        }
+                    },
+                }
             } else if path == "/rss" && method == Method::Get {
                 // RSS 代理：网关服务端直抓源站，无 CORS/浏览器指纹限制——前端抓取的第一通路，
                 // 公共转接（rss2json 等免费服务会被 Cloudflare 人机验证挡住）只做无网关时的兜底。

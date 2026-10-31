@@ -62,7 +62,7 @@ export interface Shortcut {
   keys: string
   desc: string
   /** 可自定义键位的动作名：渲染侧用键位配置的当前值替换 keys（0.4-3 键位中心） */
-  bind?: 'quickNote' | 'palette' | 'help' | 'settings' | 'wheel'
+  bind?: 'quickNote' | 'palette' | 'help' | 'settings' | 'wheel' | 'clipboard'
 }
 
 export const SHORTCUTS: Shortcut[] = [
@@ -72,6 +72,7 @@ export const SHORTCUTS: Shortcut[] = [
   { keys: '← →', desc: '复盘向导切步' },
   { keys: 'Esc', desc: '关闭浮层与面板' },
   { keys: 'Ctrl+Alt+Q', desc: '工具轮盘（桌面版全局呼出，可在 设置 → 工具轮盘 改）', bind: 'wheel' },
+  { keys: 'Ctrl+Alt+V', desc: '剪贴板速记（桌面版全局：任何应用里复制后一键存为速记，可在 设置 → 工具轮盘 改）', bind: 'clipboard' },
 ]
 
 export interface GlossaryEntry {

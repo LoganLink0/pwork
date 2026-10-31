@@ -8,11 +8,12 @@ use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// 全局热键状态：当前生效的轮盘/置顶快捷键（事件分发判断用）
+/// 全局热键状态：当前生效的轮盘/置顶/剪贴板速记快捷键（事件分发判断用）
 pub struct HotkeyState {
   pub wheel: Mutex<Option<Shortcut>>,
   #[cfg(windows)]
   pub topmost: Mutex<Option<Shortcut>>,
+  pub capture: Mutex<Option<Shortcut>>,
 }
 
 /// 工具轮盘的全局呼出键（应用外任何地方可呼出）。默认 Windows Ctrl+Alt+Q / macOS ⌘+Option+Q；
@@ -79,6 +80,7 @@ fn register_global_hotkeys(
   state: tauri::State<HotkeyState>,
   wheel: String,
   topmost: String,
+  clipboard: String,
 ) -> Result<serde_json::Value, String> {
   let shortcuts = app.global_shortcut();
   shortcuts.unregister_all().map_err(|e| format!("注销旧键位失败：{}", e))?;
@@ -86,6 +88,10 @@ fn register_global_hotkeys(
   shortcuts
     .register(Shortcut::new(Some(wheel_mods), wheel_code))
     .map_err(|e| format!("注册轮盘键位失败（可能被其他应用占用）：{}", e))?;
+  let (cap_mods, cap_code) = parse_hotkey_combo(&clipboard).map_err(|e| format!("剪贴板键位：{}", e))?;
+  shortcuts
+    .register(Shortcut::new(Some(cap_mods), cap_code))
+    .map_err(|e| format!("注册剪贴板键位失败（可能被其他应用占用）：{}", e))?;
   let mut topmost_label = String::new();
   #[cfg(windows)]
   {
@@ -96,6 +102,7 @@ fn register_global_hotkeys(
     topmost_label = display_combo(&topmost);
   }
   *state.wheel.lock().map_err(|_| "状态锁不可用")? = Some(Shortcut::new(Some(wheel_mods), wheel_code));
+  *state.capture.lock().map_err(|_| "状态锁不可用")? = Some(Shortcut::new(Some(cap_mods), cap_code));
   #[cfg(windows)]
   {
     let (topmost_mods, topmost_code) = parse_hotkey_combo(&topmost).map_err(|e| format!("置顶键位：{}", e))?;
@@ -103,7 +110,7 @@ fn register_global_hotkeys(
   }
   #[cfg(not(windows))]
   let _ = topmost;
-  Ok(serde_json::json!({ "wheel": display_combo(&wheel), "topmost": topmost_label }))
+  Ok(serde_json::json!({ "wheel": display_combo(&wheel), "topmost": topmost_label, "clipboard": display_combo(&clipboard) }))
 }
 
 /// 前端展示用：归一化串转显示格式（与 engine/keybinds displayCombo 一致）
@@ -329,15 +336,18 @@ pub fn run() {
       wheel: Mutex::new(None),
       #[cfg(windows)]
       topmost: Mutex::new(None),
+      capture: Mutex::new(None),
     })
     .plugin(tauri_plugin_fs::init())
+    // 剪贴板速记（系统工具台第二批）：全局热键读剪贴板入速记库
+    .plugin(tauri_plugin_clipboard_manager::init())
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
         .with_handler(|app, shortcut, event| {
           if event.state != ShortcutState::Pressed {
             return;
           }
-          // 热键分发：先判置顶（Windows），再走轮盘（现有逻辑）
+          // 热键分发：先判置顶（Windows）、再判剪贴板速记，最后走轮盘（现有逻辑）
           let state = app.state::<HotkeyState>();
           let is_topmost = state
             .topmost
@@ -350,6 +360,16 @@ pub fn run() {
               "topmost-toggled",
               r.unwrap_or_else(|e| format!("失败：{}", e)),
             );
+            return;
+          }
+          let is_capture = state
+            .capture
+            .lock()
+            .map(|c| c.as_ref() == Some(shortcut))
+            .unwrap_or(false);
+          if is_capture {
+            // 剪贴板速记：不唤窗口不夺焦点——读剪贴板、入库、发通知都在前端事件里完成（看到就摘）
+            let _ = app.emit("clipboard-capture", ());
             return;
           }
           let is_wheel = state
@@ -419,6 +439,7 @@ pub fn run() {
 
       // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走命令面板）；macOS 默认 ⌘+Option，其余 Ctrl+Alt
       // 置顶窗口（系统工具台第一批，Windows）：默认 Ctrl+Alt+T，键位中心可改
+      // 剪贴板速记（系统工具台第二批，全平台）：默认 Ctrl+Alt+V（macOS ⌘+Option+V），键位中心可改
       #[cfg(target_os = "macos")]
       let mods = Modifiers::META | Modifiers::ALT;
       #[cfg(not(target_os = "macos"))]
@@ -433,9 +454,13 @@ pub fn run() {
             Some(Shortcut::new(Some(topmost_mods), Code::KeyT));
         }
       }
+      let cap_mods = Modifiers::CONTROL | Modifiers::ALT;
+      app.global_shortcut().register(Shortcut::new(Some(cap_mods), Code::KeyV))?;
       if let Some(s) = app.try_state::<HotkeyState>() {
         *s.wheel.lock().map_err(|_| "热键状态锁不可用")? =
           Some(Shortcut::new(Some(mods), WHEEL_KEY));
+        *s.capture.lock().map_err(|_| "热键状态锁不可用")? =
+          Some(Shortcut::new(Some(cap_mods), Code::KeyV));
       }
       log::info!("全局热键已注册：{} / 置顶切换（Windows）", WHEEL_LABEL);
       Ok(())

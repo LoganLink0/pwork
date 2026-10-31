@@ -9,6 +9,7 @@ import { WheelMenu } from './components/shell/WheelMenu'
 import { isDesktopApp } from './engine/platform'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen } from '@tauri-apps/api/event'
+import { readText } from '@tauri-apps/plugin-clipboard-manager'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
 import { PAGE_REGISTRY } from './registry'
 import { useNotes } from './store/notes'
@@ -21,7 +22,7 @@ import { applySourceCredit } from './engine/sourceCredit'
 import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
-import { runStartupNotifiesFromDb, notifyDigestReady } from './engine/notify'
+import { runStartupNotifiesFromDb, notifyDigestReady, sendSystemNotify } from './engine/notify'
 import { loadKeybinds } from './engine/keybinds'
 import { MigrationModal } from './components/shell/MigrationModal'
 import { storageReady } from './db/schema'
@@ -177,7 +178,7 @@ export default function App() {
     if (isDesktopApp()) {
       const kb = loadKeybinds()
       track(
-        tauriInvoke<Record<string, string>>('register_global_hotkeys', { wheel: kb.wheel, topmost: kb.topmost }).then((labels) => {
+        tauriInvoke<Record<string, string>>('register_global_hotkeys', { wheel: kb.wheel, topmost: kb.topmost, clipboard: kb.clipboard }).then((labels) => {
           if (labels.wheel && labels.wheel.toUpperCase() !== 'CTRL+ALT+Q') toast('ok', `工具轮盘全局键已设为 ${labels.wheel}`)
         }),
         '注册全局热键',
@@ -322,6 +323,63 @@ export default function App() {
     tauriListen<string>('topmost-toggled', (e) => {
       const msg = e.payload
       toast(msg.startsWith('失败') ? 'error' : 'ok', msg)
+    })
+      .then((fn) => {
+        unlisten = fn
+      })
+      .catch(() => {})
+    return () => unlisten?.()
+  }, [])
+
+  // 桌面版：剪贴板速记热键（系统工具台第二批）——读剪贴板入速记库，不唤窗口不打断当前应用。
+  // 超长内容截断保存（速记是随手摘录，整本书量级的内容不该静默进库）；空剪贴板给出提示
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    let unlisten: (() => void) | null = null
+    tauriListen('clipboard-capture', () => {
+      void (async () => {
+        let text = ''
+        try {
+          text = await readText()
+        } catch (err) {
+          toast('error', '读取剪贴板失败——系统没有允许访问')
+          void recordError({ where: '剪贴板速记', kind: 'app', message: err instanceof Error ? err.message : String(err) })
+          return
+        }
+        text = text.trim()
+        if (!text) {
+          toast('info', '剪贴板里没有文本——先复制一段文字再按')
+          return
+        }
+        const body = text.length > 50_000 ? `${text.slice(0, 50_000)}\n\n…（剪贴板内容超过 5 万字，已截断保存）` : text
+        try {
+          await useNotes.getState().create({ body, source: 'quick' })
+        } catch (err) {
+          toast('error', '速记保存失败——请到速记页确认数据状态')
+          void recordError({ where: '剪贴板速记', kind: 'app', message: err instanceof Error ? err.message : String(err) })
+          return
+        }
+        const flat = body.replace(/\s+/g, ' ')
+        const preview = flat.length > 40 ? `${flat.slice(0, 40)}…` : flat
+        toast('ok', `已存入速记：${preview}`)
+        void sendSystemNotify('已存入速记', preview)
+      })()
+    })
+      .then((fn) => {
+        unlisten = fn
+      })
+      .catch(() => {})
+    return () => unlisten?.()
+  }, [])
+
+  // 桌面版：Shell 通知桥（系统工具台第二批）——外部命令经网关 /notify 弹通知（构建/安装/长任务结束叫人回来）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    let unlisten: (() => void) | null = null
+    tauriListen<{ title: string; body: string }>('shell-notify', (e) => {
+      const { title, body } = e.payload
+      toast('info', body ? `${title}：${body}` : title)
+      void sendSystemNotify(title, body)
     })
       .then((fn) => {
         unlisten = fn

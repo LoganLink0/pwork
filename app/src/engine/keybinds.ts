@@ -18,6 +18,7 @@ export interface Keybinds {
   settings: string
   wheel: string
   topmost: string
+  clipboard: string
 }
 
 export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string }[] = [
@@ -27,10 +28,12 @@ export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string 
   { key: 'settings', label: '设置页', desc: '打开设置' },
   { key: 'wheel', label: '工具轮盘', desc: '桌面版全局呼出（其他应用在前台也生效）' },
   { key: 'topmost', label: '置顶窗口', desc: '切换当前窗口置顶（Windows，任何应用在前台都生效）' },
+  { key: 'clipboard', label: '剪贴板速记', desc: '把剪贴板内容一键存为速记（全局，看到就摘）' },
 ]
 
 /** 平台默认键位：轮盘全局键 Windows 用 Ctrl，macOS 用 ⌘（键位中心 0.4-3 的 macOS 补全）；
- *  置顶（系统工具台）默认 Ctrl+Alt+T（Windows；macOS 对应实现在后续批次） */
+ *  置顶（系统工具台）默认 Ctrl+Alt+T（Windows；macOS 对应实现在后续批次）；
+ *  剪贴板速记（系统工具台第二批）默认 Ctrl+Alt+V（macOS ⌘+Option+V） */
 export function defaultKeybinds(): Keybinds {
   return {
     quickNote: 'n',
@@ -39,6 +42,7 @@ export function defaultKeybinds(): Keybinds {
     settings: 'ctrl+,',
     wheel: isMac() ? 'meta+alt+q' : 'ctrl+alt+q',
     topmost: isMac() ? 'meta+ctrl+t' : 'ctrl+alt+t',
+    clipboard: isMac() ? 'meta+alt+v' : 'ctrl+alt+v',
   }
 }
 

@@ -27,7 +27,7 @@ export function KeybindsCard({ active }: { active: boolean }) {
       setMsg({ ok: false, text: `${displayCombo(combo)} 已被「${occupied?.label}」占用——先改走那个键位，或换个键` })
       return
     }
-    const isGlobalKey = action === 'wheel' || action === 'topmost'
+    const isGlobalKey = action === 'wheel' || action === 'topmost' || action === 'clipboard'
     if (isGlobalKey && !wheelComboAllowed(combo)) {
       setMsg({ ok: false, text: '全局键需要 Ctrl/Alt/Shift 组合键 + 字母/数字/F 键（单键会劫持其他应用的输入）' })
       return
@@ -37,7 +37,7 @@ export function KeybindsCard({ active }: { active: boolean }) {
     saveKeybinds(next)
     const label = KEYBIND_ACTIONS.find((a) => a.key === action)?.label ?? ''
     if (isDesktopApp() && isGlobalKey) {
-      invoke('register_global_hotkeys', { wheel: next.wheel, topmost: next.topmost })
+      invoke('register_global_hotkeys', { wheel: next.wheel, topmost: next.topmost, clipboard: next.clipboard })
         .then(() => setMsg({ ok: true, text: `「${label}」已改为 ${displayCombo(combo)}，立即生效` }))
         .catch((e: unknown) => setMsg({ ok: false, text: `配置已保存，但热键注册失败（可能被其他应用占用）：${e instanceof Error ? e.message : String(e)}` }))
       return

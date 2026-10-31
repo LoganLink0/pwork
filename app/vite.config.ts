@@ -22,6 +22,9 @@ function pworkGatewayAutostart(): Plugin {
     configureServer(server) {
       // vitest 也走这份配置起 server——测试环境绝不拉网关（否则子进程拖住 Vite 退出）
       if (process.env.VITEST) return
+      // PWORK_NO_DEV_GATEWAY=1：调试 Rust 内嵌网关时跳过 Node 网关自启——
+      // 否则 vite 先起抢到 8788，tauri dev 的 Rust 网关永远让位（/notify 等端点验不到）
+      if (process.env.PWORK_NO_DEV_GATEWAY === '1') return
       let child: ReturnType<typeof fork> | null = null
       const up = async () => {
         try {

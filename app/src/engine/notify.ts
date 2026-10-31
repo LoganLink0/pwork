@@ -120,3 +120,25 @@ export async function runStartupNotifiesFromDb(now = new Date()): Promise<{ task
 export function notifyDigestReady(count: number): Promise<boolean> {
   return sendDailyNotify('digest', '今天的信息日报好了', `云端新抓了 ${count} 条，打开「信息日报」看看。`)
 }
+
+/**
+ * 操作确认的系统通知（系统工具台第二批增）：剪贴板速记入库、Shell 命令结束——
+ * 这些是「动作刚发生」的即时反馈，与三类每日提醒不同路，不受每日一条限制。
+ * 权限未给/通知失败都静默跳过（确认通知丢了不影响主流程）。
+ */
+export async function sendSystemNotify(title: string, body: string): Promise<void> {
+  try {
+    if (isDesktopApp()) {
+      if (!(await isPermissionGranted())) {
+        const p = await requestPermission()
+        if (p !== 'granted') return
+      }
+      sendNotification({ title, body })
+    } else {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+      new Notification(title, { body })
+    }
+  } catch {
+    // 通知只是回执，发不出去不打扰
+  }
+}

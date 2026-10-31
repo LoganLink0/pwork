@@ -11,6 +11,7 @@
     "updater:default",
     "process:allow-restart",
     "notification:default",
+    "clipboard-manager:allow-read-text",
     {
       "identifier": "fs:allow-mkdir",
       "allow": [{ "path": "$APPDATA/backups" }]
