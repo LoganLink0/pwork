@@ -79,7 +79,7 @@ jobs:
           {
             echo "PWORK 是一个本地优先的个人工作台：你的速记、信息日报、任务、复盘全部保存在你自己的电脑上，不经过任何服务器。当前内测版本 ${VERSION}（0.x 表示内测期，未到正式定版）。"
             echo
-            awk -v pat "^## ${VERSION} " 'BEGIN{f=0} $0 ~ pat {f=1; next} /^## / && f {exit} f' ../../CHANGELOG.md
+            node -e "const fs=require('fs');const md=fs.readFileSync('CHANGELOG.md','utf8');const i=md.indexOf('## '+process.argv[1]);const j=md.indexOf('\n## ',i+1);process.stdout.write(i<0?'':md.slice(i,j>0?j:undefined).trim())" "${VERSION}"
             echo
             echo "## 下载"
             echo
