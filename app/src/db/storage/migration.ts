@@ -32,6 +32,28 @@ function stamp(): string {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`
 }
 
+/** 带超时的 invoke：正常批次毫秒级完成，超时意味着通道挂起（进程冻结/IPC 丢消息）——
+ *  不加它的话界面会永远停在中间进度且没有任何反馈（2026-11-01 真机踩中）。
+ *  超时即 reject → 走失败清理路径（db_destroy + 人话报错），挂起从永久死寂变成明确失败 */
+function invokeWatched<T>(cmd: string, args: Record<string, unknown>, timeoutMs = 120_000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`迁移步骤「${cmd}」超过 ${Math.round(timeoutMs / 1000)} 秒没有响应，已中止——旧数据未受影响，可重试`)),
+      timeoutMs,
+    )
+    invoke<T>(cmd, args).then(
+      (v) => {
+        clearTimeout(timer)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(timer)
+        reject(e)
+      },
+    )
+  })
+}
+
 /** 迁移前快照（回滚保险）：与手动导出同一格式，落 backups 文件夹；同时下载一份兜底 */
 async function saveSnapshot(): Promise<string> {
   const bundle = await buildBackupBundle()
@@ -56,8 +78,8 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
   const snapshotFile = await saveSnapshot()
 
   // 打开主库（新文件）并登记迁移开始
-  await invoke('db_open')
-  await invoke('db_write', {
+  await invokeWatched('db_open', {})
+  await invokeWatched('db_write', {
     ops: [{ kind: 'put', table: 'meta', record: { key: 'migration_started', value: new Date().toISOString() } }],
   })
 
@@ -84,7 +106,7 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
         }
       }
       await inBatches(serializable, 500, async (chunk) => {
-        await invoke('db_migrate_batch', { table: name, rows: chunk })
+        await invokeWatched('db_migrate_batch', { table: name, rows: chunk })
       })
       done = serializable.length
       overallDone += done
@@ -92,7 +114,7 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
       continue
     }
     await inBatches(rows, 500, async (chunk) => {
-      await invoke('db_migrate_batch', { table: name, rows: chunk })
+      await invokeWatched('db_migrate_batch', { table: name, rows: chunk })
       done = Math.min(done + chunk.length, total)
       overallDone = Math.min(overallDone + chunk.length, overallTotal)
       // 让出一拍宏任务：确保界面在批次之间真的绘制出来（大批量时进度肉眼可见）
@@ -103,18 +125,18 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
   }
 
   // 收尾对账（铁律 4：写库前后对账）
-  const counts = await invoke<Record<string, number>>('db_migrate_finish')
+  const counts = await invokeWatched<Record<string, number>>('db_migrate_finish', {})
   for (const { name, rows } of loaded) {
     if (name === 'kv') continue // kv 有跳过行，对账口径不同
     const expected = rows.length
     const got = counts[name] ?? 0
     if (got !== expected) {
-      await invoke('db_destroy')
+      await invokeWatched('db_destroy', {}, 30_000)
       throw new Error(`迁移对账失败：${name} 应为 ${expected} 条，实际 ${got} 条——已清理半成品，旧数据未受影响`)
     }
   }
 
-  await invoke('db_write', {
+  await invokeWatched('db_write', {
     ops: [{ kind: 'put', table: 'meta', record: { key: 'migration_complete', value: new Date().toISOString() } }],
   })
   await switchToSqliteBackend()
