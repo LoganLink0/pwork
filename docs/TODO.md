@@ -5,6 +5,7 @@
 ## 待办（按优先级；做完勾掉留档）
 
 - [x] **0.1.13 发版（2026-11-01 完成）**：版本三处同步 + 运行日志落盘（log 插件全构建挂载 LogDir+KeepAll、迁移命令打点——复盘 3.49 闭环）+ CHANGELOG/发布说明 + 回归 472 绿 + **Windows 双包实测（联网 8.05MiB / 离线 224MB，双签名）+ 冒烟通过** + 文档体积行同步（README/介绍页/development.md）+ 双仓推送 + **macOS CI 两次跑通**（首跑炸出 topmost 字段缺 cfg(windows) 门控——0.1.12 的 mac 包构建于置顶功能合入前故未暴露，修复后二跑成功）+ **GitHub Release v0.1.13 七资产**（联网 exe+sig / 离线 exe / dmg / tar.gz+sig / latest.json 双平台，notes 从 CHANGELOG 提取）；本机 E:\PWORK 已被冒烟覆盖安装为 0.1.13
+- [x] **用户反馈四连批（2026-11-02 完成，995832b）**：①键位文案全量动态化（实锤过期文案=WheelSettingsCard「呼出键固定/一起做」残留；帮助快捷键表本就动态——澄清）②轮盘设置预览对称修复（空格脱环数学固定挂底、实格自身均分 60°/45°、文字居中收口；真机几何断言零极差）③Shell 通知桥重做（一键配置 PowerShell profile 幂等写入 + pdone 用法 + 一键测试；函数体全 ASCII 防编码、中文参数运行时 UTF-8 字节发送；真机三步全过）④更新代理删除（第一性审视：代理是自救补丁非解法，COS 国内直连为正解，随 0.1.14 同批）；GitHub 推送待网络窗口（Gitee 已推）
 - [ ] **Gitee v0.1.13 Release 待建（需用户 Gitee Token，2026-11-01）**：代码已推平（f505862）；Release 创建与附件上传需要 Token（历史会话用过后已按纪律销毁）——用户提供 Token 后：API 建 Release（notes 用 CHANGELOG 0.1.13 段）+ 传联网版附件（8MB 一分钟能传完；离线版超 100MB 上限不放）
 - [x] **发布版关键流程落盘日志（复盘 3.49 教训项，0.1.13 交付）**：tauri-plugin-log 改为全构建挂载（LogDir 落盘 + Stdout，KeepAll 轮转），迁移关键命令（migrate_batch 表/行数/耗时/结果、migrate_finish 对账行数）入日志——下次偶发事件有现场可取证
 - [ ] **发布版关键流程落盘日志（复盘 3.49 教训项）**：迁移/更新等关键流程在发布版写日志（tauri-plugin-log 当前仅 debug 构建挂载）——下次偶发事件才有取证能力
