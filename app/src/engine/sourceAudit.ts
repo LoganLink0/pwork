@@ -39,6 +39,28 @@ export function verdictLabel(v: SourceVerdict): string {
   return VERDICT_LABEL[v]
 }
 
+/* ------------------------------ 失败分类（信源融合批 2026-11-01） ------------------------------
+ * 健康列的 lastError 此前只有原始报错——用户看到「连接失败」会以为源死了直接删，
+ * 而其中很大一部分只是本地网络到不了源站（部署云端抓取的用户这些源全能用，
+ * 权威信源调研实测 12 个权威源属此类）。按报错文本分三类给人话提示。 */
+
+export type FailKind = 'network' | 'server' | 'dead'
+
+/** 按抓取报错分类：network=本地到不了（云端可救）/ server=源站侧问题（稍后重试）/ dead=源可能已停更 */
+export function classifySourceError(msg: string | null): { kind: FailKind; hint: string } | null {
+  if (!msg) return null
+  if (/超时|网络\/CORS|连接失败|fetch failed|Failed to fetch|Connection|解析失败/i.test(msg)) {
+    return { kind: 'network', hint: '可能是本地网络到不了这个源站（源本身未必死了）——部署了云端抓取的话可交给云端收' }
+  }
+  if (/HTTP 429|HTTP 5\d\d/i.test(msg)) {
+    return { kind: 'server', hint: '源站限流或服务端故障——稍后重试，连续多次再考虑换源' }
+  }
+  if (/HTTP 404|HTTP 410|没有找到条目|XML 解析失败|不是 RSS|响应体/i.test(msg)) {
+    return { kind: 'dead', hint: '源可能已停更或地址失效——确认源站是否还提供 RSS，或换新地址' }
+  }
+  return null
+}
+
 /** 单信源四指标 → 画像。规则顺序即优先级：样本保护最先，good 次之，噪声与零命中随后 */
 export function auditOne(fetched: number, rated: number, want: number, _no: number): { verdict: SourceVerdict; advice: string } {
   if (fetched < 5) {

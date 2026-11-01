@@ -4,15 +4,21 @@
     "AIHOT 精选",
     "量子位",
     "Latent Space",
+    "OpenAI 官方新闻",
+    "Google DeepMind 博客",
+    "Microsoft Research 博客",
     "CNCF Blog",
     "AWS News Blog",
     "Azure Blog",
+    "Cloudflare 博客",
     "美团技术团队",
     "Martin Fowler",
     "The New Stack",
     "dbt Labs Blog",
+    "React 官方博客",
     "人人都是产品经理",
     "Rebel's Guide to Project Management",
+    "Nature",
     "国家统计局 · 最新发布"
   ],
   "domains": [
@@ -27,7 +33,14 @@
         { "name": "The Decoder", "url": "https://the-decoder.com/feed/", "tier": 1.5 },
         { "name": "雷锋网", "url": "https://www.leiphone.com/feed/", "tier": 1.5 },
         { "name": "HackerNoon", "url": "https://hackernoon.com/feed", "tier": 2 },
-        { "name": "Ars Technica AI", "url": "https://arstechnica.com/ai/feed/", "tier": 2 }
+        { "name": "Ars Technica AI", "url": "https://arstechnica.com/ai/feed/", "tier": 2 },
+        { "name": "OpenAI 官方新闻", "url": "https://openai.com/news/rss.xml", "tier": 1.5 },
+        { "name": "Google DeepMind 博客", "url": "https://deepmind.google/blog/rss.xml", "tier": 1.5 },
+        { "name": "Microsoft Research 博客", "url": "https://www.microsoft.com/en-us/research/feed/", "tier": 1.5 },
+        { "name": "MIT Technology Review · AI", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/", "tier": 1.5 },
+        { "name": "MarkTechPost", "url": "https://www.marktechpost.com/feed/", "tier": 2 },
+        { "name": "BAIR 博客", "url": "https://bair.berkeley.edu/blog/feed.xml", "tier": 2 },
+        { "name": "arXiv · cs.AI", "url": "https://export.arxiv.org/rss/cs.AI", "tier": 2 }
       ]
     },
     {
@@ -39,7 +52,11 @@
         { "name": "Smashing Magazine", "url": "https://www.smashingmagazine.com/feed/", "tier": 1.5 },
         { "name": "freeCodeCamp", "url": "https://www.freecodecamp.org/news/rss/", "tier": 1.5 },
         { "name": "Josh W. Comeau", "url": "https://www.joshwcomeau.com/rss.xml", "tier": 1.5 },
-        { "name": "Kent C. Dodds", "url": "https://kentcdodds.com/rss.xml", "tier": 2 }
+        { "name": "Kent C. Dodds", "url": "https://kentcdodds.com/rss.xml", "tier": 2 },
+        { "name": "V8 开发者博客", "url": "https://v8.dev/blog.atom", "tier": 1.5 },
+        { "name": "React 官方博客", "url": "https://react.dev/rss.xml", "tier": 1.5 },
+        { "name": "Angular 官方博客", "url": "https://blog.angular.dev/feed", "tier": 2 },
+        { "name": "WebKit 博客", "url": "https://webkit.org/feed/", "tier": 2 }
       ]
     },
     {
@@ -51,7 +68,9 @@
         { "name": "InfoQ 中文", "url": "https://www.infoq.cn/feed", "tier": 1.5 },
         { "name": "InfoQ 国际", "url": "https://feed.infoq.com/", "tier": 1.5 },
         { "name": "Netflix 技术博客", "url": "https://netflixtechblog.com/feed", "tier": 2 },
-        { "name": "开源中国", "url": "https://www.oschina.net/news/rss", "tier": 2 }
+        { "name": "开源中国", "url": "https://www.oschina.net/news/rss", "tier": 2 },
+        { "name": "Meta Engineering", "url": "https://engineering.fb.com/feed/", "tier": 1.5 },
+        { "name": "ByteByteGo", "url": "https://blog.bytebytego.com/feed", "tier": 2 }
       ]
     },
     {
@@ -60,7 +79,9 @@
         { "name": "CNCF Blog", "url": "https://www.cncf.io/blog/feed/", "tier": 1.5 },
         { "name": "AWS News Blog", "url": "https://aws.amazon.com/blogs/aws/feed/", "tier": 1.5 },
         { "name": "Kubernetes Blog", "url": "https://kubernetes.io/feed.xml", "tier": 1.5 },
-        { "name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/", "tier": 2 }
+        { "name": "Azure Blog", "url": "https://azure.microsoft.com/en-us/blog/feed/", "tier": 2 },
+        { "name": "Cloudflare 博客", "url": "https://blog.cloudflare.com/rss/", "tier": 1.5 },
+        { "name": "HashiCorp 博客", "url": "https://www.hashicorp.com/blog/feed.xml", "tier": 1.5 }
       ]
     },
     {
@@ -68,7 +89,10 @@
       "sources": [
         { "name": "dbt Labs Blog", "url": "https://www.getdbt.com/blog/feed.xml", "tier": 1.5 },
         { "name": "Towards Data Science", "url": "https://towardsdatascience.com/feed", "tier": 1.5 },
-        { "name": "ClickHouse Blog", "url": "https://clickhouse.com/rss.xml", "tier": 2 }
+        { "name": "ClickHouse Blog", "url": "https://clickhouse.com/rss.xml", "tier": 2 },
+        { "name": "Databricks 博客", "url": "https://www.databricks.com/blog/feed.xml", "tier": 2 },
+        { "name": "DuckDB 官方博客", "url": "https://duckdb.org/feed.xml", "tier": 2 },
+        { "name": "KDnuggets", "url": "https://www.kdnuggets.com/feed", "tier": 2 }
       ]
     },
     {
@@ -77,7 +101,9 @@
         { "name": "人人都是产品经理", "url": "https://www.woshipm.com/feed", "tier": 1.5 },
         { "name": "Lenny's Newsletter", "url": "https://www.lennysnewsletter.com/feed", "tier": 1.5 },
         { "name": "Rebel's Guide to Project Management", "url": "https://www.girlsguidetopm.com/feed/", "tier": 2 },
-        { "name": "Product Talk", "url": "https://www.producttalk.org/feed/", "tier": 2 }
+        { "name": "Product Talk", "url": "https://www.producttalk.org/feed/", "tier": 2 },
+        { "name": "Stratechery", "url": "https://stratechery.com/feed/", "tier": 1.5 },
+        { "name": "Farnam Street", "url": "https://fs.blog/feed/", "tier": 2 }
       ]
     },
     {
@@ -89,21 +115,27 @@
     {
       "domain": "indie",
       "sources": [
-        { "name": "Product Hunt", "url": "https://www.producthunt.com/feed", "tier": 1.5 }
+        { "name": "Product Hunt", "url": "https://www.producthunt.com/feed", "tier": 1.5 },
+        { "name": "Bootstrapped 播客", "url": "https://feeds.transistor.fm/bootstrapped", "tier": 2 }
       ]
     },
     {
       "domain": "career",
       "sources": [
         { "name": "dev.to", "url": "https://dev.to/feed", "tier": 1.5 },
-        { "name": "HN 招聘帖", "url": "https://hnrss.org/jobs", "tier": 1.5 }
+        { "name": "HN 招聘帖", "url": "https://hnrss.org/jobs", "tier": 1.5 },
+        { "name": "Stack Overflow 博客", "url": "https://stackoverflow.blog/feed/", "tier": 1.5 },
+        { "name": "The Pragmatic Engineer", "url": "https://newsletter.pragmaticengineer.com/feed", "tier": 1.5 },
+        { "name": "LeadDev", "url": "https://leaddev.com/rss.xml", "tier": 2 }
       ]
     },
     {
       "domain": "finance",
       "sources": [
         { "name": "华尔街见闻", "url": "https://dedicated.wallstreetcn.com/rss.xml", "tier": 1 },
-        { "name": "36氪快讯", "url": "https://rsshub.rssforever.com/36kr/newsflashes", "tier": 1.5 }
+        { "name": "36氪快讯", "url": "https://rsshub.rssforever.com/36kr/newsflashes", "tier": 1.5 },
+        { "name": "CNBC · Top News", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114", "tier": 1.5 },
+        { "name": "财新 · 最新（RSSHub）", "url": "https://rsshub.rssforever.com/caixin/latest", "tier": 1.5 }
       ]
     },
     {
@@ -115,7 +147,19 @@
         { "name": "奇客 Solidot", "url": "https://www.solidot.org/index.rss", "tier": 1.5 },
         { "name": "Lifehacker", "url": "https://lifehacker.com/feed/rss", "tier": 2 },
         { "name": "GitHub Blog", "url": "https://github.blog/feed/", "tier": 2 },
-        { "name": "异次元软件世界", "url": "https://www.iplaysoft.com/feed", "tier": 2 }
+        { "name": "异次元软件世界", "url": "https://www.iplaysoft.com/feed", "tier": 2 },
+        { "name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "tier": 1.5 },
+        { "name": "GitHub Changelog", "url": "https://github.blog/changelog/feed/", "tier": 1.5 },
+        { "name": "Wired", "url": "https://www.wired.com/feed/rss", "tier": 2 },
+        { "name": "9to5Mac", "url": "https://9to5mac.com/feed/", "tier": 2 },
+        { "name": "Dense Discovery", "url": "https://www.densediscovery.com/feed/", "tier": 2 }
+      ]
+    },
+    {
+      "domain": "other",
+      "sources": [
+        { "name": "Nature", "url": "https://www.nature.com/nature.rss", "tier": 1.5 },
+        { "name": "WHO · 新闻", "url": "https://www.who.int/rss-feeds/news-english.xml", "tier": 2 }
       ]
     }
   ]

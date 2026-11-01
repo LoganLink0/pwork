@@ -8,7 +8,8 @@ import type { SourceInput } from '../db/collect'
 import { downloadFile } from '../db/repo'
 import { exportSourcesJson } from '../db/collect'
 import { voteStatsBySource } from '../engine/sourceCredit'
-import { auditSources, verdictLabel } from '../engine/sourceAudit'
+import { auditSources, verdictLabel, classifySourceError } from '../engine/sourceAudit'
+import { probeFeedUrl } from '../engine/feedProbe'
 import { discoverLeads } from '../engine/sourceDiscover'
 import { probeYtdlp } from '../engine/ytdlp'
 import { isDesktopApp } from '../engine/platform'
@@ -23,10 +24,12 @@ function tierCls(tier: number): string {
 function HealthCell({ s }: { s: Source }) {
   const stopped = !s.active && s.health.failStreak >= 3
   const failing = s.health.failStreak > 0 && s.active
+  // 失败分类（融合批）：区分「本地到不了（云端可救）」与「源可能停更」——避免误删还活着的源
+  const cls = classifySourceError(s.health.lastError)
   const tip = stopped
-    ? `连败 ${s.health.failStreak} 次自动停用。最近错误：${s.health.lastError ?? '未知'}——换地址后点本行「启用」开关重新启用，失败计数会清零重新开始`
+    ? `连败 ${s.health.failStreak} 次自动停用。最近错误：${s.health.lastError ?? '未知'}${cls ? `。${cls.hint}` : ''}——换地址后点本行「启用」开关重新启用，失败计数会清零重新开始`
     : s.health.lastError
-      ? `最近错误：${s.health.lastError}`
+      ? `最近错误：${s.health.lastError}${cls ? `。${cls.hint}` : ''}`
       : s.health.lastOkAt
         ? `上次成功 ${fmtLocal(s.health.lastOkAt)}`
         : '还没抓取过'
@@ -51,6 +54,17 @@ export function Sources() {
     if (!desktop) return
     void probeYtdlp().then(setYtdlpVer)
   }, [desktop])
+  // 引用发现卡的 feed 自动探测（融合批）：点「编辑后添加」先探测该域名的主页声明与惯例路径
+  const [probingDomain, setProbingDomain] = useState<string | null>(null)
+  const [probingForm, setProbingForm] = useState(false)
+  const addLead = async (domain: string) => {
+    setProbingDomain(domain)
+    const r = await probeFeedUrl(`https://${domain}`)
+    setProbingDomain(null)
+    setForm({ name: domain, url: r.feedUrl ?? `https://${domain}`, domain: 'ai', tier: 1.5 })
+    setEditId(null)
+    setMsg(r.feedUrl ? `已探测到 feed 地址（${r.how === 'link' ? '页面声明' : '惯例路径'}），确认后保存即可` : '没探测到 feed 地址——已预填主页地址，可手动补全或换 RSSHub 路由')
+  }
   // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = useMemo(() => voteStatsBySource(items), [items])
   const [editId, setEditId] = useState<string | null>(null)
@@ -261,9 +275,10 @@ export function Sources() {
                     type="button"
                     className="btn-ghost"
                     style={{ flex: 'none' }}
-                    onClick={() => { setForm({ name: l.domain, url: `https://${l.domain}`, domain: 'ai', tier: 1.5 }); setEditId(null) }}
+                    disabled={probingDomain === l.domain}
+                    onClick={() => void addLead(l.domain)}
                   >
-                    编辑后添加
+                    {probingDomain === l.domain ? '探测 feed 中…' : '编辑后添加'}
                   </button>
                 </div>
               ))}
@@ -307,6 +322,31 @@ export function Sources() {
                 placeholder={form.kind === 'ytdlp' ? 'https://space.bilibili.com/UP主ID/video 或 https://youtube.com/@频道/videos' : 'https://…（原生 RSS / RSSHub 路由）'}
                 onChange={(e) => setForm({ ...form, url: e.target.value })}
               />
+              {form.kind === 'rss' && (
+                <span style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', marginTop: 4 }}>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ flex: 'none' }}
+                    disabled={probingForm || !form.url.trim()}
+                    onClick={() => {
+                      setProbingForm(true)
+                      void probeFeedUrl(form.url).then((r) => {
+                        setProbingForm(false)
+                        if (r.feedUrl) {
+                          setForm((f) => (f ? { ...f, url: r.feedUrl! } : f))
+                          setMsg(`已探测到 feed 地址（${r.how === 'input' ? '输入本身就是 feed' : r.how === 'link' ? '页面声明' : '惯例路径'}）`)
+                        } else {
+                          setMsg('没探测到 feed 地址——试 RSSHub 路由，或看 帮助 → 配置指南 的找 feed 方法')
+                        }
+                      })
+                    }}
+                  >
+                    {probingForm ? '探测中…' : '自动探测 feed'}
+                  </button>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>只有站点主页地址？点它自动找 feed</span>
+                </span>
+              )}
             </label>
             <label>主题域
               <select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })}>
