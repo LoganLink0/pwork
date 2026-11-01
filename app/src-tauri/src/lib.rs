@@ -348,20 +348,23 @@ pub fn run() {
           if event.state != ShortcutState::Pressed {
             return;
           }
-          // 热键分发：先判置顶（Windows）、再判剪贴板速记，最后走轮盘（现有逻辑）
+          // 热键分发：先判置顶（Windows 专属字段与 Win32 调用，cfg 门控）、再判剪贴板速记，最后走轮盘
           let state = app.state::<HotkeyState>();
-          let is_topmost = state
-            .topmost
-            .lock()
-            .map(|t| t.as_ref() == Some(shortcut))
-            .unwrap_or(false);
-          if is_topmost {
-            let r = system::toggle_topmost_window();
-            let _ = app.emit(
-              "topmost-toggled",
-              r.unwrap_or_else(|e| format!("失败：{}", e)),
-            );
-            return;
+          #[cfg(windows)]
+          {
+            let is_topmost = state
+              .topmost
+              .lock()
+              .map(|t| t.as_ref() == Some(shortcut))
+              .unwrap_or(false);
+            if is_topmost {
+              let r = system::toggle_topmost_window();
+              let _ = app.emit(
+                "topmost-toggled",
+                r.unwrap_or_else(|e| format!("失败：{}", e)),
+              );
+              return;
+            }
           }
           let is_capture = state
             .capture
