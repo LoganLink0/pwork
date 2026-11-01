@@ -482,6 +482,7 @@ pub fn run() {
       deploy_cloud,
       register_global_hotkeys,
       system::toggle_topmost,
+      system::shell_bridge_install,
       ytdlp::ytdlp_probe,
       ytdlp::ytdlp_fetch_playlist,
       db::db_probe,

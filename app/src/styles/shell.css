@@ -2199,6 +2199,26 @@ a.mcard .m-link:hover {
   color: var(--ink-faint);
   background: none;
 }
+/* 编辑环的「拖入新增」空格（反馈批）：脱离圆环角度数学、固定挂在环底部——
+   实格按自身数量均分（6 格=60° 整、8 格=45° 整，正上锚点），环的对称性不再被空格打歪 */
+.wheel-edit-ring .wheel-slot-new {
+  top: auto;
+  bottom: -6px;
+  left: 50%;
+  margin: 0 0 0 -46px;
+  transform: none;
+}
+.wheel-edit-ring .wheel-slot-new:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+/* 格位内容居中收口（反馈批）：圆内文字水平居中 + 行高压实 */
+.wheel-edit-ring .wheel-slot,
+.wheel-slot {
+  text-align: center;
+  padding: 0;
+  line-height: 1.35;
+}
 .wheel-slot-del {
   position: absolute;
   top: 2px;

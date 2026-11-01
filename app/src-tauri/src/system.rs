@@ -40,3 +40,48 @@ pub fn toggle_topmost_window() -> Result<String, String> {
 pub fn toggle_topmost() -> Result<String, String> {
   toggle_topmost_window()
 }
+
+/// Shell 通知桥一键配置（反馈批重做）：把 pdone 函数写进 PowerShell profile（幂等——
+/// 已有标记块则直接返回）。函数体刻意全 ASCII：profile 文件可能是任意编码，中文写进去
+/// 会随编码假设乱码；中文消息走运行时参数，发送时显式转 UTF-8 字节。
+#[tauri::command]
+pub fn shell_bridge_install() -> Result<String, String> {
+  use std::io::Write;
+  let out = std::process::Command::new("powershell")
+    .args(["-NoProfile", "-Command", "$PROFILE"])
+    .output()
+    .map_err(|e| format!("启动 PowerShell 失败：{e}"))?;
+  if !out.status.success() {
+    return Err("获取 PowerShell 配置路径失败".into());
+  }
+  let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+  if path.is_empty() {
+    return Err("PowerShell 配置路径为空".into());
+  }
+  let p = std::path::PathBuf::from(&path);
+  if let Some(dir) = p.parent() {
+    std::fs::create_dir_all(dir).map_err(|e| format!("创建配置目录失败：{e}"))?;
+  }
+  const MARK: &str = "# >>> PWORK pdone >>>";
+  let existing = std::fs::read_to_string(&p).unwrap_or_default();
+  if existing.contains(MARK) {
+    return Ok(format!("已经配置过了（{path}）——重开一个终端窗口即可用 pdone"));
+  }
+  let block = "\n# >>> PWORK pdone >>>\n\
+    function global:pdone {\n\
+      param([string]$Message = 'done')\n\
+      try {\n\
+        $json = @{ title = 'PWORK'; body = $Message } | ConvertTo-Json -Compress\n\
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)\n\
+        Invoke-RestMethod -Uri 'http://127.0.0.1:8788/notify' -Method Post -ContentType 'application/json; charset=utf-8' -Body $bytes | Out-Null\n\
+      } catch { }\n\
+    }\n\
+    # <<< PWORK pdone <<<\n";
+  let mut f = std::fs::OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(&p)
+    .map_err(|e| format!("打开配置文件失败：{e}"))?;
+  f.write_all(block.as_bytes()).map_err(|e| format!("写入配置失败：{e}"))?;
+  Ok(format!("配置完成（{path}）——重开一个终端窗口，在任意命令后面加上：pdone 你的消息"))
+}

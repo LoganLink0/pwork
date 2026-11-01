@@ -46,8 +46,10 @@ export function defaultKeybinds(): Keybinds {
   }
 }
 
-/** 轮盘默认键的展示文案（界面静态文案引用——引导页/帮助页不用再各写一份平台判断） */
-export const WHEEL_LABEL_DISPLAY = displayCombo(defaultKeybinds().wheel)
+/** 轮盘键的实时展示文案（界面文案引用——用户改键后引导页/帮助页跟着变，不许出现过期键位） */
+export function wheelLabelLive(): string {
+  return displayCombo(loadKeybinds().wheel)
+}
 
 const KEY = 'pwork-keybinds'
 

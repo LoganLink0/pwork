@@ -14,7 +14,8 @@ import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, recordError, type ErrorKind } from '../engine/errorLog'
 import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
-import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, loadUpdateProxy, saveUpdateProxy, type UpdateState } from '../engine/updater'
+import { invoke } from '@tauri-apps/api/core'
+import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
 import { buildReadableArchive } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
@@ -34,9 +35,6 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
   window: '脚本错误',
   app: '内部错误',
 }
-
-/** Shell 通知桥示例命令（系统工具台第二批）：设置页展示与复制共用同一份 */
-const SHELL_BRIDGE_CMD = `curl -s http://127.0.0.1:8788/notify -H "Content-Type: application/json" -d '{"title":"构建完成","body":"耗时 3 分"}'`
 
 const SETTINGS_TABS = [
   { id: 'data', label: '数据', icon: 'data' },
@@ -89,9 +87,6 @@ export function Settings() {
   const [importBusy, setImportBusy] = useState(false)
   // 应用内更新（桌面版专属；0.2 批）：检查 → 下载安装 → 重启生效
   const [upd, setUpd] = useState<UpdateState>({ phase: 'idle' })
-  // 更新代理（GitHub 资产域名在国内网络时好时坏）：填写后检查与下载都走它
-  const [proxyDraft, setProxyDraft] = useState(() => loadUpdateProxy())
-  const [proxyMsg, setProxyMsg] = useState('')
   const doCheckUpdate = async () => {
     try {
       setUpd({ phase: 'checking' })
@@ -299,8 +294,9 @@ export function Settings() {
   // 系统通知（0.4-1）：三样提醒的开关；浏览器版开启时借用户手势申请系统权限
   const [notifyCfg, setNotifyCfg] = useState<NotifyConfig>(() => loadNotifyConfig())
   const [notifyMsg, setNotifyMsg] = useState('')
-  // Shell 通知桥示例命令的复制反馈（系统工具台第二批）
-  const [bridgeCopied, setBridgeCopied] = useState(false)
+  // Shell 通知桥（反馈批重做）：一键配置 PowerShell profile + 一键测试
+  const [bridgeBusy, setBridgeBusy] = useState(false)
+  const [bridgeMsg, setBridgeMsg] = useState('')
   const setNotify = async (patch: Partial<NotifyConfig>) => {
     const next = { ...notifyCfg, ...patch }
     setNotifyCfg(next)
@@ -1030,24 +1026,51 @@ export function Settings() {
             <div className="set-row" style={{ alignItems: 'flex-start' }}>
               <label>Shell 通知桥</label>
               <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                在耗时的命令后面挂一行，命令一结束 PWORK 就弹通知——不用盯着终端等。
-                先复制下面的示例命令，把里面的标题和正文换成你自己的：
+                长命令结束后让 PWORK 弹通知，不用盯着终端等。一键配置后，在任意命令后面加
+                <code style={{ margin: '0 4px' }}>pdone 你的消息</code>
+                即可（PowerShell；cmd 用户先敲 powershell 回车进入）：
                 <br />
-                <code style={{ wordBreak: 'break-all' }}>{SHELL_BRIDGE_CMD}</code>
-                <br />
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  style={{ flex: 'none', marginTop: 4 }}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(SHELL_BRIDGE_CMD).then(() => {
-                      setBridgeCopied(true)
-                      window.setTimeout(() => setBridgeCopied(false), 2000)
-                    })
-                  }}
-                >
-                  {bridgeCopied ? '已复制' : '复制示例命令'}
-                </button>
+                <span className="chips" style={{ marginTop: 6 }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ flex: 'none' }}
+                    disabled={bridgeBusy}
+                    onClick={() => {
+                      setBridgeBusy(true)
+                      setBridgeMsg('')
+                      invoke<string>('shell_bridge_install')
+                        .then((msg) => {
+                          setBridgeBusy(false)
+                          setBridgeMsg(msg)
+                        })
+                        .catch((e: unknown) => {
+                          setBridgeBusy(false)
+                          setBridgeMsg(`配置失败：${e instanceof Error ? e.message : String(e)}`)
+                        })
+                    }}
+                  >
+                    {bridgeBusy ? '配置中…' : '一键配置'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ flex: 'none' }}
+                    onClick={() => {
+                      setBridgeMsg('')
+                      fetch('http://127.0.0.1:8788/notify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: 'PWORK', body: 'Shell 通知桥测试——看到这条就说明通了' }),
+                      })
+                        .then((r) => setBridgeMsg(r.ok ? '测试通知已发出（看屏幕右下角/通知中心）' : `网关返回 HTTP ${r.status}`))
+                        .catch(() => setBridgeMsg('网关不在——桌面版网关随应用启动，确认应用在运行'))
+                    }}
+                  >
+                    发送测试通知
+                  </button>
+                </span>
+                {bridgeMsg && <><br /><span style={{ color: 'var(--ink-soft)' }}>{bridgeMsg}</span></>}
               </span>
             </div>
           )}
@@ -1088,40 +1111,6 @@ export function Settings() {
               {upd.phase === 'ready' && (
                 <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void restartToUpdate()}>重启应用</button>
               )}
-            </div>
-          )}
-          {isDesktopApp() && (
-            <div className="set-row">
-              <label>更新代理</label>
-              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                检查更新与下载更新包走这个代理（GitHub 访问不稳时用）。格式如 http://127.0.0.1:7890；留空 = 直连。保存后重新点「检查更新」生效。
-                <br />
-                <input
-                  type="text"
-                  value={proxyDraft}
-                  placeholder="http://127.0.0.1:7890"
-                  style={{ width: '100%', maxWidth: 320, marginTop: 4 }}
-                  onChange={(e) => { setProxyDraft(e.target.value); setProxyMsg('') }}
-                />
-                <br />
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  style={{ flex: 'none', marginTop: 4 }}
-                  onClick={() => {
-                    const v = proxyDraft.trim()
-                    if (v && !/^https?:\/\//.test(v)) {
-                      setProxyMsg('代理地址要以 http:// 或 https:// 开头')
-                      return
-                    }
-                    saveUpdateProxy(v)
-                    setProxyMsg(v ? '代理已保存，重新检查更新即生效' : '已清空——恢复直连')
-                  }}
-                >
-                  保存
-                </button>
-                {proxyMsg && <span style={{ marginLeft: 8 }}>{proxyMsg}</span>}
-              </span>
             </div>
           )}
           <div className="set-row">

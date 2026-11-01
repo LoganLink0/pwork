@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isDesktopApp } from '../../engine/platform'
 import { toast } from '../../engine/toast'
+import { wheelLabelLive } from '../../engine/keybinds'
 import { loadWheelSlots, saveWheelSlots, DEFAULT_WHEEL_SLOTS, type WheelSlot } from '../../content/wheel'
 import { Icon } from './icons'
 
@@ -65,15 +66,14 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
 
   const removeSlot = (slotId: string) => setSlots((ss) => ss.filter((s) => s.id !== slotId))
 
-  const n = slots.length + (slots.length < 8 ? 1 : 0) // 实格与虚线空格一起均分——空格落位在下一档，不压任何实格
   const slotName = (s: WheelSlot) => s.label?.trim() || (s.kind === 'quick' ? '速记浮层' : s.kind === 'fetch' ? '立即抓取' : s.kind === 'url' ? '网址' : '页面')
 
   return (
     <div className="set-card" data-tab="wheel" style={{ display: active ? undefined : 'none' }}>
       <h2>工具轮盘</h2>
       <div className="desc">
-        桌面版按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> 任何地方呼出的一圈快捷入口。
-        自定义方式：<b>把右边的动作卡片拖进左边轮盘的格子里</b>；格子右上角 × 删除，空的虚线格可以继续拖。
+        桌面版按 <kbd>{wheelLabelLive()}</kbd> 任何地方呼出的一圈快捷入口（改键在本页下方「键盘快捷键」卡，这里同步显示）。
+        自定义方式：<b>把右边的动作卡片拖进左边轮盘的格子里</b>；格子右上角 × 删除，环底部的虚线格可以继续拖。
       </div>
       <div className="set-body">
         {!isDesktopApp() && (
@@ -88,7 +88,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
               <div
                 key={s.id}
                 className={`wheel-slot wheel-drop${hoverSlot === s.id ? ' drop-hover' : ''}`}
-                style={{ '--i': i, '--n': n } as React.CSSProperties}
+                style={{ '--i': i, '--n': slots.length } as React.CSSProperties}
                 onDragOver={(e) => { e.preventDefault(); setHoverSlot(s.id) }}
                 onDragLeave={() => setHoverSlot((h) => (h === s.id ? null : h))}
                 onDrop={(e) => dropOn(s.id, e)}
@@ -108,8 +108,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
             ))}
             {slots.length < 8 && (
               <div
-                className="wheel-slot wheel-slot-empty"
-                style={{ '--i': slots.length, '--n': n } as React.CSSProperties}
+                className="wheel-slot wheel-slot-empty wheel-slot-new"
                 onDragOver={(e) => { e.preventDefault(); setHoverSlot('__new__') }}
                 onDragLeave={() => setHoverSlot((h) => (h === '__new__' ? null : h))}
                 onDrop={(e) => dropOn(`slot_${Date.now().toString(36)}`, e)}
@@ -174,7 +173,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
               {msg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>{msg}</span>}
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              呼出后 <kbd>←</kbd><kbd>→</kbd> 选择、<kbd>↵</kbd> 执行、<kbd>Esc</kbd> 关闭；呼出键固定 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>，自定义键位与快捷键自定义一起做。
+              呼出后 <kbd>←</kbd><kbd>→</kbd> 选择、<kbd>↵</kbd> 执行、<kbd>1-9</kbd> 直达、<kbd>Esc</kbd> 关闭；呼出键 <kbd>{wheelLabelLive()}</kbd>（在下方「键盘快捷键」卡可改）。
             </span>
           </div>
         </div>
