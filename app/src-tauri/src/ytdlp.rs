@@ -50,12 +50,11 @@ pub fn ytdlp_probe() -> Result<String, String> {
 
 /// 拉取平台投稿清单：返回 flat JSON 的 stdout 原文（entries 由前端解析入库）。
 /// --playlist-items 1:30 只取最新 30 条——信源轮询不需要全量历史。
+/// 地址守卫与 RSS 抓取同口径（gateway::guard_public_http_url）：拒绝内网/回环/保留地址，
+/// 防 yt-dlp 被当作内网探测探针。
 #[tauri::command]
 pub fn ytdlp_fetch_playlist(url: String) -> Result<String, String> {
-  let parsed = url::Url::parse(&url).map_err(|_| "地址格式无效".to_string())?;
-  if parsed.scheme() != "http" && parsed.scheme() != "https" {
-    return Err("只支持 http/https 地址".into());
-  }
+  crate::gateway::guard_public_http_url(&url)?;
   let n = MAX_ENTRIES.to_string();
   run_ytdlp(
     &["--flat-playlist", "--dump-single-json", "--playlist-items", &format!("1:{n}"), "--no-warnings", &url],

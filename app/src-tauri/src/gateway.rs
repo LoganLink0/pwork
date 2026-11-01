@@ -193,7 +193,7 @@ fn host_allowed(host: &str, port: u16) -> bool {
 
 /// RSS 代理的 URL 守卫：只放行 http/https，且解析出的地址不落在内网/回环/保留段。
 /// 域名先做 DNS 解析再校验全部地址（防解析到内网 IP 的 rebinding）；解析失败按拒绝处理。
-fn guard_public_http_url(target: &str) -> Result<String, String> {
+pub(crate) fn guard_public_http_url(target: &str) -> Result<String, String> {
     use std::net::ToSocketAddrs;
     let u = url::Url::parse(target).map_err(|_| "链接格式无效".to_string())?;
     if u.scheme() != "http" && u.scheme() != "https" {

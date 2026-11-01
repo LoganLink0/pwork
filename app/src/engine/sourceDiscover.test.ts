@@ -47,4 +47,14 @@ describe('discoverLeads', () => {
     ]
     expect(discoverLeads(items, sources, now)).toHaveLength(0)
   })
+
+  it('同注册域不算发现（yt-dlp 场景：feed 是 space.bilibili.com、条目是 www.bilibili.com）', () => {
+    const ytdlpSources = [{ id: 's1', url: 'https://space.bilibili.com/946974/video' }] as unknown as Source[]
+    const items = [
+      item('https://www.bilibili.com/video/BV1', fresh),
+      item('https://www.bilibili.com/video/BV2', fresh),
+      item('https://www.bilibili.com/video/BV3', fresh),
+    ]
+    expect(discoverLeads(items, ytdlpSources, now)).toHaveLength(0)
+  })
 })

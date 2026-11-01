@@ -11,6 +11,7 @@ import { voteStatsBySource } from '../engine/sourceCredit'
 import { auditSources, verdictLabel } from '../engine/sourceAudit'
 import { discoverLeads } from '../engine/sourceDiscover'
 import { probeYtdlp } from '../engine/ytdlp'
+import { isDesktopApp } from '../engine/platform'
 import { fmtLocal } from '../engine/datetime'
 import { sourcesToOpml, parseOpml } from '../engine/opml'
 import type { Source } from '../types/models'
@@ -43,11 +44,13 @@ const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5, ki
 export function Sources() {
   const { sources, items, items7d, loaded, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState, runFetchAll } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
-  // 本机 yt-dlp 版本（添加 yt-dlp 信源时的安装检测；挂载时探测一次）
+  // 本机 yt-dlp 版本（添加 yt-dlp 信源时的安装检测；仅桌面版探测——网页版没有本机进程，选项一并隐藏）
+  const desktop = isDesktopApp()
   const [ytdlpVer, setYtdlpVer] = useState<string | null>(null)
   useEffect(() => {
+    if (!desktop) return
     void probeYtdlp().then(setYtdlpVer)
-  }, [])
+  }, [desktop])
   // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = useMemo(() => voteStatsBySource(items), [items])
   const [editId, setEditId] = useState<string | null>(null)
@@ -287,9 +290,9 @@ export function Sources() {
             <label>类型
               <select value={form.kind ?? 'rss'} onChange={(e) => setForm({ ...form, kind: e.target.value as 'rss' | 'ytdlp' })}>
                 <option value="rss">RSS / Atom（含 RSSHub 等桥接地址）</option>
-                <option value="ytdlp">yt-dlp 平台投稿清单（B站 UP 主 / YouTube 频道）</option>
+                {desktop && <option value="ytdlp">yt-dlp 平台投稿清单（B站 UP 主 / YouTube 频道）</option>}
               </select>
-              {form.kind === 'ytdlp' && (
+              {desktop && form.kind === 'ytdlp' && (
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
                   {ytdlpVer
                     ? `本机 yt-dlp ${ytdlpVer}——抓取时只拉标题与链接，不下载视频`

@@ -21,11 +21,48 @@ interface FlatEntry {
 }
 
 interface FlatJson {
-  entries?: FlatEntry[]
+  entries?: FlatEntry[] | null
   title?: string
   id?: string
   webpage_url?: string
   url?: string
+}
+
+export interface FlatItem {
+  title: string
+  url: string
+  summary: string
+  publishedAt: string | null
+}
+
+/** 解析 yt-dlp 的 JSON 输出为条目集（纯函数，可单测）。
+ *  兼容两种形态：清单 JSON（entries 数组，UP 主空间/频道地址）与单视频 JSON
+ *  （无 entries，根对象即条目——链接捕获的解析基础）。
+ *  防御：entries 中的 null 项（平台侧删除/受限的视频在 flat 输出里可能为 null）直接跳过；
+ *  B站 space 的 flat 清单只回链接不给标题——用 BV 号（id）兜底，YouTube 等平台标题完整。 */
+export function parseFlatJson(raw: string, fetchedAt: string): FlatItem[] {
+  let parsed: FlatJson
+  try {
+    parsed = JSON.parse(raw) as FlatJson
+  } catch {
+    throw new Error('yt-dlp 输出不是合法 JSON——版本可能过旧，yt-dlp -U 自更新后重试')
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('yt-dlp 返回了空结果——可能是平台拦截（稍后重试）或地址无效')
+  }
+  const entries: FlatEntry[] = Array.isArray(parsed.entries)
+    ? parsed.entries.filter((e): e is FlatEntry => e !== null && typeof e === 'object')
+    : (parsed.title ?? parsed.webpage_url ?? parsed.url)
+      ? [{ title: parsed.title, url: parsed.webpage_url ?? parsed.url, id: parsed.id }]
+      : []
+  return entries
+    .map((e) => ({
+      title: (e.title ?? e.id ?? '').trim() || (e.webpage_url ?? e.url ?? '').trim(),
+      url: (e.webpage_url ?? e.url ?? '').trim(),
+      summary: '',
+      publishedAt: fetchedAt,
+    }))
+    .filter((e) => e.url !== '')
 }
 
 /** 本机 yt-dlp 版本（未安装/不可用返回 null，调用方给安装指引） */
@@ -37,28 +74,12 @@ export async function probeYtdlp(): Promise<string | null> {
   }
 }
 
-/** 拉取投稿清单（最新 30 条，Rust 侧 30 秒看门狗）。
- *  兼容两种 yt-dlp 输出：清单 JSON（entries 数组，UP 主空间/频道地址）
- *  与单视频 JSON（无 entries，直接给单条视频的元数据——链接捕获的基础）。 */
+/** 拉取投稿清单（最新 30 条，Rust 侧 30 秒看门狗） */
 export async function fetchYtdlpPlaylist(url: string): Promise<FetchedList> {
   try {
     const raw = await invoke<string>('ytdlp_fetch_playlist', { url })
-    const parsed = JSON.parse(raw) as FlatJson
-    const entries: FlatEntry[] = Array.isArray(parsed.entries)
-      ? parsed.entries
-      : (parsed.title ?? parsed.webpage_url ?? parsed.url)
-        ? [{ title: parsed.title, url: parsed.webpage_url ?? parsed.url, id: parsed.id }]
-        : []
     const now = new Date().toISOString()
-    const items = entries
-      .map((e) => ({
-        // B站 space 的 flat 清单只回链接不给标题——用 BV 号兜底（点击可看）；YouTube 等平台标题完整
-        title: (e.title ?? e.id ?? '').trim() || (e.webpage_url ?? e.url ?? '').trim(),
-        url: (e.webpage_url ?? e.url ?? '').trim(),
-        summary: '',
-        publishedAt: now,
-      }))
-      .filter((e) => e.url !== '')
+    const items = parseFlatJson(raw, now)
     if (items.length === 0) {
       return { ok: false, items: [], error: '清单为空——确认地址是该 UP 主/频道的投稿页，且账号下视频不为空' }
     }
