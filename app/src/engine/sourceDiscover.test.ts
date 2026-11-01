@@ -6,7 +6,7 @@ function item(url: string, fetchedAt: string): Item {
   return {
     id: `i_${Math.random().toString(36).slice(2)}`, sourceId: 's1', sourceName: 's1', url,
     title: `t-${url}`, summary: '', fingerprint: url, eventGroup: null, publishedAt: null, fetchedAt,
-    stage: 'scored', score: { total: 0, parts: {} } as Item['score'], scoreReason: '', aiBy: 'rules',
+    stage: 'scored', score: { total: 0, source: 0, novelty: 0, relevance: 0, utility: 0 }, scoreReason: '', aiBy: 'rules',
     tags: [], otFlag: null, expiresAt: null, annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
     createdAt: fetchedAt, updatedAt: fetchedAt, schemaVersion: 1,
   }

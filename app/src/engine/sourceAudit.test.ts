@@ -27,7 +27,7 @@ function item(sourceId: string, fetchedAt: string, vote: 'want' | 'meh' | 'no' |
   return {
     id: `i_${Math.random().toString(36).slice(2)}`, sourceId, sourceName: sourceId, url,
     title: 't', summary: '', fingerprint: url, eventGroup: null, publishedAt: null, fetchedAt,
-    stage: 'scored', score: { total: 0, parts: {} } as Item['score'], scoreReason: '', aiBy: 'rules',
+    stage: 'scored', score: { total: 0, source: 0, novelty: 0, relevance: 0, utility: 0 }, scoreReason: '', aiBy: 'rules',
     tags: [], otFlag: null, expiresAt: null, annotation: { notes: '', vote, keepForever: false, linkedReviewId: null },
     createdAt: fetchedAt, updatedAt: fetchedAt, schemaVersion: 1,
   }

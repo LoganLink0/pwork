@@ -40,7 +40,7 @@ export function verdictLabel(v: SourceVerdict): string {
 }
 
 /** 单信源四指标 → 画像。规则顺序即优先级：样本保护最先，good 次之，噪声与零命中随后 */
-export function auditOne(fetched: number, rated: number, want: number, no: number): { verdict: SourceVerdict; advice: string } {
+export function auditOne(fetched: number, rated: number, want: number, _no: number): { verdict: SourceVerdict; advice: string } {
   if (fetched < 5) {
     return { verdict: 'young', advice: `近 30 天仅 ${fetched} 条——样本不足，先观察再评判` }
   }
