@@ -4,6 +4,8 @@ import {
   deleteSource,
   digestDates,
   digestFor,
+  findItemByFingerprint,
+  putItem,
   softDeleteItem,
   getItem,
   importSources,
@@ -16,6 +18,9 @@ import {
   type SourceInput,
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../engine/collect'
+import { fingerprintOf } from '../engine/fingerprint'
+import { scoreByRules } from '../engine/rules'
+import { newId } from '../db/repo'
 import { recordError, track } from '../engine/errorLog'
 import {
   DEFAULT_COLLECT_CONFIG,
@@ -65,6 +70,8 @@ interface CollectState {
   toggleKeep: (itemId: string) => Promise<void>
   deleteItem: (itemId: string) => Promise<void>
   cycleOt: (itemId: string) => Promise<void>
+  /** 视频链接入库（C 路线·链接捕获）：解析后的元数据直接评分入库——手动捕获即明确意图，跳过预筛 */
+  captureLink: (meta: { title: string; author: string; description: string; url: string }) => Promise<{ ok: boolean; error?: string; duplicated?: boolean }>
   setConfig: (patch: Partial<CollectConfig>) => void
 }
 
@@ -219,6 +226,51 @@ export const useCollect = create<CollectState>((set, get) => ({
     await updateAnnotation(itemId, { otFlag: next })
     set({ items: await refreshItem(itemId, get().items) })
     set(await reloadDigest(get()))
+  },
+
+  captureLink: async (meta) => {
+    const fp = fingerprintOf(meta.url, meta.title)
+    if (await findItemByFingerprint(fp)) return { ok: false, duplicated: true }
+    const now = new Date().toISOString()
+    const config = get().config
+    // 虚拟来源：手动捕获不属于任何订阅；weight 取 T1.5 档（用户主动捕获，置信高于普通信源）
+    const virtualSource = {
+      id: 'capture', name: '链接捕获', domain: 'other', tier: 1.5 as const, weight: 0.7, active: true,
+      kind: 'rss' as const, checkEvery: 'daily' as const, health: { failStreak: 0, lastOkAt: null, lastError: null },
+      createdAt: now, updatedAt: now, deletedAt: null, schemaVersion: 1,
+    } as unknown as Source
+    const { score, reason, tags } = scoreByRules({
+      source: virtualSource,
+      title: meta.title,
+      summary: meta.description.length > 200 ? `${meta.description.slice(0, 200)}…` : meta.description,
+      domainCountToday: 0,
+      config,
+    })
+    await putItem({
+      id: newId('itm'),
+      sourceId: 'capture',
+      sourceName: '链接捕获',
+      url: meta.url,
+      title: meta.title,
+      summary: meta.description.length > 200 ? `${meta.description.slice(0, 200)}…` : meta.description,
+      fingerprint: fp,
+      eventGroup: null,
+      publishedAt: null,
+      fetchedAt: now,
+      stage: 'scored',
+      score,
+      scoreReason: reason,
+      aiBy: 'rules',
+      tags: meta.author ? [...tags, meta.author] : tags,
+      otFlag: null,
+      expiresAt: null,
+      annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
+      createdAt: now,
+      updatedAt: now,
+      schemaVersion: 1,
+    })
+    await useCollect.getState().load()
+    return { ok: true }
   },
 
   setConfig: (patch) => {

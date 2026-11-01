@@ -9,6 +9,7 @@ export type ToolEngine =
   | 'local-webspeech-tts'
   | 'local-webspeech-asr'
   | 'local-canvas'
+  | 'local-ytdlp'
   | 'external'
   | 'byok'
   | 'app'
@@ -44,6 +45,7 @@ export const ENGINE_LABEL: Record<ToolEngine, string> = {
   'local-webspeech-tts': '本地 · 浏览器语音',
   'local-webspeech-asr': '本地 · 浏览器识别',
   'local-canvas': '本地 · Canvas',
+  'local-ytdlp': '本地 · yt-dlp 解析',
   external: '外部工具 ↗',
   byok: 'BYOK 云端',
   app: '独立应用',
@@ -145,6 +147,15 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     note: '外部工具，与本工作台无数据互通',
   },
   // ── 视频 ──
+  {
+    id: 'video-capture',
+    category: 'video',
+    name: '视频链接入库',
+    desc: '粘贴 B站 / YouTube / 抖音等视频链接，解析标题、作者与简介后存入条目库——刷到的好内容随手进采集管线',
+    engine: 'local-ytdlp',
+    status: 'ready',
+    note: '仅桌面版可用（需本机安装 yt-dlp）；解析在本地完成，链接不上传任何服务器',
+  },
   {
     id: 'ext-handbrake',
     category: 'video',

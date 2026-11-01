@@ -5,6 +5,7 @@ import { TtsTool } from '../components/process/TtsTool'
 import { AsrTool } from '../components/process/AsrTool'
 import { CardTool } from '../components/process/CardTool'
 import { ImageProcessTool } from '../components/process/ImageProcessTool'
+import { CaptureTool } from '../components/process/CaptureTool'
 
 function ToolBody({ id }: { id: string }) {
   switch (id) {
@@ -12,6 +13,7 @@ function ToolBody({ id }: { id: string }) {
     case 'asr': return <AsrTool />
     case 'card': return <CardTool />
     case 'image-process': return <ImageProcessTool />
+    case 'video-capture': return <CaptureTool />
     default: return null
   }
 }

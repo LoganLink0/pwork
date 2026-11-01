@@ -88,3 +88,41 @@ export async function fetchYtdlpPlaylist(url: string): Promise<FetchedList> {
     return { ok: false, items: [], error: e instanceof Error ? e.message : String(e) }
   }
 }
+
+export interface VideoMeta {
+  title: string
+  /** UP 主/频道名（平台不回则为空串） */
+  author: string
+  /** 视频简介（原样返回，入库时再截断） */
+  description: string
+  url: string
+}
+
+/** 单条视频链接的元数据解析（链接捕获用）：调单视频 JSON，取标题/作者/简介。
+ *  B站单视频匿名可拉（实测）；抖音等平台依赖 yt-dlp 对应提取器的可用性。 */
+export async function fetchVideoMeta(url: string): Promise<{ ok: boolean; meta?: VideoMeta; error?: string }> {
+  try {
+    const raw = await invoke<string>('ytdlp_fetch_playlist', { url })
+    const parsed = JSON.parse(raw) as {
+      title?: string
+      uploader?: string
+      channel?: string
+      description?: string
+      webpage_url?: string
+      url?: string
+      entries?: unknown
+    }
+    if (Array.isArray(parsed.entries) || !(parsed.title ?? '').trim()) {
+      return { ok: false, error: '这个地址不是单条视频链接——清单地址请用「yt-dlp 信源」定时订阅' }
+    }
+    const meta: VideoMeta = {
+      title: (parsed.title ?? '').trim(),
+      author: (parsed.uploader ?? parsed.channel ?? '').trim(),
+      description: (parsed.description ?? '').trim(),
+      url: (parsed.webpage_url ?? parsed.url ?? url).trim(),
+    }
+    return { ok: true, meta }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
