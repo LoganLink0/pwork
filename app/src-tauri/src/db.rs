@@ -357,7 +357,9 @@ pub fn db_destroy(app: AppHandle, state: State<DbState>) -> Result<(), String> {
 /// 迁移分批写入：一批 500 行内在一个事务内完成（INSERT OR REPLACE，重跑安全）
 #[tauri::command]
 pub fn db_migrate_batch(state: State<DbState>, table: String, rows: Vec<Json>) -> Result<i64, String> {
-  with_conn(&state, |conn| {
+  let n_rows = rows.len();
+  let started = std::time::Instant::now();
+  let result = with_conn(&state, |conn| {
     if !conn.is_autocommit() {
       return Err("迁移期间不应有其他事务".to_string());
     }
@@ -378,13 +380,22 @@ pub fn db_migrate_batch(state: State<DbState>, table: String, rows: Vec<Json>) -
       format!("迁移事务提交失败：{}", e)
     })?;
     Ok(n)
-  })
+  });
+  // 迁移关键流程落盘（复盘 3.49）：发布版有日志，偶发挂起/失败才有取证能力
+  log::info!(
+    "migrate_batch table={} rows={} took_ms={} ok={}",
+    table,
+    n_rows,
+    started.elapsed().as_millis(),
+    result.is_ok()
+  );
+  result
 }
 
 /// 迁移收尾对账：返回全部表的行数（JS 侧与来源逐一核对）
 #[tauri::command]
 pub fn db_migrate_finish(state: State<DbState>) -> Result<Json, String> {
-  with_conn(&state, |conn| {
+  let result = with_conn(&state, |conn| {
     let tables = [
       "notes", "sources", "items", "tasks", "goals", "reviews", "actions", "insights",
       "snapshots", "blocks", "profiles", "caseFiles", "aiCache", "errorLog", "kv",
@@ -397,7 +408,11 @@ pub fn db_migrate_finish(state: State<DbState>) -> Result<Json, String> {
       counts.insert(t.to_string(), json!(n));
     }
     Ok(Json::Object(counts))
-  })
+  });
+  if let Ok(Json::Object(ref counts)) = result {
+    log::info!("migrate_finish 对账行数 {:?}", counts);
+  }
+  result
 }
 
 /// 一致性强快照（08 §R7）：备份管线在 SQLite 模式下的文件轨

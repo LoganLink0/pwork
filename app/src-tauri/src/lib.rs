@@ -423,13 +423,18 @@ pub fn run() {
       app.handle().plugin(tauri_plugin_process::init())?;
       // 系统通知（0.4）：待办到期/复盘节奏/日报就绪三类提醒（设置页可关）
       app.handle().plugin(tauri_plugin_notification::init())?;
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
+      // 运行日志（复盘 3.49 教训项）：发布版也落盘——迁移/更新等关键流程偶发出问题时
+      // 现场才有取证能力。日志写应用数据目录的 logs/（KeepAll 保留历史），调试另走 stdout
+      app.handle().plugin(
+        tauri_plugin_log::Builder::new()
+          .targets([
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir { file_name: None }),
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+          ])
+          .level(log::LevelFilter::Info)
+          .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+          .build(),
+      )?;
       // 内嵌网关：AI Key 的安全存放点（127.0.0.1，随应用启停）。
       // 端口被占（如开发版 Node 网关在跑）时让位，但发事件告知前端——
       // 8788 也可能是恶意进程冒名占位，用户应能察觉（安全审计 F12）
