@@ -17,7 +17,7 @@ Node ≥ 20（实测 24）· Rust 工具链 + VS2022（仅桌面版构建需要�
 | `npm run gateway` | 开发版 AI 网关（127.0.0.1:8788；Key 读 app/.env.local，复制 tools/.env.example） |
 | `npm run build` | 生产构建（tsc -b + vite build + PWA 预缓存 → dist/） |
 | `npm run serve` | 零依赖静态服务 dist/（默认 5273，`--port N` 换） |
-| `npx tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，默认联网版约 48MiB；package.json 无 tauri 脚本，npm run tauri 会报 Missing script） |
+| `npx tauri build` | 桌面安装包（→ src-tauri/target/release/bundle/nsis/，默认联网版约 8MiB；package.json 无 tauri 脚本，npm run tauri 会报 Missing script） |
 | `npm run audit:classes` | className 定义完整性检查（TSX 类名在 CSS 零定义即红，复盘 1.14） |
 
 worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/README.md。
@@ -39,8 +39,8 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 ## 发布打包（桌面版）
 
 1. 版本号四处同步：`app/package.json`、`app/src-tauri/tauri.conf.json`、`app/src-tauri/Cargo.toml` 的 `version`，加设置关于页文案（Settings.tsx 搜 `v0.`；版本号注入 `__APP_VERSION__` 构建时自动跟随 package.json）；lock 文件用 `npm install --package-lock-only` 刷。
-2. 打联网版（默认配置，产物约 48MiB）：`cd app && npx tauri build` → 拿走 `bundle/nsis/` 产物，改名加 `-online` 后缀。
-3. 打离线版（约 254MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
+2. 打联网版（默认配置，产物约 8MiB；带签名需 TAURI_SIGNING_PRIVATE_KEY=私钥内容，密钥在 app/.tauri/）：`cd app && npx tauri build` → 拿走 `bundle/nsis/` 产物，改名加 `-online` 后缀。
+3. 打离线版（约 224MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
 3a. 刷新在线演示版：`cd app && npm run build:demo` → 产物覆盖 `docs/demo/` → 提交推送（GitHub Pages 一两分钟自动上线；重引擎 64MB 不入演示构建，横幅已引导桌面版）。
 4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。
 4a. **CHANGELOG 同步**：发布说明定稿时，把本版变化清单同步进 [CHANGELOG.md](../CHANGELOG.md)（最新在上；GitHub Release 说明直接复用同一段）。
