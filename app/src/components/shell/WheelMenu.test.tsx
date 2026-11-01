@@ -38,10 +38,11 @@ describe('工具轮盘', () => {
     expect(screen.queryByRole('dialog', { name: '工具轮盘' })).toBeNull()
     openWheel()
     expect(screen.getByRole('dialog', { name: '工具轮盘' })).toBeInTheDocument()
+    // aria-label 带键位角标提示（速记=应用内快捷键，其余=数字直达键），按前缀匹配
     for (const label of ['速记', '立即抓取', '新建复盘', '信息日报', '工具箱', '帮助']) {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: new RegExp(`^${label}（`) })).toBeInTheDocument()
     }
-    expect(screen.getByText(/选 · /)).toBeInTheDocument()
+    expect(screen.getByText(/直达 · /)).toBeInTheDocument()
     unmount()
   })
 
@@ -49,7 +50,7 @@ describe('工具轮盘', () => {
     const user = userEvent.setup()
     setup()
     openWheel()
-    await user.click(screen.getByRole('button', { name: '信息日报' }))
+    await user.click(screen.getByRole('button', { name: /^信息日报（/ }))
     expect(screen.getByTestId('where').textContent).toBe('/input/digest')
     expect(screen.queryByRole('dialog', { name: '工具轮盘' })).toBeNull()
   })
@@ -58,12 +59,12 @@ describe('工具轮盘', () => {
     const user = userEvent.setup()
     setup()
     openWheel()
-    await user.click(screen.getByRole('button', { name: '速记' }))
+    await user.click(screen.getByRole('button', { name: /^速记（/ }))
     expect(useUi.getState().quickOpen).toBe(true)
     expect(screen.queryByRole('dialog', { name: '工具轮盘' })).toBeNull()
   })
 
-  it('键盘：→ 移动选中，Enter 执行，Esc 关闭', async () => {
+  it('键盘：→ 移动选中，Enter 执行，数字键直达，Esc 关闭', async () => {
     const user = userEvent.setup()
     setup()
     openWheel()
@@ -71,6 +72,10 @@ describe('工具轮盘', () => {
     await user.keyboard('{ArrowRight>2}')
     await user.keyboard('{Enter}')
     expect(screen.getByTestId('where').textContent).toBe('/review/new')
+    // 重开：数字键 4 直达「信息日报」格位
+    openWheel()
+    await user.keyboard('4')
+    expect(screen.getByTestId('where').textContent).toBe('/input/digest')
     // 重开再 Esc
     openWheel()
     const dial = screen.getByRole('dialog', { name: '工具轮盘' })

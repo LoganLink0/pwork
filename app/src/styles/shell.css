@@ -2310,6 +2310,20 @@ a.mcard .m-link:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 格位角标（融合批）：速记格显示应用内快捷键、其余显示数字直达键——轮盘顺带当快捷键学习卡 */
+.wheel-slot-key {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: var(--surface-2);
+}
 .wheel-center {
   position: absolute;
   top: 50%;
