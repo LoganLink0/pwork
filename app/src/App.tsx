@@ -5,10 +5,10 @@ import { Topbar } from './components/shell/Topbar'
 import { BottomNav } from './components/shell/BottomNav'
 import { CommandPalette } from './components/shell/CommandPalette'
 import { QuickNote } from './components/shell/QuickNote'
-import { WheelMenu } from './components/shell/WheelMenu'
 import { isDesktopApp } from './engine/platform'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen } from '@tauri-apps/api/event'
+import { useUi } from './store/ui'
 import { readText } from '@tauri-apps/plugin-clipboard-manager'
 import { GlobalShortcuts } from './components/shell/GlobalShortcuts'
 import { PAGE_REGISTRY } from './registry'
@@ -113,6 +113,28 @@ function ExternalLinks() {
 
 /** 自动同步只跑一次（StrictMode 开发期双挂载 / HMR 重挂载都不重复拉云端） */
 let autoSyncRan = false
+
+/** 轮盘独立窗的应用类动作回落主窗执行（ExternalLinks 同款路由内组件模式）：
+ *  轮盘窗经 wheel_dispatch_action 唤醒主窗后发 wheel-action；置顶/网址类系统动作在轮盘窗侧就地完成，不经此 */
+function WheelActionSink() {
+  const navigate = useNavigate()
+  const openQuick = useUi((s) => s.openQuick)
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    const un = tauriListen<{ kind: string; target: string }>('wheel-action', (e) => {
+      const { kind, target } = e.payload
+      if (kind === 'quick') openQuick()
+      else if (kind === 'fetch') {
+        void useCollect.getState().runFetchAll()
+        navigate('/input/digest')
+      } else if (kind === 'route' && target) navigate(target)
+    })
+    return () => {
+      void un.then((f) => f())
+    }
+  }, [navigate, openQuick])
+  return null
+}
 
 /** 窗口重新可见时的拉新节流（页面长开跨小时：cron 抓的新数据不该等刷新才看见） */
 let lastFocusPullAt = 0
@@ -417,7 +439,7 @@ export default function App() {
       <BottomNav />
       <CommandPalette />
       <QuickNote />
-      {isDesktopApp() && <WheelMenu />}
+      {isDesktopApp() && <WheelActionSink />}
       {migrationPending && (
         <MigrationModal
           onSkip={() => {

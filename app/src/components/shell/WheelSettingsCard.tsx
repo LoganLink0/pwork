@@ -20,6 +20,7 @@ const ACTION_CARDS: (WheelSlot & { note: string })[] = [
   { id: 'c_help', label: '帮助', icon: 'helpCircle', kind: 'route', target: '/help', note: '使用说明' },
   { id: 'c_quick', label: '速记浮层', icon: 'zap', kind: 'quick', note: '弹出随手记' },
   { id: 'c_fetch', label: '立即抓取', icon: 'rss', kind: 'fetch', note: '抓一轮信源' },
+  { id: 'c_topmost', label: '置顶窗口', icon: 'target', kind: 'topmost', note: '钉住/取消钉住当前窗口' },
   { id: 'c_url', label: '自定义网址', icon: 'globe', kind: 'url', target: '', note: '拖入后填地址' },
 ]
 
@@ -34,7 +35,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
   const [urlDraftFor, setUrlDraftFor] = useState<string | null>(null) // 拖入「自定义网址」后待填地址的格
 
   const save = () => {
-    const ok = slots.filter((s) => s.kind === 'quick' || s.kind === 'fetch' || s.target?.trim())
+    const ok = slots.filter((s) => s.kind === 'quick' || s.kind === 'fetch' || s.kind === 'topmost' || s.target?.trim())
     saveWheelSlots(ok)
     setSlots(ok)
     setMsg(`已保存 ${ok.length} 个格位（下次呼出生效）`)
@@ -173,7 +174,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
               {msg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>{msg}</span>}
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              呼出后 <kbd>←</kbd><kbd>→</kbd> 选择、<kbd>↵</kbd> 执行、<kbd>1-9</kbd> 直达、<kbd>Esc</kbd> 关闭；呼出键 <kbd>{wheelLabelLive()}</kbd>（在下方「键盘快捷键」卡可改）。
+              轮盘在鼠标位置弹出、不夺焦点（系统工具形态）：点格位执行、点空白处关闭、热键再按一次关闭，12 秒无操作自动隐藏。呼出键 <kbd>{wheelLabelLive()}</kbd>（在下方「键盘快捷键」卡可改）。
             </span>
           </div>
         </div>

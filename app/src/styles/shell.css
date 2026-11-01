@@ -2344,6 +2344,27 @@ a.mcard .m-link:hover {
   padding: 2px 4px;
   background: var(--surface-2);
 }
+/* 轮盘独立窗（无焦点系统工具形态）：整窗透明、环居中；窗口本身 420×420 透明，
+   点击环外空白（.wheel-window 本体）= 关闭。窗内圆环略缩（132px 半径沿用运行时轮盘） */
+.wheel-window {
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+.wheel-ring-window {
+  width: 384px;
+  height: 384px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(10px);
+}
 .wheel-center {
   position: absolute;
   top: 50%;

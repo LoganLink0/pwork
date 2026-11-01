@@ -6,8 +6,8 @@ export interface WheelSlot {
   id: string
   label: string
   icon: string
-  /** route=打开页面；quick=速记浮层；fetch=立即抓取并进日报；url=打开网址 */
-  kind: 'route' | 'quick' | 'fetch' | 'url'
+  /** route=打开页面；quick=速记浮层；fetch=立即抓取并进日报；url=打开网址；topmost=置顶当前窗口（系统动作，全程不唤主窗） */
+  kind: 'route' | 'quick' | 'fetch' | 'url' | 'topmost'
   /** route 的页面路径 / url 的地址；quick 与 fetch 无目标 */
   target?: string
 }
@@ -22,7 +22,7 @@ export const DEFAULT_WHEEL_SLOTS: WheelSlot[] = [
 ]
 
 const KEY = 'pwork-wheel-slots'
-const KINDS: WheelSlot['kind'][] = ['route', 'quick', 'fetch', 'url']
+const KINDS: WheelSlot['kind'][] = ['route', 'quick', 'fetch', 'url', 'topmost']
 const ICONS = ['zap', 'rss', 'repeat', 'fileText', 'grid', 'helpCircle', 'globe', 'search', 'pen', 'video', 'headphones', 'image', 'ai', 'cloud', 'barChart', 'pieChart']
 
 export function wheelIcons(): string[] {

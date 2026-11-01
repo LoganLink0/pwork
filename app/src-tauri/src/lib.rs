@@ -5,7 +5,6 @@ mod system;
 mod ytdlp;
 
 use std::sync::Mutex;
-use std::thread;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -330,6 +329,77 @@ fn deploy_cloud(
     Ok(())
 }
 
+/// 轮盘专用窗的显示/隐藏（无焦点系统工具形态）：弹出位置=鼠标光标（轮盘中心对准光标），
+/// clamp 到光标所在显示器的工作区内。全程不 set_focus——foreground 始终是用户正在用的窗口，
+/// 「置顶当前窗口」等系统动作因此无需记忆呼出前的前台窗口。
+fn toggle_wheel_window(app: &tauri::AppHandle) {
+  let Some(w) = app.get_webview_window("wheel") else { return };
+  let visible = w.is_visible().unwrap_or(false);
+  if visible {
+    let _ = w.hide();
+    return;
+  }
+  const SIZE: f64 = 420.0;
+  let half = SIZE / 2.0;
+  let mut point = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  if let Ok(Some(monitor)) = app.monitor_from_point(point.x, point.y) {
+    let pos = monitor.position();
+    let size = monitor.size();
+    point.x = point.x.clamp(pos.x as f64 + half, pos.x as f64 + size.width as f64 - half);
+    point.y = point.y.clamp(pos.y as f64 + half, pos.y as f64 + size.height as f64 - half);
+  }
+  // 记住弹出前的前台：同进程场景（前台=PWORK 主窗）下 WebView2 渲染路径会绕过
+  // NOACTIVATE 抢走前台，show 后显式归还——「不夺焦」对跨应用与同进程两场景都成立
+  let fg_before = system::foreground_hwnd();
+  let _ = w.set_position(tauri::PhysicalPosition::new(point.x - half, point.y - half));
+  let _ = w.show();
+  if let Some(h) = fg_before {
+    system::restore_foreground(h);
+  }
+  let _ = app.emit("wheel-show", ());
+}
+
+/// 轮盘动作分发（前端 wheel 窗调用）：系统动作直接执行、应用动作先唤醒主窗再发事件。
+/// wheel 窗自身永不夺焦；只有用户点了「速记/抓取/页面」这类应用动作时才唤主窗（合理夺焦）。
+#[tauri::command]
+fn wheel_dispatch_action(app: tauri::AppHandle, kind: String, target: String) -> Result<(), String> {
+  if let Some(w) = app.get_webview_window("wheel") {
+    let _ = w.hide();
+  }
+  match kind.as_str() {
+    "url" => {
+      if target.is_empty() {
+        return Err("网址为空".into());
+      }
+      open_external_url(target)
+    }
+    "topmost" => {
+      let r = system::toggle_topmost_window();
+      let _ = app.emit("topmost-toggled", r.unwrap_or_else(|e| format!("失败：{}", e)));
+      Ok(())
+    }
+    "quick" | "fetch" | "route" => {
+      if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.unminimize();
+        let _ = main.set_focus();
+      }
+      let _ = app.emit("wheel-action", serde_json::json!({ "kind": kind, "target": target }));
+      Ok(())
+    }
+    other => Err(format!("未知轮盘动作：{other}")),
+  }
+}
+
+/// 隐藏轮盘窗（前端点空白处/超时的关闭路径）
+#[tauri::command]
+fn wheel_hide(app: tauri::AppHandle) -> Result<(), String> {
+  if let Some(w) = app.get_webview_window("wheel") {
+    let _ = w.hide();
+  }
+  Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -384,32 +454,9 @@ pub fn run() {
           if !is_wheel {
             return;
           }
-          // 单键直达：最小化时先唤起窗口，等 WebView 真正恢复后再发轮盘事件
-          //（恢复间隙内立即发的事件会丢）；窗口已可见则立即发
-          if let Some(w) = app.get_webview_window("main") {
-            let minimized = w.is_minimized().unwrap_or(false);
-            let _ = w.show();
-            let _ = w.unminimize();
-            let _ = w.set_focus();
-            if minimized {
-              let app = app.clone();
-              thread::spawn(move || {
-                for _ in 0..20 {
-                  thread::sleep(std::time::Duration::from_millis(100));
-                  let restored = app
-                    .get_webview_window("main")
-                    .map(|w| !w.is_minimized().unwrap_or(true))
-                    .unwrap_or(true);
-                  if restored {
-                    break;
-                  }
-                }
-                let _ = app.emit("wheel-toggle", ());
-              });
-              return;
-            }
-          }
-          let _ = app.emit("wheel-toggle", ());
+          // 轮盘=独立无焦点小窗（系统工具形态）：光标位置弹出、不唤主窗不夺焦——
+          // foreground 始终是用户窗口，置顶等系统动作直接作用
+          toggle_wheel_window(app);
         })
         .build(),
     )
@@ -483,6 +530,8 @@ pub fn run() {
       register_global_hotkeys,
       system::toggle_topmost,
       system::shell_bridge_install,
+      wheel_dispatch_action,
+      wheel_hide,
       ytdlp::ytdlp_probe,
       ytdlp::ytdlp_fetch_playlist,
       db::db_probe,

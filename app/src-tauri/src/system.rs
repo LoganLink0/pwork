@@ -36,6 +36,40 @@ pub fn toggle_topmost_window() -> Result<String, String> {
   Err("置顶窗口当前仅支持 Windows，macOS 支持在后续版本提供".into())
 }
 
+/// 当前前台窗口句柄（无前台/非 Windows 返回 None）。轮盘窗弹出后归还前台用。
+#[cfg(windows)]
+pub fn foreground_hwnd() -> Option<isize> {
+  use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+  let h = unsafe { GetForegroundWindow() };
+  if h.is_invalid() {
+    None
+  } else {
+    Some(h.0 as isize)
+  }
+}
+
+#[cfg(not(windows))]
+pub fn foreground_hwnd() -> Option<isize> {
+  None
+}
+
+/// 把前台还给指定窗口（轮盘弹出后调用）：同进程 WebView2 渲染路径会在
+/// NOACTIVATE 窗口 show 时抢走前台（同进程前台=主窗场景实测），这里显式归还。
+#[cfg(windows)]
+pub fn restore_foreground(hwnd: isize) {
+  use windows::Win32::Foundation::HWND;
+  use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow};
+  unsafe {
+    let cur = GetForegroundWindow();
+    if cur.0 as isize != hwnd {
+      let _ = SetForegroundWindow(HWND(hwnd as *mut _));
+    }
+  }
+}
+
+#[cfg(not(windows))]
+pub fn restore_foreground(_hwnd: isize) {}
+
 #[tauri::command]
 pub fn toggle_topmost() -> Result<String, String> {
   toggle_topmost_window()

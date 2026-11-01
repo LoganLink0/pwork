@@ -20,6 +20,21 @@
         "resizable": true,
         "fullscreen": false,
         "dragDropEnabled": false
+      },
+      {
+        "label": "wheel",
+        "title": "工具轮盘",
+        "width": 420,
+        "height": 420,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "focus": false,
+        "focusable": false,
+        "url": "index.html#/wheel"
       }
     ],
     "security": {
