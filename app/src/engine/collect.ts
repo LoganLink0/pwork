@@ -14,6 +14,7 @@ import {
 } from '../db/collect'
 import { newId } from '../db/repo'
 import { fetchFeed } from './rss'
+import { fetchYtdlpPlaylist } from './ytdlp'
 import { prefilter, scoreByRules } from './rules'
 import { fingerprintOf } from './fingerprint'
 import { todayLocal } from './datetime'
@@ -54,7 +55,12 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
     error: null,
     autoStopped: false,
   }
-  const feed = await fetchFeed(source.url, 10_000, config.relayBase)
+  // 按信源类型分发抓取：rss 走标准 RSS/Atom；ytdlp 调本机 yt-dlp 拉平台投稿清单。
+  // 两者输出同一契约（{ok, items, error}），去重/预筛/评分后续链路完全共享
+  const feed =
+    source.kind === 'ytdlp'
+      ? await fetchYtdlpPlaylist(source.url)
+      : await fetchFeed(source.url, 10_000, config.relayBase)
   if (!feed.ok) {
     const autoStopped = await markSourceFail(source.id, feed.error ?? '未知错误')
     return { ...base, error: feed.error, autoStopped }

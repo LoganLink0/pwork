@@ -2,6 +2,7 @@ mod db;
 mod gateway;
 mod mirror;
 mod system;
+mod ytdlp;
 
 use std::sync::Mutex;
 use std::thread;
@@ -473,6 +474,8 @@ pub fn run() {
       deploy_cloud,
       register_global_hotkeys,
       system::toggle_topmost,
+      ytdlp::ytdlp_probe,
+      ytdlp::ytdlp_fetch_playlist,
       db::db_probe,
       db::db_open,
       db::db_select,

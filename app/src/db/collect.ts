@@ -23,6 +23,7 @@ export interface SourceInput {
   tier: 1 | 1.5 | 2
   weight?: number
   checkEvery?: '6h' | 'daily' | 'weekly'
+  kind?: 'rss' | 'ytdlp'
 }
 
 export async function createSource(input: SourceInput): Promise<Source> {
@@ -30,7 +31,7 @@ export async function createSource(input: SourceInput): Promise<Source> {
   const source: Source = {
     id: newId('src'),
     name: input.name.trim(),
-    kind: 'rss',
+    kind: input.kind ?? 'rss',
     url: input.url.trim(),
     domain: input.domain,
     tier: input.tier,
@@ -73,6 +74,7 @@ export async function updateSource(id: string, patch: Partial<SourceInput> & { a
     ...s,
     name: patch.name?.trim() ?? s.name,
     url: patch.url?.trim() ?? s.url,
+    kind: patch.kind ?? s.kind,
     domain: patch.domain ?? s.domain,
     tier: patch.tier ?? s.tier,
     weight: patch.weight ?? (patch.tier ? TIER_WEIGHT[patch.tier] : s.weight),

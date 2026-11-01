@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { Icon } from '../components/shell/icons'
@@ -10,6 +10,7 @@ import { exportSourcesJson } from '../db/collect'
 import { voteStatsBySource } from '../engine/sourceCredit'
 import { auditSources, verdictLabel } from '../engine/sourceAudit'
 import { discoverLeads } from '../engine/sourceDiscover'
+import { probeYtdlp } from '../engine/ytdlp'
 import { fmtLocal } from '../engine/datetime'
 import { sourcesToOpml, parseOpml } from '../engine/opml'
 import type { Source } from '../types/models'
@@ -36,12 +37,17 @@ function HealthCell({ s }: { s: Source }) {
   )
 }
 
-const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5 }
+const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5, kind: 'rss' }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
   const { sources, items, items7d, loaded, addSource, editSource, toggleActive, removeSource, importJson, fetch: fetchState, runFetchAll } = useCollect()
   const [form, setForm] = useState<SourceInput | null>(null)
+  // 本机 yt-dlp 版本（添加 yt-dlp 信源时的安装检测；挂载时探测一次）
+  const [ytdlpVer, setYtdlpVer] = useState<string | null>(null)
+  useEffect(() => {
+    void probeYtdlp().then(setYtdlpVer)
+  }, [])
   // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = useMemo(() => voteStatsBySource(items), [items])
   const [editId, setEditId] = useState<string | null>(null)
@@ -278,8 +284,26 @@ export function Sources() {
             <label>名称
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </label>
+            <label>类型
+              <select value={form.kind ?? 'rss'} onChange={(e) => setForm({ ...form, kind: e.target.value as 'rss' | 'ytdlp' })}>
+                <option value="rss">RSS / Atom（含 RSSHub 等桥接地址）</option>
+                <option value="ytdlp">yt-dlp 平台投稿清单（B站 UP 主 / YouTube 频道）</option>
+              </select>
+              {form.kind === 'ytdlp' && (
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  {ytdlpVer
+                    ? `本机 yt-dlp ${ytdlpVer}——抓取时只拉标题与链接，不下载视频`
+                    : '本机没检测到 yt-dlp：pip install yt-dlp 安装后即可抓取'}
+                </span>
+              )}
+            </label>
             <label>地址
-              <input className="input" value={form.url} placeholder="https://…（原生 RSS / RSSHub 路由）" onChange={(e) => setForm({ ...form, url: e.target.value })} />
+              <input
+                className="input"
+                value={form.url}
+                placeholder={form.kind === 'ytdlp' ? 'https://space.bilibili.com/UP主ID/video 或 https://youtube.com/@频道/videos' : 'https://…（原生 RSS / RSSHub 路由）'}
+                onChange={(e) => setForm({ ...form, url: e.target.value })}
+              />
             </label>
             <label>主题域
               <select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })}>
@@ -337,7 +361,10 @@ export function Sources() {
           <tbody>
             {sources.map((s) => (
               <tr key={s.id} data-testid="src-row">
-                <td className="src-name">{s.name}</td>
+                <td className="src-name">
+                  {s.kind === 'ytdlp' && <span className="tier-badge tier-15" title="yt-dlp 信源：抓取时调本机 yt-dlp 拉投稿清单（标题+链接）" style={{ marginRight: 6 }}>yt</span>}
+                  {s.name}
+                </td>
                 <td>
                   <span
                     className={`tier-badge ${tierCls(s.tier)}`}
@@ -369,7 +396,7 @@ export function Sources() {
                 </td>
                 <td>
                   <div className="src-actions">
-                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight }); setEditId(s.id) }}>编辑</button>
+                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight, kind: s.kind }); setEditId(s.id) }}>编辑</button>
                     <button
                       type="button"
                       className="mini-btn"

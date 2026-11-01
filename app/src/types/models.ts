@@ -228,8 +228,9 @@ export interface ExportBundle {
 export interface Source {
   id: string
   name: string
-  /** C1 只有 rss（转接后可直 fetch 的 URL：RSSHub 路由 / rss2json / CORS 开放源） */
-  kind: 'rss'
+  /** 信源类型：rss = 标准 RSS/Atom 地址（含 RSSHub 等桥接输出）；ytdlp = 本机 yt-dlp 拉取的
+   *  平台投稿列表（B站 UP 主空间 / YouTube 频道等，--flat-playlist 只取清单不下载视频） */
+  kind: 'rss' | 'ytdlp'
   /** 实际抓取地址 */
   url: string
   /** 主题域：相关度评分依据之一 */
