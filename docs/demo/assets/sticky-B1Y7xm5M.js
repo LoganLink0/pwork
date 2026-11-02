@@ -1,0 +1,1 @@
+var e={"--tilt":`0deg`};export{e as t};

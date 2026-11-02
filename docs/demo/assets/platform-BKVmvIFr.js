@@ -1,0 +1,1 @@
+function e(){return typeof window<`u`&&`__TAURI_INTERNALS__`in window}function t(){return typeof navigator>`u`?!1:/Mac/i.test(navigator.platform??``)||/Macintosh/i.test(navigator.userAgent??``)}export{t as n,e as t};

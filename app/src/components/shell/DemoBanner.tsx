@@ -3,7 +3,7 @@ export function DemoBanner() {
   return (
     <div className="demo-banner" role="note">
       <span>
-        <b>演示版</b>——数据只保存在当前浏览器，清空浏览数据即消失；AI、云端同步等完整功能请
+        <b>演示版</b>——数据只保存在当前浏览器，清空浏览数据即消失；AI、云端同步、工具轮盘、视频信源等完整功能请
         <a href="https://loganlink0.github.io/pwork/" target="_blank" rel="noreferrer noopener">下载桌面版体验 →</a>
       </span>
     </div>
