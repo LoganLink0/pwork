@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { isDesktopApp } from '../../engine/platform'
+import { isDesktopApp, isMac } from '../../engine/platform'
 import { toast } from '../../engine/toast'
 import { wheelLabelLive } from '../../engine/keybinds'
 import { applyDrop, loadWheelSlots, saveWheelSlots, DEFAULT_WHEEL_SLOTS, type WheelSlot } from '../../content/wheel'
 import { Icon } from './icons'
 
-/** 可拖入轮盘的动作卡：预设常用页面 + 三个功能动作；自定义网址拖入后填地址 */
+/** 可拖入轮盘的动作卡：预设常用页面 + 功能动作；自定义网址拖入后填地址。
+ *  置顶为 Windows 专属（macOS 公开 API 不支持置顶其他应用窗口），mac 上不出现该卡 */
 const ACTION_CARDS: (WheelSlot & { note: string })[] = [
   { id: 'c_today', label: '今日', icon: 'today', kind: 'route', target: '/', note: '工作台首页' },
   { id: 'c_tasks', label: '待办', icon: 'tasks', kind: 'route', target: '/tasks', note: '任务库' },
@@ -20,9 +21,12 @@ const ACTION_CARDS: (WheelSlot & { note: string })[] = [
   { id: 'c_help', label: '帮助', icon: 'helpCircle', kind: 'route', target: '/help', note: '使用说明' },
   { id: 'c_quick', label: '速记浮层', icon: 'zap', kind: 'quick', note: '弹出随手记' },
   { id: 'c_fetch', label: '立即抓取', icon: 'rss', kind: 'fetch', note: '抓一轮信源' },
-  { id: 'c_topmost', label: '置顶窗口', icon: 'target', kind: 'topmost', note: '钉住/取消钉住当前窗口' },
+  { id: 'c_topmost', label: '置顶窗口', icon: 'target', kind: 'topmost', note: '钉住/取消钉住当前窗口（Windows）' },
   { id: 'c_url', label: '自定义网址', icon: 'globe', kind: 'url', target: '', note: '拖入后填地址' },
 ]
+
+/** 置顶卡仅 Windows 展示（macOS 公开 API 不支持置顶其他应用窗口） */
+const ACTION_CARDS_VISIBLE = ACTION_CARDS.filter((c) => c.kind !== 'topmost' || !isMac())
 
 /**
  * 设置 → 工具轮盘（2026-10-28 拖拽版定稿）：左边是轮盘本身，右边是全部可选的动作卡片——
@@ -139,7 +143,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
               </div>
             )}
             <div className="wheel-action-grid">
-              {ACTION_CARDS.map((c) => (
+              {ACTION_CARDS_VISIBLE.map((c) => (
                 <div
                   key={c.id}
                   className="wheel-action-card"

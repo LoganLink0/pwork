@@ -21,15 +21,18 @@ export interface Keybinds {
   clipboard: string
 }
 
-export const KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string }[] = [
+const ALL_KEYBIND_ACTIONS: { key: KeybindAction; label: string; desc: string }[] = [
   { key: 'quickNote', label: '速记浮层', desc: '任何地方唤起速记输入' },
   { key: 'palette', label: '命令面板', desc: '跨模块检索与跳转（/ 永远可用）' },
   { key: 'help', label: '帮助页', desc: '打开帮助' },
   { key: 'settings', label: '设置页', desc: '打开设置' },
   { key: 'wheel', label: '工具轮盘', desc: '桌面版全局呼出（其他应用在前台也生效）' },
-  { key: 'topmost', label: '置顶窗口', desc: '切换当前窗口置顶（Windows，任何应用在前台都生效）' },
+  { key: 'topmost', label: '置顶窗口', desc: '切换当前窗口置顶（Windows 专属——macOS 公开 API 不支持置顶其他应用的窗口）' },
   { key: 'clipboard', label: '剪贴板速记', desc: '把剪贴板内容一键存为速记（全局，看到就摘）' },
 ]
+
+/** 按平台导出：置顶为 Windows 专属能力，macOS 隐藏键位卡（避免用户改一个不存在的键） */
+export const KEYBIND_ACTIONS = ALL_KEYBIND_ACTIONS.filter((a) => a.key !== 'topmost' || !isMac())
 
 /** 平台默认键位：轮盘全局键 Windows 用 Ctrl，macOS 用 ⌘（键位中心 0.4-3 的 macOS 补全）；
  *  置顶（系统工具台）默认 Ctrl+Alt+T（Windows；macOS 对应实现在后续批次）；

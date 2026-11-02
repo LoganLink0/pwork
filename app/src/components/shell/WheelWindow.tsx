@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { loadWheelSlots, type WheelSlot } from '../../content/wheel'
+import { isMac } from '../../engine/platform'
 import { Icon } from '../shell/icons'
 
 const AUTO_HIDE_MS = 12_000
@@ -15,12 +16,13 @@ let hideTimer: number | undefined
  * 唤醒主窗后发 wheel-action 事件由主窗执行。
  */
 export function WheelWindow() {
-  const [slots, setSlots] = useState<WheelSlot[]>(() => loadWheelSlots())
+  // mac 上不渲染置顶格位（能力为 Windows 专属；防御性过滤——配置里若已含 topmost 也不显示）
+  const [slots, setSlots] = useState<WheelSlot[]>(() => loadWheelSlots().filter((s) => s.kind !== 'topmost' || !isMac()))
 
   // 每次显示重读格位（与设置页保存即生效同一纪律）+ 重置自动隐藏计时
   useEffect(() => {
     const un = listen('wheel-show', () => {
-      setSlots(loadWheelSlots())
+      setSlots(loadWheelSlots().filter((s) => s.kind !== 'topmost' || !isMac()))
       window.clearTimeout(hideTimer)
       hideTimer = window.setTimeout(() => void invoke('wheel_hide').catch(() => {}), AUTO_HIDE_MS)
     })
