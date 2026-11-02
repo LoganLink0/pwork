@@ -55,8 +55,10 @@ track(
 )
 
 // 轮盘独立窗（系统工具形态）：label=wheel 的透明小窗加载 #/wheel——不进 App 的路由与壳，
-// 只渲染轮盘本体（无焦点纯鼠标视图）
+// 只渲染轮盘本体（无焦点纯鼠标视图）。html 打 wheel 标记：全局样式里把 body 底色转透明
+//（base.css 的 body 有 var(--bg) 底色，不豁免的话透明窗会渲染成一块实色）
 if (window.location.hash.startsWith('#/wheel')) {
+  document.documentElement.dataset.wheel = '1'
   void import('./components/shell/WheelWindow').then(({ WheelWindow }) => {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>

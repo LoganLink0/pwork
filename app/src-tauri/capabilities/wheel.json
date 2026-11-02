@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "wheel",
+  "description": "轮盘独立窗（无焦点系统工具窗）：只给事件与调用基础——不继承主窗的文件/更新/通知/剪贴板权限，窗内视图是纯鼠标动作面板，无数据读写路径",
+  "windows": [
+    "wheel"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

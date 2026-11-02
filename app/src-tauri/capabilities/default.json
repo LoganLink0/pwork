@@ -3,8 +3,7 @@
   "identifier": "default",
   "description": "默认窗口权限 + 桌面版备份写磁盘（仅应用数据目录的 backups 子目录——不覆盖 gateway.env 等敏感文件，安全审计 2026-10-26 F2 收窄）",
   "windows": [
-    "main",
-    "wheel"
+    "main"
   ],
   "permissions": [
     "core:default",

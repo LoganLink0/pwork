@@ -2345,7 +2345,12 @@ a.mcard .m-link:hover {
   background: var(--surface-2);
 }
 /* 轮盘独立窗（无焦点系统工具形态）：整窗透明、环居中；窗口本身 420×420 透明，
-   点击环外空白（.wheel-window 本体）= 关闭。窗内圆环略缩（132px 半径沿用运行时轮盘） */
+   点击环外空白（.wheel-window 本体）= 关闭。窗内圆环略缩（132px 半径沿用运行时轮盘）。
+   body 底色豁免：base.css 的 body 背景是全局的，仅轮盘窗（html[data-wheel]）转透明，
+   否则透明窗渲染成一块实色 */
+html[data-wheel] body {
+  background: transparent;
+}
 .wheel-window {
   width: 100vw;
   height: 100vh;
