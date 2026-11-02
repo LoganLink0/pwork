@@ -323,6 +323,10 @@ button.nav-item {
 .content {
   flex: 1;
   overflow-y: auto;
+  /* 滚动条常驻预留（.content 是壳布局的实际滚动容器）：tab 切换时内容超/不超一屏
+     滚动条出现/消失，inner 居中不再随之水平微移（2026-11-02 用户反馈全屏模式明显；
+     首次修复错加在 html 上无效——gutter 必须加在实际滚动容器） */
+  scrollbar-gutter: stable;
   padding: var(--sp-6) var(--sp-5) 96px;
 }
 
