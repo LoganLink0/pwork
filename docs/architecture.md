@@ -58,7 +58,7 @@ index.html 内联钩子（应用加载前单槽记录）→ `installErrorCapture
 
 ## 桌面壳（src-tauri）
 
-tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900 最小 1024×680，NSIS 中文安装器。Rust 侧：单实例锁（重复启动聚焦主窗）、内嵌网关（gateway.rs，行为与 Node 版对齐）、SQLite 主库命令层（db.rs：通用执行器/事务/迁移分批/VACUUM 快照）、vault 镜像命令层（mirror.rs：目录白名单+文件名穿越防护+原子写入）、fs 权限收窄至 AppData 读写（capabilities/default.json）。更新器已接入（签名密钥在 app/.tauri/，不入库；发布流程见 development.md）。
+tauri.conf.json：frontendDist=../dist（vite build 产物），窗口 1360×900 最小 1024×680，NSIS 中文安装器。**多窗口（2026-11-02 起）**：主窗（main）之外有 label=wheel 的轮盘独立窗（420×420 透明/无边框/置顶/不进任务栏，`focus:false + focusable:false` 不夺焦点，热键在鼠标光标位置弹出）——系统级动作（置顶/网址）就地执行，应用类动作经 `wheel_dispatch_action` 唤醒主窗发 `wheel-action` 事件（App 内 WheelActionSink 承接）；同进程场景 WebView2 渲染路径会绕过 NOACTIVATE 抢前台，show 后检测被抢即 `restore_foreground` 归还。capabilities 分文件：default.json（main 全量）与 wheel.json（仅 core 基础——窗内视图无数据读写路径，权限最小化）。Rust 侧：单实例锁（重复启动聚焦主窗）、内嵌网关（gateway.rs，行为与 Node 版对齐）、SQLite 主库命令层（db.rs：通用执行器/事务/迁移分批/VACUUM 快照；迁移关键命令带日志打点）、vault 镜像命令层（mirror.rs：目录白名单+文件名穿越防护+原子写入）、yt-dlp 适配器（ytdlp.rs：spawn 本机 yt-dlp 拉平台投稿清单，参数数组不经 shell、30 秒看门狗、内网地址守卫）、系统工具（system.rs：置顶切换/Shell 通知桥一键配置）、fs 权限收窄至 AppData 读写。更新器已接入（签名密钥在 app/.tauri/，不入库；发布流程见 development.md；mac workflow 对已发布 tag 重跑不覆盖 latest.json——Windows 条目由本地发版合入）。运行日志全构建落盘（LogDir，KeepAll 轮转；迁移命令带行数/耗时打点）。
 
 ## 已知架构边界
 
