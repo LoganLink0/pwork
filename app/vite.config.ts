@@ -67,7 +67,9 @@ export default defineConfig(({ mode }) => ({
     // FFmpeg/OCR 引擎随 0.1.13 精简移除（功能与系统级工具重复、占安装包 93% 体积），
     // viteStaticCopy 一并下线；工具箱的音视频转换改为外部工具跳转
     VitePWA({
-      registerType: 'prompt',
+      // 正式网页版 prompt（用户确认才换版，防打断）；demo 演示橱窗 autoUpdate——
+      // 访客永远直接看到最新版，绝不能出现「线上已更新、浏览器还供着几个月前的旧版」
+      registerType: mode === 'demo' ? 'autoUpdate' : 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: '个人工作台 PWORK',
