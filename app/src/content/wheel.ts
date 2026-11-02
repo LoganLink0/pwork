@@ -64,3 +64,19 @@ export function loadWheelSlots(): WheelSlot[] {
 export function saveWheelSlots(slots: WheelSlot[]): void {
   localStorage.setItem(KEY, JSON.stringify(slots))
 }
+
+/** 拖放落格（设置卡拖拽编辑的纯逻辑，UI 事件层调用）：同 id 替换、新 id 追加（上限 8 格）。
+ *  独立导出可单测——拖到已有格=替换、拖到环空白=新增的语义在这里。 */
+export function applyDrop(slots: WheelSlot[], slotId: string, card: WheelSlot): WheelSlot[] {
+  const entry: WheelSlot = {
+    id: slotId,
+    label: card.label ?? '',
+    icon: card.icon ?? 'zap',
+    kind: card.kind,
+    target: card.target,
+  }
+  const exists = slots.some((s) => s.id === slotId)
+  if (exists) return slots.map((s) => (s.id === slotId ? entry : s))
+  if (slots.length >= 8) return slots
+  return [...slots, entry]
+}

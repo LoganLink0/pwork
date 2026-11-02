@@ -12,6 +12,9 @@ html {
   -webkit-text-size-adjust: 100%;
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
+  /* 滚动条常驻预留：内容超/不超一屏的页面（设置/帮助的各 tab）切换时视口宽度不再
+     忽宽忽窄，整页不发生水平微移（全屏模式尤为明显，2026-11-02 用户反馈） */
+  scrollbar-gutter: stable;
 }
 
 body {

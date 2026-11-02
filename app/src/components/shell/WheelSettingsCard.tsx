@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { isDesktopApp } from '../../engine/platform'
 import { toast } from '../../engine/toast'
 import { wheelLabelLive } from '../../engine/keybinds'
-import { loadWheelSlots, saveWheelSlots, DEFAULT_WHEEL_SLOTS, type WheelSlot } from '../../content/wheel'
+import { applyDrop, loadWheelSlots, saveWheelSlots, DEFAULT_WHEEL_SLOTS, type WheelSlot } from '../../content/wheel'
 import { Icon } from './icons'
 
 /** 可拖入轮盘的动作卡：预设常用页面 + 三个功能动作；自定义网址拖入后填地址 */
@@ -44,21 +44,13 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
 
   const dropOn = (slotId: string, e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     setHoverSlot(null)
+    setDragOverRing(false)
     try {
       const card = JSON.parse(e.dataTransfer.getData('text/plain')) as WheelSlot
       if (!card.kind) return
-      const entry: WheelSlot = {
-        id: slotId,
-        label: card.label ?? '',
-        icon: card.icon ?? 'zap',
-        kind: card.kind,
-        target: card.target,
-      }
-      setSlots((ss) => {
-        const exists = ss.some((s) => s.id === slotId)
-        return exists ? ss.map((s) => (s.id === slotId ? entry : s)) : [...ss, entry]
-      })
+      setSlots((ss) => applyDrop(ss, slotId, card))
       if (card.kind === 'url' && !card.target) setUrlDraftFor(slotId)
     } catch {
       /* 拖的不是动作卡则忽略 */
@@ -66,6 +58,8 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
   }
 
   const removeSlot = (slotId: string) => setSlots((ss) => ss.filter((s) => s.id !== slotId))
+  // 环空白处的拖放 = 新增格位（拖到已有格子上则是替换，格位层 stopPropagation 不冒泡到环）
+  const [dragOverRing, setDragOverRing] = useState(false)
 
   const slotName = (s: WheelSlot) => s.label?.trim() || (s.kind === 'quick' ? '速记浮层' : s.kind === 'fetch' ? '立即抓取' : s.kind === 'url' ? '网址' : '页面')
 
@@ -74,7 +68,8 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
       <h2>工具轮盘</h2>
       <div className="desc">
         桌面版按 <kbd>{wheelLabelLive()}</kbd> 任何地方呼出的一圈快捷入口（改键在本页下方「键盘快捷键」卡，这里同步显示）。
-        自定义方式：<b>把右边的动作卡片拖进左边轮盘的格子里</b>；格子右上角 × 删除，环底部的虚线格可以继续拖。
+        <br />
+        自定义方式：<b style={{ color: 'var(--accent-text)' }}>把右边的动作卡片拖进左边轮盘的格子里</b>——拖到已有格子上是替换，拖到环的空白处是新增；格子右上角 × 删除。
       </div>
       <div className="set-body">
         {!isDesktopApp() && (
@@ -84,14 +79,23 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
         )}
 
         <div className="wheel-dnd">
-          <div className="wheel-ring wheel-edit-ring">
+          <div
+            className={`wheel-ring wheel-edit-ring${dragOverRing ? ' drop-ready' : ''}`}
+            onDragOver={(e) => {
+              if (slots.length >= 8) return
+              e.preventDefault()
+              setDragOverRing(true)
+            }}
+            onDragLeave={() => setDragOverRing(false)}
+            onDrop={(e) => slots.length < 8 && dropOn(`slot_${Date.now().toString(36)}`, e)}
+          >
             {slots.map((s, i) => (
               <div
                 key={s.id}
                 className={`wheel-slot wheel-drop${hoverSlot === s.id ? ' drop-hover' : ''}`}
                 style={{ '--i': i, '--n': slots.length } as React.CSSProperties}
-                onDragOver={(e) => { e.preventDefault(); setHoverSlot(s.id) }}
-                onDragLeave={() => setHoverSlot((h) => (h === s.id ? null : h))}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoverSlot(s.id); setDragOverRing(false) }}
+                onDragLeave={(e) => { e.stopPropagation(); setHoverSlot((h) => (h === s.id ? null : h)) }}
                 onDrop={(e) => dropOn(s.id, e)}
                 title="拖动作卡片到这里替换"
               >
@@ -107,17 +111,6 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
                 </button>
               </div>
             ))}
-            {slots.length < 8 && (
-              <div
-                className="wheel-slot wheel-slot-empty wheel-slot-new"
-                onDragOver={(e) => { e.preventDefault(); setHoverSlot('__new__') }}
-                onDragLeave={() => setHoverSlot((h) => (h === '__new__' ? null : h))}
-                onDrop={(e) => dropOn(`slot_${Date.now().toString(36)}`, e)}
-                title="拖动作卡片到这里新增"
-              >
-                <span>拖入新增</span>
-              </div>
-            )}
             <div className="wheel-edit-center">{slots.length} / 8 格</div>
           </div>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_WHEEL_SLOTS, loadWheelSlots, saveWheelSlots } from './wheel'
+import { applyDrop, DEFAULT_WHEEL_SLOTS, loadWheelSlots, saveWheelSlots, type WheelSlot } from './wheel'
 
 describe('轮盘格位配置', () => {
   it('默认 6 格；坏数据/空数据回默认', () => {
@@ -39,5 +39,32 @@ describe('轮盘格位配置', () => {
     ])
     const got = loadWheelSlots()
     expect(got.map((s) => s.id)).toEqual(['ok', 'rel', 'inner'])
+  })
+
+  describe('applyDrop（拖放落格纯逻辑）', () => {
+    const base: WheelSlot[] = [
+      { id: 'a', label: '甲', icon: 'zap', kind: 'quick' },
+      { id: 'b', label: '乙', icon: 'rss', kind: 'fetch' },
+    ]
+    const card: WheelSlot = { id: 'x', label: '新动作', icon: 'grid', kind: 'route', target: '/goals' }
+
+    it('拖到已有格 = 同 id 替换，数量不变', () => {
+      const got = applyDrop(base, 'a', card)
+      expect(got).toHaveLength(2)
+      expect(got[0]!.id).toBe('a')
+      expect(got[0]!.label).toBe('新动作')
+      expect(got[0]!.kind).toBe('route')
+    })
+
+    it('拖到新 id = 追加，数量 +1', () => {
+      const got = applyDrop(base, 'new-1', card)
+      expect(got).toHaveLength(3)
+      expect(got[2]!.id).toBe('new-1')
+    })
+
+    it('满 8 格后新 id 拖入被拒（返回原数组）', () => {
+      const full: WheelSlot[] = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, label: `格${i}`, icon: 'grid', kind: 'route', target: '/p' }))
+      expect(applyDrop(full, 'extra', card)).toHaveLength(8)
+    })
   })
 })
