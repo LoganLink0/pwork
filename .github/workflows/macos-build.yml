@@ -91,5 +91,8 @@ jobs:
           gh release create "v${VERSION}" out/PWORK_${VERSION}_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig latest.json \
             --title "PWORK ${VERSION}（内测）" \
             --notes-file release-notes.md \
-          || gh release upload "v${VERSION}" out/* latest.json --clobber
+          || gh release upload "v${VERSION}" out/PWORK_${VERSION}_aarch64.dmg out/PWORK.app.tar.gz out/PWORK.app.tar.gz.sig --clobber
+          # 重复触发同版本时（tag 已存在→create 失败走 fallback）：只补传 macOS 三产物，
+          # 不覆盖 latest.json——Release 上的清单是「macOS+Windows 双平台」的合订版
+          #（Windows 侧发版时合入），被这里的 darwin 单平台版覆盖会弄断 Windows 更新链（2026-11-02 事故）
 
