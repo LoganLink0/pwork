@@ -240,6 +240,7 @@
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
   .support-codes { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; margin: 24px 0 16px; }
   .support-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); }
+  .support-slot img { width: 260px; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line-strong); background: #fff; }
   .qr-placeholder {
     width: 170px; height: 170px; border: 2px dashed var(--line-strong); border-radius: 16px;
     display: flex; align-items: center; justify-content: center; text-align: center;
@@ -464,18 +465,17 @@ $ <span class="d">数据去向</span>
   <section class="band band-surface" id="support">
     <div class="wrap">
       <div class="sec-head">
-        <div class="kicker">自愿赞助</div>
-        <h2>请作者喝杯咖啡</h2>
-        <p>PWORK 永久免费开源。如果它对你的日常有帮助，欢迎扫码赞助——完全自愿，与任何功能无关。</p>
+        <div class="no">06</div>
+        <div>
+          <div class="kicker">自愿赞助</div>
+          <h2>请作者喝杯咖啡</h2>
+          <p>PWORK 永久免费开源。如果它对你的日常有帮助，欢迎扫码赞助——完全自愿，与任何功能无关。</p>
+        </div>
       </div>
       <div class="support-codes">
         <div class="support-slot">
-          <div class="qr-placeholder">微信赞赏码<br>即将上线</div>
-          <span>微信</span>
-        </div>
-        <div class="support-slot">
-          <div class="qr-placeholder">支付宝收款码<br>即将上线</div>
-          <span>支付宝</span>
+          <img src="assets/sponsor-wechat.jpg" alt="微信赞赏码（省下的时间，请我喝杯咖啡吧）" width="260" height="260" loading="lazy">
+          <span>微信赞赏码</span>
         </div>
       </div>
       <p class="support-note">赞助金额随意、不设门槛；不赞助也请放心使用——所有功能永久免费。</p>
