@@ -2,7 +2,7 @@
 name = "app"
 version = "0.1.14"
 description = "PWORK 个人工作台——本地优先的四模块个人操作系统"
-authors = ["PWORK"]
+authors = ["LOGANLINK0"]
 license = "MIT"
 repository = ""
 edition = "2024"
