@@ -279,6 +279,9 @@ export interface Item {
   title: string
   /** 摘要（C1 取原文首段/描述，≤200 字截断；AI 摘要 C2 接入） */
   summary: string
+  /** 全文纯文本（G1 批 2026-11）：后台队列用 Readability 提取回填；undefined = 未抓到
+   *  （登录墙/失败不自动重试，阅读视图可手动重抓）。只存纯文本，界面永不以 HTML 渲染。 */
+  content?: string
   /** 规范化 URL + 归一化标题 的哈希 → 去重主键 */
   fingerprint: string
   /** 可选：多源同事件聚合键（C2 起用） */

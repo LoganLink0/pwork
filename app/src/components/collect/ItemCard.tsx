@@ -5,6 +5,8 @@ import { fmtLocal, fmtCompact } from '../../engine/datetime'
 import { TIER_LABEL } from '../../engine/itemTier'
 import { Icon } from '../shell/icons'
 import { useNotes } from '../../store/notes'
+import { useCollect } from '../../store/collect'
+import { ArticleReader } from './ArticleReader'
 
 const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string; icon: string }> = {
   opportunity: { text: '机会', cls: 'ot-opp', icon: 'target' },
@@ -36,10 +38,13 @@ export interface ItemCardProps {
 /** 条目卡：分层徽章 + 标题外链 + 摘要 + 元信息 + 三档投票 + 展开标注 */
 export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, onCycleOt, onConvert, converted, showStage, onDelete, tier }: ItemCardProps) {
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
+  const [reading, setReading] = useState(false)
   const a = item.annotation
   const ot = item.otFlag ? OT_LABEL[item.otFlag] : null
   const navigate = useNavigate()
   const createNote = useNotes((s) => s.create)
+  const reloadItem = useCollect((s) => s.reloadItem)
+  const hasContent = Boolean(item.content)
 
   /** 条目 → 速记（写入 links.itemIds，双向挂接的另一半） */
   const writeNote = async () => {
@@ -92,6 +97,12 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           )}
           {showStage && item.stage === 'discarded' && item.expiresAt && (
             <span className="ttl-note">{fmtLocal(item.expiresAt).slice(0, 10)} 过期清理</span>
+          )}
+          {/* 阅读入口：有全文标"阅读全文"；暂缺正文也能进阅读视图手动抓（筛除层是暂存语义，不提供） */}
+          {item.stage !== 'discarded' && /^https?:\/\//i.test(item.url) && (
+            <button type="button" className="mini-btn" onClick={() => setReading(true)}>
+              {hasContent ? '阅读全文' : '阅读'}
+            </button>
           )}
           <button type="button" className="mini-btn" onClick={onToggle} aria-expanded={expanded}>
             {expanded ? '收起' : '详情'}
@@ -181,6 +192,13 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           </button>
         )}
       </div>
+        {reading && (
+          <ArticleReader
+            item={item}
+            onClose={() => setReading(false)}
+            onUpdated={(id) => void reloadItem(id)}
+          />
+        )}
     </div>
   )
 }

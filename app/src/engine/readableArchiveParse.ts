@@ -62,7 +62,7 @@ const SCHEMAS: Record<string, Record<string, FieldKind>> = {
   },
   items: {
     id: 'string', sourceId: 'opt-string', sourceName: 'opt-string', url: 'opt-string', title: 'opt-string',
-    summary: 'opt-string', fingerprint: 'opt-string', eventGroup: 'opt-string', publishedAt: 'opt-string',
+    summary: 'opt-string', content: 'opt-string', fingerprint: 'opt-string', eventGroup: 'opt-string', publishedAt: 'opt-string',
     fetchedAt: 'opt-string', stage: 'opt-string', deletedAt: 'opt-string', score: 'keep',
     scoreReason: 'opt-string', aiBy: 'opt-string', tags: 'opt-array', otFlag: 'opt-string',
     expiresAt: 'opt-string', annotation: 'keep', createdAt: 'opt-string', updatedAt: 'opt-string',
@@ -115,9 +115,10 @@ export function parseArchiveFiles(files: ArchiveMdFile[]): Record<string, unknow
     const fm = parseYaml(m[1]) as Record<string, unknown>
     const cleaned = sanitizeArchiveEntity(table, fm ?? {})
     if (!cleaned) continue // 缺 id 的条目跳过，与导入 JSON 的口径一致
-    // 正文区只恢复正文字段（速记 body / 洞察 text）；其余数据以 frontmatter 为准
+    // 正文区只恢复正文字段（速记 body / 洞察 text / 条目 content）；其余数据以 frontmatter 为准
     if (table === 'notes') cleaned.body = m[2] ?? ''
     if (table === 'insights') cleaned.text = (m[2] ?? '').trim()
+    if (table === 'items' && (m[2] ?? '').trim() !== '') cleaned.content = m[2]
     ;(entities[table] ??= []).push(cleaned)
   }
   return { version: 2, exportedAt: new Date().toISOString(), entities }

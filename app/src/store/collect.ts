@@ -18,6 +18,7 @@ import {
   type SourceInput,
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../engine/collect'
+import { backfillContentOnce, enqueueContent, onContentUpdate } from '../engine/articleContent'
 import { fingerprintOf } from '../engine/fingerprint'
 import { scoreByRules } from '../engine/rules'
 import { newId } from '../db/repo'
@@ -72,6 +73,8 @@ interface CollectState {
   cycleOt: (itemId: string) => Promise<void>
   /** 视频链接入库（C 路线·链接捕获）：解析后的元数据直接评分入库——手动捕获即明确意图，跳过预筛 */
   captureLink: (meta: { title: string; author: string; description: string; url: string }) => Promise<{ ok: boolean; error?: string; duplicated?: boolean }>
+  /** 单条刷新（正文队列写回后，阅读视图/卡片即时看到全文，不重载全列表） */
+  reloadItem: (itemId: string) => Promise<void>
   setConfig: (patch: Partial<CollectConfig>) => void
 }
 
@@ -95,6 +98,15 @@ export const useCollect = create<CollectState>((set, get) => ({
   load: async () => {
     // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默
     track(maintenance(), '采集例行清理 maintenance')
+    // 正文回填：每次打开跑一次（内部有单次闸），缺正文的旧条目按队列上限渐进补齐
+    track(
+      backfillContentOnce().catch((e: unknown) => {
+        throw new Error(`正文回填失败：${e instanceof Error ? e.message : String(e)}`)
+      }),
+      '正文回填 backfillContentOnce',
+    )
+    // 正文队列写回 → 单条刷新（阅读视图开着时即时看到全文）
+    onContentUpdate((id) => void get().reloadItem(id))
     const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(60), itemsPerSource7d()])
     set({ sources, items, items7d, loaded: true })
     // 页面跨天长开：digestDate 在开页时求值一次会卡在昨天——未手动选过日期就自动翻到今天
@@ -143,6 +155,8 @@ export const useCollect = create<CollectState>((set, get) => ({
       const [allSources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
       set({ sources: allSources, items, items7d, fetch: { running: false, summary, lastRunAt: new Date().toISOString(), error: null } })
       set(await reloadDigest(get()))
+      // 新条目进正文队列（串行限速后台跑；失败留空不重试，阅读视图可手动重抓）
+      enqueueContent(summary.newContentIds)
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
       const message = err instanceof Error ? err.message : String(err)
@@ -271,6 +285,11 @@ export const useCollect = create<CollectState>((set, get) => ({
     })
     await useCollect.getState().load()
     return { ok: true }
+  },
+
+  reloadItem: async (itemId) => {
+    set({ items: await refreshItem(itemId, get().items) })
+    set(await reloadDigest(get()))
   },
 
   setConfig: (patch) => {

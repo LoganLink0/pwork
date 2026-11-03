@@ -18,6 +18,7 @@ const OK_SUMMARY: RunSummary = {
   totalNew: 0,
   totalDiscarded: 0,
   digestIds: [],
+  newContentIds: [],
   elapsedMs: 1234,
 }
 

@@ -59,11 +59,9 @@ function reviewBody(r: ReviewRecord): string {
   return [`# ${r.title}`, '', ...r.summary.map((s) => `- ${s}`)].join('\n')
 }
 
+/** 条目正文区只放全文（与速记/洞察同一无损约定：结构字段全在 frontmatter，正文区恢复 content） */
 function itemBody(i: Item): string {
-  const lines = [`# ${i.title}`, '', `- 来源：${i.sourceName}`, `- 链接：${i.url}`]
-  if (i.summary) lines.push('', i.summary)
-  if (i.annotation?.notes) lines.push('', `> 批注：${i.annotation.notes}`)
-  return lines.join('\n')
+  return i.content ?? ''
 }
 
 /** 单条记录 → { 文件相对路径, Markdown 内容 }；archive（zip）与 vault 镜像共用同一格式（防漂移） */
@@ -99,7 +97,8 @@ export function recordMarkdown(table: string, raw: unknown): { file: string; con
     }
     case 'items': {
       const i = raw as Item
-      return { file: `条目/${(i.fetchedAt ?? i.createdAt).slice(0, 10)}-${safeName(i.title)}-${idTag(i.id)}.md`, content: mdFile(i, itemBody(i)) }
+      // content 只在正文区（Obsidian 阅读友好）；frontmatter 不再重复一份
+      return { file: `条目/${(i.fetchedAt ?? i.createdAt).slice(0, 10)}-${safeName(i.title)}-${idTag(i.id)}.md`, content: mdFile({ ...i, content: undefined }, itemBody(i)) }
     }
     default:
       return null

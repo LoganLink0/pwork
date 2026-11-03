@@ -912,3 +912,76 @@ a.origin:hover {
   flex-direction: column;
   gap: 2px;
 }
+
+/* ---------- 条目阅读视图（G1 批）：纯文本正文浮层 + 摘录操作 ---------- */
+.reader-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: color-mix(in srgb, var(--bg-page, #111) 62%, transparent);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--sp-5) var(--sp-3);
+  overflow-y: auto;
+}
+.reader {
+  width: min(720px, 100%);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgb(0 0 0 / 25%));
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--sp-5));
+}
+.reader-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.reader-title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-lg);
+  line-height: 1.35;
+}
+.reader-meta {
+  display: flex;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+.reader-meta a {
+  color: var(--accent);
+}
+.reader-body {
+  padding: var(--sp-4) var(--sp-5);
+  overflow-y: auto;
+  line-height: 1.8;
+  font-size: var(--fs-md, 15px);
+}
+.reader-body p {
+  margin: 0 0 var(--sp-3);
+}
+/* 空态（正文未抓到）：居中说明 + 手动抓取 */
+.reader-empty {
+  text-align: center;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.reader-empty p {
+  margin: 0;
+}
+.reader-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5) var(--sp-4);
+  border-top: 1px solid var(--border);
+}

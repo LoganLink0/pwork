@@ -32,6 +32,8 @@ export interface SourceRunResult {
   discardedCount: number
   error: string | null
   autoStopped: boolean
+  /** 本轮新入库的 scored 条目 id（rss 源才有；正文队列据此回填全文） */
+  newIds: string[]
 }
 
 export interface RunSummary {
@@ -39,6 +41,8 @@ export interface RunSummary {
   totalNew: number
   totalDiscarded: number
   digestIds: string[]
+  /** 值得抓正文的新条目 id（rss 源的 scored 条目；ytdlp 视频无正文不进队列） */
+  newContentIds: string[]
   /** 本轮总耗时（毫秒）——用户问"这次抓了多久"，界面直接回答 */
   elapsedMs: number
 }
@@ -54,6 +58,7 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
     discardedCount: 0,
     error: null,
     autoStopped: false,
+    newIds: [],
   }
   // 按信源类型分发抓取：rss 走标准 RSS/Atom；ytdlp 调本机 yt-dlp 拉平台投稿清单。
   // 两者输出同一契约（{ok, items, error}），去重/预筛/评分后续链路完全共享
@@ -81,8 +86,13 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
       : buildDiscardedItem(source, raw, fp, now, verdict.reason)
     await putItem(item)
     domainCount.set(source.domain, domainSeen + 1)
-    if (verdict.pass) base.newCount++
-    else base.discardedCount++
+    if (verdict.pass) {
+      base.newCount++
+      // ytdlp 源的条目是视频投稿，正文队列不收（无正文可提）
+      if (source.kind !== 'ytdlp') base.newIds.push(item.id)
+    } else {
+      base.discardedCount++
+    }
   }
   return { ...base, ok: true }
 }
@@ -200,6 +210,7 @@ export async function runCollect(sources: Source[], config: CollectConfig): Prom
     totalNew: results.reduce((n, r) => n + r.newCount, 0),
     totalDiscarded: results.reduce((n, r) => n + r.discardedCount, 0),
     digestIds: digest.map((i) => i.id),
+    newContentIds: results.flatMap((r) => r.newIds),
     elapsedMs: Date.now() - startedAt,
   }
 }

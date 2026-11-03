@@ -78,7 +78,8 @@ export async function searchAll(qRaw: string): Promise<SearchHit[]> {
   }
   for (const i of items) {
     if (i.deletedAt || i.stage === 'discarded') continue
-    const h = hit('item', i.id, i.title, `${i.sourceName} · 入库 ${fmtCompact(i.fetchedAt)}`, '/input/items', q, [i.summary ?? '', i.annotation?.notes ?? ''])
+    // 正文（G1 批回填的全文）参与命中——存过的东西要找得回来，摘要搜到不算搜到
+    const h = hit('item', i.id, i.title, `${i.sourceName} · 入库 ${fmtCompact(i.fetchedAt)}`, '/input/items', q, [i.summary ?? '', i.annotation?.notes ?? '', i.content ?? ''])
     if (h) out.push(h)
     if (out.filter((x) => x.kind === 'item').length >= 5) break
   }

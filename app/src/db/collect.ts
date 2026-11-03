@@ -207,6 +207,7 @@ export function normalizeItem(raw: Item): Item {
   return {
     ...raw,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
+    content: typeof raw.content === 'string' ? raw.content : undefined,
     otFlag: raw.otFlag ?? null,
     eventGroup: raw.eventGroup ?? null,
     expiresAt: raw.expiresAt ?? null,
