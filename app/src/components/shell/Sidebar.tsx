@@ -51,7 +51,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar" aria-label="主导航">
       <NavLink to="/" className="logo">
-        <span className="mark">P</span>
+        <img className="mark" src="/favicon.svg" alt="" width={22} height={22} />
         PWORK <span className="sub">个人工作台</span>
       </NavLink>
 

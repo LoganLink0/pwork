@@ -68,8 +68,7 @@
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
   .brand .mark {
     width: 26px; height: 26px; border-radius: 7px;
-    background: var(--accent); color: #fff;
-    display: grid; place-items: center; font-size: 14px; font-weight: 700;
+    display: block;
   }
   .topnav { display: flex; align-items: center; gap: 20px; }
   .topnav a.nav-link { font-size: 14px; color: var(--ink-soft); text-decoration: none; }
@@ -267,7 +266,7 @@
 
 <header class="topbar">
   <div class="wrap">
-    <a class="brand" href="#"><span class="mark">P</span>PWORK</a>
+    <a class="brand" href="#"><img class="mark" src="favicon.svg" alt="PWORK" width="26" height="26"></a>
     <div class="topnav">
       <a class="nav-link" href="#loop">功能</a>
       <a class="nav-link" href="#trust">底线</a>
