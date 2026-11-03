@@ -39,6 +39,7 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
 const SETTINGS_TABS = [
   { id: 'data', label: '数据', icon: 'data' },
   { id: 'collect', label: '采集偏好', icon: 'collect' },
+  { id: 'keys', label: '键盘快捷键', icon: 'key' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
   { id: 'notify', label: '通知', icon: 'volume' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
@@ -993,7 +994,7 @@ export function Settings() {
         </div>
       </div>
 
-      <KeybindsCard active={tab === 'wheel'} />
+      <KeybindsCard active={tab === 'keys'} />
       <WheelSettingsCard active={tab === 'wheel'} />
 
       <CloudSyncCards active={tab === 'cloud'} />

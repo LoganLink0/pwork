@@ -71,7 +71,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
     <div className="set-card" data-tab="wheel" style={{ display: active ? undefined : 'none' }}>
       <h2>工具轮盘</h2>
       <div className="desc">
-        桌面版按 <kbd>{wheelLabelLive()}</kbd> 任何地方呼出的一圈快捷入口（改键在本页下方「键盘快捷键」卡，这里同步显示）。
+        桌面版按 <kbd>{wheelLabelLive()}</kbd> 任何地方呼出的一圈快捷入口（呼出键在左侧导航「键盘快捷键」分类修改，这里同步显示）。
         <br />
         自定义方式：<b style={{ color: 'var(--accent-text)' }}>把右边的动作卡片拖进左边轮盘的格子里</b>——拖到已有格子上是替换，拖到环的空白处是新增；格子右上角 × 删除。
       </div>
@@ -171,7 +171,7 @@ export function WheelSettingsCard({ active }: { active: boolean }) {
               {msg && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>{msg}</span>}
             </div>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              轮盘在鼠标位置弹出、不夺焦点（系统工具形态）：点格位执行、点空白处关闭、热键再按一次关闭，12 秒无操作自动隐藏。呼出键 <kbd>{wheelLabelLive()}</kbd>（在下方「键盘快捷键」卡可改）。
+              轮盘在鼠标位置弹出、不夺焦点（系统工具形态）：点格位执行、点空白处关闭、热键再按一次关闭，12 秒无操作自动隐藏。呼出键 <kbd>{wheelLabelLive()}</kbd>（在左侧导航「键盘快捷键」分类可改）。
             </span>
           </div>
         </div>
