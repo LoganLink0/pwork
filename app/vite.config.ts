@@ -58,9 +58,10 @@ export default defineConfig(({ mode }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
   },
-  // 演示模式（npm run build:demo）：部署到 GitHub Pages 的 /pwork/demo/，
-  // 资源地址前缀必须对齐该路径（正式构建保持默认根路径）
-  base: mode === 'demo' ? '/pwork/demo/' : '/',
+  // 演示模式（npm run build:demo）：部署到 GitHub Pages（自定义域 pwork.loganlink0.cn
+  // 或 loganlink0.github.io 均为仓库路径根），资源地址前缀必须对齐 /demo/
+  //（正式构建保持默认根路径）
+  base: mode === 'demo' ? '/demo/' : '/',
   plugins: [
     react(),
     pworkGatewayAutostart(),
