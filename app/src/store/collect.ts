@@ -23,6 +23,7 @@ import { fingerprintOf } from '../engine/fingerprint'
 import { scoreByRules } from '../engine/rules'
 import { newId } from '../db/repo'
 import { recordError, track } from '../engine/errorLog'
+import { toast } from '../engine/toast'
 import {
   DEFAULT_COLLECT_CONFIG,
   loadCollectConfig,
@@ -157,6 +158,11 @@ export const useCollect = create<CollectState>((set, get) => ({
       set(await reloadDigest(get()))
       // 新条目进正文队列（串行限速后台跑；失败留空不重试，阅读视图可手动重抓）
       enqueueContent(summary.newContentIds)
+      // 正文回填不再纯无声（2026-11-04 用户反馈）：本轮有可抓正文的新文章时给一句提示，
+      // 让用户知道"阅读全文"会陆续亮起来；阅读视图打开即抓，不会扑空
+      if (summary.newContentIds.length > 0) {
+        toast('info', `新入库 ${summary.newContentIds.length} 篇，正文正在后台陆续抓取`)
+      }
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
       const message = err instanceof Error ? err.message : String(err)

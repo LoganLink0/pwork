@@ -4,6 +4,7 @@ import {
   clearContentFailed,
   enqueueContent,
   extractArticleText,
+  fetchContentForItem,
   isArticleEligible,
   isContentFailed,
   queueDepth,
@@ -140,6 +141,25 @@ describe('正文队列（真实 db：写入回填 / 失败登记 / 手动解除�
     expect(await getItem(item.id).then((i) => i?.content)).toBeUndefined()
     clearContentFailed(item.id)
     expect(isContentFailed(item.id)).toBe(false)
+    await vi.waitFor(() => expect(queueDepth()).toBe(0))
+  })
+
+  it('进行中去重：并发两次抓同一条只发一次请求', async () => {
+    const item = makeItem({ id: `itm_${Date.now()}_dedup`, url: 'https://a.com/dedup' })
+    await putItem(item)
+    const fetchMock = vi.fn(async (url: string | URL) => {
+      const u = String(url)
+      if (u.includes('127.0.0.1:8788')) throw new TypeError('connect ECONNREFUSED')
+      return u.includes('/dedup')
+        ? new Response(ARTICLE_HTML, { status: 200 })
+        : new Response('not found', { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const [a, b] = await Promise.all([fetchContentForItem(item.id), fetchContentForItem(item.id)])
+    expect(a.ok && b.ok).toBe(true)
+    // 直连通路只应请求一次（网关探测每方各一次也算了：共 3 次 = 2 网关拒绝 + 1 直连）
+    const directCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/dedup')).length
+    expect(directCalls).toBe(1)
     await vi.waitFor(() => expect(queueDepth()).toBe(0))
   })
 

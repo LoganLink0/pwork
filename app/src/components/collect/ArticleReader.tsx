@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Item } from '../../types/models'
 import { fetchContentForItem, isContentFailed } from '../../engine/articleContent'
@@ -12,10 +12,21 @@ export interface ArticleReaderProps {
   onUpdated: (id: string) => void
 }
 
+/** 选中浮窗的屏幕定位（fixed 坐标，随选区矩形计算） */
+interface SelAnchor {
+  top: number
+  left: number
+}
+
 /**
  * 条目阅读视图（G1 批）：把回填的正文纯文本当书读——固定浮层，标题/来源/原文链接齐备。
  * 正文只以纯文本渲染（段落来自提取时的 \n\n 结构），任何 HTML 都不进 DOM，XSS 无处落地。
- * 摘录（G2 批）：选中正文 → 存为带出处的速记，速记自动挂回本条目（links.itemIds）。
+ *
+ * 交互（2026-11-04 用户反馈一轮改造）：
+ * - 打开即抓：进来没有正文就当场抓取并显示进度（等在空态里让用户手点会劝退人）；
+ *   上次失败过的条目不自动重试（避免反复打扰源站），留给手动按钮；
+ * - 选中浮窗：划选文字后正上方浮出操作条（摘录到速记 / 复制），微信读书式就地操作，
+ *   替代原先角落里的固定按钮。
  */
 export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) {
   // 手动抓到的正文与本条目的 store 状态渲染期取新：队列后台写回时 prop 更新，无需 effect 同步
@@ -23,17 +34,10 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
   const content = grabbed ?? item.content ?? null
   const [grabbing, setGrabbing] = useState(false)
   const [grabErr, setGrabErr] = useState<string | null>(null)
-  const [hasSelection, setHasSelection] = useState(false)
+  const [sel, setSel] = useState<SelAnchor | null>(null)
+  const autoTriedRef = useRef(false)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const createNote = useNotes((s) => s.create)
-
-  // Esc 关闭
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const grab = async () => {
     setGrabbing(true)
@@ -48,11 +52,51 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
     }
   }
 
-  /** 选中文字 → 带出处速记（G2 最小形态：引用块 + 出处行，挂回本条目） */
+  // 打开即抓：没有正文且上次没失败过才自动抓（失败过的不打扰源站，按钮留给用户决定）
+  useEffect(() => {
+    if (autoTriedRef.current) return
+    autoTriedRef.current = true
+    if (!content && !isContentFailed(item.id)) void grab()
+    // eslint 按设计只在挂载时跑一次：grab 闭包读取的 item.id 固定不变
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Esc 关闭
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  /** 划选检测：选区落在正文里才浮出操作条（随选区矩形定位，贴顶部时翻到下方） */
+  const trackSelection = () => {
+    const s = window.getSelection()
+    if (!s || s.isCollapsed || s.rangeCount === 0) {
+      setSel(null)
+      return
+    }
+    const origin = s.getRangeAt(0).commonAncestorContainer
+    const el = origin.nodeType === 1 ? (origin as Element) : origin.parentElement
+    if (!bodyRef.current || !el?.closest('.reader-body')) {
+      setSel(null)
+      return
+    }
+    const r = s.getRangeAt(0).getBoundingClientRect()
+    if (!r.width && !r.height) {
+      setSel(null)
+      return
+    }
+    const below = r.top < 120
+    setSel({ top: below ? r.bottom + 10 : r.top - 46, left: r.left + r.width / 2 })
+  }
+
+  /** 选中文字 → 带出处速记（G2：引用块 + 出处行，挂回本条目） */
   const excerptSelection = async () => {
-    const sel = (window.getSelection()?.toString() ?? '').trim()
-    if (!sel) return
-    const quoted = sel
+    const text = (window.getSelection()?.toString() ?? '').trim()
+    if (!text) return
+    const quoted = text
       .split('\n')
       .map((l) => `> ${l.trim()}`.trimEnd())
       .join('\n')
@@ -62,17 +106,28 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
       source: 'manual',
       links: { itemIds: [item.id], reviewIds: [], taskIds: [] },
     })
+    window.getSelection()?.removeAllRanges()
+    setSel(null)
     toast('ok', '已存入速记，速记里挂着本条目链接')
   }
 
-  const trackSelection = () => {
-    setHasSelection((window.getSelection()?.toString() ?? '').trim().length > 0)
+  const copySelection = async () => {
+    const text = (window.getSelection()?.toString() ?? '').trim()
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('ok', '已复制')
+    } catch {
+      toast('error', '复制失败（剪贴板未授权）')
+    }
+    window.getSelection()?.removeAllRanges()
+    setSel(null)
   }
 
   const paragraphs = (content ?? '').split(/\n{2,}/).filter((p) => p.trim())
 
   return createPortal(
-    <div className="reader-backdrop" onClick={onClose} role="presentation">
+    <div className="reader-backdrop" onClick={() => { setSel(null); onClose() }} role="presentation">
       <article
         className="reader"
         role="dialog"
@@ -96,34 +151,43 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
         </header>
 
         {content ? (
-          <>
-            <div className="reader-body">
-              {paragraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
-            </div>
-            <footer className="reader-foot">
-              <button type="button" className="mini-btn" disabled={!hasSelection} onClick={() => void excerptSelection()}>
-                摘录选中 → 速记
-              </button>
-              <span className="ttl-note">
-                {hasSelection ? '把选中的文字存为带出处的速记' : '用鼠标选中正文即可摘录'}
-              </span>
-            </footer>
-          </>
+          <div className="reader-body" ref={bodyRef}>
+            {paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        ) : grabbing ? (
+          <div className="reader-body reader-empty">
+            <div className="reader-spinner" aria-hidden />
+            <p>正在抓取正文…</p>
+            <p className="ttl-note">抓到的正文只存在本机，用于阅读、检索和摘录。</p>
+          </div>
         ) : (
           <div className="reader-body reader-empty">
             <p>
               {grabErr
-                ? `手动抓取失败：${grabErr}。`
-                : isContentFailed(item.id)
-                  ? '这篇的正文上次自动抓取没有成功——通常是登录墙、纯视频页或源站拒绝了抓取。'
-                  : '这篇的正文还没抓到——打开应用后后台会按队列自动补齐，不用等在这里。'}
+                ? `抓取失败：${grabErr}——可以稍后再试，或直接读原链接。`
+                : '这篇的正文上次自动抓取没有成功（通常是登录墙或源站拒绝）。'}
             </p>
             <p className="ttl-note">抓到的正文只存在本机，用于阅读、检索和摘录。</p>
-            <button type="button" className="btn-ghost" disabled={grabbing} onClick={() => void grab()}>
-              {grabbing ? '抓取中…' : '抓取正文'}
+            <button type="button" className="btn-ghost" onClick={() => void grab()}>
+              再试一次
             </button>
+          </div>
+        )}
+
+        {sel && content && !grabbing && (
+          <div
+            className="sel-toolbar"
+            style={{ top: sel.top, left: sel.left }}
+            role="toolbar"
+            aria-label="选中操作"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" onClick={() => void excerptSelection()}>＋ 摘录到速记</button>
+            <span className="sel-sep" aria-hidden />
+            <button type="button" onClick={() => void copySelection()}>复制</button>
           </div>
         )}
       </article>

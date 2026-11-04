@@ -927,14 +927,14 @@ a.origin:hover {
   overflow-y: auto;
 }
 .reader {
-  width: min(720px, 100%);
+  width: min(880px, 100%);
   background: var(--bg-card, #fff);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-lg, 0 12px 40px rgb(0 0 0 / 25%));
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 2 * var(--sp-5));
+  max-height: calc(100vh - 2 * var(--sp-4));
 }
 .reader-head {
   display: flex;
@@ -978,10 +978,50 @@ a.origin:hover {
 .reader-empty p {
   margin: 0;
 }
-.reader-foot {
+/* 抓取中：转圈加载态（打开即抓，用户当场看到进展） */
+.reader-spinner {
+  width: 22px;
+  height: 22px;
+  margin-top: var(--sp-4);
+  border: 3px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: reader-spin 0.9s linear infinite;
+}
+@keyframes reader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* 选中浮窗（微信读书式）：贴选区上方就地操作，深底白字 */
+.sel-toolbar {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 95;
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-5) var(--sp-4);
-  border-top: 1px solid var(--border);
+  gap: var(--sp-1);
+  background: var(--ink-2, #2a2a2a);
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 30%);
+}
+.sel-toolbar button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: var(--fs-sm);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sel-toolbar button:hover {
+  background: rgb(255 255 255 / 14%);
+}
+.sel-sep {
+  width: 1px;
+  height: 16px;
+  background: rgb(255 255 255 / 28%);
 }

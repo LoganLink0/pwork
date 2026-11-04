@@ -190,13 +190,24 @@ export function onContentUpdate(fn: ((itemId: string) => void) | null): void {
   updateListener = fn
 }
 
+type FetchOutcome = { ok: boolean; error: string | null; text?: string }
+
+/** 进行中去重：后台队列与阅读视图同时抓同一条时共用同一次请求 */
+const inflight = new Map<string, Promise<FetchOutcome>>()
+
 /**
- * 抓单条正文并回填：队列与阅读视图的手动重抓共用同一契约。
+ * 抓单条正文并回填：队列与阅读视图（含打开时自动抓取）共用同一契约。
  * 成功写 content 并回调（带正文文本，阅读视图即时显示）；失败登记失败表，content 保持空。
  */
-export async function fetchContentForItem(
-  id: string,
-): Promise<{ ok: boolean; error: string | null; text?: string }> {
+export function fetchContentForItem(id: string): Promise<FetchOutcome> {
+  const running = inflight.get(id)
+  if (running) return running
+  const p = doFetchContent(id).finally(() => inflight.delete(id))
+  inflight.set(id, p)
+  return p
+}
+
+async function doFetchContent(id: string): Promise<FetchOutcome> {
   const item = await getItem(id)
   if (!item) return { ok: false, error: '条目不存在' }
   const fetched = await fetchArticleHtml(item.url)

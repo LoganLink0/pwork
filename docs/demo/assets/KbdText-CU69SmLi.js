@@ -1,0 +1,1 @@
+import{dn as e}from"./index-CL6_FTZJ.js";var t=e(),n=/\b(N|Ctrl K|Esc)\b/;function r({text:e}){return e.split(n).map((e,n)=>n%2==1?(0,t.jsx)(`kbd`,{children:e},n):(0,t.jsx)(`span`,{children:e},n))}export{r as t};
