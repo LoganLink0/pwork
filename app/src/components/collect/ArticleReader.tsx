@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Item } from '../../types/models'
-import { fetchContentForItem } from '../../engine/articleContent'
+import { fetchContentForItem, isContentFailed } from '../../engine/articleContent'
 import { useNotes } from '../../store/notes'
 import { toast } from '../../engine/toast'
 
@@ -113,10 +113,14 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
           </>
         ) : (
           <div className="reader-body reader-empty">
-            <p>这篇的正文还没有抓到{grabErr ? `——上次失败：${grabErr}` : '。'}</p>
-            <p className="ttl-note">
-              可能是登录墙、纯视频页或源站拒绝了抓取；抓到的正文只存在本机，用于阅读、检索和摘录。
+            <p>
+              {grabErr
+                ? `手动抓取失败：${grabErr}。`
+                : isContentFailed(item.id)
+                  ? '这篇的正文上次自动抓取没有成功——通常是登录墙、纯视频页或源站拒绝了抓取。'
+                  : '这篇的正文还没抓到——打开应用后后台会按队列自动补齐，不用等在这里。'}
             </p>
+            <p className="ttl-note">抓到的正文只存在本机，用于阅读、检索和摘录。</p>
             <button type="button" className="btn-ghost" disabled={grabbing} onClick={() => void grab()}>
               {grabbing ? '抓取中…' : '抓取正文'}
             </button>

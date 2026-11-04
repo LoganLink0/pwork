@@ -7,7 +7,6 @@ import { Icon } from '../shell/icons'
 import { useNotes } from '../../store/notes'
 import { useCollect } from '../../store/collect'
 import { ArticleReader } from './ArticleReader'
-
 const OT_LABEL: Record<NonNullable<Item['otFlag']>, { text: string; cls: string; icon: string }> = {
   opportunity: { text: '机会', cls: 'ot-opp', icon: 'target' },
   threat: { text: '威胁', cls: 'ot-threat', icon: 'alert' },
@@ -44,6 +43,8 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
   const navigate = useNavigate()
   const createNote = useNotes((s) => s.create)
   const reloadItem = useCollect((s) => s.reloadItem)
+  // 视频源（ytdlp）的条目是平台投稿链接，没有文章正文可读——不提供阅读入口
+  const srcKind = useCollect((s) => s.sources.find((src) => src.id === item.sourceId)?.kind)
   const hasContent = Boolean(item.content)
 
   /** 条目 → 速记（写入 links.itemIds，双向挂接的另一半） */
@@ -98,8 +99,8 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           {showStage && item.stage === 'discarded' && item.expiresAt && (
             <span className="ttl-note">{fmtLocal(item.expiresAt).slice(0, 10)} 过期清理</span>
           )}
-          {/* 阅读入口：有全文标"阅读全文"；暂缺正文也能进阅读视图手动抓（筛除层是暂存语义，不提供） */}
-          {item.stage !== 'discarded' && /^https?:\/\//i.test(item.url) && (
+          {/* 阅读入口：有全文标"阅读全文"；暂缺正文也能进阅读视图手动抓（筛除层是暂存语义，视频源不提供） */}
+          {item.stage !== 'discarded' && srcKind !== 'ytdlp' && /^https?:\/\//i.test(item.url) && (
             <button type="button" className="mini-btn" onClick={() => setReading(true)}>
               {hasContent ? '阅读全文' : '阅读'}
             </button>
