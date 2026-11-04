@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: 使用问题
-    url: https://loganlink0.github.io/pwork/
+  - name: 讨论与提问
+    url: https://github.com/LoganLink0/pwork/discussions
+    about: 使用问题、功能想法、展示用法——发这里，响应最快
+  - name: 使用文档
+    url: https://pwork.loganlink0.cn/
     about: 安装与功能说明见介绍页与应用内「帮助」

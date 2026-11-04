@@ -70,7 +70,9 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 想参与贡献（推荐信源、报缺陷、提代码）：见 [CONTRIBUTING.md](./CONTRIBUTING.md)。推荐信源只需改[目录数据文件](app/src/content/source-catalog.json)，CI 每周自动逐源验证活性。
 
-回归基线：476 项自动化测试全绿、tsc 零错误、lint 0 警告 0 错误。
+项目暂不接受捐赠；支持 PWORK 最有效的三个动作：给个 Star、推荐信源、把问题与想法发到 [Discussions](https://github.com/LoganLink0/pwork/discussions)。
+
+回归基线：488 项自动化测试全绿、tsc 零错误、lint 0 错误（1 条既有警告）。
 
 ## 许可证
 
