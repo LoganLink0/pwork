@@ -923,7 +923,8 @@ a.origin:hover {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: var(--sp-5) var(--sp-3);
+  /* 垂直边距与 .reader 的 max-height 算式（2 * sp-4）保持一致，底缘不吃边距 */
+  padding: var(--sp-4) var(--sp-3);
   overflow-y: auto;
 }
 .reader {

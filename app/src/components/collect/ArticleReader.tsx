@@ -12,7 +12,7 @@ export interface ArticleReaderProps {
   onUpdated: (id: string) => void
 }
 
-/** 选中浮窗的屏幕定位（fixed 坐标，随选区矩形计算） */
+/** 选中浮窗的屏幕定位（fixed 坐标，随选区矩形计算并按视口收拢） */
 interface SelAnchor {
   top: number
   left: number
@@ -89,7 +89,13 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
       return
     }
     const below = r.top < 120
-    setSel({ top: below ? r.bottom + 10 : r.top - 46, left: r.left + r.width / 2 })
+    // 浮窗按视口收拢：贴左右边缘时不被裁剪，垂直方向留出工具条自身高度
+    const left = Math.min(Math.max(90, r.left + r.width / 2), window.innerWidth - 90)
+    const top = Math.min(
+      Math.max(8, below ? r.bottom + 10 : r.top - 46),
+      window.innerHeight - 46,
+    )
+    setSel({ top, left })
   }
 
   /** 选中文字 → 带出处速记（G2：引用块 + 出处行，挂回本条目） */
@@ -127,7 +133,12 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
   const paragraphs = (content ?? '').split(/\n{2,}/).filter((p) => p.trim())
 
   return createPortal(
-    <div className="reader-backdrop" onClick={() => { setSel(null); onClose() }} role="presentation">
+    <div
+      className="reader-backdrop"
+      onClick={() => { setSel(null); onClose() }}
+      onMouseUp={trackSelection}
+      role="presentation"
+    >
       <article
         className="reader"
         role="dialog"
@@ -151,7 +162,11 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
         </header>
 
         {content ? (
-          <div className="reader-body" ref={bodyRef}>
+          <div
+            className="reader-body"
+            ref={bodyRef}
+            onScroll={() => setSel(null)}
+          >
             {paragraphs.map((p, i) => (
               <p key={i}>{p}</p>
             ))}

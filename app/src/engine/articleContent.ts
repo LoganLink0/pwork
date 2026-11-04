@@ -210,6 +210,8 @@ export function fetchContentForItem(id: string): Promise<FetchOutcome> {
 async function doFetchContent(id: string): Promise<FetchOutcome> {
   const item = await getItem(id)
   if (!item) return { ok: false, error: '条目不存在' }
+  // 已有正文的条目直接返回（阅读视图先抓完、后台队列随后轮到同一条时不再重复请求源站）
+  if (item.content) return { ok: true, error: null, text: item.content }
   const fetched = await fetchArticleHtml(item.url)
   if (!fetched.ok) {
     markFailed(id)

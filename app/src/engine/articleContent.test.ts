@@ -144,6 +144,18 @@ describe('正文队列（真实 db：写入回填 / 失败登记 / 手动解除�
     await vi.waitFor(() => expect(queueDepth()).toBe(0))
   })
 
+  it('已有正文的条目不再发请求（阅读视图先抓完、队列随后轮到时不重复打扰源站）', async () => {
+    const item = makeItem({ id: `itm_${Date.now()}_has`, url: 'https://a.com/has', content: `已有正文。`.repeat(60) })
+    await putItem(item)
+    const fetchMock = vi.fn(async () => new Response('不应被请求', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const r = await fetchContentForItem(item.id)
+    expect(r.ok).toBe(true)
+    expect(r.text).toContain('已有正文')
+    expect(fetchMock).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(queueDepth()).toBe(0))
+  })
+
   it('进行中去重：并发两次抓同一条只发一次请求', async () => {
     const item = makeItem({ id: `itm_${Date.now()}_dedup`, url: 'https://a.com/dedup' })
     await putItem(item)
