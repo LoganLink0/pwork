@@ -28,6 +28,7 @@ type FieldKind = 'string' | 'opt-string' | 'opt-number' | 'opt-boolean' | 'opt-a
 const SCHEMAS: Record<string, Record<string, FieldKind>> = {
   notes: {
     id: 'string', title: 'opt-string', body: 'opt-string', tags: 'opt-array', links: 'keep',
+    attachments: 'keep',
     source: 'opt-string', createdAt: 'opt-string', updatedAt: 'opt-string',
     deletedAt: 'opt-string', schemaVersion: 'opt-number',
   },

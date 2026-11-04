@@ -14,6 +14,8 @@ const DRAFT_KEY = 'pwork-quicknote-draft'
 interface Draft {
   body: string
   tags: string
+  /** 待挂附件元数据（字节已在盘，重开浮层恢复待挂列表；保存时一并入库） */
+  attachments?: NoteAttachment[]
 }
 
 function loadDraft(): Draft {
@@ -21,7 +23,7 @@ function loadDraft(): Draft {
     const v = localStorage.getItem(DRAFT_KEY)
     if (!v) return { body: '', tags: '' }
     const parsed = JSON.parse(v) as Partial<Draft>
-    return { body: parsed.body ?? '', tags: parsed.tags ?? '' }
+    return { body: parsed.body ?? '', tags: parsed.tags ?? '', attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [] }
   } catch {
     return { body: '', tags: '' }
   }
@@ -47,11 +49,11 @@ function QuickNoteDialog() {
   const [draft0] = useState(loadDraft)
   const [body, setBody] = useState(draft0.body)
   const [tags, setTags] = useState(draft0.tags)
+  const [pendingAtts, setPendingAtts] = useState<NoteAttachment[]>(draft0.attachments ?? [])
   const [saving, setSaving] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
   const taRef = useRef<HTMLTextAreaElement>(null)
   // 粘贴图片即存附件（R2 桌面先行）：截图 → Win+Shift+S → N 唤起 → Ctrl+V → 存
-  const [pendingAtts, setPendingAtts] = useState<NoteAttachment[]>([])
   const [attBusy, setAttBusy] = useState(false)
 
   useEffect(() => {
@@ -94,8 +96,12 @@ function QuickNoteDialog() {
   }
 
   const saveDraft = () => {
-    if (body.trim()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ body, tags } satisfies Draft))
-    else localStorage.removeItem(DRAFT_KEY)
+    // 附件元数据一并进草稿：字节已在盘，Esc 关闭后重开浮层能恢复待挂列表（不丢图不产孤儿）
+    if (body.trim() || pendingAtts.length > 0) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ body, tags, attachments: pendingAtts } satisfies Draft))
+    } else {
+      localStorage.removeItem(DRAFT_KEY)
+    }
   }
 
   const tagsOf = () =>

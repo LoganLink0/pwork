@@ -14,7 +14,7 @@ const note = (over: Partial<Note>): Note => ({
 })
 
 const sample: ArchiveInput = {
-  notes: [note({})],
+  notes: [note({ attachments: [{ id: 'attm_1', name: '截图.png', mime: 'image/png', size: 1889, file: 'att_x1.png' }] })],
   tasks: [{
     id: 'task_abcd1234', title: '交周报', status: 'todo', due: '2026-10-30', lane: 1,
     origin: { kind: 'manual', refId: null }, closedAt: null,
@@ -79,6 +79,8 @@ describe('可读档案 roundtrip', () => {
     expect(n.body).toBe('带上数据表\n核对三个数')
     expect(n.tags).toEqual(['工作'])
     expect(n.schemaVersion).toBe(1)
+    // 附件元数据随 frontmatter 回导保留（字节不进档案，文件随 zip「附件/」目录）
+    expect(n.attachments).toEqual([{ id: 'attm_1', name: '截图.png', mime: 'image/png', size: 1889, file: 'att_x1.png' }])
 
     const t = e.tasks[0]
     expect(t.id).toBe('task_abcd1234')
