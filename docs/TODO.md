@@ -15,6 +15,7 @@
 - [x] **demo 同步 0.1.14 内容（2026-11-02 完成，ff8ae92/647ed99）**：#/wheel 公网可达修复（分流补 isDesktopApp）+ DemoBanner 补桌面新功能提示 + build:demo 产物覆盖上线核对 + **demo SW 策略改 autoUpdate**（原 prompt 模式下旧 SW 长期供 0.1.10 旧版，访客永远看到旧版——演示橱窗改自动接管，正式网页版维持 prompt）
 - [x] **Mimosa 完整深扫（2026-11-02，封印 sha256:6175b8a1…）**：76 条发现全部定性为 docs/demo 构建产物压缩代码误报（浏览器端 bundle 被套 SQL/mongo/child_process 等 Node sink——与 0.1.11 后 69 条扫描同构，已知噪声基线维持）；源码侧 0 新增待办；依赖通告 1 条=已知接受 sprintf-js；1232 包扫描完成
 - [ ] ~~**Gitee v0.1.13 Release 待建**~~ / ~~**Gitee v0.1.11 dmg 补传**~~（2026-11-04 用户拍板**暂定不传**：大陆下载已有 COS 国内直连方案（实测 8MB 0.4s，README 已挂直链），Gitee 附件不再追；代码镜像保持推平即可。若日后重新需要：两件都堵在 Gitee Token，拿到即半小时）
+- [ ] **R1 增补：Obsidian vault 导入（2026-11-04 用户点名）**：R1 起步清单当时漏了 Obsidian。形态：选 Obsidian vault 文件夹 → 所有 .md 容忍无 frontmatter 直接导入为速记（title 取首行/H1，tags 取 YAML tags 或 #行内标签，正文原样），按路径转标签；与可读档案回导（要求 PWORK frontmatter）不同，这是对任意 Obsidian 库的宽容导入。排在 flomo/Notion 同批或按用户需求提前
 - [x] **发布版关键流程落盘日志（复盘 3.49 教训项，0.1.13 交付）**：tauri-plugin-log 改为全构建挂载（LogDir 落盘 + Stdout，KeepAll 轮转），迁移关键命令（migrate_batch 表/行数/耗时/结果、migrate_finish 对账行数）入日志——下次偶发事件有现场可取证（下方未勾旧条为同项残留，清理）
 - [ ] **更新器第二端点（COS，等用户开通对象存储）**：endpoints 加对象存储备用源（已查证：updater 对网络错误也回退到下一端点）；发版流水线生成对应 latest.json；前置 = 用户开通 bucket（公共读）+ AccessKey 存放方式（勿贴对话）
 - [x] **信源主动识别三件套（2026-11-01 完成）**：①信源自检（sourceAudit：30 天四指标→四类画像+建议，Sources 页自检卡）；②引用发现（sourceDiscover：非订阅域名转引 ≥3 次上榜，注册域排除防误推荐）；③日报主题异动（digestAnomaly：30 天基线 vs 当日命中，≥3 条且 ≥3 倍才点名）；真机验证四画像/转引上榜/异动倍数全过
