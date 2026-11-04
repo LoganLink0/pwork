@@ -58,9 +58,8 @@ export default defineConfig(({ mode }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
   },
-  // 演示模式（npm run build:demo）：部署到 GitHub Pages（自定义域 pwork.loganlink0.cn
-  // 或 loganlink0.github.io 均为仓库路径根），资源地址前缀必须对齐 /demo/
-  //（正式构建保持默认根路径）
+  // 演示模式（npm run build:demo）：部署在自定义域 pwork.loganlink0.cn 根路径下，
+  // 资源地址前缀必须对齐 /demo/（正式构建保持默认根路径）
   base: mode === 'demo' ? '/demo/' : '/',
   plugins: [
     react(),
@@ -80,12 +79,12 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#e8833a',
         background_color: '#f5f4f1',
         display: 'standalone',
-        start_url: mode === 'demo' ? '/pwork/demo/' : '/',
+        start_url: mode === 'demo' ? '/demo/' : '/',
         icons: [
-          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: (mode === 'demo' ? '/pwork/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: (mode === 'demo' ? '/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: (mode === 'demo' ? '/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: (mode === 'demo' ? '/demo' : '') + '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: (mode === 'demo' ? '/demo' : '') + '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
