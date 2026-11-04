@@ -15,14 +15,15 @@
 - [x] **demo 同步 0.1.14 内容（2026-11-02 完成，ff8ae92/647ed99）**：#/wheel 公网可达修复（分流补 isDesktopApp）+ DemoBanner 补桌面新功能提示 + build:demo 产物覆盖上线核对 + **demo SW 策略改 autoUpdate**（原 prompt 模式下旧 SW 长期供 0.1.10 旧版，访客永远看到旧版——演示橱窗改自动接管，正式网页版维持 prompt）
 - [x] **Mimosa 完整深扫（2026-11-02，封印 sha256:6175b8a1…）**：76 条发现全部定性为 docs/demo 构建产物压缩代码误报（浏览器端 bundle 被套 SQL/mongo/child_process 等 Node sink——与 0.1.11 后 69 条扫描同构，已知噪声基线维持）；源码侧 0 新增待办；依赖通告 1 条=已知接受 sprintf-js；1232 包扫描完成
 - [ ] ~~**Gitee v0.1.13 Release 待建**~~ / ~~**Gitee v0.1.11 dmg 补传**~~（2026-11-04 用户拍板**暂定不传**：大陆下载已有 COS 国内直连方案（实测 8MB 0.4s，README 已挂直链），Gitee 附件不再追；代码镜像保持推平即可。若日后重新需要：两件都堵在 Gitee Token，拿到即半小时）
-- [ ] **R1 全景清单（2026-11-05 用户点名扩充；实现前逐一查证各官方导出文档）**：
+- [x] **R1 全景清单（2026-11-05 用户点名扩充并当日全部交付；实现前逐一查证各官方导出文档：Raindrop=Netscape HTML、Notion=md+子文件夹+CSV、flomo=单个 HTML 内部未文档化、enex=公开 DTD XML）**：
   - ✅ ① 浏览器书签 HTML（17401，Chrome/Edge/Firefox）
-  - ② **稍后读三家 HTML 导出**——Raindrop / Pocket（已停运迁移潮）/ Instapaper：导出的就是 Netscape 书签 HTML 同构变体，**与①同一解析器，增量≈0，紧跟①做**
-  - ③ **Markdown 文件夹宽容导入**——Obsidian / Logseq / 思源 SiYuan：三家都是 md 文件夹形态，一个宽容导入器（容忍无 frontmatter，title 取首行/H1，tags 取 YAML 或行内 #标签，路径转标签）一次覆盖三家
-  - ④ flomo 导出 zip（目标用户高度重叠；格式按官方导出文档核实）
-  - ⑤ Notion 导出 zip（Markdown + CSV，数据库页解析为分批）
-  - ⑥ Evernote/印象笔记 .enex（XML 成熟格式，国内基数大；独立小批）
+  - ✅ ② **稍后读三家 HTML 导出**——Raindrop / Pocket（已停运迁移潮）/ Instapaper：**解析器扩 ul/li 形态**（Netscape DT/DL 之外的 ul/li 嵌套树），与①共用导入管线（零增量落账兑现）；设置行改「导入书签 / 稍后读」
+  - ✅ ③ **Markdown 文件夹宽容导入**——Obsidian / Logseq / 思源：engine/markdownImport.ts（容忍无 frontmatter：标题取 frontmatter title→H1→首行、标签取 frontmatter tags→行内 #标签→路径段，正文原样进速记，body 全文去重、5000 条上限、50 万字符文件跳过/5 万正文截断）；设置 → 数据「导入 Markdown 文件夹」
+  - ✅ ④ flomo 导出 HTML（官方文档查证为单 HTML、内部结构未文档化→时间戳锚点切块宽容提取，#标签入 tags）
+  - ✅ ⑤ Notion 导出 zip（md+子页面文件夹+CSV；JSZip 解包、hex 后缀文件夹名清洗、CSV/资源文件计为非笔记跳过）
+  - ✅ ⑥ Evernote/印象笔记 .enex（公开 DTD XML：note 之 title/tag/content；en-note CDATA 二次 XML 解析保留段落结构、XML 声明头剥离）；设置 → 数据「导入笔记应用数据」（.zip/.html/.enex 按扩展名分发）
   - **引导不做**：语雀（lake 私有格式）/ 有道云（无官方批量导出）/ 为知（受限）——帮助页引导"先导出为 Markdown 再走③"
+  - **验证：web dev 真导入 e2e 9/9**（五入口真实文件注入 → 解析 → IndexedDB 入库计数与正文抽查全过）；单测 +10（双形态书签/宽容 md 三样例/去重与库内重导/flomo 切块/enex 段落与空条/Notion zip 与统一入口），全量 **511** 全绿
 - [x] **发布版关键流程落盘日志（复盘 3.49 教训项，0.1.13 交付）**：tauri-plugin-log 改为全构建挂载（LogDir 落盘 + Stdout，KeepAll 轮转），迁移关键命令（migrate_batch 表/行数/耗时/结果、migrate_finish 对账行数）入日志——下次偶发事件有现场可取证（下方未勾旧条为同项残留，清理）
 - [ ] **更新器第二端点（COS，等用户开通对象存储）**：endpoints 加对象存储备用源（已查证：updater 对网络错误也回退到下一端点）；发版流水线生成对应 latest.json；前置 = 用户开通 bucket（公共读）+ AccessKey 存放方式（勿贴对话）
 - [x] **信源主动识别三件套（2026-11-01 完成）**：①信源自检（sourceAudit：30 天四指标→四类画像+建议，Sources 页自检卡）；②引用发现（sourceDiscover：非订阅域名转引 ≥3 次上榜，注册域排除防误推荐）；③日报主题异动（digestAnomaly：30 天基线 vs 当日命中，≥3 条且 ≥3 倍才点名）；真机验证四画像/转引上榜/异动倍数全过

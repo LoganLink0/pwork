@@ -34,12 +34,23 @@ export interface ParseResult {
   skipped: number
 }
 
-/** 解析 Netscape 书签 HTML：文件夹递归收集，链接提取标题/网址/时间 */
+/** 解析书签/稍后读 HTML：Netscape DT/DL（浏览器与 Raindrop）与 ul/li（Pocket/Instapaper）两种树形态；
+ *  文件夹递归收集，链接提取标题/网址/时间 */
 export function parseBookmarksHtml(html: string): ParseResult {
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const entries: BookmarkEntry[] = []
   let skipped = 0
-  const walk = (dl: Element, folders: string[]) => {
+  const pushLink = (a: Element, folders: string[]) => {
+    const url = (a.getAttribute('href') ?? '').trim()
+    if (!/^https?:\/\//i.test(url)) {
+      skipped++
+      return
+    }
+    const addRaw = (a.getAttribute('add_date') ?? '').trim()
+    const addDate = /^\d{9,10}$/.test(addRaw) ? new Date(Number(addRaw) * 1000).toISOString() : null
+    entries.push({ title: (a.textContent ?? '').trim() || url, url, folders, addDate })
+  }
+  const walkDl = (dl: Element, folders: string[]) => {
     const children = [...dl.children]
     for (let i = 0; i < children.length; i++) {
       const dt = children[i]
@@ -52,27 +63,48 @@ export function parseBookmarksHtml(html: string): ParseResult {
         const name = (h3.textContent ?? '').trim()
         // 顶层根文件夹只是浏览器分区名，不带进标签；再往下的文件夹有语义
         const next = folders.length === 0 && ROOT_NAMES.has(name.toLowerCase()) ? folders : [...folders, name]
-        if (innerDl) walk(innerDl, next)
-        if (siblingDl) walk(siblingDl, next)
+        if (innerDl) walkDl(innerDl, next)
+        if (siblingDl) walkDl(siblingDl, next)
         if (siblingDl) i++ // 已消费兄弟 DL，外层跳过
         continue
       }
       const a = dt.querySelector('a')
-      if (!a) continue
-      const url = (a.getAttribute('href') ?? '').trim()
-      if (!/^https?:\/\//i.test(url)) {
-        skipped++
-        continue
-      }
-      const addRaw = (a.getAttribute('add_date') ?? '').trim()
-      const addDate = /^\d{9,10}$/.test(addRaw) ? new Date(Number(addRaw) * 1000).toISOString() : null
-      entries.push({ title: (a.textContent ?? '').trim() || url, url, folders, addDate })
+      if (a) pushLink(a, folders)
     }
   }
-  const root = doc.querySelector('dl')
-  if (!root) return { entries: [], skipped: 0 }
-  walk(root, [])
-  return { entries, skipped }
+  const walkUl = (ul: Element, folders: string[]) => {
+    for (const li of [...ul.children]) {
+      if (li.tagName !== 'LI') continue
+      const nestedUl = li.querySelector(':scope > ul')
+      const ownText = [...li.childNodes]
+        .filter((n) => n.nodeType === 3 || (n.nodeType === 1 && (n as Element).tagName !== 'UL' && (n as Element).tagName !== 'A'))
+        .map((n) => n.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      const link = li.querySelector(':scope > a')
+      if (nestedUl) {
+        // 组文件夹：li 自身文本作文件夹名（无文本用链接文本兜底），子列表递归
+        const name = ownText || (link?.textContent ?? '').trim()
+        if (link) pushLink(link, [...folders, name])
+        walkUl(nestedUl, [...folders, name])
+        continue
+      }
+      if (link) pushLink(link, folders)
+    }
+  }
+  // 树形态分派：Netscape（dl>dt）优先；无 DT 而有 li>a 时走 ul/li（Pocket/Instapaper 导出形态）
+  const dlRoot = doc.querySelector('dl')
+  if (dlRoot) {
+    walkDl(dlRoot, [])
+    return { entries, skipped }
+  }
+  const ulWithLinks = [...doc.querySelectorAll('ul')].find((u) => u.querySelector('li > a, li ul'))
+  if (ulWithLinks) {
+    walkUl(ulWithLinks, [])
+    return { entries, skipped }
+  }
+  return { entries: [], skipped: 0 }
 }
 
 /** 虚拟来源：书签导入不属于任何订阅，权重取 T1.5 档（用户主动保存，置信高于普通信源） */

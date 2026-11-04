@@ -19,6 +19,8 @@ import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type Up
 import { buildReadableArchive, type ArchiveExtraFile } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { parseBookmarksHtml, importBookmarks } from '../engine/bookmarksImport'
+import { parseMarkdownFiles, importMarkdownNotes } from '../engine/markdownImport'
+import { importNoteAppData } from '../engine/thirdpartyImport'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
 import { rebuildMirror } from '../db/storage/mirror'
 import { loadNotifyConfig, saveNotifyConfig, type NotifyConfig } from '../engine/notify'
@@ -239,7 +241,7 @@ export function Settings() {
     try {
       const r = parseBookmarksHtml(await file.text())
       if (r.entries.length === 0) {
-        setImportMsg('没解析出书签——请选择浏览器「导出书签」得到的 HTML 文件（Chrome/Edge 在书签管理器菜单里导出，Firefox 在书签库的导入/导出里）')
+        setImportMsg('没解析出书签——请选择浏览器「导出书签」或 Raindrop / Pocket / Instapaper 导出的 HTML 文件')
         return
       }
       const r2 = await importBookmarks(r.entries, useCollect.getState().config)
@@ -251,6 +253,52 @@ export function Settings() {
       )
     } catch (e) {
       setImportMsg(`书签导入失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
+  // Markdown 文件夹宽容导入（R1 批）：Obsidian / Logseq / 思源导出或任意 md 库 → 速记
+  const doImportMarkdownFolder = async (files: FileList) => {
+    if (importBusy) return
+    setImportBusy(true)
+    try {
+      const mds: { path: string; text: string }[] = []
+      for (const f of Array.from(files)) {
+        if (!f.name.endsWith('.md')) continue
+        mds.push({ path: (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name, text: await f.text() })
+      }
+      if (mds.length === 0) {
+        setImportMsg('没找到 .md 文件——请选择 Markdown 文件夹（Obsidian / Logseq / 思源导出的文件夹或任意 md 库）')
+        return
+      }
+      // 首段（用户选中的文件夹名）不进标签：只保留其下的层级
+      const rootLabel = mds[0]!.path.split(/[\/]/)[0] ?? ''
+      const r = await importMarkdownNotes(parseMarkdownFiles(mds, rootLabel).drafts)
+      await useNotes.getState().load()
+      setImportMsg(
+        `Markdown 导入完成：新进 ${r.imported} 条速记，重复 ${r.duplicates} 条（按内容去重），跳过 ${r.skipped} 个非 md/空文件。文件夹已转为标签`,
+      )
+    } catch (e) {
+      setImportMsg(`Markdown 导入失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
+  // 笔记应用数据导入（R1 批）：flomo HTML / Notion 导出 zip / Evernote·印象笔记 enex，按扩展名分发
+  const doImportNoteApp = async (file: File) => {
+    if (importBusy) return
+    setImportBusy(true)
+    try {
+      const r = await importNoteAppData(file)
+      await useNotes.getState().load()
+      setImportMsg(
+        `导入完成（来源：${r.source}）：新进 ${r.imported} 条速记，重复 ${r.duplicates} 条（按内容去重），跳过 ${r.skipped} 个空条目` +
+        (r.nonNoteFiles > 0 ? `；另有 ${r.nonNoteFiles} 个非笔记文件（CSV 数据库页、图片等）未带入` : ''),
+      )
+    } catch (e) {
+      setImportMsg(`导入失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setImportBusy(false)
     }
@@ -479,9 +527,9 @@ export function Settings() {
             </span>
           </div>
           <div className="set-row">
-            <label>浏览器书签</label>
-            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择 Chrome / Edge / Firefox「导出书签」得到的 HTML 文件；按网址去重，可重复导入，文件夹会转为标签">
-              导入浏览器书签
+            <label>书签 / 稍后读</label>
+            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择浏览器「导出书签」或 Raindrop / Pocket / Instapaper 导出的 HTML 文件；按网址去重，可重复导入，文件夹会转为标签">
+              导入书签 / 稍后读
               <input
                 type="file"
                 accept=".html,.htm,text/html"
@@ -494,7 +542,46 @@ export function Settings() {
               />
             </label>
             <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              把浏览器里存的文章链接带进条目库，历史数据搬家第一步
+              把浏览器书签与稍后读（Raindrop / Pocket / Instapaper）带进条目库，历史数据搬家第一步
+            </span>
+          </div>
+          <div className="set-row">
+            <label>Markdown 文件夹</label>
+            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择 Obsidian / Logseq / 思源导出的文件夹或任意 md 库；宽容导入为速记（无需特定格式），按内容去重，文件夹转为标签">
+              导入 Markdown 文件夹
+              <input
+                type="file"
+                multiple
+                accept=".md,text/markdown"
+                {...({ webkitdirectory: '' } as Record<string, string>)}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files?.length) void doImportMarkdownFolder(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              Obsidian / Logseq / 思源等任意 Markdown 库搬为速记，原样保留正文
+            </span>
+          </div>
+          <div className="set-row">
+            <label>笔记应用数据</label>
+            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="flomo：导出的 HTML；Notion：导出的 zip（Markdown & CSV）；Evernote / 印象笔记：导出的 .enex。按内容去重，导入为速记">
+              导入笔记应用数据
+              <input
+                type="file"
+                accept=".zip,.html,.htm,.enex"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void doImportNoteApp(f)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              flomo（HTML）/ Notion（zip）/ Evernote·印象笔记（.enex）
             </span>
           </div>
           {storage?.supported && (

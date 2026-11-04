@@ -126,7 +126,12 @@ export const FAQ: FaqEntry[] = [
   },
   {
     q: '浏览器书签怎么搬进来？',
-    a: '在 Chrome/Edge 的书签管理器（Firefox 在书签库）里「导出书签」得到 HTML 文件，然后到 设置 → 数据 → 「导入浏览器书签」选中它。按网址去重、可重复导入，文件夹会转成标签，链接进条目库参与检索与投票。',
+    a: '在 Chrome/Edge 的书签管理器（Firefox 在书签库）里「导出书签」得到 HTML 文件，然后到 设置 → 数据 → 「导入书签 / 稍后读」选中它。Raindrop / Pocket / Instapaper 导出的 HTML 也是同一格式。按网址去重、可重复导入，文件夹会转成标签，链接进条目库参与检索与投票。',
+    link: { label: '去数据设置', to: '/settings' },
+  },
+  {
+    q: '其他笔记应用（Obsidian / flomo / Notion / 印象笔记）的数据怎么搬？',
+    a: '都在 设置 → 数据：① Obsidian / Logseq / 思源——选导出的文件夹（或任意 md 库）走「导入 Markdown 文件夹」，宽容导入为速记、按内容去重；② flomo——账号设置里导出 HTML，走「导入笔记应用数据」；③ Notion——导出 zip（Markdown & CSV）；④ Evernote / 印象笔记——导出 .enex。后三者也都进速记、按内容去重。语雀 / 有道云等导出受限的应用，先导出为 Markdown 再走①。',
     link: { label: '去数据设置', to: '/settings' },
   },
   {
