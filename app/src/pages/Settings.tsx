@@ -18,6 +18,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
 import { buildReadableArchive } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
+import { parseBookmarksHtml, importBookmarks } from '../engine/bookmarksImport'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
 import { rebuildMirror } from '../db/storage/mirror'
 import { loadNotifyConfig, saveNotifyConfig, type NotifyConfig } from '../engine/notify'
@@ -231,6 +232,30 @@ export function Settings() {
   }
 
   // 可读档案（0.3d）：zip 导出走带走场景，回导收解压后的 .md 文件/文件夹
+  // 浏览器书签导入（R1 批）：Netscape HTML → 条目库，按网址去重、文件夹转标签
+  const doImportBookmarks = async (file: File) => {
+    if (importBusy) return
+    setImportBusy(true)
+    try {
+      const r = parseBookmarksHtml(await file.text())
+      if (r.entries.length === 0) {
+        setImportMsg('没解析出书签——请选择浏览器「导出书签」得到的 HTML 文件（Chrome/Edge 在书签管理器菜单里导出，Firefox 在书签库的导入/导出里）')
+        return
+      }
+      const r2 = await importBookmarks(r.entries, useCollect.getState().config)
+      await useCollect.getState().load()
+      setImportMsg(
+        `书签导入完成：新进 ${r2.imported} 条，跳过 ${r2.skipped} 条（库内已有同址或批内重复）` +
+        (r.skipped > 0 ? `；另有 ${r.skipped} 条非网页链接（浏览器内部页等）未带入` : '') +
+        '。条目可在条目库与检索里看到，文件夹已转为标签',
+      )
+    } catch (e) {
+      setImportMsg(`书签导入失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
   const doExportArchive = async () => {
     const b = await buildBackupBundle()
     const e = b.entities
@@ -437,6 +462,25 @@ export function Settings() {
             </label>
             <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               人类可读的带走格式；恢复用上方的全量导出
+            </span>
+          </div>
+          <div className="set-row">
+            <label>浏览器书签</label>
+            <label className="btn-ghost" style={{ cursor: 'pointer', flex: 'none', width: 'auto' }} title="选择 Chrome / Edge / Firefox「导出书签」得到的 HTML 文件；按网址去重，可重复导入，文件夹会转为标签">
+              导入浏览器书签
+              <input
+                type="file"
+                accept=".html,.htm,text/html"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void doImportBookmarks(f)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              把浏览器里存的文章链接带进条目库，历史数据搬家第一步
             </span>
           </div>
           {storage?.supported && (

@@ -99,13 +99,17 @@ export const useCollect = create<CollectState>((set, get) => ({
   load: async () => {
     // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默
     track(maintenance(), '采集例行清理 maintenance')
-    // 正文回填：每次打开跑一次（内部有单次闸），缺正文的旧条目按队列上限渐进补齐
-    track(
-      backfillContentOnce().catch((e: unknown) => {
-        throw new Error(`正文回填失败：${e instanceof Error ? e.message : String(e)}`)
-      }),
-      '正文回填 backfillContentOnce',
-    )
+    // 正文回填：每次打开跑一次（内部有单次闸），缺正文的旧条目按队列上限渐进补齐。
+    // 测试环境不进队列（与网关自启的 VITEST 守卫同纪律）：集成测试挂载 App 时，
+    // 后台串行抓取的真实 800ms 间隔会横跨多个用例持续搅动，拖垮后续渲染断言
+    if (import.meta.env.MODE !== 'test') {
+      track(
+        backfillContentOnce().catch((e: unknown) => {
+          throw new Error(`正文回填失败：${e instanceof Error ? e.message : String(e)}`)
+        }),
+        '正文回填 backfillContentOnce',
+      )
+    }
     // 正文队列写回 → 单条刷新（阅读视图开着时即时看到全文）
     onContentUpdate((id) => void get().reloadItem(id))
     const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(60), itemsPerSource7d()])
@@ -156,12 +160,14 @@ export const useCollect = create<CollectState>((set, get) => ({
       const [allSources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
       set({ sources: allSources, items, items7d, fetch: { running: false, summary, lastRunAt: new Date().toISOString(), error: null } })
       set(await reloadDigest(get()))
-      // 新条目进正文队列（串行限速后台跑；失败留空不重试，阅读视图可手动重抓）
-      enqueueContent(summary.newContentIds)
-      // 正文回填不再纯无声（2026-11-04 用户反馈）：本轮有可抓正文的新文章时给一句提示，
-      // 让用户知道"阅读全文"会陆续亮起来；阅读视图打开即抓，不会扑空
-      if (summary.newContentIds.length > 0) {
-        toast('info', `新入库 ${summary.newContentIds.length} 篇，正文正在后台陆续抓取`)
+      // 新条目进正文队列（串行限速后台跑；失败留空不重试，阅读视图可手动重抓）。测试环境不进队列
+      if (import.meta.env.MODE !== 'test') {
+        enqueueContent(summary.newContentIds)
+        // 正文回填不再纯无声（2026-11-04 用户反馈）：本轮有可抓正文的新文章时给一句提示，
+        // 让用户知道"阅读全文"会陆续亮起来；阅读视图打开即抓，不会扑空
+        if (summary.newContentIds.length > 0) {
+          toast('info', `新入库 ${summary.newContentIds.length} 篇，正文正在后台陆续抓取`)
+        }
       }
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
