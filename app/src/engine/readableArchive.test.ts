@@ -99,6 +99,19 @@ describe('可读档案 roundtrip', () => {
     expect(files.some((f) => f.path.startsWith('README'))).toBe(true)
     expect(() => parseArchiveFiles([{ path: '速记/坏.md', text: '没有元数据块的内容' }])).toThrow('缺少元数据块')
   })
+
+  it('附件字节随 extras 进「附件/」目录（桌面版导出收集）', async () => {
+    const bytes = await buildReadableArchive(sample, [
+      { path: 'att_x1.png', bytes: new Uint8Array([137, 80, 78, 71]) },
+    ])
+    const zip = await JSZip.loadAsync(bytes)
+    const entry = zip.file('附件/att_x1.png')
+    expect(entry).toBeTruthy()
+    expect(await entry!.async('uint8array')).toEqual(new Uint8Array([137, 80, 78, 71]))
+    // 不带 extras 时无附件目录
+    const plain = await JSZip.loadAsync(await buildReadableArchive(sample))
+    expect(plain.file('附件/att_x1.png')).toBeNull()
+  })
 })
 
 describe('sanitizeArchiveEntity（读取防御）', () => {

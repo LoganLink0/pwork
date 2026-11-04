@@ -25,6 +25,12 @@ export interface ArchiveInput {
   items: Item[]
 }
 
+/** 随档案带走的其他文件（速记附件字节，桌面版导出时收集；归入 zip 的「附件/」目录） */
+export interface ArchiveExtraFile {
+  path: string
+  bytes: Uint8Array
+}
+
 /** 文件名安全化：路径/保留字符与空白折成连字符，截 40 字 */
 function safeName(s: string): string {
   const cleaned = s.replace(/[\\/:*?"<>|#]+/g, '-').replace(/\s+/g, ' ').trim()
@@ -105,8 +111,11 @@ export function recordMarkdown(table: string, raw: unknown): { file: string; con
   }
 }
 
-/** 导出为 zip（Uint8Array，调用方负责落盘/下载） */
-export async function buildReadableArchive(data: ArchiveInput): Promise<Uint8Array> {
+/** 导出为 zip（Uint8Array，调用方负责落盘/下载）；extras 为速记附件字节（桌面版收集） */
+export async function buildReadableArchive(
+  data: ArchiveInput,
+  extras: ArchiveExtraFile[] = [],
+): Promise<Uint8Array> {
   const zip = new JSZip()
   zip.file('README.md', [
     '# PWORK 可读档案', '',
@@ -114,12 +123,16 @@ export async function buildReadableArchive(data: ArchiveInput): Promise<Uint8Arr
     '每个文件 = 一条数据：头部元数据块（frontmatter）保存全部字段，正文供人阅读。', '',
     '导回方法：设置 → 数据 → 导入可读档案，选择本压缩包即可；相同内容按修改时间新者为准。',
     '本档案覆盖速记/任务/目标/洞察/复盘/行动项/信源/条目；采集偏好与外部数据块在「全量导出」的 JSON 备份里。',
-  ].join('\n'))
+    extras.length > 0 ? '「附件/」目录是速记的图片附件原文件（字节不进数据库，随本包带走）。' : '',
+  ].filter(Boolean).join('\n'))
   for (const [table, rows] of Object.entries(data)) {
     for (const row of rows) {
       const md = recordMarkdown(table, row)
       if (md) zip.file(md.file, md.content)
     }
+  }
+  for (const f of extras) {
+    zip.file(`附件/${f.path}`, f.bytes)
   }
   return zip.generateAsync({ type: 'uint8array' })
 }

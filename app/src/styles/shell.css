@@ -2659,3 +2659,82 @@ html[data-wheel] body {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+/* ---------- 速记附件（R2 批，桌面粘贴即存）：chips 行 + 阅读态画廊 ---------- */
+.att-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-5) var(--sp-2);
+}
+.qn-modal .att-row {
+  padding: 0 0 var(--sp-2);
+}
+.att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  background: var(--surface-2, rgb(0 0 0 / 4%));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 6px 3px 10px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.att-chip .att-x {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.att-chip .att-x:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.att-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-5) var(--sp-4);
+}
+.att-thumb {
+  margin: 0;
+  max-width: min(280px, 100%);
+}
+.att-thumb img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+}
+.att-thumb .att-miss {
+  width: 120px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius, 8px);
+}
+.att-thumb figcaption {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+.n-att {
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}

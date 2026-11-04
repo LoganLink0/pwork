@@ -182,6 +182,17 @@ export interface TaskItem {
   schemaVersion: number
 }
 
+/** 速记附件元数据（R2 批，桌面先行）：字节存桌面版 attachments 目录，记录只带元数据。
+ *  file = attachments 目录内的文件名（att_ 前缀白名单），readableArchive 回导与备份均不带字节。 */
+export interface NoteAttachment {
+  id: string
+  /** 展示名（原始文件名或「截图」） */
+  name: string
+  mime: string
+  size: number
+  file: string
+}
+
 /** 速记 —— 输入模块拥有（PRD §6.2） */
 export interface Note {
   id: string
@@ -193,6 +204,8 @@ export interface Note {
   links: NoteLinks
   /** quick = 全局速记浮层；manual = 页面内新建 */
   source: 'quick' | 'manual'
+  /** 图片附件（桌面版粘贴即存；字段只增不删，读取侧 normalize 补默认） */
+  attachments?: NoteAttachment[]
   createdAt: string
   updatedAt: string
   /** 软删除标记（铁律 3）；null = 未删除 */

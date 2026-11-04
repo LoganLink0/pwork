@@ -1,0 +1,1 @@
+import{Ct as e,vn as t}from"./index-CMz0QL7s.js";/* empty css           */var n=t();function r({delta:t}){let{mark:r,name:i}=e[t];return(0,n.jsx)(`span`,{className:`delta delta--${t} tnum`,title:i,"aria-label":i,children:r})}export{r as t};

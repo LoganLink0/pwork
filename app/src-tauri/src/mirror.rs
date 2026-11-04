@@ -29,12 +29,14 @@ fn resolve_dir(app: &AppHandle, dir: &str) -> Result<PathBuf, String> {
   Ok(if dir == "根目录" { root } else { root.join(dir) })
 }
 
-/// 文件名安全化：拒绝空名、路径分隔符与 ..（防目录穿越）
+/// 文件名安全化：拒绝空名、路径分隔符与点开头（防目录穿越）。
+/// 注意 `..` 只在作为独立路径段时才有穿越意义——分隔符已单独拒绝，文件名内部的
+/// 省略号（如标题截断产生的「主权...」）是合法内容，不能一刀切（2026-11-04 真实条目
+/// 镜像投影连败 4 次的根因）。
 fn safe_file_name(name: &str) -> Result<String, String> {
   if name.is_empty()
     || name.contains('/')
     || name.contains('\\')
-    || name.contains("..")
     || name.starts_with('.')
   {
     return Err(format!("非法的镜像文件名：{}", name));
@@ -95,4 +97,26 @@ pub fn mirror_remove_dir(app: AppHandle, dir: String) -> Result<(), String> {
     std::fs::remove_dir_all(&dir_path).map_err(|e| format!("清空镜像目录失败：{}", e))?;
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::safe_file_name;
+
+  #[test]
+  fn 合法名通过含省略号() {
+    // 真实条目标题截断产生的省略号是合法内容（2026-11-04 真实镜像投影连败的回归锁）
+    assert!(safe_file_name("2026-11-04-伊朗军方提出五项和平原则：主权...-l_jzfvr0.md").is_ok());
+    assert!(safe_file_name("速记-标题.md").is_ok());
+  }
+
+  #[test]
+  fn 穿越与点开头拒绝() {
+    assert!(safe_file_name("").is_err());
+    assert!(safe_file_name("../evil.md").is_err());
+    assert!(safe_file_name("a/b.md").is_err());
+    assert!(safe_file_name("a\\b.md").is_err());
+    assert!(safe_file_name(".hidden.md").is_err());
+    assert!(safe_file_name("..md").is_err());
+  }
 }

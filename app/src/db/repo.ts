@@ -4,7 +4,7 @@
  */
 import { db } from './schema'
 import { registerTombstones } from './tombstones'
-import type { ExportBundle, Note, NoteLinks } from '../types/models'
+import type { ExportBundle, Note, NoteAttachment, NoteLinks } from '../types/models'
 
 /** 生成本地唯一 ID（无需 uuid 依赖） */
 export function newId(prefix: string): string {
@@ -21,6 +21,10 @@ export function normalizeNote(raw: Note): Note {
     title: raw.title ?? '',
     body: raw.body ?? '',
     tags: Array.isArray(raw.tags) ? raw.tags : [],
+    // 附件元数据（R2 批）：数组形态防御 + 必备字段（id/file）齐全才保留
+    attachments: Array.isArray(raw.attachments)
+      ? raw.attachments.filter((a) => a && typeof a.id === 'string' && typeof a.file === 'string')
+      : [],
     links: {
       itemIds: raw.links?.itemIds ?? [],
       reviewIds: raw.links?.reviewIds ?? [],
@@ -41,6 +45,8 @@ export interface CreateNoteInput {
   source?: 'quick' | 'manual'
   /** 初始挂接（如条目卡"写速记"写入 links.itemIds） */
   links?: NoteLinks
+  /** 初始附件（桌面版粘贴即存；字节已在 attachments 目录，这里只带元数据） */
+  attachments?: NoteAttachment[]
 }
 
 /** 标题缺省取正文首行（截 30 字） */
@@ -56,6 +62,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
     title: input.title?.trim() || deriveTitle(input.body),
     body: input.body,
     tags: input.tags ?? [],
+    attachments: input.attachments ?? [],
     links: input.links ?? { itemIds: [], reviewIds: [], taskIds: [] },
     source: input.source ?? 'manual',
     createdAt: now,
@@ -106,7 +113,7 @@ export async function attachTaskToNote(noteId: string, taskId: string): Promise<
 
 export async function updateNoteFields(
   id: string,
-  patch: Partial<Pick<Note, 'body' | 'title' | 'tags' | 'links'>>,
+  patch: Partial<Pick<Note, 'body' | 'title' | 'tags' | 'links' | 'attachments'>>,
 ): Promise<void> {
   await db.transaction('rw', ['notes'], async () => {
     const raw = await db.notes.get(id)
@@ -120,6 +127,7 @@ export async function updateNoteFields(
       title: patch.title !== undefined ? patch.title.trim() || deriveTitle(body) : current.title,
       tags: patch.tags ?? current.tags,
       links: patch.links ?? current.links,
+      attachments: patch.attachments ?? current.attachments,
       updatedAt: new Date().toISOString(),
     })
   })

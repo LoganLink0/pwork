@@ -1,3 +1,4 @@
+mod attachments;
 mod db;
 mod gateway;
 mod mirror;
@@ -551,6 +552,9 @@ pub fn run() {
       mirror::mirror_remove_file,
       mirror::mirror_list_dir,
       mirror::mirror_remove_dir,
+      attachments::attachment_write,
+      attachments::attachment_read,
+      attachments::attachment_delete,
     ])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");

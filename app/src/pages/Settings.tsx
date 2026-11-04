@@ -16,7 +16,7 @@ import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir
 import { isDesktopApp } from '../engine/platform'
 import { invoke } from '@tauri-apps/api/core'
 import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
-import { buildReadableArchive } from '../engine/readableArchive'
+import { buildReadableArchive, type ArchiveExtraFile } from '../engine/readableArchive'
 import { parseArchiveFiles, type ArchiveMdFile } from '../engine/readableArchiveParse'
 import { parseBookmarksHtml, importBookmarks } from '../engine/bookmarksImport'
 import { queryStorageStatus, requestPersistence, humanBytes, type StorageStatus } from '../engine/storageHealth'
@@ -259,14 +259,28 @@ export function Settings() {
   const doExportArchive = async () => {
     const b = await buildBackupBundle()
     const e = b.entities
+    // 附件字节随档案带走（R2 桌面版）：单个附件读取失败不挡导出（元数据仍在 frontmatter）
+    const extras: ArchiveExtraFile[] = []
+    if (isDesktopApp()) {
+      for (const n of e.notes ?? []) {
+        for (const a of n.attachments ?? []) {
+          try {
+            const b64 = await invoke<string>('attachment_read', { name: a.file })
+            extras.push({ path: a.file, bytes: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)) })
+          } catch {
+            /* 孤儿元数据：文件已不在，档案里只有引用 */
+          }
+        }
+      }
+    }
     const bytes = await buildReadableArchive({
       notes: e.notes ?? [], tasks: e.tasks ?? [], goals: e.goals ?? [], insights: e.insights ?? [],
       reviews: e.reviews ?? [], actions: e.actions ?? [], sources: e.sources ?? [], items: e.items ?? [],
-    })
+    }, extras)
     const now = new Date()
     const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
     downloadFile(`pwork-archive-${stamp}.zip`, new Blob([bytes as BlobPart]), 'application/zip')
-    setImportMsg('可读档案已导出：zip 里每条数据一个 Markdown 文件，可直接阅读；导回时先解压再点「导入可读档案」选文件夹')
+    setImportMsg(`可读档案已导出${extras.length ? `（含 ${extras.length} 个图片附件）` : ''}：zip 里每条数据一个 Markdown 文件，可直接阅读；导回时先解压再点「导入可读档案」选文件夹`)
   }
 
   const doImportArchive = async (files: FileList) => {
@@ -386,7 +400,7 @@ export function Settings() {
         <div className="set-body">
           {(noteCount > 0 || sources.length > 0 || items.length > 0 || trashCount > 0) && (
             <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
-              <b>换电脑 / 换浏览器 / 换到桌面版时</b>：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。
+              <b>换电脑 / 换浏览器 / 换到桌面版时</b>：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。速记图片附件的字节不在 JSON 备份里（桌面版）——带附件走用「导出可读档案」的压缩包，或直接拷应用数据目录的 attachments 文件夹。
             </div>
           )}
           <div className="set-row">

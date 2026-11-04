@@ -26,6 +26,8 @@ tauri-build = { version = "2.7.2", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+# 附件读取以 base64 返回（前端拼 data: URL 预览）
+base64 = "0.22"
 log = "0.4"
 tauri = { version = "2.12.3", features = [] }
 tauri-plugin-log = "2"

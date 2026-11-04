@@ -26,8 +26,8 @@ interface NotesState {
   loaded: boolean
   load: () => Promise<void>
   create: (input: CreateNoteInput) => Promise<Note>
-  /** 增量更新正文/标题/标签；bumps updatedAt */
-  update: (id: string, patch: Partial<Pick<Note, 'body' | 'title' | 'tags'>>) => Promise<void>
+  /** 增量更新正文/标题/标签/附件元数据；bumps updatedAt */
+  update: (id: string, patch: Partial<Pick<Note, 'body' | 'title' | 'tags' | 'attachments'>>) => Promise<void>
   softDelete: (id: string) => Promise<void>
   restore: (id: string) => Promise<void>
   /** 彻底删除（仅回收站手动触发，先确认） */

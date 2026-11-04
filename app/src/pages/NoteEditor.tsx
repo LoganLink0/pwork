@@ -6,7 +6,17 @@ import { getNote, noteToMarkdown, downloadFile, attachTaskToNote } from '../db/r
 import { useTasks } from '../store/tasks'
 import { useNotes } from '../store/notes'
 import { fmtLocal } from '../engine/datetime'
-import type { Note } from '../types/models'
+import { toast } from '../engine/toast'
+import { recordError } from '../engine/errorLog'
+import {
+  MAX_ATTACHMENTS_PER_NOTE,
+  attachmentDataUrl,
+  deleteAttachmentFile,
+  imageFromPaste,
+  saveImageAttachment,
+} from '../engine/attachments'
+import { isDesktopApp } from '../engine/platform'
+import type { Note, NoteAttachment } from '../types/models'
 
 const SAVE_DEBOUNCE_MS = 600
 
@@ -35,11 +45,17 @@ export function NoteEditor() {
   const [taskBusy, setTaskBusy] = useState(false)
   const [mode, setMode] = useState<'edit' | 'read'>('edit')
   const taRef = useRef<HTMLTextAreaElement>(null)
+  // 附件粘贴（R2 桌面先行）：图片 Ctrl+V 即存盘挂到本条；busy 防连粘
+  const [attBusy, setAttBusy] = useState(false)
+  // 附件元数据以 store 为权威来源（update → reload 自动刷新，不经本地 note 状态——
+  // 新建后跳转会与加载 effect 抢时序，本地状态被旧快照回写，e2e 实抓）
+  const noteIdInStore = note?.id ?? ''
+  const storeAttachments = useNotes((s) => s.notes.find((n) => n.id === noteIdInStore)?.attachments)
 
   // noteRef 供卸载时的 flush 使用（Hook 全部先于早退 return —— 开发复盘 1.1）
   // hydrated 记录"从库读回的值"：只有当前值 ≠ 读回值才算用户改动（只打开不改字不写库、不改 updatedAt）
-  const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false, hydrated: '' })
-  stateRef.current = { ...stateRef.current, noteId: note?.id ?? '', title, body, tagsText }
+  const stateRef = useRef({ noteId: '', title, body, tagsText, dirty: false, hydrated: '', note: null as Note | null })
+  stateRef.current = { ...stateRef.current, noteId: note?.id ?? '', title, body, tagsText, note }
 
   useEffect(() => {
     if (isNew) {
@@ -55,6 +71,9 @@ export function NoteEditor() {
       stateRef.current.dirty = false
       return
     }
+    // 自己 navigate 过来的 id（粘贴附件时先建实体再跳转）：实体刚建、note 已在状态，
+    // 重取反而拿到写入前的旧快照把附件元数据冲掉（e2e 实抓的竞态），跳过
+    if (stateRef.current.noteId === id && stateRef.current.note) return
     let alive = true
     setLoading(true)
     setTaskCreated(false)
@@ -133,9 +152,15 @@ export function NoteEditor() {
     [mode, body],
   )
 
-  /** 新速记：内容非空时首次创建，随后 replace 到真实 id 路由 */
+  /** 新速记：内容非空时首次创建，随后 replace 到真实 id 路由。
+   *  note.id 兜底：路由切换会让壳层 ErrorBoundary 按 pathname 重挂组件（key 设计如此），
+   *  stateRef 归零而 note 已由加载 effect 从库取回——接着原实体写，不再另起新条。 */
   async function ensureCreated(): Promise<string | null> {
     if (stateRef.current.noteId) return stateRef.current.noteId
+    if (note?.id) {
+      stateRef.current.noteId = note.id
+      return note.id
+    }
     if (!title.trim() && !body.trim()) return null
     const created = await createNote({ title, body, tags: parseTags(tagsText), source: 'manual' })
     stateRef.current.noteId = created.id
@@ -145,6 +170,66 @@ export function NoteEditor() {
     setSavedAt(created.updatedAt)
     navigate(`/input/notes/${created.id}`, { replace: true })
     return created.id
+  }
+
+  /** 粘贴图片落库前的实体保障：正文/标题都空的新速记也允许只存图片（正文给占位首行） */
+  async function ensureCreatedForAttachment(): Promise<string> {
+    const existing = await ensureCreated()
+    if (existing) return existing
+    const created = await createNote({ title: '图片', body: '（图片）', tags: parseTags(tagsText), source: 'manual' })
+    stateRef.current.noteId = created.id
+    stateRef.current.dirty = false
+    stateRef.current.hydrated = JSON.stringify([created.title, created.body, tagsText])
+    setNote(created)
+    setBody(created.body)
+    setTitle(created.title)
+    setSavedAt(created.updatedAt)
+    navigate(`/input/notes/${created.id}`, { replace: true })
+    return created.id
+  }
+
+  /** 粘贴图片 → 存盘 + 挂到本条（上限拦截，失败提示且不丢图——图还在剪贴板）。
+   *  元数据一律以数据库读回为准：新速记粘贴会触发路由切换与加载 effect，本地乐观状态
+   *  会被旧快照回写冲掉（e2e 实抓），update 后重取才可靠。 */
+  const onPasteImage = async (e: React.ClipboardEvent) => {
+    if (!isDesktopApp()) return
+    const img = imageFromPaste(e)
+    if (!img) return // 文字粘贴走浏览器默认
+    e.preventDefault()
+    if ((storeAttachments?.length ?? 0) >= MAX_ATTACHMENTS_PER_NOTE) {
+      toast('error', `一条速记最多 ${MAX_ATTACHMENTS_PER_NOTE} 个附件`)
+      return
+    }
+    if (attBusy) return
+    setAttBusy(true)
+    try {
+      const noteId = await ensureCreatedForAttachment()
+      const meta = await saveImageAttachment(img.blob, img.name)
+      const fresh = await getNote(noteId)
+      const next: NoteAttachment[] = [...(fresh?.attachments ?? []), meta]
+      await updateNote(noteId, { attachments: next })
+      toast('ok', '图片已存为附件')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast('error', `图片存附件失败：${msg}`)
+      void recordError({ where: '速记附件粘贴', kind: 'app', message: msg }, { silent: true })
+    } finally {
+      setAttBusy(false)
+    }
+  }
+
+  /** 摘除附件：删文件 + 元数据移除（正文不留引用语法，v1 附件与正文分列呈现） */
+  const removeAttachment = async (att: NoteAttachment, id: string) => {
+    if (!id || !window.confirm(`摘除附件「${att.name}」？文件会从附件目录删除。`)) return
+    try {
+      await deleteAttachmentFile(att.file)
+    } catch (err) {
+      // 文件删除失败不拦元数据移除（孤儿文件可由用户手动清理）；如实留痕
+      void recordError({ where: '速记附件删除', kind: 'app', message: err instanceof Error ? err.message : String(err) }, { silent: true })
+    }
+    const fresh = await getNote(id)
+    const next = (fresh?.attachments ?? []).filter((a) => a.id !== att.id)
+    await updateNote(id, { attachments: next })
   }
 
   // 编辑新速记时也走防抖创建（输入停顿 600ms 且非空 → 落库）
@@ -172,6 +257,7 @@ export function NoteEditor() {
   const deleted = note?.deletedAt != null
   const charCount = body.replace(/\s/g, '').length
   const lineCount = body ? body.split('\n').length : 0
+  const attachments = storeAttachments ?? note?.attachments ?? []
 
   return (
     <div className="editor" data-testid="note-editor">
@@ -210,9 +296,10 @@ export function NoteEditor() {
           ref={taRef}
           className="e-body"
           value={body}
-          placeholder="想到什么写什么……（Markdown）"
+          placeholder={isDesktopApp() ? '想到什么写什么……（Markdown；截图可直接 Ctrl+V 存为附件）' : '想到什么写什么……（Markdown）'}
           onChange={(e) => setBody(e.target.value)}
           onBlur={() => void flush()}
+          onPaste={(e) => void onPasteImage(e)}
           aria-label="速记正文"
         />
       ) : (
@@ -222,6 +309,33 @@ export function NoteEditor() {
           ) : (
             <p className="coach-say" style={{ margin: 0 }}>（空）</p>
           )}
+        </div>
+      )}
+      {/* 附件行（编辑态）：chips 可摘除；阅读态走下方画廊。元数据以 store 为权威来源 */}
+      {mode === 'edit' && attachments.length > 0 && (
+        <div className="att-row" data-testid="att-row">
+          {attachments.map((a) => (
+            <span className="att-chip" key={a.id}>
+              📎 {a.name} · {Math.max(1, Math.round(a.size / 1024))} KB
+              <button
+                type="button"
+                className="att-x"
+                aria-label={`摘除附件 ${a.name}`}
+                title="摘除（文件从附件目录删除）"
+                onClick={() => void removeAttachment(a, noteIdInStore)}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* 附件画廊（阅读态）：缩略图直出（字节从 attachments 目录读，不进库） */}
+      {mode === 'read' && attachments.length > 0 && (
+        <div className="att-gallery" data-testid="att-gallery">
+          {attachments.map((a) => (
+            <AttachmentThumb key={a.id} att={a} />
+          ))}
         </div>
       )}
       <details className="fm">
@@ -319,7 +433,6 @@ export function NoteEditor() {
   function parseTags(text: string): string[] {
     return text.split(/[\s,，#]+/).map((t) => t.trim()).filter(Boolean)
   }
-
   /** 包裹选区（无选区时在光标处插入成对标记，光标落在中间）；作用于真实选区而非全文首尾 */
   function wrapSelection(before: string, after: string) {
     const ta = taRef.current
@@ -344,4 +457,26 @@ export function NoteEditor() {
       ta?.setSelectionRange(pos + prefix.length, pos + prefix.length)
     })
   }
+}
+
+/** 附件缩略图（阅读态画廊）：字节从 attachments 目录读（base64 → data: URL），失败显示占位 */
+function AttachmentThumb({ att }: { att: NoteAttachment }) {
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    void attachmentDataUrl(att)
+      .then((u) => {
+        if (alive) setSrc(u)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [att])
+  return (
+    <figure className="att-thumb">
+      {src ? <img src={src} alt={att.name} loading="lazy" /> : <div className="att-miss" aria-hidden>🖼</div>}
+      <figcaption>{att.name}</figcaption>
+    </figure>
+  )
 }

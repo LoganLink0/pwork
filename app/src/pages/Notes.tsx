@@ -111,7 +111,7 @@ export function Notes() {
                     className={`note-item${n.id === activeId ? ' on' : ''}`}
                   >
                     <div className="n-time">{relTime(n.updatedAt)}{n.source === 'quick' ? ' · 速记浮层' : ''}</div>
-                    <div className="n-title">{n.title || '（无标题）'}</div>
+                    <div className="n-title">{n.title || '（无标题）'}{n.attachments?.length ? <span className="n-att" title="含图片附件"> 📎{n.attachments.length}</span> : null}</div>
                     <div className="n-meta">
                       {n.tags.length ? n.tags.map((t) => `#${t}`).join(' ') : '无标签'}
                     </div>
@@ -153,7 +153,7 @@ export function Notes() {
                       className={`note-item${n.id === activeId ? ' on' : ''}`}
                     >
                       <div className="n-time">{relTime(n.updatedAt)}{n.source === 'quick' ? ' · 速记浮层' : ''}</div>
-                      <div className="n-title">{n.title || '（无标题）'}</div>
+                      <div className="n-title">{n.title || '（无标题）'}{n.attachments?.length ? <span className="n-att" title="含图片附件"> 📎{n.attachments.length}</span> : null}</div>
                       <div className="n-meta">
                         {n.tags.length ? n.tags.map((t) => `#${t}`).join(' ') : '无标签'}
                       </div>
