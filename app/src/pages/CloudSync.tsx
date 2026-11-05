@@ -292,8 +292,14 @@ export function CloudSyncCards({ active }: { active: boolean }) {
       </div>
 
       <div className="set-card">
-        <h2>设备同步</h2>
-        <div className="desc">手机 / 电脑数据一致（记录级增量）：每台设备都能读能写，打开应用自动「先拉后推」，只传各自变过的记录，相同记录按修改时间新者为准——没有「主从设备」之分</div>
+        <h2>
+          设备同步
+          <InfoTip
+            label="设备同步数据边界说明"
+            text={<>外发明示：开启后你的数据<b>记录级</b>经你自己的 Cloudflare D1 中转（含速记/任务/调研发现等）——它只是管道，删掉云端表只断同步不丢数据，每台设备本地各有全量；需上方已按 D1 直连配置。删除通过「软删除记录」传播（备份可找回）。</>}
+          />
+        </h2>
+        <div className="desc">手机 / 电脑数据一致（记录级增量）：每台设备都能读能写，打开应用自动「先拉后推」，只传各自变过的记录，相同记录按修改时间新者为准——各设备平权，没有谁是主设备</div>
         <div className="set-body">
           <div className="set-row">
             <label>同步开关</label>
