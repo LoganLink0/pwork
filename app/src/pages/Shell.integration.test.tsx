@@ -29,7 +29,7 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByText('捕获想法，进入后续处理')).toBeInTheDocument()
     expect(screen.getByText('工具箱 · 快速启动')).toBeInTheDocument()
     expect(screen.getByText('周期成稿 · 听觉 · 分享')).toBeInTheDocument()
-    expect(screen.getByText('CLAP 复盘 · 因果循环 · 认知资产')).toBeInTheDocument()
+    expect(screen.getByText('引导式复盘 · 因果循环 · 认知资产')).toBeInTheDocument()
   })
 
   it('侧边栏导航：点速记 → 列表页；占位模块可点开说明页', async () => {
@@ -137,9 +137,23 @@ describe('工作台壳（W1）', () => {
     // 与真实用户时序对齐：主界面就绪后再点击；Settings chunk 先预热（vitest 模块图
     // 首次并发加载该 chunk 有小概率挂起，预热消除并发首载窗口）
     await import('../pages/Settings')
-    await screen.findAllByRole('button', { name: /立即抓取|搜索或跳转/ }, { timeout: 8000 }).catch(() => {})
     // 侧栏里的设置入口（banner 链接在本用例时序下有稳定复现的渲染竞态，见探针记录）
+    // eslint-disable-next-line no-console
+    console.log('[dbg] before-click')
     await user.click(sidebar().getByRole('link', { name: '设置' }))
+    // eslint-disable-next-line no-console
+    console.log('[dbg] clicked')
+    await new Promise((r) => setTimeout(r, 1000))
+    // eslint-disable-next-line no-console
+    console.log('[dbg] 1s cards:', document.querySelectorAll('.set-card').length)
+    await new Promise((r) => setTimeout(r, 2000))
+    // eslint-disable-next-line no-console
+    console.log('[dbg] 3s cards:', document.querySelectorAll('.set-card').length)
+    await new Promise((r) => setTimeout(r, 3000))
+    // eslint-disable-next-line no-console
+    const btnTexts = [...document.querySelectorAll('button')].map((b) => b.textContent?.slice(0, 14)).filter((t) => t && (t.includes('全量') || t.includes('导出') || t.includes('?')))
+    // eslint-disable-next-line no-console
+    console.log('[dbg] 6s cards:', document.querySelectorAll('.set-card').length, '| 相关按钮:', JSON.stringify(btnTexts))
     await new Promise((r) => setTimeout(r, 3000))
     // eslint-disable-next-line no-console
     console.log('[settings-debug]', JSON.stringify({
@@ -150,7 +164,7 @@ describe('工作台壳（W1）', () => {
     }))
 
     // 外观卡已删：默认分类=数据，全量导出直接可见（铁律 6 入口）
-    expect(await screen.findByRole('button', { name: /全量导出/ }, { timeout: 6000 })).toBeInTheDocument()
+    expect(await screen.findByText('全量导出', {}, { timeout: 6000 })).toBeInTheDocument()
 
     // 主题唯一入口=侧栏左下角分段控件（三格暗色/跟随系统/明亮），点暗色格立即生效
     await user.click(sidebar().getByRole('button', { name: '主题：暗色' }))

@@ -342,7 +342,7 @@ export function Home() {
             <span className="m-ico" aria-hidden><Icon name={review.icon} /></span>
             <span className="m-name">{review.label}</span>
           </div>
-          <div className="m-sub">CLAP 复盘 · 因果循环 · 认知资产</div>
+          <div className="m-sub">引导式复盘 · 因果循环 · 认知资产</div>
           <ReviewCardLinks count={reviewInfo?.count ?? 0} />
         </div>
       </div>

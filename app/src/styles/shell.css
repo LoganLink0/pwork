@@ -2821,3 +2821,54 @@ html[data-wheel] body {
   font-size: var(--fs-xs);
   color: var(--accent);
 }
+
+/* ---------- 圆圈问号说明符（R 批：卡片标题/字段标签右上角，点击展开说明气泡） ---------- */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.info-tip-btn {
+  width: 17px;
+  height: 17px;
+  border: 1.4px solid var(--ink-faint);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.info-tip-btn:hover,
+.info-tip-btn[aria-expanded='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.info-tip-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -8px;
+  z-index: 60;
+  width: 340px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-3) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  color: var(--ink-soft);
+  text-align: left;
+  white-space: normal;
+}
+.info-tip-pop a {
+  color: var(--accent);
+}

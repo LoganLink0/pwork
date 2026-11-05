@@ -9,6 +9,7 @@ import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
 import { useUi } from '../store/ui'
 import { DEFAULT_PREFS, FONT_FAMILY_OPTIONS, FONT_SCALE_OPTIONS, READING_WIDTH_OPTIONS } from '../engine/prefs'
+import { InfoTip } from '../components/shell/InfoTip'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, AI_VENDORS, PROVIDER_PRESETS, type CoachConfig, type CoachProvider } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
@@ -526,16 +527,22 @@ export function Settings() {
       </div>
 
       <div className="set-card" data-tab="data" style={{ display: tab === 'data' ? undefined : 'none' }}>
-        <h2>数据</h2>
+        <h2>
+          数据
+          <InfoTip
+            label="数据搬家说明"
+            text={<>换电脑 / 换浏览器 / 换到桌面版时：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。速记图片附件的字节不在 JSON 备份里（桌面版）——带附件走用「导出可读档案」的压缩包，或直接拷应用数据目录的 attachments 文件夹。</>}
+          />
+        </h2>
         <div className="desc">全量导出、导入、自动备份与备份位置——换机迁移也从这里走</div>
         <div className="set-body">
-          {(noteCount > 0 || sources.length > 0 || items.length > 0 || trashCount > 0) && (
-            <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
-              <b>换电脑 / 换浏览器 / 换到桌面版时</b>：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。速记图片附件的字节不在 JSON 备份里（桌面版）——带附件走用「导出可读档案」的压缩包，或直接拷应用数据目录的 attachments 文件夹。
-            </div>
-          )}
+
           <div className="set-row">
             <label>全量备份</label>
+            <InfoTip
+              label="全量导出内容范围"
+              text={<>导出内容：速记、信源、条目、采集偏好、任务、目标、复盘（含行动项与洞察）、外部数据块。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。</>}
+            />
             <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void doExport()}>
               全量导出
             </button>
@@ -756,9 +763,7 @@ export function Settings() {
               )}
             </div>
           )}
-          <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            导出内容：速记、信源、条目、采集偏好、任务、目标、复盘（含行动项与洞察）、外部数据块、简历辅导数据。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。
-          </div>
+
           {importMsg && (
             <div className="run-banner" style={{ marginTop: 'var(--sp-3)' }} data-testid="import-msg" role="status">
               {importMsg}
@@ -937,7 +942,13 @@ export function Settings() {
 
 
       <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
-        <h2>AI · BYOK</h2>
+<h2>
+          AI · BYOK
+          <InfoTip
+            label="AI 数据边界说明"
+            text={<>外发说明：使用 AI 时，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，内置规则兜底，产品完整可用。</>}
+          />
+        </h2>
         <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / AI 写大纲 / 采集筛选）；不配或 AI 不可用时自动用内置规则，功能完整</div>
         <div className="set-body">
           <div className="set-row">
@@ -1217,7 +1228,6 @@ export function Settings() {
             </>
           )}
           <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-            <b>外发明示</b>：使用 AI 时，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，内置规则兜底，产品完整可用。
           </div>
         </div>
       </div>
@@ -1344,7 +1354,7 @@ export function Settings() {
           )}
           <div className="set-row">
             <label>数据存放</label>
-            <span className="val">全部数据存本机（浏览器 IndexedDB，桌面版在应用数据目录）——换机迁移用「数据」页的全量导出与导入</span>
+            <span className="val">全部数据存本机——桌面版在应用数据目录（SQLite 主库 pwork.db + 附件与镜像文件夹），网页版在浏览器 IndexedDB——换机迁移用「数据」页的全量导出与导入</span>
           </div>
           <div className="set-row">
             <label>AI 数据边界</label>

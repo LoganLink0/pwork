@@ -6,6 +6,7 @@ import { fmtLocal } from '../engine/datetime'
 import { recordError } from '../engine/errorLog'
 import { useNotes } from '../store/notes'
 import { useCollect } from '../store/collect'
+import { InfoTip } from '../components/shell/InfoTip'
 import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
 
@@ -192,6 +193,10 @@ export function CloudSyncCards({ active }: { active: boolean }) {
               </div>
               <div className="set-row">
                 <label>API Token</label>
+            <InfoTip
+              label="创建 API Token 教程"
+              text={<>创建 API Token（约 2 分钟）：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌；② 权限选「账户 → D1 → 编辑」，账户资源选你的账户；③ 继续 → 创建，复制只显示一次的 Token 粘到上面。</>}
+            />
                 <input
                   className="input"
                   type="password"
@@ -248,8 +253,7 @@ export function CloudSyncCards({ active }: { active: boolean }) {
           )}
           {cloud.mode === 'd1' && (
             <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-              <b>创建 API Token（约 2 分钟）</b>：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌；② 权限选「账户 → D1 → 编辑」，账户资源选你的账户；③ 继续 → 创建，复制只显示一次的 Token 粘到上面。
-            </div>
+              </div>
           )}
         </div>
       </div>
@@ -324,7 +328,6 @@ export function CloudSyncCards({ active }: { active: boolean }) {
             </span>
           </div>
           <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
-            <b>外发明示</b>：开启后你的数据<b>记录级</b>经你自己的 Cloudflare D1 中转（含速记/任务/调研发现等）——它只是管道，删掉云端表只断同步不丢数据，每台设备本地各有全量；需要上方已按 D1 直连配置。删除通过「软删除记录」传播（备份可找回）。
           </div>
         </div>
       </div>
