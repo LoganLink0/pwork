@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { gatherReportData, type ReportData, type ReportMode } from '../engine/reportData'
 import { reportToHtml, reportToMarkdown, reportTitle } from '../engine/reportRender'
 import { downloadFile } from '../db/repo'
+import { cornerNotify } from '../engine/cornerNotify'
 import { saveSnapshot, latestSnapshotBefore, deltaLabel, listSnapshots } from '../db/snapshots'
 import { exportReportPptx } from '../engine/pptFile'
 import { buildReportSlides } from '../engine/pptExport'
@@ -73,6 +74,7 @@ export function ReportGenerator() {
       )
       setAiSummary(text.trim())
       setAiState('idle')
+      cornerNotify({ title: 'AI 总结已生成', desc: '已附在报告末尾', to: '/output/report', actionLabel: '去报告' })
     } catch (e) {
       setAiError(e instanceof Error ? e.message : String(e))
       setAiState('error')
@@ -91,6 +93,7 @@ export function ReportGenerator() {
     try {
       const name = await exportReportPptx(data, snapshots)
       setPptMsg(`已生成 ${name}`)
+      cornerNotify({ title: 'PPT 已生成', desc: name, to: '/output/write', actionLabel: '去查看' })
     } catch (e) {
       setPptMsg(`PPT 生成失败：${e instanceof Error ? e.message : String(e)}`)
     } finally {

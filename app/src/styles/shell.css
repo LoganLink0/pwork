@@ -57,9 +57,11 @@ img.mark {
 .mark-workspace { --mark: var(--accent); }
 
 .nav-group {
-  font-size: var(--fs-xs);
-  color: var(--ink-faint);
-  letter-spacing: 0.12em;
+  /* 分类标题（输入/工作区等）与子模块项拉开层级：字号提升 + 保持弱化色 */
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.05em;
   padding: var(--sp-4) var(--sp-3) var(--sp-1);
 }
 
@@ -1027,6 +1029,10 @@ a.mcard .m-link:hover {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+}
+/* 偏好中心/数据/帮助共用本布局：标题下间距统一由 gap 提供，页头自带 margin 会造成两页不一致 */
+.settings-page .page-head {
+  margin-bottom: 0;
 }
 .settings-layout {
   display: flex;
@@ -2771,4 +2777,47 @@ html[data-wheel] body {
   color: var(--ink-faint);
   font-size: var(--fs-xs);
   font-weight: 400;
+}
+
+/* ---------- 右下角完成通知（R 批：长任务回执，点击跳回来源页） ---------- */
+.corner-toasts {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.corner-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 280px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--ok, var(--accent));
+  border-left-width: 3px;
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+}
+.corner-card .corner-title {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.corner-card .corner-title span {
+  color: var(--ok, var(--accent));
+  margin-right: 4px;
+}
+.corner-card .corner-desc {
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+.corner-card .corner-action {
+  font-size: var(--fs-xs);
+  color: var(--accent);
 }

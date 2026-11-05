@@ -6,6 +6,8 @@ import { useUi } from '../store/ui'
 import { useNotes, todayNoteCount } from '../store/notes'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
+import { useGoals } from '../store/goals'
+import { byRecentUse, loadQuickSites, type QuickSite } from '../engine/quickLaunch'
 import { greetWord, relTime, weekdayLocal } from '../engine/datetime'
 import { gatherSignals, type Signal } from '../engine/signals'
 import { db } from '../db/schema'
@@ -56,6 +58,12 @@ export function Home() {
   const config = useCollect((s) => s.config)
   const runFetchAll = useCollect((s) => s.runFetchAll)
   const taskStats = useTasks((s) => s.stats)
+  const goals = useGoals((st) => st.goals)
+  const activeGoals = goals.filter((g) => g.status === 'active')
+  const nearestDue = activeGoals
+    .filter((g) => g.due)
+    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? ''))[0]
+  const [quickSites, setQuickSites] = useState<QuickSite[]>([])
   const [reviewInfo, setReviewInfo] = useState<{ count: number; lastAt: string | null } | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
   const [backupWarn, setBackupWarn] = useState(false)
@@ -75,6 +83,11 @@ export function Home() {
       setReviewInfo({ count, lastAt: last[0]?.createdAt ?? null })
       setSignals(sig)
       setBackupWarn(shouldRemindBackup(localStorage.getItem('pwork-last-backup'), getSnoozeDate(), now))
+      void (async () => {
+        const { useGoals: g } = await import('../store/goals')
+        await g.getState().load()
+      })()
+      setQuickSites(byRecentUse(loadQuickSites()).slice(0, 6))
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 装配一次即可
   }, [])
@@ -201,6 +214,80 @@ export function Home() {
         )}
       </div>
 
+      <div className="sec-title">目标</div>
+      <div className="tiles" style={{ marginBottom: 'var(--sp-6)' }}>
+        {activeGoals.length > 0 ? (
+          <Link to="/goals" className="tile mark-process">
+            <div className="t-label">目标</div>
+            <div className="t-num">
+              {nearestDue?.due
+                ? `最近截止 ${nearestDue.due.slice(5).replace('-', '/')}`
+                : `${activeGoals.length} 个进行中`}
+            </div>
+            <div className="t-sub">
+              {nearestDue?.progressNote
+                ? nearestDue.progressNote.slice(0, 30)
+                : `${activeGoals.length} 个进行中 · 保持节奏`}
+            </div>
+            <span className="t-link">看目标 →</span>
+          </Link>
+        ) : (
+          <Link to="/goals" className="tile quiet mark-process">
+            <div className="t-label">目标</div>
+            <div className="t-num weak">还没有目标</div>
+            <div className="t-sub">定一个阶段目标，复盘时对照进度</div>
+            <span className="t-link">去立一个 →</span>
+          </Link>
+        )}
+      </div>
+
+      {/* 常用工具（R 批用户需求：PWORK 高频功能 + 常用站点直达，未来并入系统桌面应用） */}
+      {quickSites.length > 0 && (
+        <>
+          <div className="sec-title">常用工具</div>
+          <div className="module-grid">
+            <div className="mcard mark-workspace">
+              <div className="m-head">
+                <span className="m-ico" aria-hidden><Icon name="zap" /></span>
+                <span className="m-name">PWORK 高频</span>
+              </div>
+              <div className="m-sub">最常用的功能直达</div>
+              <div className="m-links">
+                <button type="button" className="m-link" style={{ cursor: 'pointer' }} onClick={openQuick}>
+                  速记浮层<span className="cnt">N 键唤起</span>
+                </button>
+                <Link className="m-link" to="/input/digest">
+                  信息日报<span className="cnt">今日 {digest.length} 条</span>
+                </Link>
+                <Link className="m-link" to="/output/research">
+                  调研分析<span className="cnt">出稿 →</span>
+                </Link>
+                <Link className="m-link" to="/output/report">
+                  周报导出<span className="cnt">成稿 →</span>
+                </Link>
+              </div>
+            </div>
+            <div className="mcard mark-process">
+              <div className="m-head">
+                <span className="m-ico" aria-hidden><Icon name="play" /></span>
+                <span className="m-name">快速启动</span>
+              </div>
+              <div className="m-sub">常用站点（处理页可增删，按最近使用排序）</div>
+              <div className="m-links">
+                {quickSites.map((site) => (
+                  <a key={site.id} className="m-link" href={site.url} target="_blank" rel="noreferrer noopener">
+                    {site.name}<span className="cnt">打开 →</span>
+                  </a>
+                ))}
+                <Link className="m-link" to="/process">
+                  管理清单<span className="cnt">处理页 →</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="sec-title">模块</div>
       <div className="module-grid">
         <div className={`mcard ${input.mark}`}>
@@ -224,9 +311,6 @@ export function Home() {
             </Link>
             <Link className="m-link" to="/process">
               快速启动<span className="cnt">常用站点直达 →</span>
-            </Link>
-            <Link className="m-link" to="/cases">
-              简历辅导专题<span className="cnt">独立应用 →</span>
             </Link>
           </div>
         </div>

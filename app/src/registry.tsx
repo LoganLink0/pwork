@@ -84,8 +84,7 @@ export const PAGE_REGISTRY: PageReg[] = [
     loader: () => import('./pages/Items').then((m) => ({ default: m.Items })) },
   { path: '/input/blocks', label: '外部数据', mark: 'mark-input', meta: ['外部数据', '输出 · 周报数据源'], nav: 'palette', paletteSub: '周报数据源',
     loader: () => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })) },
-  { path: '/cases', label: '简历辅导（独立应用）', mark: 'mark-process', meta: ['简历辅导（独立应用）', '处理 · 专题'], nav: 'palette', paletteSub: '独立应用入口',
-    loader: () => import('./pages/CasesPage').then((m) => ({ default: m.CasesPage })) },
+
 
   { path: '/process', label: '处理', mark: 'mark-process', meta: ['处理', '模块 · 工具箱'], nav: 'module:process', sidebar: true,
     loader: () => import('./pages/Process').then((m) => ({ default: m.Process })) },

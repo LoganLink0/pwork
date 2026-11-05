@@ -431,7 +431,7 @@ export function Settings() {
 
   return (
     <section className="settings-page">
-      <div className="page-head" style={{ marginBottom: 0 }}>
+      <div className="page-head">
         <h1>设置</h1>
         <span className="sub">凭据只存本机，永不进备份</span>
         <div className="right">

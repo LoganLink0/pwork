@@ -32,6 +32,7 @@ import { toast } from './engine/toast'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
+import { CornerToasts } from './components/shell/CornerToasts'
 // 页面注册表（0.4-5）：路由/导航/面包屑/命令面板的单点数据源，见 registry.tsx
 
 function PageFallback() {
@@ -436,6 +437,7 @@ export default function App() {
           <div className="main">
             <ErrorBar />
             <Toaster />
+            <CornerToasts />
             <Topbar />
             <div className="content">
               <div className="content-inner">

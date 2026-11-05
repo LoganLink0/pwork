@@ -70,16 +70,6 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByLabelText('速记标题')).toHaveValue('面板搜索目标条目')
   })
 
-  it('命令面板搜「简历辅导」能到入口页（2026-10-13 起并入处理工具箱·专题，入口不缺）', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.keyboard('{Control>}k{/Control}')
-    const dialog = await screen.findByRole('dialog', { name: '命令面板' })
-    await user.type(within(dialog).getByLabelText('搜索'), '简历辅导')
-    await user.click(await within(dialog).findByText('打开简历辅导应用'))
-    await waitFor(() => expect(screen.getByRole('heading', { name: '简历辅导（独立应用）' })).toBeInTheDocument())
-  })
-
   it('速记浮层：N 唤起，Esc 存草稿，重开可恢复', async () => {
     const user = userEvent.setup()
     render(<App />)

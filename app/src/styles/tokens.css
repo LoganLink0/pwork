@@ -50,14 +50,14 @@
   --font-hand: var(--font-body);
 
   /* ------- 字号阶梯（8 级，唯一来源；--font-scale 由偏好中心字号缩放驱动） ------- */
-  --fs-xs: calc(12px * var(--font-scale, 1)); /* 标签、说明 */
-  --fs-sm: calc(13px * var(--font-scale, 1)); /* 次要文本 */
-  --fs-md: calc(16px * var(--font-scale, 1)); /* 正文 */
-  --fs-lg: calc(18px * var(--font-scale, 1)); /* 卡片标题 */
-  --fs-xl: calc(20px * var(--font-scale, 1)); /* 区块标题 h2 */
-  --fs-h1: calc(28px * var(--font-scale, 1)); /* 页面标题 */
-  --fs-hero: calc(32px * var(--font-scale, 1)); /* 仪表盘主标语 */
-  --fs-num: calc(24px * var(--font-scale, 1)); /* 统计数字 */
+  --fs-xs: calc(13px * var(--font-scale, 1)); /* 标签、说明 */
+  --fs-sm: calc(14px * var(--font-scale, 1)); /* 次要文本 */
+  --fs-md: calc(17px * var(--font-scale, 1)); /* 正文 */
+  --fs-lg: calc(19px * var(--font-scale, 1)); /* 卡片标题 */
+  --fs-xl: calc(21px * var(--font-scale, 1)); /* 区块标题 h2 */
+  --fs-h1: calc(29px * var(--font-scale, 1)); /* 页面标题 */
+  --fs-hero: calc(33px * var(--font-scale, 1)); /* 仪表盘主标语 */
+  --fs-num: calc(25px * var(--font-scale, 1)); /* 统计数字 */
 
   /* ------- 间距（8px 基） ------- */
   --sp-1: 4px;

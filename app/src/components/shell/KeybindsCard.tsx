@@ -6,6 +6,7 @@ import {
 } from '../../engine/keybinds'
 import type { KeybindAction } from '../../types/keybinds'
 import { isDesktopApp } from '../../engine/platform'
+import { toast } from '../../engine/toast'
 
 /**
  * 键盘快捷键设置卡（0.4-3，放 设置 → 工具轮盘 选项卡——同属快捷操作）：
@@ -16,7 +17,6 @@ import { isDesktopApp } from '../../engine/platform'
 export function KeybindsCard({ active }: { active: boolean }) {
   const [kb, setKb] = useState<Keybinds>(() => loadKeybinds())
   const [recording, setRecording] = useState<KeybindAction | null>(null)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const commit = (action: KeybindAction, combo: string | null) => {
     setRecording(null)
@@ -24,12 +24,12 @@ export function KeybindsCard({ active }: { active: boolean }) {
     const conflict = findConflict(kb, action, combo)
     if (conflict) {
       const occupied = KEYBIND_ACTIONS.find((a) => a.key === conflict)
-      setMsg({ ok: false, text: `${displayCombo(combo)} 已被「${occupied?.label}」占用——先改走那个键位，或换个键` })
+      toast('error', `${displayCombo(combo)} 已被「${occupied?.label}」占用——先改走那个键位，或换个键`)
       return
     }
     const isGlobalKey = action === 'wheel' || action === 'topmost' || action === 'clipboard'
     if (isGlobalKey && !wheelComboAllowed(combo)) {
-      setMsg({ ok: false, text: '全局键需要 Ctrl/Alt/Shift 组合键 + 字母/数字/F 键（单键会劫持其他应用的输入）' })
+      toast('error', '全局键需要 Ctrl/Alt/Shift 组合键 + 字母/数字/F 键（单键会劫持其他应用的输入）')
       return
     }
     const next = { ...kb, [action]: combo }
@@ -38,11 +38,11 @@ export function KeybindsCard({ active }: { active: boolean }) {
     const label = KEYBIND_ACTIONS.find((a) => a.key === action)?.label ?? ''
     if (isDesktopApp() && isGlobalKey) {
       invoke('register_global_hotkeys', { wheel: next.wheel, topmost: next.topmost, clipboard: next.clipboard })
-        .then(() => setMsg({ ok: true, text: `「${label}」已改为 ${displayCombo(combo)}，立即生效` }))
-        .catch((e: unknown) => setMsg({ ok: false, text: `配置已保存，但热键注册失败（可能被其他应用占用）：${e instanceof Error ? e.message : String(e)}` }))
+        .then(() => toast('ok', `「${label}」已改为 ${displayCombo(combo)}，立即生效`))
+        .catch((e: unknown) => toast('error', `配置已保存，但热键注册失败（可能被其他应用占用）：${e instanceof Error ? e.message : String(e)}`))
       return
     }
-    setMsg({ ok: true, text: `「${label}」已改为 ${displayCombo(combo)}` })
+    toast('ok', `「${label}」已改为 ${displayCombo(combo)}`)
   }
 
   return (
@@ -65,7 +65,6 @@ export function KeybindsCard({ active }: { active: boolean }) {
                   e.stopPropagation()
                   if (e.key === 'Escape') {
                     setRecording(null)
-                    setMsg(null)
                     return
                   }
                   commit(key, comboFromEvent(e))
@@ -74,18 +73,12 @@ export function KeybindsCard({ active }: { active: boolean }) {
                 按下新键位…
               </button>
             ) : (
-              <button type="button" className="btn-ghost" style={{ flex: 'none', minWidth: 96 }} onClick={() => { setMsg(null); setRecording(key) }}>
+              <button type="button" className="btn-ghost" style={{ flex: 'none', minWidth: 96 }} onClick={() => setRecording(key)}>
                 {displayCombo(kb[key])}
               </button>
             )}
           </div>
         ))}
-        {msg && (
-          <div className="set-row">
-            <label></label>
-            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: msg.ok ? 'var(--ok)' : 'var(--danger)' }}>{msg.text}</span>
-          </div>
-        )}
         <div className="set-row">
           <label>重置</label>
           <button
@@ -95,7 +88,7 @@ export function KeybindsCard({ active }: { active: boolean }) {
             onClick={() => {
               setKb(defaultKeybinds())
               saveKeybinds(defaultKeybinds())
-              setMsg({ ok: true, text: '已恢复默认键位' })
+              toast('ok', '已恢复默认键位')
             }}
           >
             恢复默认键位

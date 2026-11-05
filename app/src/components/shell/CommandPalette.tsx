@@ -103,16 +103,6 @@ function PaletteDialog() {
         run: () => { close(); navigate('/review/new') },
       })
     }
-    if (match('简历辅导') || match('案例')) {
-      actions.push({
-        key: 'act-case',
-        group: '快速动作',
-        icon: 'play',
-        label: '打开简历辅导应用',
-        run: () => { close(); navigate('/cases') },
-      })
-    }
-
     // 页面组全部来自页面注册表派生（PALETTE_PAGES，0.4-5）——新增页面注册即出现在面板
     const pages: PaletteItem[] = PALETTE_PAGES
       .filter((p) => match(p.label))
