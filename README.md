@@ -20,7 +20,8 @@
 - **AI 配不配都行**：不配，信息筛选与报告生成全部用内置规则完成，功能完整；配上自己在大模型平台申请的 Key（16 家厂商可选，含国内大厂与聚合平台、本机 Ollama），解锁 AI 复盘教练、写大纲、联网调研——Key 只写进你电脑上的文件
 - **云端是可选项**：想要全天候自动收信源、多设备同步，在你自己的 Cloudflare 账号下装一套（免费档每月 0 元）——桌面版在引导里点「一键部署」，全程在应用内跑，不弹终端，完成时端点和凭据自动填好
 - **80 个实测可用的信源**：12 个领域勾选订阅（官方一手博客、权威媒体、学术源），每天自动收成一份信息日报；信源清单可导出成文件分享给他人一键导入
-- **桌面版与浏览器版**：Windows 安装包与 macOS（Apple Silicon）安装包，或下载源码在本机起服务后用浏览器访问（也可安装为浏览器应用）；桌面版带系统级热键——工具轮盘全局呼出（Windows Ctrl+Alt+Q / macOS ⌘+Option+Q）、窗口置顶切换（Ctrl+Alt+T）、剪贴板速记（Ctrl+Alt+V），键位中心可改
+- **历史数据一键搬家**：浏览器书签与稍后读（Raindrop / Pocket / Instapaper）、Obsidian / Logseq / 思源的 Markdown 库、flomo / Notion / 印象笔记导出——设置 → 数据 里选文件即可，按网址或内容去重、文件夹转标签
+- **桌面版与浏览器版**：Windows 安装包与 macOS（Apple Silicon）安装包，或下载源码在本机起服务后用浏览器访问（也可安装为浏览器应用）；桌面版带系统级热键——工具轮盘全局呼出（Windows Ctrl+Alt+Q / macOS ⌘+Option+Q）、窗口置顶切换（Ctrl+Alt+T）、剪贴板速记（Ctrl+Alt+V），键位中心可改；启动即最大化铺满屏幕
 
 ## 下载安装（Windows）
 
@@ -33,7 +34,9 @@
 
 首次运行如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」（安装包未购买代码签名证书，属预期）。覆盖安装即可升级，数据不受影响。
 
-大陆访问 GitHub 慢？联网版也放在 [Gitee 镜像](https://gitee.com/LoganLink0/pwork/releases)（Gitee 平台规则：下载附件需注册/登录 Gitee 账号；离线版仅在 GitHub）。
+大陆访问 GitHub 慢？两个更快的通道：
+1. **国内直连（无需登录，最快）**：[COS 直链下载联网版](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.14_x64-setup-online.exe)（腾讯云对象存储，实测 8MB 约 0.4s）。
+2. [Gitee 镜像 Releases](https://gitee.com/LoganLink0/pwork/releases)：代码镜像已与 GitHub 同步；Release 附件更新滞后于 GitHub（平台规则需登录且部分附件在补传中），急用请走上面的 COS 直链或 GitHub 发布页。
 
 ## 下载安装（macOS · 内测）
 
@@ -72,7 +75,7 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 项目暂不接受捐赠；支持 PWORK 最有效的三个动作：给个 Star、推荐信源、把问题与想法发到 [Discussions](https://github.com/LoganLink0/pwork/discussions)。
 
-回归基线：488 项自动化测试全绿、tsc 零错误、lint 0 错误（1 条既有警告）。
+回归基线：511 项自动化测试全绿、tsc 零错误、lint 0 错误（1 条既有警告）。
 
 ## 许可证
 

@@ -101,5 +101,9 @@ export default defineConfig(({ mode }) => ({
     setupFiles: ['./src/test/setup.ts'],
     // 整树渲染 <App /> 的集成测试在全量并发时单条可超 5s（单跑 <1s），默认超时会误报
     testTimeout: 15000,
+    // 并发上限（2026-11-04）：核多的开发机默认开满 worker，重型集成测试互相挤压——
+    // 设置页两条 findBy 在满并发下超过 3s 等待上限稳定失败（单独跑恒过）。
+    // 限 worker 数是对症的确定性修复，不再加等待时间；CI（核少）天然不受影响
+    maxWorkers: 2,
   },
 }))
