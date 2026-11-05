@@ -40,9 +40,9 @@ describe('首访引导（全屏遮罩分步式）', () => {
     expect(screen.getByRole('tablist', { name: '信源领域' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /导入所选 \d+ 个/ })).toBeInTheDocument()
 
-    // 第 3 步：采集偏好
+    // 第 3 步：采集设置
     await user.click(screen.getByRole('button', { name: '下一步' }))
-    expect(await screen.findByRole('heading', { name: '采集偏好' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '采集设置' })).toBeInTheDocument()
 
     // 第 4 步：AI 功能（左栏读区 + 右栏厂商/Key 操作组块）
     await user.click(screen.getByRole('button', { name: '下一步' }))
@@ -82,12 +82,12 @@ describe('首访引导（全屏遮罩分步式）', () => {
     expect(localStorage.getItem('pwork-welcomed')).toBe('1')
   })
 
-  it('采集偏好：添加兴趣域/屏蔽词、点掉预置词 → 即时写入采集配置', async () => {
+  it('采集设置：添加兴趣域/屏蔽词、点掉预置词 → 即时写入采集配置', async () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('heading', { name: '欢迎使用 PWORK' })
     // 直达第 3 步（进度点可点）
-    await user.click(screen.getByRole('button', { name: '第 3 步：采集偏好' }))
+    await user.click(screen.getByRole('button', { name: '第 3 步：采集设置' }))
 
     await user.click(screen.getByRole('button', { name: 'AI 应用 ×' }))
     await user.type(screen.getByRole('textbox', { name: '添加兴趣域' }), '量化投资{enter}')

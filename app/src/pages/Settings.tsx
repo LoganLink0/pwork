@@ -43,16 +43,16 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
 }
 
 const SETTINGS_TABS = [
-  { id: 'prefs', label: '偏好中心', icon: 'appearance' },
-  { id: 'data', label: '数据', icon: 'data' },
-  { id: 'collect', label: '采集偏好', icon: 'collect' },
-  { id: 'keys', label: '键盘快捷键', icon: 'key' },
+  { id: 'prefs', label: '显示设置', icon: 'appearance' },
+  { id: 'data', label: '数据管理', icon: 'data' },
+  { id: 'collect', label: '采集设置', icon: 'collect' },
+  { id: 'keys', label: '键位设置', icon: 'key' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
-  { id: 'notify', label: '通知', icon: 'volume' },
+  { id: 'notify', label: '通知设置', icon: 'volume' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
   { id: 'cloud', label: '云端同步', icon: 'cloud' },
-  { id: 'ai', label: 'AI', icon: 'ai' },
-  { id: 'about', label: '关于', icon: 'about' },
+  { id: 'ai', label: 'AI 设置', icon: 'ai' },
+  { id: 'about', label: '软件信息', icon: 'about' },
 ] as const
 
 /** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
@@ -74,7 +74,7 @@ export function Settings() {
   const noteCount = useNotes((s) => s.notes.length)
   const trashCount = useNotes((s) => s.trash.length)
   const { config, setConfig, sources, items } = useCollect()
-  // 偏好中心（R15）：字号缩放 / 阅读行宽 / 界面字体——即时生效并持久化
+  // 显示设置（R15）：字号缩放 / 阅读行宽 / 界面字体——即时生效并持久化
   const prefs = useUi((st) => st.prefs)
   const setPrefs = useUi((st) => st.setPrefs)
   const [lastBackup, setLastBackup] = useState<string | null>(
@@ -143,7 +143,7 @@ export function Settings() {
   const [profileBusy, setProfileBusy] = useState(false)
   const [profileMsg, setProfileMsg] = useState('')
 
-  /** 本地采集偏好是唯一真相；一键把当前偏好同步给云端（云端 7×24 抓取用它打分） */
+  /** 本地采集设置是唯一真相；一键把当前设置同步给云端（云端 7×24 抓取用它打分） */
   const syncPrefsToCloud = async () => {
     setPrefsMsg(null)
     const r = await pushCloudPrefs({
@@ -451,7 +451,7 @@ export function Settings() {
         <div className="settings-content">
 
       <div className="set-card" data-tab="prefs" style={{ display: tab === 'prefs' ? undefined : 'none' }}>
-        <h2>偏好中心</h2>
+        <h2>显示设置</h2>
         <div className="desc">字号、阅读行宽与界面字体——让工具适配你的眼睛，改完立即生效并记住</div>
         <div className="set-body">
           <div className="set-row">
@@ -528,7 +528,7 @@ export function Settings() {
 
       <div className="set-card" data-tab="data" style={{ display: tab === 'data' ? undefined : 'none' }}>
         <h2>
-          数据
+          数据管理
           <InfoTip
             label="数据搬家说明"
             text={<>换电脑 / 换浏览器 / 换到桌面版时：① 在当前环境的这一页点「全量导出」，会得到一个 JSON 备份文件；② 在新环境这一页点「导入」选中该文件，所有数据合并进来（相同的按时间新者为准）。速记图片附件的字节不在 JSON 备份里（桌面版）——带附件走用「导出可读档案」的压缩包，或直接拷应用数据目录的 attachments 文件夹。</>}
@@ -541,7 +541,7 @@ export function Settings() {
             <label>全量备份</label>
             <InfoTip
               label="全量导出内容范围"
-              text={<>导出内容：速记、信源、条目、采集偏好、任务、目标、复盘（含行动项与洞察）、外部数据块。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。</>}
+              text={<>导出内容：速记、信源、条目、采集设置、任务、目标、复盘（含行动项与洞察）、外部数据块。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。</>}
             />
             <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void doExport()}>
               全量导出
@@ -773,7 +773,7 @@ export function Settings() {
       </div>
 
       <div className="set-card" data-tab="collect" style={{ display: tab === 'collect' ? undefined : 'none' }}>
-        <h2>采集偏好</h2>
+        <h2>采集设置</h2>
         <div className="desc">写清你关注的领域——越相关越可能进日报；随使用随时调整</div>
         <div className="set-body">
           <div className="set-row">
@@ -942,8 +942,8 @@ export function Settings() {
 
 
       <div className="set-card" data-tab="ai" style={{ display: tab === 'ai' ? undefined : 'none' }}>
-<h2>
-          AI · BYOK
+        <h2>
+          AI 设置
           <InfoTip
             label="AI 数据边界说明"
             text={<>外发说明：使用 AI 时，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，内置规则兜底，产品完整可用。</>}
@@ -1236,7 +1236,7 @@ export function Settings() {
       <CloudSyncCards active={tab === 'cloud'} />
 
       <div className="set-card" data-tab="notify" style={{ display: tab === 'notify' ? undefined : 'none' }}>
-        <h2>通知</h2>
+        <h2>通知设置</h2>
         <div className="desc">应用不在眼前时，把要紧事送到系统通知。每类每天最多提醒一次，不会变成噪音。</div>
         <div className="set-body">
           {([
@@ -1320,7 +1320,7 @@ export function Settings() {
         </div>
       </div>
       <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
-        <h2>关于</h2>
+        <h2>软件信息</h2>
         <div className="desc">本地优先的个人工作台 · 数据只属于你</div>
         <div className="set-body">
           <div className="set-row">

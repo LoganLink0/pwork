@@ -401,7 +401,7 @@ export async function pushScheduleHours(hours: number[]): Promise<{ ok: boolean;
   }
 }
 
-/** 云端采集偏好（兴趣域/屏蔽词/上下文）：向导部署后用户可在设置页改，改完即生效 */
+/** 云端采集设置（兴趣域/屏蔽词/上下文）：向导部署后用户可在设置页改，改完即生效 */
 export type CloudPrefs = { interests: string; dislikes: string; context: string }
 
 export async function getCloudPrefs(): Promise<{ ok: boolean; prefs?: CloudPrefs; message: string }> {
@@ -441,7 +441,7 @@ export async function pushCloudPrefs(prefs: CloudPrefs): Promise<{ ok: boolean; 
       for (const [k, v] of entries) {
         await d1Query(config, 'INSERT OR REPLACE INTO config(key, value) VALUES(?, ?)', [k, String(v).slice(0, 300)])
       }
-      return { ok: true, message: '云端采集偏好已保存，下次抓取生效' }
+      return { ok: true, message: '云端采集设置已保存，下次抓取生效' }
     }
     const resp = await fetch(`${config.endpoint.replace(/\/$/, '')}/api/config/prefs`, {
       method: 'PUT',
@@ -452,7 +452,7 @@ export async function pushCloudPrefs(prefs: CloudPrefs): Promise<{ ok: boolean; 
       const t = await resp.text().catch(() => '')
       return { ok: false, message: `云端返回 HTTP ${resp.status}${t ? '：' + t.slice(0, 80) : ''}` }
     }
-    return { ok: true, message: '云端采集偏好已保存，下次抓取生效' }
+    return { ok: true, message: '云端采集设置已保存，下次抓取生效' }
   } catch {
     return { ok: false, message: '保存失败——检查云端同步配置与网络' }
   }

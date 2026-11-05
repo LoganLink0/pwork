@@ -95,12 +95,12 @@ describe('信息采集 C1（W2）', () => {
     expect(screen.getByText(/过期清理/)).toBeInTheDocument()
   })
 
-  it('设置·采集偏好：兴趣域可增删并持久化（左导航切到采集偏好分类后操作）', async () => {
+  it('设置·采集设置：兴趣域可增删并持久化（左导航切到采集设置分类后操作）', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(within(screen.getByRole('banner')).getByRole('link', { name: '设置' }))
-    // 左导航切到采集偏好分类（导航按钮与卡片标题同名，用导航角色精确定位；懒加载需等待）
-    await user.click(await screen.findByRole('button', { name: /采集偏好/ }))
+    // 左导航切到采集设置分类（导航按钮与卡片标题同名，用导航角色精确定位；懒加载需等待）
+    await user.click(await screen.findByRole('button', { name: /采集设置/ }))
     await screen.findByLabelText('添加兴趣域')
 
     const input = screen.getByLabelText('添加兴趣域')

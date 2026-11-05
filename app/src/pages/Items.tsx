@@ -102,7 +102,7 @@ export function Items() {
             .join(' · ')}
           {rejects.topSource && rejects.topSource.share >= 0.4
             ? `。「${rejects.topSource.name}」独占 ${Math.round(rejects.topSource.share * 100)}%——可去信源管理停用它，或检查是不是该源的抓取解析出了问题。`
-            : '。屏蔽词误杀多就去 设置 → 采集偏好 调整词表。'}
+            : '。屏蔽词误杀多就去 设置 → 采集设置 调整词表。'}
         </div>
       )}
 

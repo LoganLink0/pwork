@@ -47,7 +47,7 @@ export function KeybindsCard({ active }: { active: boolean }) {
 
   return (
     <div className="set-card" data-tab="wheel" style={{ display: active ? undefined : 'none' }}>
-      <h2>键盘快捷键</h2>
+      <h2>键位设置</h2>
       <div className="desc">按自己的习惯改键位。命令面板的 / 永远可用；改键后帮助页的快捷键表同步更新。工具轮盘的格位编辑在旁边「工具轮盘」分类。</div>
       <div className="set-body">
         {KEYBIND_ACTIONS.map(({ key, label, desc }) => (

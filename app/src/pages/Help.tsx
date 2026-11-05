@@ -58,7 +58,7 @@ export function Help() {
           <div className="set-row">
             <label></label>
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              新手引导还有信源初始化、采集偏好与上云步骤：<Link to="/welcome">重新查看完整引导 →</Link>
+              新手引导还有信源初始化、采集设置与上云步骤：<Link to="/welcome">重新查看完整引导 →</Link>
             </span>
           </div>
         </div>

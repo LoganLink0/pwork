@@ -8,7 +8,7 @@ beforeEach(() => {
   document.documentElement.style.removeProperty('--font-body-override')
 })
 
-describe('偏好中心（prefs 引擎）', () => {
+describe('显示设置（prefs 引擎）', () => {
   it('默认值：标准 100% / 标准行宽 / 系统字体', () => {
     expect(loadPrefs()).toEqual(DEFAULT_PREFS)
     expect(DEFAULT_PREFS).toEqual({ fontScale: 1, readingWidth: 'standard', fontFamily: 'system' })

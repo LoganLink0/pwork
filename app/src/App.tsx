@@ -195,7 +195,7 @@ export default function App() {
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
-    // 存储耐久第一道闸（0.3a）：启动即静默申请持久化保护；结果不弹通知（设置 → 数据 可查状态）
+    // 存储耐久第一道闸（0.3a）：启动即静默申请持久化保护；结果不弹通知（设置 → 数据管理 可查状态）
     track(requestPersistence(), '申请持久化存储')
     // 数据不丢第三道闸（0.3f）：库打不开立即弹错误条给恢复指引，不静默带病运行
     track(
@@ -209,7 +209,7 @@ export default function App() {
       }),
       '启动数据健康检查',
     )
-    // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知 可关）
+    // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知设置 可关）
     track(runStartupNotifiesFromDb(), '启动通知检查')
     // 键位中心（0.4-3）：轮盘全局键按用户配置重注册（默认键 Rust 侧已注册；改动/占用失败会弹错误条）
     if (isDesktopApp()) {

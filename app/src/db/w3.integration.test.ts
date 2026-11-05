@@ -12,7 +12,7 @@ async function seedAction(over: Partial<ActionItem> = {}): Promise<ActionItem> {
     reviewId: 'rev_x',
     kind: 'start',
     text: '把评分权重反馈整理进兴趣域配置',
-    ifThen: '如果打开设置，就先看采集偏好',
+    ifThen: '如果打开设置，就先看采集设置',
     due: todayLocal(),
     status: 'open',
     closedAt: null,

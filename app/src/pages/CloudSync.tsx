@@ -13,7 +13,7 @@ import { useGoals } from '../store/goals'
 /**
  * 设置 → 云端同步（2026-10-28 归位用户拍板：在设置的左侧分类导航里拆一项，不占侧栏工作区）。
  * 只放云端专属的事：连接配置、同步动作、抓取时间、设备同步。
- * 采集偏好不在这一页：本地 设置 → 采集偏好 是唯一入口，那边带「同步到云端」。
+ * 采集设置不在这一页：本地 设置 → 采集设置 是唯一入口，那边带「同步到云端」。
  */
 export function CloudSyncCards({ active }: { active: boolean }) {
   const [cloud, setCloud] = useState<CloudConfig>(() => loadCloudConfig())

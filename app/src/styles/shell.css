@@ -27,7 +27,8 @@
   gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3) var(--sp-4);
   font-weight: 700;
-  font-size: var(--fs-lg);
+  /* 品牌字号固定基准值，不随显示设置的字号缩放（用户拍板：左上角标识恒定） */
+  font-size: 19px;
   color: var(--ink);
   text-decoration: none;
 }
@@ -44,7 +45,7 @@ img.mark {
 }
 
 .logo .sub {
-  font-size: var(--fs-xs);
+  font-size: 13px; /* 同品牌区：固定不缩放 */
   color: var(--ink-faint);
   font-weight: 400;
 }

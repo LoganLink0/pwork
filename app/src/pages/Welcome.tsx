@@ -31,7 +31,7 @@ import {
  * 左栏=读区（标题/说明/提示，低密度），右栏=做区（操作组块）；第 1 步视频 2×2。
  * AI 卡与上云卡按运行环境只显示对应端的内容（桌面版/浏览器版各一套）。
  */
-const STEPS = ['认识工作台', '信源初始化', '采集偏好', 'AI 功能（可选）', '上云（可选）'] as const
+const STEPS = ['认识工作台', '信源初始化', '采集设置', 'AI 功能（可选）', '上云（可选）'] as const
 
 /** 左栏文案：每步「为什么/是什么」与提示（右栏只留操作，长说明全部收进这里摊薄密度） */
 const STEP_GUIDES: { title: string; desc: string; tips?: string[] }[] = [
@@ -196,7 +196,7 @@ export function Welcome() {
   }
 
   /** 应用内一键部署（2026-10-27 定稿）：无终端窗口，Rust 后台跑向导全自动模式，
-   *  进度经事件回流面板；本地采集偏好随部署带上云端。invoke/listen 静态引入
+   *  进度经事件回流面板；本地采集设置随部署带上云端。invoke/listen 静态引入
    *  （动态 import 的依赖预加载在 tauri.localhost 下会挂起，复盘 3.36）。 */
   const runDeploy = async () => {
     setDeployState('running')
@@ -473,7 +473,7 @@ export function Welcome() {
                           <p className="caption" style={{ color: 'var(--danger)' }}>部署失败——看上方提示的原因，处理后点「一键部署」重试（已完成的步骤自动跳过）。</p>
                         )}
                         <p className="caption">
-                          点按钮直接在应用里部署（不弹终端窗口）：第一次会弹出浏览器让你登录 Cloudflare（免费注册，点「Allow」），之后全自动。你的本地采集偏好会一并同步到云端。中途失败随时重试，已完成的步骤不重复。
+                          点按钮直接在应用里部署（不弹终端窗口）：第一次会弹出浏览器让你登录 Cloudflare（免费注册，点「Allow」），之后全自动。你的本地采集设置会一并同步到云端。中途失败随时重试，已完成的步骤不重复。
                         </p>
                       </>
                     ) : (
@@ -551,7 +551,7 @@ export function Welcome() {
           <footer className="welcome-card-foot">
             <div className="skip-wrap">
               <button type="button" className="text-btn" onClick={() => finish()}>跳过引导</button>
-              <span className="skip-hint">以后想再看：设置 → 关于 → 重看首访引导</span>
+              <span className="skip-hint">以后想再看：设置 → 软件信息 → 重看首访引导</span>
             </div>
             <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
               {step > 0 && (
