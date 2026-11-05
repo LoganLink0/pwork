@@ -401,7 +401,7 @@ export function ResearchPage() {
 
       <div className="set-card">
         <h2>① 调研目标</h2>
-        <div className="desc">{coachReady ? 'AI 已配置：框架按目标定制生成' : 'AI 未配置：用内置调研模板（同样完整可用，配了 AI 可定制）'}</div>
+        <div className="desc">{coachReady ? 'AI 已配置：框架按目标定制生成' : 'AI 未配置：用内置调研模板，配了 AI 可定制'}</div>
         <div className="set-body">
           {profiles.length > 0 && (
             <div className="chips" style={{ marginBottom: 'var(--sp-2)' }}>

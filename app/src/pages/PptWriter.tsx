@@ -179,7 +179,7 @@ export function PptWriter() {
 
       <div className="set-card">
         <h2>一、材料</h2>
-        <div className="desc">直接粘贴文字；上传 .md / .txt；上传 Word（.docx）与 PDF（自动提取文字）。</div>
+        <div className="desc">直接粘贴文字；上传 .md / .txt；上传 Word（.docx）与 PDF。</div>
         <div className="set-body">
           <div className="set-row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>

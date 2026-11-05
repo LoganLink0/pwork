@@ -44,7 +44,7 @@ export function Help() {
         <div className="set-body">
           {MODULES.map((m) => (
             <div className="quick-row" key={m.key}>
-              <video src={m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
+              <video src={import.meta.env.BASE_URL + m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
               <span className="val" style={{ flex: 1, minWidth: 0 }}>
                 <b>{m.name} · {m.tagline}</b>
                 <br />

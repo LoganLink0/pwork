@@ -312,7 +312,7 @@ export function Welcome() {
                 <div className="welcome-mods">
                   {MODULES.map((m) => (
                     <div className="welcome-mod" key={m.key}>
-                      <video src={m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
+                      <video src={import.meta.env.BASE_URL + m.video} autoPlay loop muted playsInline aria-label={`${m.name}模块操作演示`} />
                       <div className="welcome-mod-body">
                         <b>{m.name} · {m.tagline}</b>
                         <span className="mod-desc"><KbdText text={m.desc} /></span>
@@ -551,7 +551,7 @@ export function Welcome() {
           <footer className="welcome-card-foot">
             <div className="skip-wrap">
               <button type="button" className="text-btn" onClick={() => finish()}>跳过引导</button>
-              <span className="skip-hint">以后想再看：设置 → 软件信息 → 重看首访引导</span>
+              <span className="skip-hint">以后想再看：设置 → 关于 → 重看首访引导</span>
             </div>
             <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
               {step > 0 && (

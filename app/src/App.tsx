@@ -103,6 +103,14 @@ function FirstRunRedirect() {
   return null
 }
 
+/** 演示版横幅开关：demo 构建渲染；首访引导页不渲染（横幅固定在底部，
+ *  会盖住引导的「下一步」按钮——引导是全屏独占时刻，完成后再出现横幅） */
+function DemoBannerGate() {
+  const location = useLocation()
+  if (import.meta.env.MODE !== 'demo' || location.pathname === '/welcome') return null
+  return <DemoBanner />
+}
+
 /** 桌面版外链统一走系统浏览器：WebView 不处理 target=_blank，
  *  全站所有外链（GitHub 入口、拿 Key、注册引导等）在这里一次接管。
  *  invoke 用静态 import（动态 import 的依赖预加载在 tauri.localhost 下挂起，点击无响应）。 */
@@ -427,7 +435,7 @@ export default function App() {
 
   return (
     <HashRouter>
-      {import.meta.env.MODE === 'demo' && <DemoBanner />}
+      <DemoBannerGate />
       <RoutedBoundary>
         <FirstRunRedirect />
         <ExternalLinks />

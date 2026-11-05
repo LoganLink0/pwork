@@ -159,7 +159,7 @@ export function Home() {
         <Link to="/input/digest" className="tile mark-input">
           <div className="t-label">信息日报</div>
           <div className="t-num">{digest.length} 条 · 2 分钟</div>
-          <div className="t-sub">每天最多 {config.topN} 条 · 规则评分（云端 AI 两级筛选随同步并入）</div>
+          <div className="t-sub">每天最多 {config.topN} 条 · 按评分排序</div>
           <span className="t-link">去扫读 →</span>
         </Link>
       ) : (
@@ -272,7 +272,7 @@ export function Home() {
                 <span className="m-ico" aria-hidden><Icon name="play" /></span>
                 <span className="m-name">快速启动</span>
               </div>
-              <div className="m-sub">常用站点（处理页可增删，按最近使用排序）</div>
+              <div className="m-sub">按最近使用排序</div>
               <div className="m-links">
                 {quickSites.map((site) => (
                   <a key={site.id} className="m-link" href={site.url} target="_blank" rel="noreferrer noopener">

@@ -52,7 +52,7 @@ const SETTINGS_TABS = [
   { id: 'errors', label: '错误日志', icon: 'errors' },
   { id: 'cloud', label: '云端同步', icon: 'cloud' },
   { id: 'ai', label: 'AI 设置', icon: 'ai' },
-  { id: 'about', label: '软件信息', icon: 'about' },
+  { id: 'about', label: '关于', icon: 'about' },
 ] as const
 
 /** 设置页（VS Code / GitHub 同款布局）：左侧分类导航 + 右侧当前分类全宽内容 */
@@ -949,7 +949,7 @@ export function Settings() {
             text={<>外发说明：使用 AI 时，被你主动调用的内容（提问、措辞检查、采集评分的字段）将发往上方配置的服务商；其余数据一律留在本机。网关模式下 Key 只存本机（桌面版 gateway.env / 浏览器版 .env.local），浏览器不接触。拔掉 AI，内置规则兜底，产品完整可用。</>}
           />
         </h2>
-        <div className="desc">自带 Key，全工作台共用一把（复盘 AI 教练 / AI 写大纲 / 采集筛选）；不配或 AI 不可用时自动用内置规则，功能完整</div>
+        <div className="desc">自带 Key，全工作台共用一把，复盘教练、写大纲、采集筛选都用到；不配或 AI 不可用时自动用内置规则，功能完整</div>
         <div className="set-body">
           <div className="set-row">
             <label>模式</label>
@@ -1320,7 +1320,7 @@ export function Settings() {
         </div>
       </div>
       <div className="set-card" data-tab="about" style={{ display: tab === 'about' ? undefined : 'none' }}>
-        <h2>软件信息</h2>
+        <h2>关于</h2>
         <div className="desc">本地优先的个人工作台 · 数据只属于你</div>
         <div className="set-body">
           <div className="set-row">
@@ -1331,7 +1331,7 @@ export function Settings() {
             <div className="set-row" data-testid="upd-row">
               <label>应用更新</label>
               <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                {upd.phase === 'idle' && '更新包挂在 GitHub Releases，点右边检查（不后台静默拉取）'}
+                {upd.phase === 'idle' && '点「检查更新」，有新版本会自动下载，重启应用即完成升级'}
                 {upd.phase === 'checking' && '正在检查…'}
                 {upd.phase === 'latest' && '已是最新'}
                 {upd.phase === 'available' && <>发现新版本 v{upd.version}{upd.notes ? `：${upd.notes.slice(0, 120)}` : ''}</>}
