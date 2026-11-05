@@ -125,6 +125,11 @@ export const FAQ: FaqEntry[] = [
     link: { label: '去速记', to: '/input/notes' },
   },
   {
+    q: '界面字体太小 / 看久了累？',
+    a: '设置 → 偏好中心：界面字号四档缩放（90%–125%）、阅读行宽三档（紧凑/标准/全宽）、界面字体三选（系统/衬线/等宽），改完立即生效并记住。全屏使用建议配「大 110%」以上。',
+    link: { label: '去偏好中心', to: '/settings?tab=prefs' },
+  },
+  {
     q: '浏览器书签怎么搬进来？',
     a: '在 Chrome/Edge 的书签管理器（Firefox 在书签库）里「导出书签」得到 HTML 文件，然后到 设置 → 数据 → 「导入书签 / 稍后读」选中它。Raindrop / Pocket / Instapaper 导出的 HTML 也是同一格式。按网址去重、可重复导入，文件夹会转成标签，链接进条目库参与检索与投票。',
     link: { label: '去数据设置', to: '/settings' },
