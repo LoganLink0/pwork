@@ -129,7 +129,7 @@ export const PAGE_REGISTRY: PageReg[] = [
     ] },
 
   { path: '/settings', label: '设置', mark: 'mark-workspace', meta: ['设置', '工作台'], nav: 'palette',
-    loader: () => import('./pages/Settings').then((m) => ({ default: m.Settings })) },
+    loader: () => import('./pages/Settings').then((m) => ({ default: m.Settings })) }, // TEMP-DEBUG
   { path: '/help', label: '帮助', mark: 'mark-workspace', meta: ['帮助', '工作台'], nav: 'palette',
     loader: () => import('./pages/Help').then((m) => ({ default: m.Help })) },
   { path: '/welcome', label: '首访引导', mark: 'mark-workspace', meta: ['欢迎', '工作台 · 首访引导'], nav: 'none',

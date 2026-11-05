@@ -7,6 +7,8 @@ import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
+import { useUi } from '../store/ui'
+import { DEFAULT_PREFS, FONT_FAMILY_OPTIONS, FONT_SCALE_OPTIONS, READING_WIDTH_OPTIONS } from '../engine/prefs'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, AI_VENDORS, PROVIDER_PRESETS, type CoachConfig, type CoachProvider } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
@@ -40,6 +42,7 @@ const ERR_KIND_LABEL: Record<ErrorKind, string> = {
 }
 
 const SETTINGS_TABS = [
+  { id: 'prefs', label: '偏好中心', icon: 'appearance' },
   { id: 'data', label: '数据', icon: 'data' },
   { id: 'collect', label: '采集偏好', icon: 'collect' },
   { id: 'keys', label: '键盘快捷键', icon: 'key' },
@@ -70,6 +73,9 @@ export function Settings() {
   const noteCount = useNotes((s) => s.notes.length)
   const trashCount = useNotes((s) => s.trash.length)
   const { config, setConfig, sources, items } = useCollect()
+  // 偏好中心（R15）：字号缩放 / 阅读行宽 / 界面字体——即时生效并持久化
+  const prefs = useUi((st) => st.prefs)
+  const setPrefs = useUi((st) => st.setPrefs)
   const [lastBackup, setLastBackup] = useState<string | null>(
     () => localStorage.getItem('pwork-last-backup'),
   )
@@ -274,7 +280,8 @@ export function Settings() {
       }
       // 首段（用户选中的文件夹名）不进标签：只保留其下的层级
       const rootLabel = mds[0]!.path.split(/[\/]/)[0] ?? ''
-      const r = await importMarkdownNotes(parseMarkdownFiles(mds, rootLabel).drafts)
+      const parsed = await parseMarkdownFiles(mds, rootLabel)
+      const r = await importMarkdownNotes(parsed.drafts)
       await useNotes.getState().load()
       setImportMsg(
         `Markdown 导入完成：新进 ${r.imported} 条速记，重复 ${r.duplicates} 条（按内容去重），跳过 ${r.skipped} 个非 md/空文件。文件夹已转为标签`,
@@ -441,6 +448,82 @@ export function Settings() {
         />
 
         <div className="settings-content">
+
+      <div className="set-card" data-tab="prefs" style={{ display: tab === 'prefs' ? undefined : 'none' }}>
+        <h2>偏好中心</h2>
+        <div className="desc">字号、阅读行宽与界面字体——让工具适配你的眼睛，改完立即生效并记住</div>
+        <div className="set-body">
+          <div className="set-row">
+            <label>界面字号</label>
+            <div className="seg" role="group" aria-label="界面字号缩放">
+              {FONT_SCALE_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={prefs.fontScale === o.value ? 'on' : ''}
+                  aria-pressed={prefs.fontScale === o.value}
+                  onClick={() => setPrefs({ fontScale: o.value })}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              全界面等比缩放，信息密集页也看得清
+            </span>
+          </div>
+          <div className="set-row">
+            <label>阅读行宽</label>
+            <div className="seg" role="group" aria-label="阅读行宽">
+              {READING_WIDTH_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={prefs.readingWidth === o.value ? 'on' : ''}
+                  aria-pressed={prefs.readingWidth === o.value}
+                  onClick={() => setPrefs({ readingWidth: o.value })}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              速记编辑器与条目阅读窗的正文宽度
+            </span>
+          </div>
+          <div className="set-row">
+            <label>界面字体</label>
+            <div className="seg" role="group" aria-label="界面字体">
+              {FONT_FAMILY_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={prefs.fontFamily === o.value ? 'on' : ''}
+                  aria-pressed={prefs.fontFamily === o.value}
+                  onClick={() => setPrefs({ fontFamily: o.value })}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              衬线适合长文阅读，等宽适合代码与对齐敏感场景
+            </span>
+          </div>
+          <div className="set-row">
+            <label></label>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ flex: 'none' }}
+              disabled={prefs.fontScale === DEFAULT_PREFS.fontScale && prefs.readingWidth === DEFAULT_PREFS.readingWidth && prefs.fontFamily === DEFAULT_PREFS.fontFamily}
+              onClick={() => setPrefs(DEFAULT_PREFS)}
+            >
+              恢复默认
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="set-card" data-tab="data" style={{ display: tab === 'data' ? undefined : 'none' }}>
         <h2>数据</h2>

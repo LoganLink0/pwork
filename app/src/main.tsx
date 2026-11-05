@@ -8,6 +8,7 @@ import './styles/collect.css'
 import './modules/review/styles/review.css'
 import App from './App.tsx'
 import { applyTheme, loadTheme } from './engine/appearance.ts'
+import { initPrefs } from './engine/prefs.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
 import { useUi } from './store/ui.ts'
 import { installErrorCapture, track } from './engine/errorLog.ts'
@@ -18,6 +19,20 @@ installErrorCapture()
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
+
+// 偏好中心（字号缩放/阅读行宽/字体）同样渲染前应用——写 CSS 变量到根元素
+initPrefs()
+
+// 常用页面 chunk 空闲预载：消除「首屏懒组件未加载完时快速点击导航 → 目标页白屏」的竞态窗口
+// （点击本身没问题，问题在目标 chunk 尚未就绪；预载后首次点击即命中已就绪的组件）
+const IDLE = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback
+const preloadIdle = (cb: () => void) => (IDLE ? IDLE(cb) : setTimeout(cb, 1200))
+preloadIdle(() => {
+  void import('./pages/Settings')
+  void import('./pages/Notes')
+  void import('./pages/Digest')
+  void import('./pages/Help')
+})
 
 // PWA Service Worker：网页版离线可用、安装到主屏。
 // prompt 模式：新版本就绪后顶栏出更新按钮——必须把 registerSW 返回的激活函数传进去，

@@ -33,8 +33,8 @@ describe('书签 HTML：ul/li 形态（稍后读三家）', () => {
 })
 
 describe('parseMarkdownFiles（宽容 md 导入）', () => {
-  it('frontmatter 型：title/tags 从元数据，正文去头', () => {
-    const r = parseMarkdownFiles([
+  it('frontmatter 型：title/tags 从元数据，正文去头', async () => {
+    const r = await parseMarkdownFiles([
       { path: '笔记/深/一条.md', text: '---\ntitle: 有元数据\ntags: [工作, 项目]\n---\n\n正文第一段。\n\n正文第二段。' },
     ])
     expect(r.drafts).toHaveLength(1)
@@ -46,8 +46,8 @@ describe('parseMarkdownFiles（宽容 md 导入）', () => {
     expect(d.body).toContain('正文第一段。')
   })
 
-  it('无元数据型：H1 或首行作标题，行内 #标签提取', () => {
-    const r = parseMarkdownFiles([
+  it('无元数据型：H1 或首行作标题，行内 #标签提取', async () => {
+    const r = await parseMarkdownFiles([
       { path: 'a.md', text: '# 大标题\n\n带 #标签 的正文，以及 #另一个。' },
     ])
     const d = r.drafts[0]!
@@ -56,8 +56,8 @@ describe('parseMarkdownFiles（宽容 md 导入）', () => {
     expect(d.body).toContain('# 大标题')
   })
 
-  it('非 md 与空文件计入跳过；路径文件夹转标签（多段）', () => {
-    const r = parseMarkdownFiles([
+  it('非 md 与空文件计入跳过；路径文件夹转标签（多段）', async () => {
+    const r = await parseMarkdownFiles([
       { path: '库/AI/文章/深度长文.md', text: '内容' },
       { path: '库/图片.png', text: '二进制' },
       { path: '库/空.md', text: '   ' },

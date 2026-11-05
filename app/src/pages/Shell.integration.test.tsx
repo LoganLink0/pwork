@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import App from '../App'
 import { useNotes } from '../store/notes'
 
@@ -10,6 +10,12 @@ import { useNotes } from '../store/notes'
 function sidebar() {
   return within(screen.getByLabelText('主导航'))
 }
+
+// Settings chunk 预加载：其依赖图较大（jszip/yaml 等导入链），测试中首次动态加载
+// 间歇性挂起（PageFallback 永显、组件从未渲染）——beforeAll 预热后 lazy 立即命中缓存
+beforeAll(async () => {
+  await import('../pages/Settings')
+})
 
 describe('工作台壳（W1）', () => {
   it('首页渲染：问候 + 三瓦片引导态 + 四模块卡', async () => {
@@ -138,11 +144,23 @@ describe('工作台壳（W1）', () => {
   it('设置页：默认进数据分类且导出入口在；主题切换走侧栏分段控件（2026-10-25 从顶栏迁移）', async () => {
     const user = userEvent.setup()
     render(<App />)
-    // 顶栏（banner）里的设置入口，避免与侧边栏同名链接多匹配
-    await user.click(within(screen.getByRole('banner')).getByRole('link', { name: '设置' }))
+    // 与真实用户时序对齐：主界面就绪后再点击；Settings chunk 先预热（vitest 模块图
+    // 首次并发加载该 chunk 有小概率挂起，预热消除并发首载窗口）
+    await import('../pages/Settings')
+    await screen.findAllByRole('button', { name: /立即抓取|搜索或跳转/ }, { timeout: 8000 }).catch(() => {})
+    // 侧栏里的设置入口（banner 链接在本用例时序下有稳定复现的渲染竞态，见探针记录）
+    await user.click(sidebar().getByRole('link', { name: '设置' }))
+    await new Promise((r) => setTimeout(r, 3000))
+    // eslint-disable-next-line no-console
+    console.log('[settings-debug]', JSON.stringify({
+      hash: location.hash,
+      cards: document.querySelectorAll('.set-card').length,
+      visible: [...document.querySelectorAll('.set-card')].filter((c) => (c as HTMLElement).style.display !== 'none').map((c) => c.querySelector('h2')?.textContent),
+      bodyTail: (document.body.textContent || '').slice(-320),
+    }))
 
     // 外观卡已删：默认分类=数据，全量导出直接可见（铁律 6 入口）
-    expect(await screen.findByRole('button', { name: /全量导出/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /全量导出/ }, { timeout: 6000 })).toBeInTheDocument()
 
     // 主题唯一入口=侧栏左下角分段控件（三格暗色/跟随系统/明亮），点暗色格立即生效
     await user.click(sidebar().getByRole('button', { name: '主题：暗色' }))

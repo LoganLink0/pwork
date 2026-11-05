@@ -43,21 +43,21 @@
   --m-output: var(--cat-action); /* 输出 = 赭 */
   --m-review: var(--accent); /* 回路 = 琥珀（闭环枢纽与品牌同源） */
 
-  /* ------- 字体：全局唯一字族 ------- */
-  --font-body: -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC',
-    'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  /* ------- 字体：全局唯一字族（--font-body-override 为偏好中心覆盖口，缺省走系统栈） ------- */
+  --font-body: var(--font-body-override, -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC',
+    'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif);
   --font-display: var(--font-body);
   --font-hand: var(--font-body);
 
-  /* ------- 字号阶梯（8 级，唯一来源） ------- */
-  --fs-xs: 12px; /* 标签、说明 */
-  --fs-sm: 13px; /* 次要文本 */
-  --fs-md: 16px; /* 正文 */
-  --fs-lg: 18px; /* 卡片标题 */
-  --fs-xl: 20px; /* 区块标题 h2 */
-  --fs-h1: 28px; /* 页面标题 */
-  --fs-hero: 32px; /* 仪表盘主标语 */
-  --fs-num: 24px; /* 统计数字 */
+  /* ------- 字号阶梯（8 级，唯一来源；--font-scale 由偏好中心字号缩放驱动） ------- */
+  --fs-xs: calc(12px * var(--font-scale, 1)); /* 标签、说明 */
+  --fs-sm: calc(13px * var(--font-scale, 1)); /* 次要文本 */
+  --fs-md: calc(16px * var(--font-scale, 1)); /* 正文 */
+  --fs-lg: calc(18px * var(--font-scale, 1)); /* 卡片标题 */
+  --fs-xl: calc(20px * var(--font-scale, 1)); /* 区块标题 h2 */
+  --fs-h1: calc(28px * var(--font-scale, 1)); /* 页面标题 */
+  --fs-hero: calc(32px * var(--font-scale, 1)); /* 仪表盘主标语 */
+  --fs-num: calc(24px * var(--font-scale, 1)); /* 统计数字 */
 
   /* ------- 间距（8px 基） ------- */
   --sp-1: 4px;

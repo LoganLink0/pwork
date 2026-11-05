@@ -4,9 +4,10 @@
  * 入库复用 markdownImport 的去重管线（按 body 全文去重）。
  * 格式依据（2026-11-05 官方文档查证）：flomo 官方导出为单个 HTML、内部结构未文档化→
  * 时间戳锚点切块的宽容提取；Notion 导出 zip 内 .md + 子页面文件夹 + .csv（CSV 数据库页
- * v1 跳过计数）；.enex 为公开 DTD 的 XML（note: title/created/updated/tag/content）。
+ * v1 跳过）；.enex 为公开 DTD 的 XML（note: title/created/updated/tag/content）。
+ * JSZip 仅 Notion zip 需要（单 HTML/enex 用 DOMParser）——动态加载，避免 Settings 页
+ * 静态依赖大库拖慢首页到设置的跳转加载（e2e 实测 chunk 加载超测试等待窗口）。
  */
-import JSZip from 'jszip'
 import { importMarkdownNotes, parseMarkdownFiles, type MarkdownDraft, type MarkdownImportResult } from './markdownImport'
 
 export interface ThirdpartyOutcome extends MarkdownImportResult {
@@ -125,6 +126,7 @@ function cleanNotionSegment(seg: string): string {
 }
 
 export async function parseNotionZip(file: File): Promise<SimpleParseResult & { nonNoteFiles: number }> {
+  const { default: JSZip } = await import('jszip')
   const zip = await JSZip.loadAsync(await file.arrayBuffer())
   const files: { path: string; text: string }[] = []
   let nonNoteFiles = 0
@@ -139,7 +141,7 @@ export async function parseNotionZip(file: File): Promise<SimpleParseResult & { 
     files.push({ path: cleanedPath, text: await entry.async('string') })
   }
   // CSV 数据库页 v1 跳过：nonNoteFiles 已含；md 交给宽容解析（空文件自行计 skipped）
-  return { ...parseMarkdownFiles(files), nonNoteFiles }
+  return { ...(await parseMarkdownFiles(files)), nonNoteFiles }
 }
 
 /* ------------------------------ 行内 #标签提取（与 markdownImport 同规则） ------------------------------ */

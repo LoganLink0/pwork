@@ -7,7 +7,6 @@
  */
 import { db } from '../db/schema'
 import { newId, deriveTitle } from '../db/repo'
-import { parse as parseYaml } from 'yaml'
 import type { Note } from '../types/models'
 
 /** 单次导入上限（与书签导入同口径） */
@@ -41,11 +40,13 @@ interface FrontmatterLite {
   tags?: string[]
 }
 
-/** 宽容 frontmatter 提取：仅认 title 与 tags（字符串或数组），其余字段忽略；解析失败当无元数据 */
-function extractFrontmatter(text: string): { meta: FrontmatterLite; rest: string } {
+/** 宽容 frontmatter 提取：仅认 title 与 tags（字符串或数组），其余字段忽略；解析失败当无元数据。
+ *  yaml 库动态加载——md 导入是低频操作，不值得让 yaml 进 Settings 页的首载依赖链 */
+async function extractFrontmatter(text: string): Promise<{ meta: FrontmatterLite; rest: string }> {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
   if (!m) return { meta: {}, rest: text }
   try {
+    const { parse: parseYaml } = await import('yaml')
     const parsed = parseYaml(m[1]) as Record<string, unknown> | null
     if (!parsed || typeof parsed !== 'object') return { meta: {}, rest: text.slice(m[0].length) }
     const meta: FrontmatterLite = {}
@@ -70,11 +71,11 @@ function inlineTags(text: string): string[] {
 }
 
 /** 文件（含相对路径）→ 速记草稿；返回 null 表示该文件跳过 */
-function parseMarkdownFile(path: string, text: string, rootLabel: string): MarkdownDraft | null {
+async function parseMarkdownFile(path: string, text: string, rootLabel: string): Promise<MarkdownDraft | null> {
   if (text.length > MAX_FILE_CHARS) return null
   const trimmed = text.trim()
   if (!trimmed) return null
-  const { meta, rest } = extractFrontmatter(text)
+  const { meta, rest } = await extractFrontmatter(text)
   const body = rest.trim() ? rest.trimEnd() : (text.trim() || trimmed)
   // 标题：frontmatter title → H1 → 首行非空行
   let title = meta.title ?? ''
@@ -87,7 +88,7 @@ function parseMarkdownFile(path: string, text: string, rootLabel: string): Markd
 }
 
 /** 解析一组 md 文件（相对路径携带文件夹层级） */
-export function parseMarkdownFiles(files: { path: string; text: string }[], rootLabel = ''): MarkdownParseResult {
+export async function parseMarkdownFiles(files: { path: string; text: string }[], rootLabel = ''): Promise<MarkdownParseResult> {
   const drafts: MarkdownDraft[] = []
   let skipped = 0
   for (const f of files) {
@@ -96,7 +97,7 @@ export function parseMarkdownFiles(files: { path: string; text: string }[], root
       skipped++
       continue
     }
-    const d = parseMarkdownFile(f.path, f.text, rootLabel)
+    const d = await parseMarkdownFile(f.path, f.text, rootLabel)
     if (!d) {
       skipped++
       continue

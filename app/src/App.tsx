@@ -40,6 +40,20 @@ function PageFallback() {
 
 /** 从注册表递归生成路由树：redirect → <Navigate>；children → 嵌套布局（layoutElement 或懒加载父组件）。
  *  返回数组由 <Routes> 直接展开（Routes 的直接子元素必须是 Route，组件包装会被 react-router 拒绝）。 */
+/** 懒组件按路由键缓存（必须模块级稳定）：lazy 若在每次渲染的 registryRoutes() 内新建，
+ *  React 视为不同组件类型 → 全部路由组件随任意状态更新反复卸载重挂——设置页白屏、
+ *  速记编辑器重挂竞态（R2 批）等历史偶发的共同根因。缓存后组件类型恒定，重渲染只做更新。 */
+const lazyCache = new Map<string, React.ComponentType>()
+
+function lazyPage(key: string, loader: () => Promise<{ default: React.ComponentType }>): React.ComponentType {
+  let C = lazyCache.get(key)
+  if (!C) {
+    C = lazy(loader)
+    lazyCache.set(key, C)
+  }
+  return C
+}
+
 function registryRoutes(): ReactNode[] {
   return PAGE_REGISTRY.map((p) => {
     if (p.redirect) {
@@ -51,26 +65,26 @@ function registryRoutes(): ReactNode[] {
           <Route key={p.path} path={p.path} element={p.layoutElement}>
             {p.children.map((c) => {
               if (!c.loader) return null
-              const C = lazy(c.loader)
+              const C = lazyPage(`${p.path}/${c.path || 'index'}`, c.loader)
               return <Route key={c.path || 'index'} index={c.index} path={c.index ? undefined : c.path} element={<C />} />
             })}
           </Route>
         )
       }
       if (!p.loader) return null
-      const Layout = lazy(p.loader)
+      const Layout = lazyPage(p.path, p.loader)
       return (
         <Route key={p.path} path={p.path} element={<Layout />}>
           {p.children.map((c) => {
             if (!c.loader) return null
-            const C = lazy(c.loader)
+            const C = lazyPage(`${p.path}/${c.path || 'index'}`, c.loader)
             return <Route key={c.path || 'index'} index={c.index} path={c.index ? undefined : c.path} element={<C />} />
           })}
         </Route>
       )
     }
     if (!p.loader) return null
-    const C = lazy(p.loader)
+    const C = lazyPage(p.path, p.loader)
     return <Route key={p.path} path={p.path} element={<C />} />
   })
 }
