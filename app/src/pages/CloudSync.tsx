@@ -251,10 +251,6 @@ export function CloudSyncCards({ active }: { active: boolean }) {
               {cloudMsg}
             </div>
           )}
-          {cloud.mode === 'd1' && (
-            <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-              </div>
-          )}
         </div>
       </div>
 
@@ -332,8 +328,6 @@ export function CloudSyncCards({ active }: { active: boolean }) {
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {sync.lastSyncAt ? `上次 ${fmtLocal(sync.lastSyncAt)}：拉 ${sync.lastPulled} / 推 ${sync.lastPushed} 条` : '还没同步过'}
             </span>
-          </div>
-          <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
           </div>
         </div>
       </div>

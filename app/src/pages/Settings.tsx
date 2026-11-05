@@ -1227,8 +1227,6 @@ export function Settings() {
               </div>
             </>
           )}
-          <div className="notice" style={{ marginTop: 'var(--sp-3)' }}>
-          </div>
         </div>
       </div>
 

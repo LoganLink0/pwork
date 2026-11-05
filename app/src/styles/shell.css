@@ -591,7 +591,8 @@ a.mcard-link:hover {
 }
 
 .mcard .m-name {
-  font-size: var(--fs-lg);
+  /* 偏好中心反馈：与子模块 m-links（14px）拉开真实层级差，而非仅加粗 */
+  font-size: var(--fs-xl);
   font-weight: 700;
 }
 

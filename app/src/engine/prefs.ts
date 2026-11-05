@@ -5,7 +5,7 @@
  * 渲染前应用避免闪屏（main.tsx 与主题同位调用）。
  */
 
-export type FontScale = 0.9 | 1 | 1.1 | 1.25
+export type FontScale = 0.9 | 1 | 1.1 | 1.25 | 1.5
 export type ReadingWidth = 'narrow' | 'standard' | 'wide'
 export type FontFamilyPref = 'system' | 'serif' | 'mono'
 
@@ -24,6 +24,7 @@ export const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
   { value: 1, label: '标准 100%' },
   { value: 1.1, label: '大 110%' },
   { value: 1.25, label: '特大 125%' },
+  { value: 1.5, label: '超大 150%' },
 ]
 
 export const READING_WIDTH_OPTIONS: { value: ReadingWidth; label: string; px: number | null }[] = [

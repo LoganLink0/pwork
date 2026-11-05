@@ -36,7 +36,7 @@ describe('偏好中心（prefs 引擎）', () => {
   })
 
   it('三组选项清单完整（设置页分段控件数据源）', () => {
-    expect(FONT_SCALE_OPTIONS.map((o) => o.value)).toEqual([0.9, 1, 1.1, 1.25])
+    expect(FONT_SCALE_OPTIONS.map((o) => o.value)).toEqual([0.9, 1, 1.1, 1.25, 1.5])
     expect(READING_WIDTH_OPTIONS.map((o) => o.value)).toEqual(['narrow', 'standard', 'wide'])
     expect(FONT_FAMILY_OPTIONS.map((o) => o.value)).toEqual(['system', 'serif', 'mono'])
   })
