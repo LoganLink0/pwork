@@ -9,6 +9,7 @@ import { isPermissionGranted, requestPermission, sendNotification } from '@tauri
 import { isDesktopApp } from './platform'
 import { db } from '../db/schema'
 import { todayLocal as localDay } from './datetime'
+import { useNotifyHub } from './notifyCenter'
 
 export type NotifyKind = 'tasks' | 'review' | 'digest'
 
@@ -75,6 +76,8 @@ export async function sendDailyNotify(
     return false // 通知失败不影响主流程（它只是提醒，不是承诺）
   }
   await markSent(kind, today)
+  // 同步进通知中心历史：系统提醒发过之后铃铛里可回看
+  useNotifyHub.getState().push({ kind: 'remind', title, desc: body })
   return true
 }
 

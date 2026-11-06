@@ -12,6 +12,7 @@ import { greetWord, relTime, weekdayLocal } from '../engine/datetime'
 import { gatherSignals, type Signal } from '../engine/signals'
 import { db } from '../db/schema'
 import { shouldRemindBackup, snoozeBackupReminder, getSnoozeDate } from '../engine/backupReminder'
+import { healthNotice, healthDismissedToday, dismissHealthToday, type HealthNotice } from '../engine/healthNotice'
 
 /** 输入模块卡的直达行（速记 = 我想到的；信源 = 网上来的） */
 function InputCardLinks({ noteCount, sourceCount, digestCount }: { noteCount: number; sourceCount: number; digestCount: number }) {
@@ -67,6 +68,7 @@ export function Home() {
   const [reviewInfo, setReviewInfo] = useState<{ count: number; lastAt: string | null } | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
   const [backupWarn, setBackupWarn] = useState(false)
+  const [health, setHealth] = useState<HealthNotice | null>(null)
   const now = new Date()
   const today = todayNoteCount(notes, now)
   const recent = notes.slice(0, 3)
@@ -83,6 +85,9 @@ export function Home() {
       setReviewInfo({ count, lastAt: last[0]?.createdAt ?? null })
       setSignals(sig)
       setBackupWarn(shouldRemindBackup(localStorage.getItem('pwork-last-backup'), getSnoozeDate(), now))
+      // 健康提示（错误堆积）：已有提醒在先（备份条）就不叠第二条
+      const hn = await healthNotice(now)
+      if (hn && !healthDismissedToday('errors')) setHealth(hn)
       void (async () => {
         const { useGoals: g } = await import('../store/goals')
         await g.getState().load()
@@ -149,6 +154,23 @@ export function Home() {
             }}
           >
             暂缓 7 天
+          </button>
+        </div>
+      )}
+      {health && !backupWarn && (
+        <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="health-notice">
+          {health.title}——{health.desc}
+          <Link to={health.to} style={{ marginLeft: 'var(--sp-2)', fontWeight: 600 }}>{health.actionLabel} →</Link>
+          <button
+            type="button"
+            className="text-btn"
+            style={{ marginLeft: 'var(--sp-2)' }}
+            onClick={() => {
+              dismissHealthToday('errors')
+              setHealth(null)
+            }}
+          >
+            今天不再提醒
           </button>
         </div>
       )}

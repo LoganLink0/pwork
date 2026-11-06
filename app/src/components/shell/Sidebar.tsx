@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { MODULE_NAV, WORKSPACE_NAV } from '../../content/nav'
 import { Icon } from './icons'
+import { NotifyBell } from './NotifyBell'
 import { useNotes } from '../../store/notes'
 import { useCollect } from '../../store/collect'
 import { useTasks } from '../../store/tasks'
 import { useUi } from '../../store/ui'
+import { loadRecent, recordRecent, subscribeRecent } from '../../engine/recentOpen'
 import type { ThemePref } from '../../engine/appearance'
 
 const OPEN_KEY = 'pwork-nav-open'
@@ -17,6 +19,29 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
   { pref: 'light', icon: 'sun', label: '明亮' },
 ]
 
+/** 公告轮播（WorkBuddy 学习批）：内测期的版本亮点 / 引导 / 交流入口常驻出口，
+ *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示） */
+const ANNOUNCES = [
+  {
+    title: '0.1.15 更新',
+    desc: '阅读视图、图片附件、历史数据一键搬家',
+    to: '/help',
+    internal: true,
+  },
+  {
+    title: '新手引导',
+    desc: '五步认识工作台，随时可以重看',
+    to: '/welcome',
+    internal: true,
+  },
+  {
+    title: '交流与反馈',
+    desc: '想法、提问、展示都在 Discussions',
+    to: 'https://github.com/LoganLink0/pwork/discussions',
+    internal: false,
+  },
+]
+
 function loadOpen(): Record<string, boolean> {
   try {
     const v = localStorage.getItem(OPEN_KEY)
@@ -24,6 +49,69 @@ function loadOpen(): Record<string, boolean> {
   } catch {
     return {}
   }
+}
+
+/** 公告轮播卡：8 秒轮换 + 小点切换；关闭记到版本级 localStorage */
+function AnnounceCard() {
+  const [idx, setIdx] = useState(0)
+  const [off, setOff] = useState(() => {
+    try {
+      return localStorage.getItem(`pwork-announce-off-${__APP_VERSION__}`) === '1'
+    } catch {
+      return false
+    }
+  })
+  const a = ANNOUNCES[idx]
+
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % ANNOUNCES.length), 8000)
+    return () => clearInterval(t)
+  }, [])
+
+  if (off) return null
+  return (
+    <div className="announce-card" role="note" aria-label="公告">
+      <div className="an-head">
+        <b>{a.title}</b>
+        <button
+          type="button"
+          className="an-x"
+          aria-label="关闭公告"
+          onClick={() => {
+            try {
+              localStorage.setItem(`pwork-announce-off-${__APP_VERSION__}`, '1')
+            } catch {
+              // 静默
+            }
+            setOff(true)
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      <div className="an-desc">{a.desc}</div>
+      <div className="an-foot">
+        {ANNOUNCES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`an-dot${i === idx ? ' on' : ''}`}
+            aria-label={`公告 ${i + 1}`}
+            onClick={() => setIdx(i)}
+          />
+        ))}
+        {a.internal ? (
+          <NavLink to={a.to} className="an-link">
+            前往 →
+          </NavLink>
+        ) : (
+          <a href={a.to} target="_blank" rel="noreferrer noopener" className="an-link">
+            前往 →
+          </a>
+        )}
+      </div>
+    </div>
+  )
 }
 
 /** 侧边栏（PRD §4.1）：工作区横切面 + 四模块分组；占位模块置灰可点开 */
@@ -34,6 +122,8 @@ export function Sidebar() {
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
   const [open, setOpen] = useState<Record<string, boolean>>(() => loadOpen())
+  const location = useLocation()
+  const recent = useSyncExternalStore(subscribeRecent, loadRecent, () => [])
 
   const countOf = (from: 'notes' | 'sources' | undefined): number | null => {
     if (from === 'notes') return noteCount || null
@@ -44,6 +134,11 @@ export function Sidebar() {
   useEffect(() => {
     localStorage.setItem(OPEN_KEY, JSON.stringify(open))
   }, [open])
+
+  // 路由变化：记录「最近打开」（列表经 useSyncExternalStore 订阅自动刷新）
+  useEffect(() => {
+    recordRecent(location.pathname)
+  }, [location.pathname])
 
   const toggle = (key: string) =>
     setOpen((o) => ({ ...o, [key]: !(o[key] ?? true) }))
@@ -114,7 +209,24 @@ export function Sidebar() {
         ),
       )}
 
+      {(() => {
+        const visible = recent.filter((it) => it.path !== location.pathname).slice(0, 6)
+        if (visible.length === 0) return null
+        return (
+          <>
+            <div className="nav-group">最近打开</div>
+            {visible.map((it) => (
+              <NavLink key={it.path} to={it.path} className="nav-item nav-recent">
+                <span className="ico" aria-hidden><Icon name="clock" size={14} /></span>
+                {it.label}
+              </NavLink>
+            ))}
+          </>
+        )
+      })()}
+
       <div className="spacer" />
+      <AnnounceCard />
       <a
         className="gh-btn"
         href="https://github.com/LoganLink0/pwork"
@@ -131,20 +243,23 @@ export function Sidebar() {
         <span className="ico" aria-hidden><Icon name="settings" /></span>
         设置
       </NavLink>
-      <div className="theme-seg" role="group" aria-label="视觉主题">
-        {THEMES.map((t) => (
-          <button
-            key={t.pref}
-            type="button"
-            className={theme === t.pref ? 'on' : ''}
-            aria-pressed={theme === t.pref}
-            title={`主题：${t.label}`}
-            aria-label={`主题：${t.label}`}
-            onClick={() => setTheme(t.pref)}
-          >
-            <Icon name={t.icon} size={15} />
-          </button>
-        ))}
+      <div className="dock-row">
+        <NotifyBell />
+        <div className="theme-seg" role="group" aria-label="视觉主题">
+          {THEMES.map((t) => (
+            <button
+              key={t.pref}
+              type="button"
+              className={theme === t.pref ? 'on' : ''}
+              aria-pressed={theme === t.pref}
+              title={`主题：${t.label}`}
+              aria-label={`主题：${t.label}`}
+              onClick={() => setTheme(t.pref)}
+            >
+              <Icon name={t.icon} size={15} />
+            </button>
+          ))}
+        </div>
       </div>
       <div className="foot">
         v{__APP_VERSION__} · 内测中

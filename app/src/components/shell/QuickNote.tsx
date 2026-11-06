@@ -175,7 +175,7 @@ function QuickNoteDialog() {
         <textarea
           ref={taRef}
           value={body}
-          placeholder={isDesktopApp() ? '想到什么写什么……（Markdown；截图可直接 Ctrl+V）' : '想到什么写什么……（Markdown）'}
+          placeholder={isDesktopApp() ? '想到什么写什么……Ctrl+Enter 存了继续；截图可直接 Ctrl+V' : '想到什么写什么……Ctrl+Enter 存了继续'}
           onChange={(e) => setBody(e.target.value)}
           onPaste={(e) => void onPasteImage(e)}
           onKeyDown={(e) => {

@@ -8,8 +8,9 @@ import { db as db2 } from '../db/schema'
 /** 速记模块集成（PRD §4.3）：列表、筛选、编辑器自动保存、软删除与回收站 */
 
 async function gotoNotes(user: ReturnType<typeof userEvent.setup>) {
-  // 链接 accessible name 会带计数（如"速记 1"），用正则匹配
-  await user.click(within(screen.getByLabelText('主导航')).getByRole('link', { name: /速记/ }))
+  // 链接 accessible name 会带计数（如"速记 1"），用正则匹配；
+  // 「最近打开」分组里也有同名历史入口（DOM 顺序在主导航之后），取第一个即主入口
+  await user.click(within(screen.getByLabelText('主导航')).getAllByRole('link', { name: /速记/ })[0]!)
   await screen.findByTestId('note-list')
 }
 

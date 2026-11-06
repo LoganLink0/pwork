@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useNotifyHub } from './notifyCenter'
 
 /**
  * 右下角完成通知（R 批用户需求：输出/处理的长任务返回结果后，右下角弹「已完成」，
@@ -31,6 +32,8 @@ export const useCornerNotify = create<CornerState>((set, get) => ({
   notify: (n) => {
     const id = `cn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
     set((s) => ({ entries: [...s.entries.slice(-2), { id, ...n }] }))
+    // 同步进通知中心历史：右下角弹完消失，铃铛里留底
+    useNotifyHub.getState().push({ kind: 'done', title: n.title, desc: n.desc, to: n.to })
     setTimeout(() => get().dismiss(id), CORNER_TTL)
   },
   dismiss: (id) => set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
