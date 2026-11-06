@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'r
 import { Sidebar } from './components/shell/Sidebar'
 import { Topbar } from './components/shell/Topbar'
 import { BottomNav } from './components/shell/BottomNav'
+import { MobileSubTabs } from './components/shell/MobileSubTabs'
 import { CommandPalette } from './components/shell/CommandPalette'
 import { QuickNote } from './components/shell/QuickNote'
 import { isDesktopApp } from './engine/platform'
@@ -447,6 +448,7 @@ export default function App() {
             <Toaster />
             <CornerToasts />
             <Topbar />
+            <MobileSubTabs />
             <div className="content">
               <div className="content-inner">
                 <Suspense fallback={<PageFallback />}>

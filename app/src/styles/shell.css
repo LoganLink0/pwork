@@ -1868,6 +1868,11 @@ a.mcard .m-link:hover {
   outline: none;
 }
 
+/* 模块子页 Tab 条：桌面隐藏（窄屏媒体查询内显示） */
+.mobile-subtabs {
+  display: none;
+}
+
 /* ---------- 窄屏（手机）适配（2026-11-06 用户验收反馈）---------- */
 @media (max-width: 768px) {
   /* 顶栏面包屑只留主标题：窄屏下与搜索框抢宽导致截断 */
@@ -1894,6 +1899,86 @@ a.mcard .m-link:hover {
   /* 提示横幅内的链接不拆行（箭头曾单独掉到下一行） */
   .run-banner a {
     white-space: nowrap;
+  }
+
+  /* 模块子页 Tab 条：仅窄屏显示，页头下方横排切换子模块 */
+  .mobile-subtabs {
+    display: flex;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    scrollbar-width: none;
+  }
+  .mobile-subtabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mst {
+    flex: none;
+    padding: 5px var(--sp-3);
+    border-radius: 999px;
+    font-size: var(--fs-sm);
+    color: var(--ink-faint);
+    text-decoration: none;
+    background: var(--surface-2);
+  }
+  .mst.on {
+    color: #fff;
+    font-weight: 600;
+    background: var(--accent);
+  }
+
+  /* 「更多」按钮与四项同形态（button 元素重置为 NavLink 观感） */
+  .bottomnav button.bn {
+    border: none;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  /* 「更多」完整导航抽屉：底部上滑面板 */
+  .more-sheet-overlay {
+    align-items: flex-end;
+    padding: 0;
+    z-index: 260;
+  }
+  .more-sheet {
+    width: 100%;
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    box-shadow: var(--shadow-pop);
+    animation: overlay-in var(--dur-1) var(--ease) both;
+  }
+  .ms-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--fs-md);
+  }
+  .ms-body {
+    overflow-y: auto;
+    padding: var(--sp-2) var(--sp-3) calc(var(--sp-4) + env(safe-area-inset-bottom));
+  }
+  .ms-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 10px var(--sp-3);
+    border-radius: var(--r-sm);
+    color: var(--ink-soft);
+    font-size: var(--fs-md);
+    text-decoration: none;
+  }
+  .ms-item.on {
+    background: var(--surface-2);
+    color: var(--accent-text);
+    font-weight: 600;
   }
 }
 
