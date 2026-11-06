@@ -469,7 +469,7 @@ export function Settings() {
                 </button>
               ))}
             </div>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               全界面等比缩放，信息密集页也看得清
             </span>
           </div>
@@ -488,7 +488,7 @@ export function Settings() {
                 </button>
               ))}
             </div>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               速记编辑器与条目阅读窗的正文宽度
             </span>
           </div>
@@ -507,7 +507,7 @@ export function Settings() {
                 </button>
               ))}
             </div>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               衬线适合长文阅读，等宽适合代码与对齐敏感场景
             </span>
           </div>
@@ -559,7 +559,7 @@ export function Settings() {
                   }}
                 />
               </label>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               {lastBackup ? `上次导出：${fmtLocal(lastBackup)}` : '还没有导出过'}
             </span>
           </div>
@@ -594,7 +594,7 @@ export function Settings() {
               </button>
             )}
             {mirrorMsg && (
-              <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+              <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
                 {mirrorMsg}
               </span>
             )}
@@ -612,7 +612,7 @@ export function Settings() {
                 }}
               />
             </label>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               人类可读的带走格式；恢复用上方的全量导出
             </span>
           </div>
@@ -631,7 +631,7 @@ export function Settings() {
                 }}
               />
             </label>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               把浏览器书签与稍后读（Raindrop / Pocket / Instapaper）带进条目库，历史数据搬家第一步
             </span>
           </div>
@@ -651,7 +651,7 @@ export function Settings() {
                 }}
               />
             </label>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               Obsidian / Logseq / 思源等任意 Markdown 库搬为速记，原样保留正文
             </span>
           </div>
@@ -670,7 +670,7 @@ export function Settings() {
                 }}
               />
             </label>
-            <span className="val" style={{ flex: 'none', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
               flomo（HTML）/ Notion（zip）/ Evernote·印象笔记（.enex）
             </span>
           </div>

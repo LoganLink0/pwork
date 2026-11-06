@@ -474,13 +474,13 @@ button.nav-item {
   padding: var(--sp-3);
   border-top: 1px solid var(--line);
   line-height: 1.5;
-  white-space: nowrap;
 }
 .foot-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
+  white-space: nowrap; /* 版本行不换行；公告卡文字正常换行（曾致侧栏横向滚动） */
 }
 .gh-foot {
   display: flex;
@@ -1440,6 +1440,15 @@ a.mcard .m-link:hover {
   flex: 1;
   min-width: 0;
 }
+/* 所有行末说明都可收缩换行（含长英文词/箭头串——数据管理卡曾出现 534px 不可断溢出） */
+.set-row .val {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* 分段控件允许换行收缩（窄容器下五档按钮折行，不再撑破卡片） */
+.seg {
+  flex-wrap: wrap;
+}
 
 .input {
   flex: 1;
@@ -1899,6 +1908,33 @@ a.mcard .m-link:hover {
   /* 提示横幅内的链接不拆行（箭头曾单独掉到下一行） */
   .run-banner a {
     white-space: nowrap;
+  }
+
+  /* 设置行窄屏纵向堆叠：label 在上、控件与说明在下——修复数据管理等卡的内容溢出与挤压换行 */
+  .settings-content .set-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+  .settings-content .set-row > label {
+    width: auto;
+  }
+  .settings-content .set-row .seg {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .settings-content .set-row input,
+  .settings-content .set-row .input {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .settings-content .set-card {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .bottomnav {
+    z-index: 301;
   }
 
   /* 模块子页 Tab 条：仅窄屏显示，页头下方横排切换子模块 */
@@ -2613,19 +2649,26 @@ a.mcard .m-link:hover {
   align-items: flex-start;
   flex-wrap: wrap;
 }
+.wheel-dnd {
+  /* 容器查询锚点：环半径随卡片内容宽自适应（任意窗口宽度不再溢出） */
+  container-type: inline-size;
+}
 .wheel-edit-ring {
+  /* 半径/格位尺寸变量化：默认 148/92（桌面正常宽），容器变窄时按 100cqw 联动收缩 */
+  --ring-r: min(148px, calc((100cqw - 104px) / 2));
+  --slot-size: min(92px, calc(100cqw * 0.22));
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: calc(var(--ring-r) * 2 + var(--slot-size) + 12px);
+  height: calc(var(--ring-r) * 2 + var(--slot-size) + 12px);
   flex: none;
 }
 .wheel-edit-ring .wheel-slot {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 92px;
-  height: 92px;
-  margin: -46px 0 0 -46px;
+  width: var(--slot-size);
+  height: var(--slot-size);
+  margin: calc(var(--slot-size) / -2) 0 0 calc(var(--slot-size) / -2);
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: var(--surface);
@@ -2638,7 +2681,7 @@ a.mcard .m-link:hover {
   font-size: var(--fs-sm);
   font-family: inherit;
   cursor: grab;
-  transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(148px) rotate(calc(-1 * var(--i) * (360deg / var(--n))));
+  transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(var(--ring-r)) rotate(calc(-1 * var(--i) * (360deg / var(--n))));
 }
 .wheel-drop.drop-hover {
   border-color: var(--accent);
@@ -3017,6 +3060,21 @@ html[data-wheel] body {
   padding: 5px 16px;
 }
 .demo-banner a { color: #fff; font-weight: 700; text-decoration: underline; }
+/* 窄屏时横幅上移避开底部导航（须声明在 .demo-banner 基础样式之后以覆盖 bottom:0）；
+   避让高度 = 底栏高度 + 设备安全区（env 动态计算，iPhone 底部横条也算入）；
+   底部导航层级同时抬到横幅之上（2026-11-06 用户报告「更多」被横幅挡住） */
+@media (max-width: 768px) {
+  .demo-banner {
+    /* 60px = 底栏 height，加 env 安全区后横幅正好悬在底栏上沿 */
+    bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+  .bottomnav {
+    z-index: 301;
+  }
+}
+
+/* 更窄（手机竖排）：轮盘编辑环整体缩小（格位公式引用变量，改两个值即整体缩放） */
+/* 480 断点的轮盘缩放已由容器查询（--ring-r 的 min() 计算）取代，删除硬编码覆盖 */
 
 /* 数据存储升级窗口（08 S2 迁移向导）：全屏遮罩正中居中卡（复用 welcome-veil 的
    fixed 遮罩与快捷键屏蔽，叠加 flex 居中——迁移是独占时刻，视视觉重中心给足） */
