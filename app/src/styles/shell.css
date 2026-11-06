@@ -1718,12 +1718,30 @@ a.mcard .m-link:hover {
   overflow: hidden;
 }
 
-/* 帮助页常见问题/术语表的分组标题（按四模块与主题归类）：高于正文一档的标题层级 */
+/* 帮助页常见问题/术语表的分组标题（按四模块与主题归类）：
+   圆点 + 标题 + 细线延伸到行尾——复用待办页分类行的分组语言 */
 .faq-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   margin: var(--sp-5) 0 var(--sp-3);
   font-size: var(--fs-md);
   font-weight: 700;
   color: var(--ink);
+}
+.faq-group::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+.faq-group::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 .faq-group:first-child {
   margin-top: 0;
