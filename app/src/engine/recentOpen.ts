@@ -13,7 +13,7 @@ export interface RecentItem {
 }
 
 const STORE_KEY = 'pwork-recent'
-const MAX_ITEMS = 6
+const MAX_ITEMS = 3
 const EVENT = 'pwork-recent-changed'
 
 /** path → 页面名：从导航表构建（工作区 + 模块子页） */

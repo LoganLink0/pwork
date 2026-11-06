@@ -209,7 +209,7 @@ export function Sidebar() {
       )}
 
       {(() => {
-        const visible = recent.filter((it) => it.path !== location.pathname).slice(0, 6)
+        const visible = recent.filter((it) => it.path !== location.pathname).slice(0, 3)
         if (visible.length === 0) return null
         return (
           <>
