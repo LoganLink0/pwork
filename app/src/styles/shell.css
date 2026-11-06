@@ -1850,6 +1850,35 @@ a.mcard .m-link:hover {
   outline: none;
 }
 
+/* ---------- 窄屏（手机）适配（2026-11-06 用户验收反馈）---------- */
+@media (max-width: 768px) {
+  /* 顶栏面包屑只留主标题：窄屏下与搜索框抢宽导致截断 */
+  .crumb > span:last-of-type {
+    display: none;
+  }
+
+  /* 速记浮层底行：键盘快捷键提示在触屏无意义，隐藏；行内允许换行不挤出屏幕 */
+  .qn-foot {
+    flex-wrap: wrap;
+  }
+  .qn-foot .qn-hint {
+    display: none;
+  }
+
+  /* 待办快速添加行：标题输入可收缩，日期框收窄不再被推出视口 */
+  .quick-add input:not([type='date']) {
+    min-width: 0;
+  }
+  .quick-add input[type='date'] {
+    width: 132px !important; /* 覆盖内联 width:140，同时保证日期完整显示 */
+  }
+
+  /* 提示横幅内的链接不拆行（箭头曾单独掉到下一行） */
+  .run-banner a {
+    white-space: nowrap;
+  }
+}
+
 @keyframes overlay-in {
   from {
     opacity: 0;

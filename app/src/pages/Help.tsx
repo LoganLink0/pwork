@@ -33,7 +33,7 @@ export function Help() {
     <section className="settings-page">
       <div className="page-head">
         <h1>帮助</h1>
-        <span className="sub">四模块系统怎么用 · 数据在哪、怎么丢不了 · 出了问题看排错</span>
+        <span className="sub">四模块系统怎么用 · 数据在哪、怎么丢不了 · 出了问题看常见问题</span>
       </div>
 
       <div className="settings-layout">

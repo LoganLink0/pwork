@@ -59,7 +59,7 @@ export function Notes() {
       <div className="page-head">
         <h1>速记</h1>
         <span className="sub">
-          {notes.length} 条 · 捕获 ≤3 次交互（N 键随时唤起）
+          {notes.length} 条 · 捕获 ≤3 次交互
         </span>
         <div className="right">
           <Link to="/input/notes/new" className="btn-primary">＋ 新速记</Link>
@@ -177,7 +177,7 @@ export function NotesEmptyPane() {
   return (
     <div className="empty">
       <div className="e-ico" aria-hidden><Icon name="pen" size={32} /></div>
-      <p>选择左侧一条速记，或新建一条。</p>
+      <p>点一条速记查看，或新建一条。</p>
       <Link to="/input/notes/new" className="btn-primary">＋ 新速记</Link>
     </div>
   )
