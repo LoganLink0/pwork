@@ -467,12 +467,29 @@ button.nav-item {
 }
 
 .sidebar .foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
   font-size: var(--fs-xs);
   color: var(--ink-faint);
   padding: var(--sp-3);
   border-top: 1px solid var(--line);
   line-height: 1.5;
   white-space: nowrap;
+}
+.gh-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  color: var(--ink-faint);
+  transition: color var(--dur-1) var(--ease);
+}
+.gh-foot:hover {
+  color: var(--ink);
 }
 
 .main {
@@ -1695,6 +1712,19 @@ a.mcard .m-link:hover {
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   overflow: hidden;
+}
+
+/* 帮助页常见问题/术语表的分组小标题（按四模块与主题归类） */
+.faq-group {
+  margin: var(--sp-3) 0 var(--sp-2);
+  padding-left: var(--sp-2);
+  border-left: 3px solid var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.faq-group:first-child {
+  margin-top: 0;
 }
 
 .errlog-item {

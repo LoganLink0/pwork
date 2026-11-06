@@ -138,7 +138,7 @@ export function AsrTool() {
         {savedMsg && <span className="val" style={{ color: 'var(--ok)', fontSize: 'var(--fs-xs)' }}>{savedMsg}</span>}
       </div>
       <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-        识别由浏览器引擎完成（免费，但 Chrome/Edge 会联网到其服务）；嘈杂环境与长音频建议后续用「高质量语音识别」（BYOK，待点亮）。
+        识别由浏览器引擎完成（免费，但 Chrome/Edge 会联网到其服务）；嘈杂环境与长音频建议后续用「高质量语音识别」（需自带 Key，待点亮）。
       </p>
     </div>
   )

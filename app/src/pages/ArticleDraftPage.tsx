@@ -177,7 +177,7 @@ export function ArticleDraftPage() {
               </button>
               {!coachReady() && (
                 <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置。
+                  AI 需要先在 <Link to="/settings">设置 → AI 设置</Link> 配置。
                 </span>
               )}
               {!materials.length && (

@@ -57,7 +57,7 @@ export function Process() {
 
       <div className="set-card">
         <h2>工具箱</h2>
-        <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频；本地引擎离线可用，生成类为 BYOK 占位</div>
+        <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频；本地引擎离线可用，生成类为自带 Key 占位</div>
         <div className="set-body">
           <div className="module-grid">
             {CATEGORY_ORDER.map((cat) => {

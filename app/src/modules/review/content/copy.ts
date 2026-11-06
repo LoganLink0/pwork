@@ -343,7 +343,7 @@ export const SETTINGS = {
   coachHint:
     '规则引擎完全离线可用；接入你自己的大模型 API Key 后，AI 会替你生成深挖式追问、改写追责措辞。Key 只存在本机 localStorage，不会进入备份文件。',
   coachModeRule: '规则引擎（离线）',
-  coachModeLlm: 'AI 模型（BYOK）',
+  coachModeLlm: 'AI 模型（自带 Key）',
   providerLabel: '服务商',
   baseURLLabel: '接口地址',
   modelLabel: '模型',

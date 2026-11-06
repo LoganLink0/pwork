@@ -183,7 +183,7 @@ export function ReportGenerator() {
             </div>
           ) : (
             <div className="notice">
-              BYOK 未配置——跳过即可；需要时到 <Link to="/settings">设置 → AI · BYOK</Link> 配置。
+              AI Key 未配置——跳过即可；需要时到 <Link to="/settings">设置 → AI 设置</Link> 配置。
             </div>
           )}
         </div>

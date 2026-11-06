@@ -47,7 +47,7 @@ export const ENGINE_LABEL: Record<ToolEngine, string> = {
   'local-canvas': '本地 · Canvas',
   'local-ytdlp': '本地 · yt-dlp 解析',
   external: '外部工具 ↗',
-  byok: 'BYOK 云端',
+  byok: '自带 Key 云端',
   app: '独立应用',
 }
 

@@ -40,7 +40,7 @@ export function ProcessToolPage() {
       <section>
         <div className="page-head">
           <h1>{tool.name}</h1>
-          <span className="sub">{cat.name}类 · BYOK 云引擎</span>
+          <span className="sub">{cat.name}类 · 自带 Key 云引擎</span>
         </div>
         <div className="placeholder" style={{ margin: 'var(--sp-6) auto' }}>
           <div className="p-ico" aria-hidden><Icon name="key" size={32} /></div>
@@ -52,7 +52,7 @@ export function ProcessToolPage() {
           </div>
           <div className="will">
             <h3>怎么点亮</h3>
-            <p>拿到对应服务商的 Key 后，在 设置 → AI · BYOK 增加该服务商接入（或直接告诉我，按工具逐个实现）。</p>
+            <p>拿到对应服务商的 Key 后，到 设置 → AI 设置 配置接入。</p>
           </div>
           <Link to="/process" className="btn-ghost">← 回工具箱</Link>
         </div>

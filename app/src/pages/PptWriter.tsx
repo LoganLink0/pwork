@@ -310,7 +310,7 @@ export function PptWriter() {
               </button>
               {!coachReady() && (
                 <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  AI 需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置；不配置也能用模板手填。
+                  AI 需要先在 <Link to="/settings">设置 → AI 设置</Link> 配置；不配置也能用模板手填。
                 </span>
               )}
               {!materialsReady && (

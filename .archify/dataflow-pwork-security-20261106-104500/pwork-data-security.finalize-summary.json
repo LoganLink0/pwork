@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "dataflow",
+  "quality": "showcase",
+  "specification": {
+    "path": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+    "sha256": "187683cedc2f2512d4d7c60e7dc226b9b938e062d0e15fd483d31793a818adb6",
+    "bytes": 5184
+  },
+  "artifact": {
+    "path": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+    "sha256": "f7574de5264f54f956b5bf159bacb3800797aeab32cf94478a0de51405142e42",
+    "bytes": 841663
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "fail"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/evidence-path-conflict",
+      "severity": "error",
+      "message": "browser-check will not replace the existing unowned evidence path \"E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.browser-check.json\".",
+      "subject": {
+        "artifact": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "evidencePath": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.browser-check.json"
+      },
+      "evidence": {
+        "reason": {
+          "code": "ownership-artifact-mismatch"
+        }
+      },
+      "supportedFixes": [
+        "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.finalize.json",
+    "summaryReceipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.finalize-summary.json",
+    "browserCheckReceipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T04:16:41.451Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4097,
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  }
+}

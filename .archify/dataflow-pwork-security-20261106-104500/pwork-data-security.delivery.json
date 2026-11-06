@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "cae1be8d-49e9-4ed4-a3e1-7b3f2b52ba61",
+  "status": "current",
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+  "output": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+  "specification": {
+    "sha256": "187683cedc2f2512d4d7c60e7dc226b9b938e062d0e15fd483d31793a818adb6",
+    "bytes": 5184
+  },
+  "artifact": {
+    "sha256": "f7574de5264f54f956b5bf159bacb3800797aeab32cf94478a0de51405142e42",
+    "bytes": 841663
+  }
+}

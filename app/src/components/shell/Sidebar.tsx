@@ -225,14 +225,6 @@ export function Sidebar() {
       })()}
 
       <div className="spacer" />
-      <a
-        className="gh-btn"
-        href="https://github.com/LoganLink0/pwork"
-        target="_blank"
-        rel="noreferrer noopener"
-      >
-        <Icon name="github" size={16} /> GitHub 开源
-      </a>
       <NavLink to="/help" className={({ isActive }) => `nav-item mark-workspace${isActive ? ' active' : ''}`}>
         <span className="ico" aria-hidden><Icon name="helpCircle" /></span>
         帮助
@@ -258,7 +250,17 @@ export function Sidebar() {
       </div>
       <AnnounceCard />
       <div className="foot">
-        v{__APP_VERSION__} · 内测中
+        <span>v{__APP_VERSION__} · 内测中</span>
+        <a
+          className="gh-foot"
+          href="https://github.com/LoganLink0/pwork"
+          target="_blank"
+          rel="noreferrer noopener"
+          title="GitHub 开源仓库"
+          aria-label="GitHub 开源仓库"
+        >
+          <Icon name="github" size={14} />
+        </a>
       </div>
     </aside>
   )

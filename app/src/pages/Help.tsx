@@ -9,9 +9,12 @@ const HELP_TABS = [
   { id: 'shortcuts', label: '快捷键', icon: 'shortcuts' },
   { id: 'privacy', label: '数据安全', icon: 'privacy' },
   { id: 'config', label: '配置指南', icon: 'config' },
-  { id: 'troubleshoot', label: '排错', icon: 'troubleshoot' },
+  { id: 'troubleshoot', label: '常见问题', icon: 'troubleshoot' },
   { id: 'glossary', label: '术语表', icon: 'glossary' },
 ] as const
+
+/** 常见问题与术语表的分组展示顺序：四模块优先，其余殿后 */
+const GROUP_ORDER = ['输入', '处理', '输出', '回路', '数据与备份', '数据', 'AI', '界面与通用', '通用'] as const
 
 /**
  * 帮助页（/help）：回答"这个四模块系统本身怎么用"。
@@ -55,12 +58,9 @@ export function Help() {
               </Link>
             </div>
           ))}
-          <div className="set-row">
-            <label></label>
-            <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              新手引导还有信源初始化、采集设置与上云步骤：<Link to="/welcome">重新查看完整引导 →</Link>
-            </span>
-          </div>
+          <p style={{ margin: 'var(--sp-2) 0 0', color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)' }}>
+            新手引导还有信源初始化、采集设置与上云步骤，<Link to="/welcome">重新查看完整引导 →</Link>
+          </p>
         </div>
       </div>
 
@@ -96,6 +96,12 @@ export function Help() {
         <h2>数据安全</h2>
         <div className="desc">数据只属于你——在哪里、怎么丢不了、谁会看到</div>
         <div className="set-body">
+          <img
+            src={`${import.meta.env.BASE_URL}assets/data-security.png`}
+            alt="数据流向图：实线全部在你的电脑里（信源抓取 → 本机网关 → 本机存储 → 自动备份与全量导出）；虚线是仅有的两条出本机通道（AI 服务商、Cloudflare 同步），默认关闭"
+            style={{ width: '100%', maxWidth: 860, display: 'block', margin: '0 auto var(--sp-3)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}
+            loading="lazy"
+          />
           {DATA_POINTS.map((d) => (
             <div className="set-row" key={d.title} style={{ alignItems: 'flex-start' }}>
               <label style={{ fontWeight: 600, color: 'var(--ink)' }}>{d.title}</label>
@@ -129,23 +135,35 @@ export function Help() {
 
 
       <div className="set-card" data-tab="troubleshoot" style={{ display: tab === 'troubleshoot' ? undefined : 'none' }}>
-        <h2>排错</h2>
-        <div className="desc">真实踩坑沉淀——随使用持续增长</div>
+        <h2>常见问题</h2>
+        <div className="desc">按模块分组的使用问题——真实踩坑沉淀，随使用持续增长</div>
         <div className="set-body">
-          {FAQ.map((f) => (
-            <div key={f.q} style={{ marginBottom: 'var(--sp-4)' }}>
-              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 4 }}>{f.q}</div>
-              <div className="notice" style={{ borderLeftColor: 'var(--line-strong)' }}>
-                {f.a}
-                {f.link && (
-                  <>
-                    {' '}
-                    <Link to={f.link.to}>{f.link.label} →</Link>
-                  </>
-                )}
+          <div className="notice" style={{ borderLeftColor: 'var(--accent)', marginBottom: 'var(--sp-3)' }} data-testid="feedback-notice">
+            这里没有你要的答案？<a href="https://github.com/LoganLink0/pwork/discussions" target="_blank" rel="noreferrer noopener">去 Discussions 发帖</a>（设置 → 数据管理 可导出错误日志附上），或在微信群里直接说。
+          </div>
+          {GROUP_ORDER.map((group) => {
+            const groupFaq = FAQ.filter((f) => f.group === group)
+            if (groupFaq.length === 0) return null
+            return (
+              <div key={group}>
+                <div className="faq-group">{group}</div>
+                {groupFaq.map((f) => (
+                  <div key={f.q} style={{ marginBottom: 'var(--sp-4)' }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 4 }}>{f.q}</div>
+                    <div className="notice" style={{ borderLeftColor: 'var(--line-strong)' }}>
+                      {f.a}
+                      {f.link && (
+                        <>
+                          {' '}
+                          <Link to={f.link.to}>{f.link.label} →</Link>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -153,12 +171,21 @@ export function Help() {
         <h2>术语表</h2>
         <div className="desc">应用里的专门说法——什么意思，在这里查</div>
         <div className="set-body">
-          {GLOSSARY.map((g) => (
-            <div className="set-row" key={g.term} style={{ alignItems: 'flex-start' }}>
-              <label style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{g.term}</label>
-              <span className="val" style={{ color: 'var(--ink-soft)' }}>{g.def}</span>
-            </div>
-          ))}
+          {GROUP_ORDER.map((group) => {
+            const groupTerms = GLOSSARY.filter((g) => g.group === group)
+            if (groupTerms.length === 0) return null
+            return (
+              <div key={group}>
+                <div className="faq-group">{group}</div>
+                {groupTerms.map((g) => (
+                  <div className="set-row" key={g.term} style={{ alignItems: 'flex-start' }}>
+                    <label style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{g.term}</label>
+                    <span className="val" style={{ color: 'var(--ink-soft)' }}>{g.def}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
         </div>
       </div>
         </div>

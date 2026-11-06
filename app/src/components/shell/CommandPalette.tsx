@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PALETTE_PAGES } from '../../content/nav'
+import { FAQ, GLOSSARY } from '../../content/help'
 import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
@@ -120,7 +121,26 @@ function PaletteDialog() {
         run: () => { close(); navigate(`/input/notes/${n.id}`) },
       }))
 
-    return [...actions, ...pages, ...noteItems]
+    // 帮助组（用户反馈：Ctrl K 搜不到帮助内容）：常见问题按问题文本、术语按词条命中，
+    // 命中即给一条「帮助」项，点击跳帮助页对应分类；有查询词才出现（列表态太吵）
+    const helpItems: PaletteItem[] = q
+      ? [
+          ...FAQ.map((f) => ({ key: `help-faq-${f.q}`, label: f.q, sub: `常见问题 · ${f.group}`, to: '/help?tab=troubleshoot' })),
+          ...GLOSSARY.map((g) => ({ key: `help-gl-${g.term}`, label: g.term, sub: `术语 · ${g.group}`, to: '/help?tab=glossary' })),
+        ]
+          .filter((it) => match(it.label))
+          .slice(0, 6)
+          .map((it) => ({
+            key: it.key,
+            group: '帮助',
+            icon: 'helpCircle',
+            label: it.label,
+            sub: it.sub,
+            run: () => { close(); navigate(it.to) },
+          }))
+      : []
+
+    return [...actions, ...pages, ...noteItems, ...helpItems]
   }, [query, notes, close, openQuick, navigate])
 
   // 使用处夹紧（代替 effect 内 setState）

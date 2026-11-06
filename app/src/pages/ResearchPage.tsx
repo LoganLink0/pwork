@@ -613,7 +613,7 @@ export function ResearchPage() {
               </button>
               {!coachReady && (
                 <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                  AI 整理需要先在 <Link to="/settings">设置 → AI · BYOK</Link> 配置。
+                  AI 整理需要先在 <Link to="/settings">设置 → AI 设置</Link> 配置。
                 </span>
               )}
               {articleMaterials.length === 0 && (

@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "PWORK 数据安全：数据在哪、怎么丢不了、谁会看到",
+    "locale": "zh-CN",
+    "subtitle": "实线全部发生在你的电脑里；虚线是仅有的两条出本机通道，且默认关闭",
+    "output": "pwork-data-security.html",
+    "viewBox": [
+      1015,
+      520
+    ],
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "dashed": {
+          "label": "可选外发（默认关闭）"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "数据从哪来"
+    },
+    {
+      "label": "本机存储"
+    },
+    {
+      "label": "怎么丢不了"
+    },
+    {
+      "label": "可选外发（默认关）"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "sources",
+      "type": "external",
+      "label": "你订阅的信源",
+      "sublabel": "RSS / Atom",
+      "stage": 0,
+      "row": 0,
+      "tag": "公开信息"
+    },
+    {
+      "id": "manual",
+      "type": "frontend",
+      "label": "你亲手写的内容",
+      "sublabel": "速记 / 待办 / 复盘",
+      "stage": 0,
+      "row": 2,
+      "tag": "私有内容"
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "本地网关",
+      "sublabel": "在你电脑里",
+      "stage": 0,
+      "row": 1,
+      "tag": "无遥测"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "本机主库",
+      "sublabel": "SQLite / 浏览器库",
+      "stage": 1,
+      "row": 1,
+      "tag": "唯一权威副本"
+    },
+    {
+      "id": "attachments",
+      "type": "database",
+      "label": "附件文件夹",
+      "sublabel": "图片原文件",
+      "stage": 1,
+      "row": 0,
+      "tag": "本机磁盘"
+    },
+    {
+      "id": "backup",
+      "type": "database",
+      "label": "自动备份",
+      "sublabel": "写本机磁盘",
+      "stage": 2,
+      "row": 0,
+      "tag": "安全网"
+    },
+    {
+      "id": "export",
+      "type": "frontend",
+      "label": "全量导出",
+      "sublabel": "JSON 随时带走",
+      "stage": 2,
+      "row": 2,
+      "tag": "可迁移"
+    },
+    {
+      "id": "ai",
+      "type": "cloud",
+      "label": "你配置的 AI 服务商",
+      "sublabel": "仅标题与摘要",
+      "stage": 3,
+      "row": 0,
+      "tag": "明示外发"
+    },
+    {
+      "id": "d1",
+      "type": "cloud",
+      "label": "你自己的 Cloudflare",
+      "sublabel": "同步中转",
+      "stage": 3,
+      "row": 2,
+      "tag": "明示外发"
+    }
+  ],
+  "flows": [
+    {
+      "id": "fetch",
+      "from": "sources",
+      "to": "gateway",
+      "label": "定时抓取",
+      "classification": "公开信息",
+      "variant": "default"
+    },
+    {
+      "id": "cleaned",
+      "from": "gateway",
+      "to": "store",
+      "label": "清洗入库",
+      "classification": "公开信息入库",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "id": "manual-in",
+      "from": "manual",
+      "to": "store",
+      "label": "直接入库",
+      "classification": "私有内容",
+      "variant": "emphasis",
+      "toSide": "bottom"
+    },
+    {
+      "id": "attach",
+      "from": "store",
+      "to": "attachments",
+      "label": "附件字节落盘",
+      "classification": "本机磁盘",
+      "variant": "default",
+      "labelDx": -100
+    },
+    {
+      "id": "backup-flow",
+      "from": "store",
+      "to": "backup",
+      "label": "到期自动备份",
+      "classification": "写本机磁盘",
+      "variant": "emphasis"
+    },
+    {
+      "id": "export-flow",
+      "from": "store",
+      "to": "export",
+      "label": "全量导出",
+      "classification": "随时可带走",
+      "variant": "default"
+    },
+    {
+      "id": "ai-out",
+      "from": "store",
+      "to": "ai",
+      "label": "仅标题摘要 · 可选",
+      "classification": "默认关闭",
+      "variant": "dashed"
+    },
+    {
+      "id": "sync-out",
+      "from": "store",
+      "to": "d1",
+      "label": "记录级增量 · 可选",
+      "classification": "默认关闭",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "一切实线都在你的电脑里",
+      "items": [
+        "抓取经本机网关转发，没有遥测、没有账号",
+        "主库和附件都存在本机：桌面版是 SQLite 加文件夹，网页版是浏览器数据库",
+        "自动备份写你自己的磁盘，全量导出随时带走"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "出本机的只有两条虚线",
+      "items": [
+        "配了 AI 才有第一条：只有条目标题和摘要发往你选的服务商",
+        "开了云端同步才有第二条：数据走你自己的 Cloudflare 中转，各设备平权",
+        "两条默认都关着；不配置，数据一步都不出本机"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "删错也丢不了",
+      "items": [
+        "所有删除都是软删除，14 天内可找回",
+        "备份到期会主动提醒，不用你记着",
+        "换电脑走全量导出导入，附件随压缩包带走"
+      ]
+    }
+  ]
+}

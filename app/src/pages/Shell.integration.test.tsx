@@ -180,9 +180,9 @@ describe('工作台壳（W1）', () => {
     expect(screen.getByRole('button', { name: '快捷键' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '术语表' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '四模块模型' })).not.toBeInTheDocument()
-    // 切到排错分类后内容出现
-    await user.click(screen.getByRole('button', { name: '排错' }))
-    expect(await screen.findByRole('heading', { name: '排错' })).toBeInTheDocument()
+    // 切到常见问题分类后内容出现（2026-11-06 排错改名常见问题，内容按模块分组）
+    await user.click(screen.getByRole('button', { name: '常见问题' }))
+    expect(await screen.findByRole('heading', { name: '常见问题' })).toBeInTheDocument()
     expect(screen.getAllByText(/优先走应用自带的本地网关/).length).toBeGreaterThan(0)
     expect(screen.getByText(/怎么做信源包分享给别人/)).toBeInTheDocument()
 
