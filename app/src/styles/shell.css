@@ -363,9 +363,8 @@ button.nav-item {
   position: absolute;
 }
 
-/* 公告轮播卡：左下角常驻运营位，紧凑不抢工作区 */
+/* 公告轮播卡：侧栏最底部版本区（横线下方与版本号同区），紧凑不抢工作区 */
 .announce-card {
-  margin: 0 var(--sp-2) var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
   border: 1px dashed var(--line);
   border-radius: var(--r-md);
@@ -468,8 +467,7 @@ button.nav-item {
 
 .sidebar .foot {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--sp-2);
   font-size: var(--fs-xs);
   color: var(--ink-faint);
@@ -477,6 +475,12 @@ button.nav-item {
   border-top: 1px solid var(--line);
   line-height: 1.5;
   white-space: nowrap;
+}
+.foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
 }
 .gh-foot {
   display: flex;

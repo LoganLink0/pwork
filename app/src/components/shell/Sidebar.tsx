@@ -248,19 +248,21 @@ export function Sidebar() {
           </button>
         ))}
       </div>
-      <AnnounceCard />
       <div className="foot">
-        <span>v{__APP_VERSION__} · 内测中</span>
-        <a
-          className="gh-foot"
-          href="https://github.com/LoganLink0/pwork"
-          target="_blank"
-          rel="noreferrer noopener"
-          title="GitHub 开源仓库"
-          aria-label="GitHub 开源仓库"
-        >
-          <Icon name="github" size={14} />
-        </a>
+        <AnnounceCard />
+        <div className="foot-row">
+          <span>v{__APP_VERSION__} · 内测中</span>
+          <a
+            className="gh-foot"
+            href="https://github.com/LoganLink0/pwork"
+            target="_blank"
+            rel="noreferrer noopener"
+            title="GitHub 开源仓库"
+            aria-label="GitHub 开源仓库"
+          >
+            <Icon name="github" size={14} />
+          </a>
+        </div>
       </div>
     </aside>
   )
