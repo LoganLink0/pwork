@@ -28,7 +28,7 @@ const GROUP_ORDER = ['输入', '处理', '输出', '回路', '数据与备份', 
 export function Help() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = HELP_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'quick'
-  const [zoomImg, setZoomImg] = useState(false)
+  const [zoomImg, setZoomImg] = useState<string | null>(null)
   return (
     <section className="settings-page">
       <div className="page-head">
@@ -104,7 +104,7 @@ export function Help() {
             src={`${import.meta.env.BASE_URL}${DATA_FLOW_IMG}`}
             alt="数据流向图：实线全部在你的电脑里（信源抓取 → 本机网关 → 本机存储 → 自动备份与全量导出）；虚线是仅有的两条出本机通道（AI 服务商、Cloudflare 同步），默认关闭"
             style={{ width: '100%', display: 'block', margin: '0 auto var(--sp-3)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)', cursor: 'zoom-in' }}
-            onClick={() => setZoomImg(true)}
+            onClick={() => setZoomImg(`${import.meta.env.BASE_URL}${DATA_FLOW_IMG}`)}
             title="点击放大查看"
           />
           <p style={{ margin: '0 0 var(--sp-3)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
@@ -146,8 +146,17 @@ export function Help() {
         <h2>常见问题</h2>
         <div className="desc">按模块分组的使用问题——真实踩坑沉淀，随使用持续增长</div>
         <div className="set-body">
-          <div className="notice" style={{ borderLeftColor: 'var(--accent)', marginBottom: 'var(--sp-3)' }} data-testid="feedback-notice">
-            这里没有你要的答案？<a href="https://github.com/LoganLink0/pwork/discussions" target="_blank" rel="noreferrer noopener">去 Discussions 发帖</a>（设置 → 数据管理 可导出错误日志附上），或在微信群里直接说。
+          <div className="notice" style={{ borderLeftColor: 'var(--accent)', marginBottom: 'var(--sp-3)', display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }} data-testid="feedback-notice">
+            <span style={{ flex: 1, minWidth: 0 }}>
+              这里没有你要的答案？<a href="https://github.com/LoganLink0/pwork/discussions" target="_blank" rel="noreferrer noopener">去 Discussions 发帖</a>（设置 → 数据管理 可导出错误日志附上），或在微信群直接说——「PWORK 内测群」二维码在右边，点击放大后扫码进群。
+            </span>
+            <img
+              src={`${import.meta.env.BASE_URL}assets/wechat-group.png`}
+              alt="PWORK 内测群微信群二维码"
+              style={{ width: 64, height: 64, flex: 'none', cursor: 'zoom-in', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
+              title="点击放大扫码"
+              onClick={() => setZoomImg(`${import.meta.env.BASE_URL}assets/wechat-group.png`)}
+            />
           </div>
           {GROUP_ORDER.map((group) => {
             const groupFaq = FAQ.filter((f) => f.group === group)
@@ -202,15 +211,15 @@ export function Help() {
         <div
           className="overlay img-zoom-overlay"
           role="dialog"
-          aria-label="数据流向图（放大查看）"
-          onClick={() => setZoomImg(false)}
-          onKeyDown={(e) => e.key === 'Escape' && setZoomImg(false)}
+          aria-label="图片放大查看"
+          onClick={() => setZoomImg(null)}
+          onKeyDown={(e) => e.key === 'Escape' && setZoomImg(null)}
           tabIndex={-1}
           ref={(el) => el?.focus()}
         >
           <img
-            src={`${import.meta.env.BASE_URL}${DATA_FLOW_IMG}`}
-            alt="数据流向图（放大）"
+            src={zoomImg}
+            alt="放大查看"
             style={{ maxWidth: 'min(1400px, 94vw)', maxHeight: '88vh', display: 'block', margin: '0 auto', borderRadius: 'var(--r-md)' }}
             onClick={(e) => e.stopPropagation()}
           />

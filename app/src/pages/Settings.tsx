@@ -1364,6 +1364,19 @@ export function Settings() {
               <Link className="btn-ghost" to="/welcome" onClick={() => localStorage.removeItem('pwork-welcomed')}>重看首访引导 →</Link>
             </span>
           </div>
+          <div className="set-row" style={{ alignItems: 'flex-start' }}>
+            <label>内测微信群</label>
+            <span className="val" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
+              <img
+                src="assets/wechat-group.png"
+                alt="PWORK 内测群微信群二维码"
+                style={{ width: 120, height: 120, border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
+              />
+              <span style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)', maxWidth: 260, display: 'inline-block' }}>
+                扫码进「PWORK 内测群」，问题反馈与交流都在群里；二维码会定期更新，过期了看帮助页的最新版
+              </span>
+            </span>
+          </div>
         </div>
       </div>
         </div>
