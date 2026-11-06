@@ -1718,14 +1718,12 @@ a.mcard .m-link:hover {
   overflow: hidden;
 }
 
-/* 帮助页常见问题/术语表的分组小标题（按四模块与主题归类） */
+/* 帮助页常见问题/术语表的分组标题（按四模块与主题归类）：高于正文一档的标题层级 */
 .faq-group {
-  margin: var(--sp-3) 0 var(--sp-2);
-  padding-left: var(--sp-2);
-  border-left: 3px solid var(--accent);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--ink-soft);
+  margin: var(--sp-5) 0 var(--sp-3);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--ink);
 }
 .faq-group:first-child {
   margin-top: 0;
@@ -1841,6 +1839,15 @@ a.mcard .m-link:hover {
 .overlay.qn-overlay {
   align-items: center;
   padding-top: 0;
+}
+
+/* 图片放大查看遮罩（帮助页数据流向图）：深底居中，点任意处关闭 */
+.overlay.img-zoom-overlay {
+  align-items: center;
+  padding-top: 0;
+  background: rgba(20, 18, 16, 0.86);
+  cursor: zoom-out;
+  outline: none;
 }
 
 @keyframes overlay-in {

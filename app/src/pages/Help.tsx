@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, SHORTCUTS } from '../content/help'
 import { loadKeybinds, displayCombo } from '../engine/keybinds'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { KbdText } from '../components/shell/KbdText'
+
+const DATA_FLOW_IMG = 'assets/data-security.png'
 
 const HELP_TABS = [
   { id: 'quick', label: '快速上手', icon: 'quick' },
@@ -25,6 +28,7 @@ const GROUP_ORDER = ['输入', '处理', '输出', '回路', '数据与备份', 
 export function Help() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = HELP_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'quick'
+  const [zoomImg, setZoomImg] = useState(false)
   return (
     <section className="settings-page">
       <div className="page-head">
@@ -97,11 +101,15 @@ export function Help() {
         <div className="desc">数据只属于你——在哪里、怎么丢不了、谁会看到</div>
         <div className="set-body">
           <img
-            src={`${import.meta.env.BASE_URL}assets/data-security.png`}
+            src={`${import.meta.env.BASE_URL}${DATA_FLOW_IMG}`}
             alt="数据流向图：实线全部在你的电脑里（信源抓取 → 本机网关 → 本机存储 → 自动备份与全量导出）；虚线是仅有的两条出本机通道（AI 服务商、Cloudflare 同步），默认关闭"
-            style={{ width: '100%', maxWidth: 860, display: 'block', margin: '0 auto var(--sp-3)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}
-            loading="lazy"
+            style={{ width: '100%', display: 'block', margin: '0 auto var(--sp-3)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)', cursor: 'zoom-in' }}
+            onClick={() => setZoomImg(true)}
+            title="点击放大查看"
           />
+          <p style={{ margin: '0 0 var(--sp-3)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            点击图片可放大查看
+          </p>
           {DATA_POINTS.map((d) => (
             <div className="set-row" key={d.title} style={{ alignItems: 'flex-start' }}>
               <label style={{ fontWeight: 600, color: 'var(--ink)' }}>{d.title}</label>
@@ -190,6 +198,27 @@ export function Help() {
       </div>
         </div>
       </div>
+      {zoomImg && (
+        <div
+          className="overlay img-zoom-overlay"
+          role="dialog"
+          aria-label="数据流向图（放大查看）"
+          onClick={() => setZoomImg(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setZoomImg(false)}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}${DATA_FLOW_IMG}`}
+            alt="数据流向图（放大）"
+            style={{ maxWidth: 'min(1400px, 94vw)', maxHeight: '88vh', display: 'block', margin: '0 auto', borderRadius: 'var(--r-md)' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p style={{ textAlign: 'center', color: '#fff', fontSize: 'var(--fs-sm)', marginTop: 'var(--sp-2)' }}>
+            点任意位置关闭
+          </p>
+        </div>
+      )}
     </section>
   )
 }
