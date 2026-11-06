@@ -16,10 +16,11 @@ function relTime(ts: number, now = Date.now()): string {
 const KIND_MARK: Record<string, string> = { done: 'mark-input', remind: 'mark-review' }
 
 /**
- * 通知铃铛（WorkBuddy 学习批，2026-11-06）：侧栏底部铃铛 + 未读徽标，
- * 点开通知中心面板（历史可回看、点条目跳来源页）。打开面板即全部已读。
+ * 通知铃铛（WorkBuddy 学习批，2026-11-06）：未读徽标 + 通知中心面板
+ * （历史可回看、点条目跳来源页）。打开面板即全部已读。
+ * 两种形态：topbar=true 顶栏图标按钮（面板右上下拉）；默认侧栏底部。
  */
-export function NotifyBell() {
+export function NotifyBell({ topbar = false }: { topbar?: boolean }) {
   const items = useNotifyHub((s) => s.items)
   const panelOpen = useNotifyHub((s) => s.panelOpen)
   const setOpen = useNotifyHub((s) => s.setOpen)
@@ -47,12 +48,13 @@ export function NotifyBell() {
   }
 
   return (
-    <div className="bell-wrap" ref={boxRef}>
+    <div className={topbar ? 'bell-wrap bell-top' : 'bell-wrap'} ref={boxRef}>
       <button
         type="button"
-        className="bell-btn"
+        className={topbar ? 'bell-btn bell-btn-top' : 'bell-btn'}
         aria-label={`通知${unread > 0 ? `，${unread} 条未读` : ''}`}
         aria-expanded={panelOpen}
+        title="通知"
         onClick={() => {
           if (!panelOpen) markAllRead() // 打开即已读
           setOpen(!panelOpen)
@@ -62,7 +64,7 @@ export function NotifyBell() {
         {unread > 0 && <span className="bell-badge tnum">{unread > 9 ? '9+' : unread}</span>}
       </button>
       {panelOpen && (
-        <div className="bell-panel" role="dialog" aria-label="通知中心">
+        <div className={topbar ? 'bell-panel bell-panel-top' : 'bell-panel'} role="dialog" aria-label="通知中心">
           <div className="bell-head">
             <b>通知</b>
             {items.length > 0 && (

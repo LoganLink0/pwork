@@ -2,8 +2,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { crumbFor } from '../../content/nav'
 import { useUi } from '../../store/ui'
 import { Icon } from './icons'
+import { NotifyBell } from './NotifyBell'
 
-/** 顶栏（PRD §4.1）：面包屑 + 搜索(⌘K) + 速记 + 设置（主题切换在侧栏底部） */
+/** 顶栏（PRD §4.1）：面包屑 + 搜索(⌘K) + 速记 + 通知 + 设置（主题切换在侧栏底部） */
 export function Topbar() {
   const { pathname } = useLocation()
   const openPalette = useUi((s) => s.openPalette)
@@ -38,6 +39,7 @@ export function Topbar() {
       <button type="button" className="quicknote-btn" onClick={openQuick}>
         <Icon name="zap" /> 速记
       </button>
+      <NotifyBell topbar />
       <Link to="/settings" className="iconbtn" title="设置" aria-label="设置">
         <Icon name="settings" />
       </Link>

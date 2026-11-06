@@ -2,7 +2,6 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { MODULE_NAV, WORKSPACE_NAV } from '../../content/nav'
 import { Icon } from './icons'
-import { NotifyBell } from './NotifyBell'
 import { useNotes } from '../../store/notes'
 import { useCollect } from '../../store/collect'
 import { useTasks } from '../../store/tasks'
@@ -226,7 +225,6 @@ export function Sidebar() {
       })()}
 
       <div className="spacer" />
-      <AnnounceCard />
       <a
         className="gh-btn"
         href="https://github.com/LoganLink0/pwork"
@@ -243,24 +241,22 @@ export function Sidebar() {
         <span className="ico" aria-hidden><Icon name="settings" /></span>
         设置
       </NavLink>
-      <div className="dock-row">
-        <NotifyBell />
-        <div className="theme-seg" role="group" aria-label="视觉主题">
-          {THEMES.map((t) => (
-            <button
-              key={t.pref}
-              type="button"
-              className={theme === t.pref ? 'on' : ''}
-              aria-pressed={theme === t.pref}
-              title={`主题：${t.label}`}
-              aria-label={`主题：${t.label}`}
-              onClick={() => setTheme(t.pref)}
-            >
-              <Icon name={t.icon} size={15} />
-            </button>
-          ))}
-        </div>
+      <div className="theme-seg" role="group" aria-label="视觉主题">
+        {THEMES.map((t) => (
+          <button
+            key={t.pref}
+            type="button"
+            className={theme === t.pref ? 'on' : ''}
+            aria-pressed={theme === t.pref}
+            title={`主题：${t.label}`}
+            aria-label={`主题：${t.label}`}
+            onClick={() => setTheme(t.pref)}
+          >
+            <Icon name={t.icon} size={15} />
+          </button>
+        ))}
       </div>
+      <AnnounceCard />
       <div className="foot">
         v{__APP_VERSION__} · 内测中
       </div>

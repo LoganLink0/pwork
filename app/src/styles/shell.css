@@ -19,6 +19,8 @@
   flex-direction: column;
   padding: var(--sp-4) var(--sp-3);
   overflow-y: auto;
+  /* 滚动条位置常驻预留：模块折叠/展开、内容高度变化都不再改变可用宽度（用户报告的抖动） */
+  scrollbar-gutter: stable;
 }
 
 .logo {
@@ -202,6 +204,20 @@ button.nav-item {
 /* ---------- 侧栏底部新构件（WorkBuddy 学习批，2026-11-06）----------
    公告轮播卡 / 最近打开分组 / 铃铛 + 主题并排行 */
 
+/* 顶栏铃铛形态：无边框图标按钮（面板定位覆盖见 .bell-panel-top，声明在基础样式之后） */
+.bell-top {
+  flex: none;
+}
+.bell-btn-top {
+  width: 34px;
+  height: 34px;
+  background: none;
+  border-radius: var(--r-sm);
+}
+.bell-btn-top:hover {
+  background: var(--surface-2);
+}
+
 /* 铃铛 + 主题段同一行：铃铛定宽、主题段吃剩余宽度 */
 .dock-row {
   display: flex;
@@ -337,6 +353,14 @@ button.nav-item {
   font-size: var(--fs-xs);
   color: var(--ink-faint);
   opacity: 0.8;
+}
+/* 顶栏形态的面板定位：从按钮下方右对齐下拉（须声明在基础 .bell-panel 之后以覆盖 left/bottom） */
+.bell-panel-top {
+  left: auto;
+  right: 0;
+  bottom: auto;
+  top: calc(100% + 6px);
+  position: absolute;
 }
 
 /* 公告轮播卡：左下角常驻运营位，紧凑不抢工作区 */
