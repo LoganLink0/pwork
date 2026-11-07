@@ -1,10 +1,10 @@
 /**
  * 宣传图合成（朋友圈分享图一条命令出图）：
- *   node tools/make-promo.mjs [--platform "Windows 与 macOS"] [--ver v0.1.12] [--out 路径]
+ *   node tools/make-promo.mjs [--ver v0.1.16] [--out 路径]
  *
  * 流程（复盘 3.37/3.38 沉淀的机制化）：
- *   ① 读模板 docs/assets/promo-1080.html，注入 __PWORK_VER__（默认取 app/package.json）与
- *      __PWORK_PLATFORM__（默认 Windows 与 macOS）两个 token，写临时渲染文件（与模板同目录，相对引用素材）；
+ *   ① 读模板 docs/assets/promo-1080.html，注入 __PWORK_VER__（默认取 app/package.json），
+ *      写临时渲染文件（与模板同目录，相对引用素材）；
  *   ② Edge/Chrome 无头截图 1080×1080；
  *   ③ 输出 docs/assets/promo-1080-vN.png（N 自动递增现有最大版本；--out 可覆盖）；
  *   ④ 校验：尺寸恰为 1080×1080、体积非空；打印 sha256 与大小。
@@ -30,7 +30,6 @@ const argOf = (name) => {
   const i = args.indexOf(name)
   return i >= 0 ? args[i + 1] : undefined
 }
-const platform = argOf('--platform') ?? 'Windows 与 macOS'
 const verOverride = argOf('--ver')
 const outOverride = argOf('--out')
 
@@ -40,8 +39,8 @@ const version = verOverride ?? `v${pkg.version}`
 
 /* ---- 模板注入 ---- */
 const template = readFileSync(templatePath, 'utf-8')
-if (!template.includes('__PWORK_VER__') || !template.includes('__PWORK_PLATFORM__')) {
-  console.error('模板缺少 __PWORK_VER__ / __PWORK_PLATFORM__ 占位符——模板被改过？请恢复 token 后重试')
+if (!template.includes('__PWORK_VER__')) {
+  console.error('模板缺少 __PWORK_VER__ 占位符——模板被改过？请恢复 token 后重试')
   process.exit(1)
 }
 if (!existsSync(cropPath)) {
@@ -49,7 +48,7 @@ if (!existsSync(cropPath)) {
   process.exit(1)
 }
 const renderedPath = join(assets, 'promo-1080.render.html')
-writeFileSync(renderedPath, template.replaceAll('__PWORK_VER__', version).replaceAll('__PWORK_PLATFORM__', platform))
+writeFileSync(renderedPath, template.replaceAll('__PWORK_VER__', version))
 
 /* ---- 浏览器探测 ---- */
 const browsers = [
