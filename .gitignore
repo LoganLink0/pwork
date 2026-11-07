@@ -33,3 +33,4 @@ app/.tauri/
 /package-lock.json
 # 本地中间结果（不入仓库）
 local/
+docs/assets/promo-card.render.html
