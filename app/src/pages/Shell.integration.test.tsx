@@ -113,10 +113,10 @@ describe('工作台壳（W1）', () => {
     await user.type(ta, '连记第一条')
     await user.keyboard('{Control>}{Enter}{/Control}')
     await waitFor(() => expect(useNotes.getState().notes.length).toBeGreaterThanOrEqual(1))
-    // 浮层未关、正文清空、标签沿用、回执出现
-    expect(screen.getByLabelText('速记内容')).toHaveValue('')
-    expect(screen.getByLabelText('标签')).toHaveValue('会议')
-    expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条')
+    // 浮层未关、正文清空、标签沿用、回执出现（CI 冷启动慢：状态更新到渲染完成有间隙，全部等待式）
+    await waitFor(() => expect(screen.getByLabelText('速记内容')).toHaveValue(''))
+    await waitFor(() => expect(screen.getByLabelText('标签')).toHaveValue('会议'))
+    await waitFor(() => expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条'))
 
     // 第二条：标签沿用没动，直接写直接存
     await user.type(screen.getByLabelText('速记内容'), '连记第二条')
@@ -176,7 +176,7 @@ describe('工作台壳（W1）', () => {
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
     // 左导航可见 + 默认分类（快速上手）内容显示
-    expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '快速上手' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '快捷键' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '术语表' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '四模块模型' })).not.toBeInTheDocument()
@@ -189,7 +189,7 @@ describe('工作台壳（W1）', () => {
     // ? 快捷键（非输入态）跳转帮助页
     await user.click(sidebar().getByRole('link', { name: '今日' }))
     await user.keyboard('?')
-    expect(await screen.findByRole('heading', { name: '快速上手' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '快速上手' }, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('设计系统样例页路由直达渲染（开发参考页，2026-10-24 起无公开入口）', async () => {
