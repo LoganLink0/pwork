@@ -3366,9 +3366,19 @@ html[data-wheel] body {
    本块声明在文件末尾以覆盖上方全部基础样式（复盘 3.56：覆盖必须在基础之后）。 */
 @media (max-width: 768px) {
   /* 手机形态：视频演示区放最上（首屏即演示），左栏说明移到下方滚动阅读——
-     左栏 clamp 最小 280px 在 390px 视口占 72%，视频区曾被挤成一条缝 */
+     左栏 clamp 最小 280px 在 390px 视口占 72%，视频区曾被挤成一条缝。
+     同时解除高度锁（stage/card/card-main 三层 flex 高度预算是为桌面双栏设计，
+     手机纵向堆叠后内容总高超预算，锁死会导致左栏溢出与 footer 文字重叠） */
+  .welcome-stage {
+    height: auto;
+    min-height: 100%;
+  }
+  .welcome-card {
+    flex: none;
+  }
   .welcome-card-main {
     flex-direction: column;
+    min-height: 0;
   }
   .welcome-right {
     order: 1;
@@ -3377,6 +3387,10 @@ html[data-wheel] body {
   .welcome-left {
     order: 2;
     width: 100%;
+    overflow: visible; /* 解除栏内滚动：堆叠后自然撑开，不再与 footer 重叠 */
+  }
+  .welcome-right {
+    justify-content: flex-start; /* 堆叠后内容超高时直接展开，safe center 的回退逻辑不需要 */
   }
   .welcome-mods {
     display: flex;
