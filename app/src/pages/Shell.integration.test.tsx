@@ -101,7 +101,7 @@ describe('工作台壳（W1）', () => {
     await user.keyboard('{Escape}')
   })
 
-  it('速记浮层：Ctrl+Enter 连记——存了继续（浮层不关、回执计数、标签沿用），按钮保存收尾关闭（2026-10-24）', async () => {
+  it('速记浮层：Ctrl+Enter 连记——存了继续（浮层不关、回执计数、标签沿用），按钮保存收尾关闭（2026-10-24）', { timeout: 30000 }, async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.keyboard('n')
@@ -113,10 +113,10 @@ describe('工作台壳（W1）', () => {
     await user.type(ta, '连记第一条')
     await user.keyboard('{Control>}{Enter}{/Control}')
     await waitFor(() => expect(useNotes.getState().notes.length).toBeGreaterThanOrEqual(1))
-    // 浮层未关、正文清空、标签沿用、回执出现（CI 冷启动慢：状态更新到渲染完成有间隙，全部等待式）
-    await waitFor(() => expect(screen.getByLabelText('速记内容')).toHaveValue(''))
-    await waitFor(() => expect(screen.getByLabelText('标签')).toHaveValue('会议'))
-    await waitFor(() => expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条'))
+    // 浮层未关、正文清空、标签沿用、回执出现（CI 冷启动慢：等待拉长到 8s——waitFor 默认 1s 曾不够）
+    await waitFor(() => expect(screen.getByLabelText('速记内容')).toHaveValue(''), { timeout: 8000 })
+    await waitFor(() => expect(screen.getByLabelText('标签')).toHaveValue('会议'), { timeout: 8000 })
+    await waitFor(() => expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条'), { timeout: 8000 })
 
     // 第二条：标签沿用没动，直接写直接存
     await user.type(screen.getByLabelText('速记内容'), '连记第二条')
@@ -171,7 +171,7 @@ describe('工作台壳（W1）', () => {
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'))
   })
 
-  it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染（2026-10-22 重排：四模块卡已移除）', async () => {
+  it('帮助页：侧边栏进入 + ? 快捷键 + 六板块渲染（2026-10-22 重排：四模块卡已移除）', { timeout: 30000 }, async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
