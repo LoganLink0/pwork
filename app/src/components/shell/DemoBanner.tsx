@@ -13,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function DemoBanner() {
   const [standalone, setStandalone] = useState(false)
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [installing, setInstalling] = useState(false)
 
   useEffect(() => {
     setStandalone(window.matchMedia('(display-mode: standalone)').matches)
@@ -34,12 +35,23 @@ export function DemoBanner() {
         <button
           type="button"
           className="demo-install-btn"
-          onClick={() => {
-            installEvt.prompt()
-            setInstallEvt(null)
+          disabled={installing}
+          onClick={async () => {
+            // 安装调起期间暂停 SW 自动刷新——controllerchange 的 reload 会打断/推迟原生安装框（2026-11-07 用户反馈「过了很久才弹出」）
+            sessionStorage.setItem('pwa-installing', '1')
+            setInstalling(true)
+            try {
+              await installEvt.prompt()
+            } catch {
+              // 用户关闭安装框
+            } finally {
+              sessionStorage.removeItem('pwa-installing')
+              setInstallEvt(null)
+              setInstalling(false)
+            }
           }}
         >
-          ⬇ 添加到主屏
+          {installing ? '正在调起安装…' : '⬇ 添加到主屏'}
         </button>
       ) : (
         <span className="demo-install-tip">手机安装：建议用 Chrome 或手机自带浏览器打开本页，菜单里「添加到主屏幕」（夸克等部分浏览器不支持）</span>

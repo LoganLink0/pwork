@@ -53,11 +53,13 @@ if (isDesktopApp()) {
     },
   })
   // demo 构建自动更新模式：新 SW 接管（skipWaiting+clientsClaim）后自动刷新一次——
-  // 部署新版后用户免手动清缓存再刷（2026-11-07 手机端反馈：夸克等浏览器缓存停旧版）
+  // 部署新版后用户免手动清缓存再刷（2026-11-07 手机端反馈：夸克等浏览器缓存停旧版）。
+  // 安装流程调起期间不刷新（sessionStorage 标志）——reload 会打断/推迟原生安装框（2026-11-07 用户反馈「过了很久才弹出」）
   if (import.meta.env.MODE === 'demo') {
     let reloaded = false
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (reloaded) return
+      if (sessionStorage.getItem('pwa-installing') === '1') return
       reloaded = true
       window.location.reload()
     })
