@@ -22,8 +22,8 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
  *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示） */
 const ANNOUNCES = [
   {
-    title: '0.1.15 更新',
-    desc: '阅读视图、图片附件、历史数据一键搬家',
+    title: '0.1.16 更新',
+    desc: '通知中心、手机端全部页面直达、帮助页重排',
     to: '/help',
     internal: true,
   },
