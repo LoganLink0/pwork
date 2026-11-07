@@ -29,14 +29,14 @@
 
 | 安装包 | 体积 | 适合 |
 |---|---|---|
-| `…-setup-online.exe` | 约 8MB | 推荐。绝大多数电脑已有浏览器运行时（WebView2），直接装；极少数没有的，安装时联网下载 |
+| `…-setup-online.exe` | 约 11MB | 推荐。绝大多数电脑已有浏览器运行时（WebView2），直接装；极少数没有的，安装时联网下载 |
 | `…-setup-offline.exe` | 约 224MB | 完全离线的电脑（安装全程不联网） |
 
 首次运行如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」（安装包未购买代码签名证书，属预期）。覆盖安装即可升级，数据不受影响。
 
 大陆访问 GitHub 慢？两个更快的通道：
-1. **国内直连（无需登录，最快）**：[COS 直链下载联网版](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.14_x64-setup-online.exe)（腾讯云对象存储，实测 8MB 约 0.4s）。
-2. [Gitee 镜像 Releases](https://gitee.com/LoganLink0/pwork/releases)：代码镜像已与 GitHub 同步；Release 附件更新滞后于 GitHub（平台规则需登录且部分附件在补传中），急用请走上面的 COS 直链或 GitHub 发布页。
+1. **国内直连（无需登录，最快）**：[COS 直链下载联网版](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe)（腾讯云对象存储，10MB 级安装包秒下）。
+2. [Gitee 镜像](https://gitee.com/LoganLink0/pwork)：代码镜像与 GitHub 同步；安装包附件统一走上面的 COS 直链（Gitee 侧不重复放附件）。
 
 ## 下载安装（macOS · 内测）
 
