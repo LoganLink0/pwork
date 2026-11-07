@@ -5,8 +5,6 @@
 
 一个装在你电脑里的个人工作台：记下来、加工、成稿、复盘，四步连成一个循环。数据只属于你——不上传、不注册、断网也能用。开源免费，内测中（版本 0.1.x）。产品介绍页：https://pwork.loganlink0.cn/
 
-大陆访问 GitHub 慢？本仓库镜像与安装包下载在 [Gitee：LoganLink0/pwork](https://gitee.com/LoganLink0/pwork)（Gitee 平台规则：下载附件需注册/登录 Gitee 账号）。
-
 ![首次打开时的 5 步上手引导](docs/assets/app-home.png)
 
 ## 核心特性
@@ -34,9 +32,7 @@
 
 首次运行如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」（安装包未购买代码签名证书，属预期）。覆盖安装即可升级，数据不受影响。
 
-大陆访问 GitHub 慢？两个更快的通道：
-1. **国内直连（无需登录，最快）**：[COS 直链下载联网版](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe)（腾讯云对象存储，10MB 级安装包秒下）。
-2. [Gitee 镜像](https://gitee.com/LoganLink0/pwork)：代码镜像与 GitHub 同步；安装包附件统一走上面的 COS 直链（Gitee 侧不重复放附件）。
+大陆访问 GitHub 慢？国内直连通道（无需登录，最快）：[直接下载联网版安装包](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe)（10MB 级，秒下）。
 
 ## 下载安装（macOS · 内测）
 
