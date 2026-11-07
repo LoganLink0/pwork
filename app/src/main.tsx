@@ -52,6 +52,16 @@ if (isDesktopApp()) {
       useUi.getState().setUpdateReady(true, () => void updateSW())
     },
   })
+  // demo 构建自动更新模式：新 SW 接管（skipWaiting+clientsClaim）后自动刷新一次——
+  // 部署新版后用户免手动清缓存再刷（2026-11-07 手机端反馈：夸克等浏览器缓存停旧版）
+  if (import.meta.env.MODE === 'demo') {
+    let reloaded = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded) return
+      reloaded = true
+      window.location.reload()
+    })
+  }
 }
 
 // IndexedDB 探针：不可用则降级内存模式，并挂横幅；失败入错误日志

@@ -3060,6 +3060,21 @@ html[data-wheel] body {
   padding: 5px 16px;
 }
 .demo-banner a { color: #fff; font-weight: 700; text-decoration: underline; }
+/* 横幅内「添加到主屏」按钮与指引（3.63 手机安装批） */
+.demo-banner { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.demo-install-btn {
+  flex: none;
+  padding: 4px 14px;
+  border: 1px solid #fff;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--accent-deep);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.demo-install-btn:active { opacity: 0.85; }
+.demo-install-tip { font-size: 12px; opacity: 0.92; }
 /* 窄屏时横幅上移避开底部导航（须声明在 .demo-banner 基础样式之后以覆盖 bottom:0）；
    避让高度 = 底栏高度 + 设备安全区（env 动态计算，iPhone 底部横条也算入）；
    底部导航层级同时抬到横幅之上（2026-11-06 用户报告「更多」被横幅挡住） */
