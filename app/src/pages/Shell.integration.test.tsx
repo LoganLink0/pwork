@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it } from 'vitest'
 import App from '../App'
 import { useNotes } from '../store/notes'
+import { useUi } from '../store/ui'
 
 /** 壳层集成：导航、命令面板、速记浮层、主题、占位页（jsdom 抓逻辑，浏览器抓挂载路径） */
 
@@ -115,7 +116,18 @@ describe('工作台壳（W1）', () => {
     await waitFor(() => expect(useNotes.getState().notes.length).toBeGreaterThanOrEqual(1))
     // 浮层未关、正文清空、标签沿用、回执出现（CI 冷启动慢：等待拉长到 8s——waitFor 默认 1s 曾不够）
     await waitFor(() => expect(screen.getByLabelText('速记内容')).toHaveValue(''), { timeout: 8000 })
-    await waitFor(() => expect(screen.getByLabelText('标签')).toHaveValue('会议'), { timeout: 8000 })
+    // 诊断（CI 排查 2026-11-07）：标签值异常时打印环境现场——hash / ui store / overlay 计数 / 标签框匹配数与各自值
+    try {
+      expect(screen.getByLabelText('标签')).toHaveValue('会议')
+    } catch (e) {
+      const tagsAll = screen.queryAllByLabelText('标签')
+      console.log('[diag-连记] hash =', window.location.hash)
+      console.log('[diag-连记] ui.quickOpen =', useUi.getState().quickOpen, '| ui.paletteOpen =', useUi.getState().paletteOpen)
+      console.log('[diag-连记] overlay 数量 =', document.querySelectorAll('.overlay').length, '| qn-modal =', document.querySelectorAll('.qn-modal').length)
+      console.log('[diag-连记] 标签框匹配数 =', tagsAll.length, '| 各值 =', tagsAll.map((el) => (el as HTMLInputElement).value))
+      console.log('[diag-连记] notes =', JSON.stringify(useNotes.getState().notes.map((n) => ({ body: n.body.slice(0, 12), tags: n.tags }))))
+      throw e
+    }
     await waitFor(() => expect(screen.getByTestId('qn-saved')).toHaveTextContent('已保存 1 条'), { timeout: 8000 })
 
     // 第二条：标签沿用没动，直接写直接存
@@ -175,8 +187,17 @@ describe('工作台壳（W1）', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(sidebar().getByRole('link', { name: /帮助/ }))
-    // 左导航可见 + 默认分类（快速上手）内容显示
-    expect(await screen.findByRole('heading', { name: '快速上手' }, { timeout: 5000 })).toBeInTheDocument()
+    // 诊断（CI 排查 2026-11-07）：点击帮助后路由未切换时打印现场——hash / ui store / overlay / 侧栏帮助链接命中数
+    try {
+      expect(await screen.findByRole('heading', { name: '快速上手' }, { timeout: 8000 })).toBeInTheDocument()
+    } catch (e) {
+      console.log('[diag-帮助] hash =', window.location.hash)
+      console.log('[diag-帮助] ui.paletteOpen =', useUi.getState().paletteOpen, '| ui.quickOpen =', useUi.getState().quickOpen)
+      console.log('[diag-帮助] overlay 数量 =', document.querySelectorAll('.overlay').length, '| overlay 类名 =', [...document.querySelectorAll('.overlay')].map((el) => el.className))
+      console.log('[diag-帮助] 帮助链接匹配数 =', sidebar().queryAllByRole('link', { name: /帮助/ }).length, '| p-item 数 =', document.querySelectorAll('.p-item').length)
+      console.log('[diag-帮助] main 内容前 200 字 =', (document.querySelector('.main')?.textContent ?? '').slice(0, 200))
+      throw e
+    }
     expect(screen.getByRole('button', { name: '快捷键' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '术语表' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '四模块模型' })).not.toBeInTheDocument()
