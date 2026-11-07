@@ -3360,3 +3360,35 @@ html[data-wheel] body {
 .info-tip-pop a {
   color: var(--accent);
 }
+
+/* ---------- 首访引导第 1 步：手机单卡横向滑动（2026-11-07 用户反馈）----------
+   桌面的 2×2 网格与「100vh-450px」高度公式为桌面预留设计，手机上只剩一条缝。
+   本块声明在文件末尾以覆盖上方全部基础样式（复盘 3.56：覆盖必须在基础之后）。 */
+@media (max-width: 768px) {
+  /* 手机形态：视频演示区放最上（首屏即演示），左栏说明移到下方滚动阅读——
+     左栏 clamp 最小 280px 在 390px 视口占 72%，视频区曾被挤成一条缝 */
+  .welcome-card-main {
+    flex-direction: column;
+  }
+  .welcome-right {
+    order: 1;
+    flex: none;
+  }
+  .welcome-left {
+    order: 2;
+    width: 100%;
+  }
+  .welcome-mods {
+    display: flex;
+    align-items: flex-start; /* 横排容器高度由卡片内容撑起——默认 stretch 会循环依赖塌成 2px */
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .welcome-mods::-webkit-scrollbar { display: none; }
+  .welcome-mod {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+  }
+}
