@@ -1937,6 +1937,11 @@ a.mcard .m-link:hover {
     z-index: 301;
   }
 
+  /* 首访引导全屏独占：底部留安全间距，按钮不被系统手势条遮住 */
+  .welcome-veil {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
   /* 模块子页 Tab 条：仅窄屏显示，页头下方横排切换子模块 */
   .mobile-subtabs {
     display: flex;
