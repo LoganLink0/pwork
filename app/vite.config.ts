@@ -93,6 +93,19 @@ export default defineConfig(({ mode }) => ({
         // 使用时按需请求 + 浏览器 HTTP 缓存即可，首装同步缓存过重会拖垮 PWA 安装
         globIgnores: ['ffmpeg/**', 'tesseract/**'],
         navigateFallback: 'index.html',
+        // 演示视频运行时缓存（CacheFirst，30 天）：视频文件不可变且体积大，
+        // 首次在线播放后即缓存，弱网重看秒开；不进 precache 保证首装轻量
+        runtimeCaching: [
+          {
+            urlPattern: /\.webm$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'demo-videos',
+              expiration: { maxEntries: 8, maxAgeSeconds: 30 * 24 * 3600 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
       },
     }),
   ],
