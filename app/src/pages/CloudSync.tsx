@@ -172,6 +172,21 @@ export function CloudSyncCards({ active }: { active: boolean }) {
           ) : (
             <>
               <div className="set-row">
+                <label>云端代理地址</label>
+            <InfoTip
+              label="云端代理地址说明"
+              text={<>可选。手机浏览器连不到电脑的本地网关，需要填它才能走云端代理：填 https://pwork-api.loganlink0.cn（你部署的云端服务地址，在桌面版这里也能看到）。桌面版可不填——优先走本机网关，连不上才用它。</>}
+            />
+                <input
+                  className="input"
+                  placeholder="桌面可留空；手机端填云端服务地址（见右侧说明）"
+                  value={cloud.endpoint}
+                  onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
+                  onBlur={() => saveCloud(cloud)}
+                  aria-label="云端代理地址"
+                />
+              </div>
+              <div className="set-row">
                 <label>账户 ID</label>
                 <input
                   className="input"
