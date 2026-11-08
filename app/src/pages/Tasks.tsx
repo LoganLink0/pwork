@@ -61,7 +61,7 @@ function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
 }
 
 export function Tasks() {
-  const { tasks, stats, create, setStatus, postpone, remove, setLane, update, load, scanProjectTodos } = useTasks()
+  const { tasks, stats, create, setStatus, postpone, remove, setLane, update, load, scanProjectTodos, loaded: tasksLoaded } = useTasks()
   const goals = useGoals((s) => s.goals)
   const [draft, setDraft] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
@@ -309,7 +309,9 @@ export function Tasks() {
         </h3>
         <div className="task-card">
           {list.length === 0 ? (
-            <div style={{ padding: 'var(--sp-3) var(--sp-4)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>（无）</div>
+            <div style={{ padding: 'var(--sp-3) var(--sp-4)', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
+              {tasksLoaded ? '（无）' : '正在读取待办…'}
+            </div>
           ) : (
             list.map((t) => renderRow(t))
           )}

@@ -20,6 +20,7 @@ function dayLabel(dateKey: string): string {
 export function Notes() {
   const notes = useNotes((s) => s.notes)
   const trash = useNotes((s) => s.trash)
+  const notesLoaded = useNotes((s) => s.loaded)
   const restore = useNotes((s) => s.restore)
   const purge = useNotes((s) => s.purge)
   const [query, setQuery] = useState('')
@@ -101,7 +102,13 @@ export function Notes() {
           <div className="note-list" data-testid="note-list">
             {list.length === 0 && (
               <div style={{ padding: 'var(--sp-5)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-sm)' }}>
-                {showTrash ? '回收站是空的' : query || tag ? '没有匹配的速记' : <>第一条速记会在这里。按 <kbd>N</kbd> 随时开始。</>}
+                {showTrash
+                  ? '回收站是空的'
+                  : query || tag
+                    ? '没有匹配的速记'
+                    : notesLoaded
+                      ? <>第一条速记会在这里。按 <kbd>N</kbd> 随时开始。</>
+                      : '正在读取速记…'}
               </div>
             )}
             {showTrash ? (
