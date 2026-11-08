@@ -240,8 +240,8 @@ export function CloudSyncCards({ active }: { active: boolean }) {
               <div className="set-row">
                 <label>API Token</label>
             <InfoTip
-              label="创建 API Token 教程"
-              text={<>创建 API Token（约 2 分钟）：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌；② 权限选「账户 → D1 → 编辑」，账户资源选你的账户；③ 继续 → 创建，复制只显示一次的 Token 粘到上面。</>}
+              label="凭据怎么填"
+              text={<>推荐：直接粘贴部署完成时输出的「端点地址 + Token」（ptk_ 开头那个）——填到上面两处即可，不用去 Cloudflare 控制台。也可以改用 Cloudflare API Token（约 2 分钟）：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌 → 权限「账户 → D1 → 编辑」→ 复制粘贴。两种都能用。</>}
             />
                 <input
                   className="input"
