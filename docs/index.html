@@ -248,6 +248,41 @@
   }
   .support-note { text-align: center; font-size: 13px; color: var(--ink-faint); margin-top: 4px; }
 
+  /* 系统徽章行：与分享图同款三徽章（Windows/macOS/Android） */
+  .osbadges { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+  .osbadge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 6px 14px; font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .osbadge svg { width: 15px; height: 15px; fill: var(--ink); }
+
+  /* 下载卡「为你推荐」高亮：按访客系统动态标记（JS 加 rec 类） */
+  .get .card { position: relative; }
+  .get .card.rec { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 10px 30px rgba(232, 131, 58, 0.14); }
+  .rec-tip {
+    position: absolute; top: -12px; right: 16px;
+    background: var(--accent-deep); color: #fff; border-radius: 999px;
+    font-size: 12px; font-weight: 600; padding: 3px 12px; white-space: nowrap;
+  }
+
+  /* 版本时间线（软件外面区块） */
+  .timeline { margin: 28px 0 0; padding: 0; list-style: none; border-left: 2px solid var(--line-strong); }
+  .timeline li { position: relative; padding: 0 0 18px 22px; font-size: 14.5px; color: var(--ink-soft); }
+  .timeline li::before {
+    content: ''; position: absolute; left: -6px; top: 7px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent);
+  }
+  .timeline li:last-child { padding-bottom: 0; }
+  .timeline .v { font-family: var(--mono); font-weight: 700; color: var(--ink); margin-right: 8px; }
+  .timeline .t { color: var(--ink-faint); font-size: 13px; margin-left: 8px; }
+
+  /* 微信群二维码（反馈区卡片内） */
+  .qr-in-card { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+  .qr-in-card img { width: 108px; height: 108px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; display: block; }
+  .qr-in-card span { font-size: 13px; color: var(--ink-faint); }
+
   @media (max-width: 900px) {
     .mods { grid-template-columns: repeat(2, 1fr); }
     .trust, .get { grid-template-columns: 1fr; }
@@ -290,18 +325,18 @@
       <p class="sub">随手速记、订阅网站更新、每天一份信息日报、一次搜索找出所有内容、一键生成周报和 PPT、复盘后的行动项自动进待办。该有的都有，多余的一样没有。</p>
       <p class="sub">为每天要写东西、要读东西、要交东西的人做的——写作者、研究者、自由职业者，或者任何不想把笔记交给别人服务器的人。</p>
     <div class="cta-row">
-      <a class="btn-primary" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 版</a>
+      <a class="btn-primary" id="cta-main" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 版</a>
       <a class="btn-ghost" href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">在线体验演示版</a>
       <a class="btn-ghost" href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">查看源码</a>
     </div>
-      <div class="platforms">
-        <span>Windows 10/11 桌面版</span>
-        <span>macOS（Apple Silicon）内测首包</span>
-        <span>浏览器里也能用，手机浏览器可装到主屏</span>
-        <span>断网也能用</span>
+      <div class="osbadges">
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>Windows 10/11</span>
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.702"/></svg>macOS（Apple Silicon）</span>
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.8405 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.4396"/></svg>Android / iPhone 网页版</span>
+        <span class="osbadge">断网也能用</span>
       </div>
       <div class="facts">
-        <div class="fact"><div class="num">529</div><div class="lab">项自动化测试，全部通过</div></div>
+        <div class="fact"><div class="num">532</div><div class="lab">项自动化测试，全部通过</div></div>
         <div class="fact"><div class="num">2<small> 个平台</small></div><div class="lab">Windows 与 macOS 安装包</div></div>
         <div class="fact"><div class="num">80</div><div class="lab">挑好就能用的信息源</div></div>
         <div class="fact"><div class="num">0<small> 元</small></div><div class="lab">软件免费，云端可选免费档</div></div>
@@ -332,7 +367,7 @@
         <div class="mod" style="--mc: var(--m-process)">
           <span class="tag">第二步</span>
           <b>加工</b>
-          <span>按 Ctrl K 一次搜出所有内容；读过的文章可以投票，投得越多，筛选越合你的口味；信源自己会汇报产出健康度，主题声量反常时日报自动点名；还有一批常用小工具。任务完成与到期提醒都有通知留痕，顶栏铃铛随时回看。</span>
+          <span>按 Ctrl K 一次搜出所有内容；文章点开就是全文，不再是干巴巴的摘要，划一段直接存进速记；读过的投一票，筛选越来越合你的口味；配上 AI 还能对整个库提问，回答带出处。任务完成与到期提醒都有通知留痕，顶栏铃铛随时回看。</span>
         </div>
         <div class="mod" style="--mc: var(--m-output)">
           <span class="tag">第三步</span>
@@ -382,13 +417,13 @@
         <div>
           <div class="kicker">说到做到，有据可查</div>
           <h2>上面说的每一条，都有可以核对的东西</h2>
-          <p>下面是这段介绍对应的真实核对结果：四百多项自动化测试在每一次代码改动后全部重跑，发布包的校验值公开可查。数据在你电脑上，所以这些证明也必须经得起你自己核对。</p>
+          <p>下面是这段介绍对应的真实核对结果：五百多项自动化测试在每一次代码改动后全部重跑，发布包的校验值公开可查。数据在你电脑上，所以这些证明也必须经得起你自己核对。</p>
         </div>
       </div>
       <div class="term">
         <div class="bar"><i></i><i></i><i></i><span class="ttl">pwork — 测试与发布验证记录</span></div>
         <pre>$ <span class="d">npm run test</span>
-<span class="g">✓</span> 529 项自动化测试全部通过 <span class="d">（单元 + 集成，每次提交全量重跑）</span>
+<span class="g">✓</span> 532 项自动化测试全部通过 <span class="d">（单元 + 集成，每次提交全量重跑）</span>
 $ <span class="d">发布包校验</span>
 <span class="g">✓</span> PWORK_0.1.16_x64-setup-online.exe      <span class="d">Windows 安装包</span>
 <span class="g">✓</span> PWORK_0.1.16_aarch64.dmg       <span class="d">macOS 安装包（Apple Silicon）</span>
@@ -400,35 +435,92 @@ $ <span class="d">数据去向</span>
     </div>
   </section>
 
-  <section class="band" id="download">
+  <section class="band" id="ops">
     <div class="wrap">
       <div class="sec-head">
         <div class="no">04</div>
         <div>
-          <div class="kicker">怎么拿到</div>
-          <h2>四种方式，按你的设备选</h2>
+          <div class="kicker">软件外面</div>
+          <h2>免费开源，不该等于没人管</h2>
+          <p>很多人对开源软件的担心是：作者扔下一个链接就消失了。PWORK 不这样经营——下载、更新、提问、看记录，每一步都有人在维护。</p>
         </div>
       </div>
-      <div class="get">
+      <div class="trust">
         <div class="card">
-          <b>Windows / macOS 安装包</b>
-          <p>Windows 联网版约 11MB，走国内直连通道下载，双击安装；macOS 提供 Apple Silicon 版 dmg（内测首包，首次打开需在系统设置放行）。装完自动进入 5 步上手引导。离线版与历史版本在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>。</p>
-          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 联网版 →</a>
+          <b>下载不用翻墙</b>
+          <p>安装包放在国内对象存储上，直链下载，不等 GitHub 的龟速；发布页挂着校验值，下载完可以对一遍再装。</p>
         </div>
         <div class="card">
-          <b>浏览器直接用</b>
-          <p>下载项目到电脑，在 app 目录安装依赖后一条命令就能启动；也可以像应用一样装进浏览器。</p>
+          <b>装上以后自动更新</b>
+          <p>出新版本，应用里一键升级，更新通道同样走国内直连——装完这一次，后面不用再手动下载。</p>
+        </div>
+        <div class="card">
+          <b>两个系统一起发</b>
+          <p>Windows 与 macOS 安装包同一时间发布，macOS 的包由云端自动构建，不会让你等「另一个平台的版本还没出」。</p>
+        </div>
+        <div class="card">
+          <b>大陆看代码也顺畅</b>
+          <p>代码在 Gitee 同步镜像，网络不畅时看源码、提问题都不受影响。</p>
+        </div>
+        <div class="card">
+          <b>每一版都有说明</b>
+          <p>八个版本，每一版改了什么都写在发布说明里，改了什么、没改什么，历史记录全部可回溯。</p>
+        </div>
+        <div class="card">
+          <b>提问有人回</b>
+          <p>微信交流群和 GitHub Discussions 都开着，用着别扭的地方直接说——好的想法，会变成下一个版本。</p>
+        </div>
+      </div>
+      <ul class="timeline">
+        <li><span class="v">0.1.8</span>开源首发，Windows 双版安装包<span class="t">10-27</span></li>
+        <li><span class="v">0.1.11</span>macOS 版发布，应用内自动更新上线<span class="t">10-30</span></li>
+        <li><span class="v">0.1.13</span>运行日志可导出，macOS 自动构建流水线跑通<span class="t">11-01</span></li>
+        <li><span class="v">0.1.15</span>字号行宽字体随你调，书签与 Obsidian 一键搬家<span class="t">11-05</span></li>
+        <li><span class="v">0.1.16</span>全文阅读、AI 全库问答、手机端全面重做<span class="t">11-07</span></li>
+      </ul>
+      <p class="loop-back">完整版本历史在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>——每一版、每一条改动，都留着。</p>
+    </div>
+  </section>
+
+  <section class="band" id="download">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="no">05</div>
+        <div>
+          <div class="kicker">怎么拿到</div>
+          <h2>按你的设备选，页面会帮你认出来</h2>
+        </div>
+      </div>
+      <div class="osbadges">
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>Windows</span>
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.702"/></svg>macOS</span>
+        <span class="osbadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.8405 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.4396"/></svg>Android / iPhone</span>
+      </div>
+      <div class="get">
+        <div class="card" id="card-windows">
+          <b>Windows 联网版</b>
+          <p>约 11MB，走国内直连下载，双击安装——机器上缺的运行环境它会自动补齐，装完自动进入 5 步上手引导。首次打开若提示「已保护你的电脑」，点「更多信息 → 仍要运行」即可（内测版暂未购买签名，见下方常见问题）。离线版与历史版本在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>。</p>
+          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 联网版 →</a>
+        </div>
+        <div class="card" id="card-macos">
+          <b>macOS 版（Apple Silicon）</b>
+          <p>适用于 M 系列芯片的 Mac，同样走国内直连下载。内测首包首次打开需放行：先打开一次（会提示「已损坏」），到 系统设置 → 隐私与安全性 点「仍要打开」。Intel 芯片的 Mac 暂无安装包，可先用浏览器方式。</p>
+          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_aarch64.dmg" target="_blank" rel="noreferrer noopener">下载 macOS 版 dmg →</a>
+        </div>
+        <div class="card" id="card-mobile">
+          <b>手机上用（Android / iPhone）</b>
+          <p>用 Chrome 或手机自带浏览器打开 <a href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">pwork.loganlink0.cn/demo</a>，点浏览器右上角菜单，选「添加到主屏幕」（有的浏览器叫「安装应用」），就像装了一个应用——数据存在手机浏览器的本机存储里。点添加后确认框可能要等几秒到十几秒（浏览器在验证资源），属正常。夸克等部分浏览器没有这个菜单项，换上面的浏览器即可；页面有新版本时会自动刷新。</p>
+          <a href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">打开演示地址 →</a>
+        </div>
+        <div class="card">
+          <b>浏览器里跑（进阶）</b>
+          <p>下载项目到电脑，在 app 目录安装依赖后一条命令就能启动；也可以像应用一样装进浏览器。适合不想装桌面包、想先摸一摸的人。</p>
           <a href="https://github.com/LoganLink0/pwork#快速开始" target="_blank" rel="noreferrer noopener">看快速开始 →</a>
         </div>
         <div class="card">
           <b>从源码构建</b>
           <p>全部代码公开：界面、桌面安装包、云端同步服务、部署脚本都在仓库里，五百余项自动化测试可以自己跑一遍验证。</p>
           <a href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">浏览源码 →</a>
-        </div>
-        <div class="card">
-          <b>手机上用</b>
-          <p>用 Chrome 或手机自带浏览器打开 <a href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">pwork.loganlink0.cn/demo</a>，点浏览器右上角菜单，选「添加到主屏幕」（有的浏览器叫「安装应用」），就像装了一个应用——数据存在手机浏览器的本机存储里。点添加后确认框可能要等几秒到十几秒（浏览器在验证资源），属正常。夸克等部分浏览器没有这个菜单项，换上面的浏览器即可；页面有新版本时会自动刷新。</p>
-          <a href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">打开演示地址 →</a>
         </div>
       </div>
     </div>
@@ -437,7 +529,7 @@ $ <span class="d">数据去向</span>
   <section class="band band-surface" id="faq">
     <div class="wrap">
       <div class="sec-head">
-        <div class="no">05</div>
+        <div class="no">06</div>
         <div>
           <div class="kicker">常见问题</div>
           <h2>问得最多的五件事</h2>
@@ -471,7 +563,7 @@ $ <span class="d">数据去向</span>
   <section class="band band-surface" id="feedback">
     <div class="wrap">
       <div class="sec-head">
-        <div class="no">06</div>
+        <div class="no">07</div>
         <div>
           <div class="kicker">找到我们</div>
           <h2>用着别扭的地方，直接说出来</h2>
@@ -486,7 +578,11 @@ $ <span class="d">数据去向</span>
         </div>
         <div class="card">
           <b>内测微信群</b>
-          <p>想即时聊、或者发截图不方便用 GitHub 的，扫码进「PWORK 内测群」。群二维码会过期，最新版在应用内：帮助 → 常见问题 的反馈区，或者 设置 → 关于。</p>
+          <p>想即时聊、或者发截图不方便用 GitHub 的，扫码进「PWORK 内测群」。群二维码会过期，过期后以应用内最新为准：帮助 → 常见问题 的反馈区，或 设置 → 关于。</p>
+          <div class="qr-in-card">
+            <img src="assets/wechat-group.png" alt="PWORK 内测微信群二维码" width="108" height="108" loading="lazy">
+            <span>扫码进群，聊用法、报问题都行</span>
+          </div>
         </div>
         <div class="card">
           <b>缺陷直达</b>
@@ -500,7 +596,7 @@ $ <span class="d">数据去向</span>
   <section class="band" id="support">
     <div class="wrap">
       <div class="sec-head">
-        <div class="no">07</div>
+        <div class="no">08</div>
         <div>
           <div class="kicker">自愿赞助</div>
           <h2>请作者喝杯咖啡</h2>
@@ -522,7 +618,7 @@ $ <span class="d">数据去向</span>
       <h2>好不好用，装下来试五分钟就知道。</h2>
       <p>电脑上装安装包，手机浏览器打开演示地址添加到主屏——数据从第一秒起就在你自己的设备上。</p>
       <div class="cta-row">
-        <a class="btn-primary" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">免费下载</a>
+        <a class="btn-primary js-dl" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">免费下载</a>
         <a class="btn-ghost" href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">先看演示</a>
       </div>
     </div>
@@ -536,5 +632,34 @@ $ <span class="d">数据去向</span>
   </div>
 </footer>
 
+<script>
+/* 按访客系统做推荐：主按钮换对应下载（macOS 走国内直链 dmg、手机换演示地址），
+   下载区对应卡加「为你推荐」高亮。检测失败（other）不标记，四卡如常自选。 */
+(function () {
+  var ua = navigator.userAgent
+  var COS = 'https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/'
+  var DEMO = 'https://pwork.loganlink0.cn/demo/'
+  var os = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ? 'mobile'
+    : /Windows/i.test(ua) ? 'windows'
+    : /Mac OS X|Macintosh/i.test(ua) ? 'macos'
+    : 'other'
+  var labels = { windows: 'Windows', macos: 'macOS', mobile: '手机' }
+  var btn = document.getElementById('cta-main')
+  if (os === 'macos' && btn) { btn.textContent = '下载 macOS 版'; btn.href = COS + 'PWORK_0.1.16_aarch64.dmg' }
+  else if (os === 'mobile' && btn) { btn.textContent = '手机上直接用'; btn.href = DEMO }
+  document.querySelectorAll('.js-dl').forEach(function (el) {
+    if (os === 'macos') { el.textContent = '免费下载 macOS 版'; el.href = COS + 'PWORK_0.1.16_aarch64.dmg' }
+    else if (os === 'mobile') { el.textContent = '手机上直接用'; el.href = DEMO }
+  })
+  var card = document.getElementById('card-' + os)
+  if (card) {
+    card.classList.add('rec')
+    var tip = document.createElement('span')
+    tip.className = 'rec-tip'
+    tip.textContent = '看起来你在用' + labels[os] + '——推荐这份'
+    card.appendChild(tip)
+  }
+})()
+</script>
 </body>
 </html>
