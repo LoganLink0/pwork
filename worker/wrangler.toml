@@ -2,6 +2,17 @@ name = "pwork-collect"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
 
+# 自定义域（2026-11-08 DNS 迁移后启用）：workers.dev 大陆直连被阻断，自定义域走
+# Cloudflare 边缘大陆可达——手机端 D1 代理（/api/d1/query）依赖此入口。
+# 前提：域名 NS 已托管到同一 Cloudflare 账号（deploy 时自动建 DNS 记录与证书）。
+# 注意 routes 必须是顶层键（写进 [triggers] 段内会被当成 triggers.routes 忽略并告警）。
+# workers_dev 显式保留：配置 routes 后 wrangler 默认关闭 workers.dev 入口，
+# 设备里已存的旧端点地址（workers.dev）会失效——双入口并存，旧地址不裂。
+workers_dev = true
+routes = [
+  { pattern = "pwork-api.loganlink0.cn", custom_domain = true }
+]
+
 [triggers]
 # 每小时触发一次；是否真抓由云端配置的「北京时间整点表」决定（默认 9/11/15/18/19/20/23）——
 # 用户在应用 设置 → 云端同步 改抓取时间即生效（写 D1 config 表），不用改这里重新部署
