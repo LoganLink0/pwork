@@ -5,7 +5,7 @@
  * 不可用时（未配 AI）调用方收到明确错误，检索不受影响。
  */
 import { db } from '../db/schema'
-import { searchAll, type SearchHit } from './searchAll'
+import { searchMulti, type SearchHit } from './searchAll'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { llmConfigFrom, loadCoachConfig } from '../modules/review/engine/coach'
 
@@ -81,7 +81,8 @@ export async function askLibrary(question: string): Promise<AskAiResult> {
   const cfg = llmConfigFrom(coach)
   if (coach.viaGateway !== true && !cfg.apiKey) throw new Error('还没有配置 AI——在 设置 → AI 或首访引导里配好 Key 即可使用')
 
-  const hits = await searchAll(q)
+  // 自然语言问句走多词检索（2026-11-08 修复：整句子串匹配对长问句永远零命中）
+  const hits = await searchMulti(q)
   const sources: AskAiSource[] = hits
     .filter((h) => h.kind !== 'term')
     .map((h) => ({ kind: h.kind, title: h.title, to: h.to }))

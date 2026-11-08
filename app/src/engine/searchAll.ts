@@ -102,3 +102,55 @@ export async function searchAll(qRaw: string): Promise<SearchHit[]> {
   }
   return out
 }
+
+/**
+ * 自然语言问句的检索词切分（2026-11-08）：searchAll 是整句子串匹配，AI 问答把
+ * 自然语言长句整句丢进来永远零命中（正文里不可能存在完整问句子串）——这是
+ * 「AI 问答真机验收」卡住的根因。此函数按标点与多字填充词把问句切成片段，
+ * 再对 ≥2 字片段提取 2-gram 子串，得到一组检索词。不做真分词（backlog 13 的
+ * FTS5+分词是性能与排序向的另一个触发项）；2-gram 在子串匹配下足够召回。
+ */
+export function askKeywords(question: string): string[] {
+  let s = question.replace(/[？！。，、：；「」『』“”‘’（）<>《》\s]+/g, '|')
+  const fillers = [
+    '帮我', '请问', '一下', '现在', '最近', '之前', '之后', '哪些', '什么', '怎么', '如何',
+    '为什么', '是不是', '有没有', '可以', '应该', '需要', '看看', '说说', '总结', '告诉',
+    '关于', '这个', '那个', '这些', '或者', '并且', '如果', '那么', '以及',
+  ]
+  for (const w of fillers) s = s.split(w).join('|')
+  const pieces = s.split('|').map((x) => x.trim()).filter((x) => x.length >= 2)
+  const terms: string[] = []
+  const seen = new Set<string>()
+  for (const p of pieces) {
+    for (let i = 0; i + 2 <= p.length; i++) {
+      const gram = p.slice(i, i + 2)
+      if (!seen.has(gram)) { seen.add(gram); terms.push(gram) }
+    }
+  }
+  return terms
+}
+
+/**
+ * 多词检索（AI 全库问答专用入口）：自然语言问句切词后逐词检索，命中合并——
+ * 被越多词命中的实体排越前（更相关），同分保持词序。命令面板保持原 searchAll
+ * （单词输入，行为零变化）。
+ */
+export async function searchMulti(qRaw: string): Promise<SearchHit[]> {
+  const terms = askKeywords(qRaw)
+  if (terms.length === 0) return searchAll(qRaw.trim())
+  const results = await Promise.all(terms.map((t) => searchAll(t)))
+  const order = new Map<string, number>()
+  terms.forEach((t, i) => order.set(t.toLowerCase(), i))
+  const merged = new Map<string, { h: SearchHit; words: Set<string> }>()
+  for (let i = 0; i < results.length; i++) {
+    const term = terms[i].toLowerCase()
+    for (const h of results[i]) {
+      const prev = merged.get(h.id)
+      if (prev) prev.words.add(term)
+      else merged.set(h.id, { h, words: new Set([term]) })
+    }
+  }
+  return Array.from(merged.values())
+    .sort((a, b) => b.words.size - a.words.size || Math.min(...Array.from(a.words).map((w) => order.get(w) ?? 99)) - Math.min(...Array.from(b.words).map((w) => order.get(w) ?? 99)))
+    .map((x) => x.h)
+}

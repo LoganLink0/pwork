@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { searchAll } from './searchAll'
+import { askKeywords, searchAll, searchMulti } from './searchAll'
 import { putItem } from '../db/collect'
 import type { Item } from '../types/models'
 
@@ -39,5 +39,42 @@ describe('searchAll 正文级检索（G1 批：item.content 参与命中）', ()
     await putItem(makeItem('itm_c3', { deletedAt: '2026-11-01T00:00:00.000Z', content: '另一篇正文提到量子纠缠通信协议。' }))
     const hits = await searchAll('量子纠缠')
     expect(hits.filter((h) => h.kind === 'item')).toHaveLength(0)
+  })
+})
+
+describe('askKeywords 自然语言问句切词（2026-11-08 AI 问答空态根因修复）', () => {
+  it('标点与填充词切分后得到 2-gram 实词：问句里含有库内容词', () => {
+    const terms = askKeywords('我现在有哪些待办要做？')
+    expect(terms).toContain('待办')
+    expect(terms.every((t) => t.length >= 2)).toBe(true)
+  })
+
+  it('英文与数字版本号被标点切分后仍保留可用片段', () => {
+    const terms = askKeywords('月之暗面开放 Kimi K3.1 Pro 权重是怎么回事？')
+    expect(terms).toContain('月之')
+    expect(terms.some((t) => t.toLowerCase().startsWith('k3'))).toBe(true)
+    expect(terms.some((t) => t.includes('权重'))).toBe(true)
+  })
+
+  it('整句即单词时直接返回该词（单词式提问零损耗）', () => {
+    expect(askKeywords('测试')).toEqual(['测试'])
+  })
+})
+
+describe('searchMulti 多词检索（askLibrary 的自然语言入口）', () => {
+  it('问句含正文里的词 → 自然语言也能命中（修复前整句匹配必空）', async () => {
+    await putItem(makeItem('itm_m1', { title: 'Kimi K3.1 权重开放', summary: '月之暗面开放 2.8 万亿参数权重。', content: '登顶 Agent Arena 开源模型榜。' }))
+    const hits = await searchMulti('月之暗面开放 Kimi K3.1 Pro 权重是怎么回事？')
+    const itemHit = hits.find((h) => h.kind === 'item' && h.id === 'itm_m1')
+    expect(itemHit).toBeTruthy()
+  })
+
+  it('被更多词命中的实体排更前', async () => {
+    await putItem(makeItem('itm_m2', { title: 'Kimi 开放权重', content: 'Kimi 开放权重细节说明。' }))
+    await putItem(makeItem('itm_m3', { content: 'Kimi 相关的一条普通记录。' }))
+    const hits = await searchMulti('Kimi 开放权重是怎么回事？')
+    const ranked = hits.filter((h) => h.kind === 'item')
+    expect(ranked[0]?.id).toBe('itm_m2')
+    expect(ranked.indexOf(ranked.find((h) => h.id === 'itm_m3')!)).toBeGreaterThan(0)
   })
 })
