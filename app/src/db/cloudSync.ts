@@ -61,7 +61,8 @@ export function lastSyncAt(): string | null {
 /** 云端配置是否已填到可同步（端点模式看端点；D1 直连看三项齐）——打开应用自动同步的门槛 */
 export function cloudConfigured(): boolean {
   const c = loadCloudConfig()
-  return c.mode === 'd1' ? Boolean(c.accountId && c.databaseId && c.token) : Boolean(c.endpoint)
+  // 手机端配对形态：端点 + 配对码（token 位）即可，无需 Cloudflare 三件套（2026-11-08）
+  return c.mode === 'd1' ? Boolean(c.token && (c.endpoint || (c.accountId && c.databaseId))) : Boolean(c.endpoint)
 }
 
 interface SyncResult {
@@ -278,8 +279,8 @@ export async function d1Query(config: CloudConfig, sql: string, params: (string 
 }
 
 async function syncViaD1(config: CloudConfig, since: string): Promise<SyncResult> {
-  if (!config.accountId || !config.databaseId || !config.token) {
-    return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token（设置里有创建指引）' }
+  if (!config.token || (!config.endpoint && (!config.accountId || !config.databaseId))) {
+    return { ok: false, newCount: 0, skipCount: 0, serverTime: null, error: 'D1 直连需要：API Token + 账户 ID/数据库 ID，或「云端代理地址」+ 配对码（手机场景；设置里有创建指引）' }
   }
   const rows = await d1Query(
     config,
@@ -297,8 +298,8 @@ async function syncViaD1(config: CloudConfig, since: string): Promise<SyncResult
 }
 
 async function pushViaD1(config: CloudConfig): Promise<PushResult> {
-  if (!config.accountId || !config.databaseId || !config.token) {
-    return { ok: false, imported: 0, skipped: 0, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token' }
+  if (!config.token || (!config.endpoint && (!config.accountId || !config.databaseId))) {
+    return { ok: false, imported: 0, skipped: 0, error: 'D1 直连需要：API Token + 账户 ID/数据库 ID，或「云端代理地址」+ 配对码（手机场景）' }
   }
   const sources = await listActiveSources()
   let imported = 0
@@ -356,8 +357,8 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
   const config = loadCloudConfig()
   try {
     if (config.mode === 'd1') {
-      if (!config.token) return { ok: false, message: 'API Token 还没填——按下方「创建 API Token」三步指引创建后粘进来（部署输出的 ptk_ 开头 Token 在这里无效）' }
-      if (!config.accountId || !config.databaseId) return { ok: false, message: '账户 ID / 数据库 ID 还没填——一键部署会自动填好，或到 Cloudflare 控制台首页复制' }
+      if (!config.token) return { ok: false, message: '凭据还没填——桌面端填 API Token（Cloudflare 控制台创建）；手机端粘贴桌面「配对到手机」生成的配对文本即可' }
+      if (!config.endpoint && (!config.accountId || !config.databaseId)) return { ok: false, message: '账户 ID / 数据库 ID 还没填——一键部署会自动填好，或填「云端代理地址」走配对通道' }
       const rows = await d1Query(config, 'SELECT count(*) AS n FROM sources', [])
       const n = (rows[0]?.n as number) ?? 0
       return { ok: true, message: `连接成功！云端已有 ${n} 个信源` }
@@ -516,8 +517,8 @@ export async function syncIngestBlocks(): Promise<IngestPullResult> {
   let rows: IngestRow[] = []
   try {
     if (config.mode === 'd1') {
-      if (!config.accountId || !config.databaseId || !config.token) {
-        return { ok: false, pulled: 0, error: 'D1 直连需要：账户 ID + 数据库 ID + API Token（设置里有创建指引）' }
+      if (!config.token || (!config.endpoint && (!config.accountId || !config.databaseId))) {
+        return { ok: false, pulled: 0, error: 'D1 直连需要：API Token + 账户 ID/数据库 ID，或「云端代理地址」+ 配对码（手机场景；设置里有创建指引）' }
       }
       const r = await d1Query(
         config,

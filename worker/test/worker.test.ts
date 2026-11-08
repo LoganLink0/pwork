@@ -231,7 +231,7 @@ describe('D1 代理（手机端通路：挂 CORS 转发官方端点，鉴权由�
   it('账户/库 ID 格式坏 → 400（拼上游 URL 前拦截，防路径注入）', async () => {
     globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch
     const res = await worker.fetch(
-      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: 'Bearer t' }, body: JSON.stringify({ ...GOOD, accountId: '../other/account' }) }),
+      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: 'Bearer cf_x' }, body: JSON.stringify({ ...GOOD, accountId: '../other/account' }) }),
       { TOKEN: 't' } as never,
     )
     expect(res.status).toBe(400)
@@ -266,6 +266,74 @@ describe('D1 代理（手机端通路：挂 CORS 转发官方端点，鉴权由�
     expect(res.status).toBe(401)
     const data = (await res.json()) as { errors?: { message?: string }[] }
     expect(data.errors?.[0]?.message).toBe('Invalid API Token')
+  })
+})
+
+describe('配对码直执行（手机端两步配对：端点地址 + 配对码，白名单收口）', () => {
+  const PAIR = 'A1B2C3D4E5F60708'
+  /** 最小 D1 mock：config 表查询回配对码；其余语句走可选 exec 回结果 */
+  function mockSyncDb(pairing: string | null, exec?: (sql: string, params: unknown[]) => { results?: unknown[] }) {
+    return {
+      prepare(sql: string) {
+        if (/from\s+config/i.test(sql)) {
+          return {
+            bind: () => ({ first: async () => ({ value: pairing }), all: async () => ({ results: [] }), run: async () => ({}) }),
+          }
+        }
+        return {
+          first: async () => null,
+          bind: (...params: unknown[]) => ({
+            all: async () => ({ results: exec?.(sql, params)?.results ?? [] }),
+            run: async () => ({}),
+          }),
+        }
+      },
+    }
+  }
+  const req = (sql: string, bearer: string, exec?: (sql: string, params: unknown[]) => { results?: unknown[] }) =>
+    worker.fetch(
+      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: `Bearer ${bearer}` }, body: JSON.stringify({ sql, params: [] }) }),
+      { TOKEN: 'ptk_x', DB: mockSyncDb(PAIR, exec) } as never,
+    )
+
+  it('配对码命中 + 白名单内 SELECT → 就地执行返回官方形状，不外呼', async () => {
+    globalThis.fetch = (async () => { throw new Error('不应外呼') }) as typeof fetch
+    const res = await req("SELECT * FROM items WHERE stage = 'scored'", PAIR)
+    expect(res.status).toBe(200)
+    const data = (await res.json()) as { success?: boolean; result?: { results?: unknown[] }[] }
+    expect(data.success).toBe(true)
+    expect(data.result?.[0]?.results).toEqual([])
+  })
+
+  it('配对码错误 → 不就地执行也不外呼（无 ID 可转发，400 拒绝）', async () => {
+    let called = 0
+    globalThis.fetch = (async () => { called++; return new Response('{}', { status: 200 }) }) as typeof fetch
+    const res = await req('SELECT * FROM items', 'WRONGCODE0000')
+    expect(res.status).toBe(400)
+    expect(called).toBe(0)
+  })
+
+  it('白名单外的表 → 拒绝且不外呼（错误消息含表名）', async () => {
+    let called = 0
+    globalThis.fetch = (async () => { called++; return new Response('{}', { status: 200 }) }) as typeof fetch
+    const res = await req('SELECT * FROM notes', PAIR)
+    const data = (await res.json()) as { success?: boolean; errors?: { message?: string }[] }
+    expect(data.success).toBe(false)
+    expect(data.errors?.[0]?.message).toContain('白名单')
+    expect(called).toBe(0)
+  })
+
+  it('多语句（分号）→ 拒绝', async () => {
+    const res = await req('SELECT * FROM items; DROP TABLE items', PAIR)
+    const data = (await res.json()) as { success?: boolean }
+    expect(data.success).toBe(false)
+  })
+
+  it('部署 Token（ptk_）同样走直执行白名单，不外呼', async () => {
+    globalThis.fetch = (async () => { throw new Error('不应外呼') }) as typeof fetch
+    const res = await req('SELECT count(*) AS n FROM sources', 'ptk_x')
+    const data = (await res.json()) as { success?: boolean }
+    expect(data.success).toBe(true)
   })
 })
 

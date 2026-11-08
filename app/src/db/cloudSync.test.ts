@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cloudConfigured, loadCloudConfig, saveCloudConfig, syncFromCloud } from './cloudSync'
+import { buildPairingText, parsePairingText, createPairing } from './pairing'
 import { db } from './schema'
 
 beforeEach(async () => {
@@ -149,10 +150,53 @@ describe('cloudConfigured（打开应用自动同步的门槛，2026-10-12）', 
     expect(cloudConfigured()).toBe(true)
   })
 
-  it('D1 模式：三项缺一 → false；填齐 → true', () => {
+  it('D1 模式：三项填齐 → true；只缺数据库 ID 但没填代理 → false', () => {
     saveCloudConfig({ mode: 'd1', endpoint: '', token: 'tk', accountId: 'acc', databaseId: '' })
     expect(cloudConfigured()).toBe(false)
     saveCloudConfig({ mode: 'd1', endpoint: '', token: 'tk', accountId: 'acc', databaseId: 'db' })
     expect(cloudConfigured()).toBe(true)
+  })
+
+  it('D1 模式配对形态：代理地址 + 凭据即可（无需 Cloudflare 三件套，2026-11-08）', () => {
+    saveCloudConfig({ mode: 'd1', endpoint: 'https://pwork.example.workers.dev', token: 'pair-code', accountId: '', databaseId: '' })
+    expect(cloudConfigured()).toBe(true)
+  })
+})
+
+describe('配对码（手机端两步配对，2026-11-08）', () => {
+  it('配对文本往返：生成 → 解析还原端点与码', () => {
+    const text = buildPairingText('https://pwork-api.example.cn/', 'A1B2C3D4E5F60708')
+    const parsed = parsePairingText(text)
+    expect(parsed).toEqual({ endpoint: 'https://pwork-api.example.cn', code: 'A1B2C3D4E5F60708' })
+  })
+
+  it('解析拒绝：非 https 端点 / 码形不对 / 非法 JSON', () => {
+    expect(parsePairingText(JSON.stringify({ app: 'pwork-pair', endpoint: 'http://x.cn', code: 'A1B2C3D4E5F60708' }))).toBeNull()
+    expect(parsePairingText(JSON.stringify({ app: 'pwork-pair', endpoint: 'https://x.cn', code: 'short' }))).toBeNull()
+    expect(parsePairingText('not json')).toBeNull()
+  })
+
+  it('createPairing：生成随机码写入 config 表并返回配对文本', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: 'https://pwork.example.workers.dev', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
+    const sent: { sql: string; params: string[] }[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('127.0.0.1:8788')) throw new TypeError('Failed to fetch')
+      const payload = JSON.parse(init!.body!) as { sql: string; params: string[] }
+      sent.push({ sql: payload.sql, params: payload.params })
+      return new Response(JSON.stringify({ success: true, result: [{ results: [] }] }), { status: 200 })
+    }))
+    const r = await createPairing()
+    expect(r.ok).toBe(true)
+    expect(r.text).toContain('https://pwork.example.workers.dev')
+    expect(sent[0]?.sql).toContain('sync_pairing_code')
+    const parsed = parsePairingText(r.text!)
+    expect(parsed?.code).toBe(sent[0]?.params[0])
+  })
+
+  it('createPairing：代理地址未填 → 明确报错不写码', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: '', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
+    const r = await createPairing()
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('云端代理地址')
   })
 })

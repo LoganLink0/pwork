@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncFromCloud, pushSourcesToCloud, syncIngestBlocks, getScheduleHours, pushScheduleHours, type CloudConfig } from '../db/cloudSync'
+import { createPairing, parsePairingText } from '../db/pairing'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, pullChangedRecords, type SyncConfig } from '../db/syncRecords'
 import { fmtLocal } from '../engine/datetime'
 import { recordError } from '../engine/errorLog'
@@ -23,6 +24,9 @@ export function CloudSyncCards({ active }: { active: boolean }) {
   const [scheduleDraft, setScheduleDraft] = useState('')
   const [sync, setSyncState] = useState<SyncConfig>(() => loadSyncConfig())
   const [syncBusy, setSyncBusy] = useState(false)
+  const [pairingText, setPairingText] = useState('')
+  const [pairingImport, setPairingImport] = useState('')
+  const [pairingMsg, setPairingMsg] = useState<string | null>(null)
 
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
@@ -44,6 +48,33 @@ export function CloudSyncCards({ active }: { active: boolean }) {
       if (r.ok && r.hours) setScheduleDraft(r.hours.join(','))
     })
   }, [active])
+
+  const doPair = async () => {
+    setCloudMsg(null)
+    setPairingMsg(null)
+    try {
+      const r = await createPairing()
+      if (r.ok && r.text) {
+        setPairingText(r.text)
+        setPairingMsg('已生成——点「复制」发到手机（微信文件传输助手即可），手机粘贴导入')
+      } else {
+        setPairingMsg(r.error ?? '生成失败')
+      }
+    } catch (e) {
+      setPairingMsg(e instanceof Error ? e.message : '生成失败')
+    }
+  }
+
+  const doImportPairing = () => {
+    const parsed = parsePairingText(pairingImport)
+    if (!parsed) {
+      setPairingMsg('格式不对——请粘贴桌面生成的完整配对文本')
+      return
+    }
+    saveCloud({ ...cloud, endpoint: parsed.endpoint, token: parsed.code })
+    setPairingImport('')
+    setPairingMsg('已导入——点「立即同步」验证')
+  }
 
   const doSync = async () => {
     setCloudBusy(true)
@@ -221,6 +252,38 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                   aria-label="API Token"
                 />
               </div>
+              <div className="set-row">
+                <label>配对到手机</label>
+                <InfoTip
+                  label="配对说明"
+                  text={<>生成一行配对文本（含云端代理地址与配对码），发到手机粘贴导入——手机端全程不需要 Cloudflare 控制台。重新生成会让旧配对码作废。</>}
+                />
+                <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+                  <input className="input" readOnly value={pairingText} placeholder="点右侧「生成配对码」…" aria-label="配对文本" />
+                  {pairingText ? (
+                    <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={() => { void navigator.clipboard.writeText(pairingText) }}>复制</button>
+                  ) : (
+                    <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={() => void doPair()}>生成配对码</button>
+                  )}
+                </div>
+              </div>
+              <div className="set-row">
+                <label>从桌面导入</label>
+                <InfoTip
+                  label="导入说明"
+                  text={<>手机端用：粘贴桌面「配对到手机」生成的文本，自动填好云端代理地址与凭据。注意：会覆盖本机已填的凭据——桌面端已配置好的不要点导入。</>}
+                />
+                <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+                  <input className="input" value={pairingImport} placeholder="手机端：粘贴配对文本后点「导入」" onChange={(e) => setPairingImport(e.target.value)} aria-label="配对文本导入" />
+                  <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={doImportPairing}>导入</button>
+                </div>
+              </div>
+              {pairingMsg && (
+                <div className="set-row">
+                  <label />
+                  <span style={{ fontSize: 13, color: 'var(--accent-text)', flex: 1 }}>{pairingMsg}</span>
+                </div>
+              )}
             </>
           )}
 

@@ -16,6 +16,7 @@
 import { aiConfigFrom, loadAiConfig, runPipeline, type Env } from './pipeline'
 import { INGEST_MAX_PER_MINUTE, INGEST_MAX_PER_REQUEST, minuteKey, normalizeIngest } from './ingest'
 import { assertPublicHttpUrl, guardedFetch } from './urlGuard'
+import { assertSyncSql, executeSyncSql, getPairingCode } from './pairingSql'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -113,11 +114,36 @@ export default {
       const body = (await request.json().catch(() => null)) as
         | { accountId?: unknown; databaseId?: unknown; sql?: unknown; params?: unknown }
         | null
+      const sql = typeof body?.sql === 'string' ? body.sql : ''
+      const params = Array.isArray(body?.params) ? (body!.params as (string | number | null)[]) : []
+      if (!sql.trim()) return json({ error: 'bad request' }, 400)
+
+      // 三级鉴权分流（2026-11-08 配对方案）：
+      // ① Bearer = 部署 Token（ptk_）或 配对码 → worker 用自己的 D1 绑定就地直执行（白名单收口，
+      //    手机端因此只需「端点地址 + 配对码」，不再需要 Cloudflare API Token / 账户 ID / 数据库 ID）
+      // ② 其余 Bearer 视为 Cloudflare API Token → 转发官方端点（桌面既有路径，行为不变）
+      const isWorkerToken = checkAuth(request, env)
+      let pairingCode: string | null | undefined
+      try {
+        pairingCode = await getPairingCode(env)
+      } catch {
+        pairingCode = undefined // 无法判定（如测试环境无 DB）→ 跳过配对分支走转发
+      }
+      const bearer = auth.replace(/^Bearer\s+/i, '')
+      if (isWorkerToken || (pairingCode !== undefined && pairingCode !== null && bearer === pairingCode)) {
+        try {
+          assertSyncSql(sql)
+          return json(await executeSyncSql(env, sql, params))
+        } catch (e) {
+          // 按官方 API 的失败形状返回（前端 readD1Results 解析同一套，错误消息直达用户）
+          return json({ success: false, errors: [{ message: e instanceof Error ? e.message : '执行失败' }] })
+        }
+      }
+
+      // 转发分支：账户 ID 为 32 位十六进制、数据库 ID 为 UUID——拼进上游 URL 前严格校验
       const accountId = typeof body?.accountId === 'string' ? body.accountId : ''
       const databaseId = typeof body?.databaseId === 'string' ? body.databaseId : ''
-      const sql = typeof body?.sql === 'string' ? body.sql : ''
-      // 账户 ID 为 32 位十六进制、数据库 ID 为 UUID——拼进上游 URL 前严格校验，非此格式一律拒绝
-      if (!/^[0-9a-f]{32}$/i.test(accountId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId) || !sql.trim()) {
+      if (!/^[0-9a-f]{32}$/i.test(accountId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId)) {
         return json({ error: 'bad request' }, 400)
       }
       // 与采集管线同一外联纪律：guardedFetch 内部先 assertPublicHttpUrl 再发起，重定向逐跳重校验
@@ -126,7 +152,7 @@ export default {
       const upstream = await guardedFetch(upstreamUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: auth },
-        body: JSON.stringify({ sql, params: Array.isArray(body?.params) ? body!.params : [] }),
+        body: JSON.stringify({ sql, params }),
       }, 60_000)
       // 官方响应（含 success/errors 形状）原样透传，前端解析逻辑与网关/直连共用
       return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
