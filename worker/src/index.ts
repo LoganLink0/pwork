@@ -120,15 +120,14 @@ export default {
       if (!/^[0-9a-f]{32}$/i.test(accountId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId) || !sql.trim()) {
         return json({ error: 'bad request' }, 400)
       }
-      const upstream = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: auth },
-          body: JSON.stringify({ sql, params: Array.isArray(body?.params) ? body!.params : [] }),
-          signal: AbortSignal.timeout(60_000),
-        },
-      )
+      // 与采集管线同一外联纪律：guardedFetch 内部先 assertPublicHttpUrl 再发起，重定向逐跳重校验
+      const upstreamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`
+      assertPublicHttpUrl(upstreamUrl)
+      const upstream = await guardedFetch(upstreamUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: auth },
+        body: JSON.stringify({ sql, params: Array.isArray(body?.params) ? body!.params : [] }),
+      }, 60_000)
       // 官方响应（含 success/errors 形状）原样透传，前端解析逻辑与网关/直连共用
       return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
     }
