@@ -122,19 +122,19 @@ export function Welcome() {
     unsubs.push(tauriListen<{ endpoint: string; token: string; account: string; db: string }>('deploy-done', (e) => {
       setDeployState('done')
       // 大陆网络 workers.dev 常被阻断——部署能拿到账户/数据库 ID 时直接切 D1 直连模式。
-      // 注意两种凭据不同：部署输出的 ptk_ Token 给端点模式用；D1 直连要的是 Cloudflare
-      // 控制台创建的 API Token——所以切 D1 后 token 留空，提示用户创建，绝不拿错钥匙混填
+      // 2026-11-08 起部署输出的 ptk_ Token 在 D1 模式同样有效（worker 配对分支吃这对凭据：
+      // 端点 + Token 走云端代理直执行），四项全部自动填好，用户无需去 Cloudflare 控制台
       const hasD1 = Boolean(e.payload.account && e.payload.db)
       setCloud((c) => ({
         ...c,
         mode: hasD1 ? 'd1' : c.mode,
         endpoint: e.payload.endpoint || c.endpoint,
-        token: hasD1 ? '' : (e.payload.token || c.token),
+        token: e.payload.token || c.token,
         accountId: e.payload.account || c.accountId,
         databaseId: e.payload.db || c.databaseId,
       }))
       setMsg(hasD1
-        ? '部署完成，云端已开始首轮抓取！账户 ID / 数据库 ID 已自动填进下方「部署完成后回来填」区——只剩 API Token 按旁边的三步指引创建（约 2 分钟），填好点「测试连接」'
+        ? '部署完成，云端已开始首轮抓取！端点 / Token / 账户 ID / 数据库 ID 已自动填好——点「测试连接」验证即可，不需要去 Cloudflare 控制台创建任何令牌'
         : '部署完成，云端已开始首轮抓取！端点地址和 Token 已自动填进下方「部署完成后回来填」区——点「测试连接」验证后「保存并同步」')
       // 部署按钮在页面顶部，回填区在底部——完成即滚动过去并高亮，用户不用找
       setTimeout(() => {
@@ -218,13 +218,8 @@ export function Welcome() {
     setMsg(null)
     // D1 直连模式：直接用当前输入框的值测试（不读已存配置——用户可能还没点保存）
     if (cloud.mode === 'd1') {
-      if (!cloud.accountId.trim() || !cloud.databaseId.trim()) {
-        setMsg('账户 ID / 数据库 ID 还没填——刚部署完会自动填好；没填上就点上面的「一键部署」或到 设置 → 云端同步 手动填')
-        setTesting(false)
-        return
-      }
-      if (!cloud.token.trim()) {
-        setMsg('API Token 还没填——按回填区下面的三步指引创建（约 2 分钟），复制粘贴到这里')
+      if (!cloud.token.trim() || (!cloud.endpoint.trim() && (!cloud.accountId.trim() || !cloud.databaseId.trim()))) {
+        setMsg('还差一点：Token 必须填（部署完成时输出的 ptk_ 开头值）；账户 ID / 数据库 ID 与端点地址至少有一样')
         setTesting(false)
         return
       }
@@ -487,6 +482,15 @@ export function Welcome() {
                         <div className="key-row">
                           <input
                             className="input"
+                            placeholder="端点地址（部署完自动填好，手机配对也用它）"
+                            value={cloud.endpoint}
+                            onChange={(e) => setCloud({ ...cloud, endpoint: e.target.value })}
+                            aria-label="云端端点"
+                          />
+                        </div>
+                        <div className="key-row">
+                          <input
+                            className="input"
                             placeholder="账户 ID（32 位，部署完自动填好）"
                             value={cloud.accountId}
                             onChange={(e) => setCloud({ ...cloud, accountId: e.target.value })}
@@ -504,15 +508,15 @@ export function Welcome() {
                           <input
                             className="input"
                             type="password"
-                            placeholder="API Token（还没创建？按下面三步，约 2 分钟）"
+                            placeholder="Token（部署完成后输出，ptk_ 开头）"
                             value={cloud.token}
                             onChange={(e) => setCloud({ ...cloud, token: e.target.value })}
-                            aria-label="Cloudflare API Token"
+                            aria-label="云端访问 Token"
                           />
                         </div>
                         <p className="caption">
-                          <b>创建 API Token（三步）</b>：① 打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">Cloudflare 令牌页 ↗</a> → 创建令牌 → 自定义令牌；
-                          ② 权限选「账户 → D1 → 编辑」，账户选你自己的；③ 创建后复制（<b>只显示一次</b>）粘到上面。注：这里要的是 Cloudflare 控制台的 API Token，部署时给的 ptk_ 开头 Token 用在这里无效。
+                          <b>推荐</b>：部署完成后输出的 Token（ptk_ 开头）直接粘到上面即可——配合端点地址，无需去 Cloudflare 控制台。
+                          也可以改用 Cloudflare API Token（<a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">令牌页 ↗</a> → 自定义令牌 → 权限「账户 → D1 → 编辑」），两种都能用。
                         </p>
                       </>
                     ) : (
