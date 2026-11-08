@@ -11,7 +11,7 @@
      区块纪律：全宽背景带交替分区，统一 72px 上下节奏，内容一律 .wrap 居中限宽。
      平台声明只写实测过的：Windows 桌面版与浏览器运行；macOS 为内测首包（标注状态）。
      文案纪律：不用工程词（闭环/条目/任务库/全库），不用内部模块名（回路），界面文字全部说人话。
-     数字纪律：页面数字与 CHANGELOG/README 同源（529 测试/80 信源/0.1.16），发版时同步更新。 -->
+     数字纪律：页面数字与 CHANGELOG/README 同源（529 测试/80 信源/0.1.17），发版时同步更新。 -->
 <style>
   :root {
     --bg: #f5f4f1;
@@ -325,7 +325,7 @@
       <p class="sub">随手速记、订阅网站更新、每天一份信息日报、一次搜索找出所有内容、一键生成周报和 PPT、复盘后的行动项自动进待办。该有的都有，多余的一样没有。</p>
       <p class="sub">为每天要写东西、要读东西、要交东西的人做的——写作者、研究者、自由职业者，或者任何不想把笔记交给别人服务器的人。</p>
     <div class="cta-row">
-      <a class="btn-primary" id="cta-main" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 版</a>
+      <a class="btn-primary" id="cta-main" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.17_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 版</a>
       <a class="btn-ghost" href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">在线体验演示版</a>
       <a class="btn-ghost" href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">查看源码</a>
     </div>
@@ -336,7 +336,7 @@
         <span class="osbadge">断网也能用</span>
       </div>
       <div class="facts">
-        <div class="fact"><div class="num">532</div><div class="lab">项自动化测试，全部通过</div></div>
+        <div class="fact"><div class="num">537</div><div class="lab">项自动化测试，全部通过</div></div>
         <div class="fact"><div class="num">2<small> 个平台</small></div><div class="lab">Windows 与 macOS 安装包</div></div>
         <div class="fact"><div class="num">80</div><div class="lab">挑好就能用的信息源</div></div>
         <div class="fact"><div class="num">0<small> 元</small></div><div class="lab">软件免费，云端可选免费档</div></div>
@@ -423,10 +423,10 @@
       <div class="term">
         <div class="bar"><i></i><i></i><i></i><span class="ttl">pwork — 测试与发布验证记录</span></div>
         <pre>$ <span class="d">npm run test</span>
-<span class="g">✓</span> 532 项自动化测试全部通过 <span class="d">（单元 + 集成，每次提交全量重跑）</span>
+<span class="g">✓</span> 537 项自动化测试全部通过 <span class="d">（单元 + 集成，每次提交全量重跑）</span>
 $ <span class="d">发布包校验</span>
-<span class="g">✓</span> PWORK_0.1.16_x64-setup-online.exe      <span class="d">Windows 安装包</span>
-<span class="g">✓</span> PWORK_0.1.16_aarch64.dmg       <span class="d">macOS 安装包（Apple Silicon）</span>
+<span class="g">✓</span> PWORK_0.1.17_x64-setup-online.exe      <span class="d">Windows 安装包</span>
+<span class="g">✓</span> PWORK_0.1.17_aarch64.dmg       <span class="d">macOS 安装包（Apple Silicon）</span>
 <span class="g">✓</span> sha256 校验值公开挂在发布页     <span class="d">下载后可自行核对</span>
 $ <span class="d">数据去向</span>
 <span class="a">本地</span> 全部业务数据 · <span class="a">本地</span> AI 密钥 · <span class="a">无</span> 服务器上传通道</pre>
@@ -477,6 +477,7 @@ $ <span class="d">数据去向</span>
         <li><span class="v">0.1.13</span>运行日志可导出，macOS 自动构建流水线跑通<span class="t">11-01</span></li>
         <li><span class="v">0.1.15</span>字号行宽字体随你调，书签与 Obsidian 一键搬家<span class="t">11-05</span></li>
         <li><span class="v">0.1.16</span>全文阅读、AI 全库问答、手机端全面重做<span class="t">11-07</span></li>
+        <li><span class="v">0.1.17</span>手机扫码配对、删除确认升级、条目按月浏览<span class="t">11-09</span></li>
       </ul>
       <p class="loop-back">完整版本历史在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>——每一版、每一条改动，都留着。</p>
     </div>
@@ -500,12 +501,12 @@ $ <span class="d">数据去向</span>
         <div class="card" id="card-windows">
           <b>Windows 联网版</b>
           <p>约 11MB，走国内直连下载，双击安装——机器上缺的运行环境它会自动补齐，装完自动进入 5 步上手引导。首次打开若提示「已保护你的电脑」，点「更多信息 → 仍要运行」即可（内测版暂未购买签名，见下方常见问题）。离线版与历史版本在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>。</p>
-          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 联网版 →</a>
+          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.17_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">下载 Windows 联网版 →</a>
         </div>
         <div class="card" id="card-macos">
           <b>macOS 版（Apple Silicon）</b>
           <p>适用于 M 系列芯片的 Mac，同样走国内直连下载。内测首包首次打开需放行：先打开一次（会提示「已损坏」），到 系统设置 → 隐私与安全性 点「仍要打开」。Intel 芯片的 Mac 暂无安装包，可先用浏览器方式。</p>
-          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_aarch64.dmg" target="_blank" rel="noreferrer noopener">下载 macOS 版 dmg →</a>
+          <a href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.17_aarch64.dmg" target="_blank" rel="noreferrer noopener">下载 macOS 版 dmg →</a>
         </div>
         <div class="card" id="card-mobile">
           <b>手机上用（Android / iPhone）</b>
@@ -618,7 +619,7 @@ $ <span class="d">数据去向</span>
       <h2>好不好用，装下来试五分钟就知道。</h2>
       <p>电脑上装安装包，手机浏览器打开演示地址添加到主屏——数据从第一秒起就在你自己的设备上。</p>
       <div class="cta-row">
-        <a class="btn-primary js-dl" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">免费下载</a>
+        <a class="btn-primary js-dl" href="https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.17_x64-setup-online.exe" target="_blank" rel="noreferrer noopener">免费下载</a>
         <a class="btn-ghost" href="https://pwork.loganlink0.cn/demo/" target="_blank" rel="noreferrer noopener">先看演示</a>
       </div>
     </div>
@@ -645,10 +646,10 @@ $ <span class="d">数据去向</span>
     : 'other'
   var labels = { windows: 'Windows', macos: 'macOS', mobile: '手机' }
   var btn = document.getElementById('cta-main')
-  if (os === 'macos' && btn) { btn.textContent = '下载 macOS 版'; btn.href = COS + 'PWORK_0.1.16_aarch64.dmg' }
+  if (os === 'macos' && btn) { btn.textContent = '下载 macOS 版'; btn.href = COS + 'PWORK_0.1.17_aarch64.dmg' }
   else if (os === 'mobile' && btn) { btn.textContent = '手机上直接用'; btn.href = DEMO }
   document.querySelectorAll('.js-dl').forEach(function (el) {
-    if (os === 'macos') { el.textContent = '免费下载 macOS 版'; el.href = COS + 'PWORK_0.1.16_aarch64.dmg' }
+    if (os === 'macos') { el.textContent = '免费下载 macOS 版'; el.href = COS + 'PWORK_0.1.17_aarch64.dmg' }
     else if (os === 'mobile') { el.textContent = '手机上直接用'; el.href = DEMO }
   })
   var card = document.getElementById('card-' + os)

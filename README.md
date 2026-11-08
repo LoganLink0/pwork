@@ -32,7 +32,7 @@
 
 首次运行如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」。这不是软件有问题——是系统对没有注册开发者身份的软件的固定提醒（内测阶段暂未购买签名服务）。覆盖安装即可升级，数据不受影响。
 
-大陆访问 GitHub 慢？国内直连通道（无需登录，最快）：[直接下载联网版安装包](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.16_x64-setup-online.exe)（10MB 级，秒下）。
+大陆访问 GitHub 慢？国内直连通道（无需登录，最快）：[直接下载联网版安装包](https://pworkupdate-1306346848.cos.ap-chongqing.myqcloud.com/PWORK_0.1.17_x64-setup-online.exe)（10MB 级，秒下）。
 
 ## 下载安装（macOS · 内测）
 
@@ -71,7 +71,7 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 项目暂不接受捐赠；支持 PWORK 最有效的三个动作：给个 Star、推荐信源、把问题与想法发到 [Discussions](https://github.com/LoganLink0/pwork/discussions)。
 
-回归基线：529 项自动化测试全绿、tsc 零错误、lint 0 错误（4 条既有警告）。
+回归基线：542 项自动化测试全绿、tsc 零错误、lint 0 错误（4 条既有警告）。
 
 ## 许可证
 
