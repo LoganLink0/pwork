@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncFromCloud, pushSourcesToCloud, syncIngestBlocks, getScheduleHours, pushScheduleHours, type CloudConfig } from '../db/cloudSync'
 import { createPairing, parsePairingText } from '../db/pairing'
 import { confirmDialog } from '../engine/confirm'
+import QRCode from 'qrcode'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, pullChangedRecords, type SyncConfig } from '../db/syncRecords'
 import { fmtLocal } from '../engine/datetime'
 import { recordError } from '../engine/errorLog'
@@ -28,6 +29,11 @@ export function CloudSyncCards({ active }: { active: boolean }) {
   const [pairingText, setPairingText] = useState('')
   const [pairingImport, setPairingImport] = useState('')
   const [pairingMsg, setPairingMsg] = useState<string | null>(null)
+  const [qrUrl, setQrUrl] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const scanStreamRef = useRef<MediaStream | null>(null)
+  const scanningRef = useRef(false)
 
   const saveCloud = (next: CloudConfig) => {
     setCloud(next)
@@ -57,7 +63,8 @@ export function CloudSyncCards({ active }: { active: boolean }) {
       const r = await createPairing()
       if (r.ok && r.text) {
         setPairingText(r.text)
-        setPairingMsg('已生成——点「复制」发到手机（微信文件传输助手即可），手机粘贴导入')
+        setQrUrl(await QRCode.toDataURL(r.text, { width: 240, margin: 1 }))
+        setPairingMsg('已生成——手机点「扫码导入」对准二维码；没有摄像头就复制文本粘贴导入')
       } else {
         setPairingMsg(r.error ?? '生成失败')
       }
@@ -66,16 +73,68 @@ export function CloudSyncCards({ active }: { active: boolean }) {
     }
   }
 
-  const doImportPairing = () => {
-    const parsed = parsePairingText(pairingImport)
+  const applyPairing = (text: string) => {
+    const parsed = parsePairingText(text)
     if (!parsed) {
-      setPairingMsg('格式不对——请粘贴桌面生成的完整配对文本')
-      return
+      setPairingMsg('格式不对——请用桌面生成的完整配对文本（或二维码）')
+      return false
     }
     saveCloud({ ...cloud, endpoint: parsed.endpoint, token: parsed.code })
     setPairingImport('')
     setPairingMsg('已导入——点「立即同步」验证')
+    return true
   }
+
+  const doImportPairing = () => applyPairing(pairingImport)
+
+  const stopScan = () => {
+    scanningRef.current = false
+    scanStreamRef.current?.getTracks().forEach((t) => t.stop())
+    scanStreamRef.current = null
+    setScanning(false)
+  }
+
+  /** 扫码导入：摄像头 + BarcodeDetector（Android Chrome 原生；不支持的浏览器提示回落粘贴） */
+  const doStartScan = async () => {
+    setPairingMsg(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      scanStreamRef.current = stream
+      setScanning(true)
+      scanningRef.current = true
+      setTimeout(() => {
+        const video = videoRef.current
+        if (!video) return
+        video.srcObject = stream
+        void video.play()
+        const Detector = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector
+        if (!Detector) {
+          setPairingMsg('此浏览器不支持扫码（BarcodeDetector 不可用）——直接粘贴配对文本即可')
+          stopScan()
+          return
+        }
+        const detector = new Detector({ formats: ['qr_code'] })
+        const tick = async (): Promise<void> => {
+          if (!scanningRef.current) return
+          try {
+            const hits = await detector.detect(video)
+            if (hits.length > 0) {
+              const text = hits[0]!.rawValue
+              stopScan()
+              applyPairing(text)
+              return
+            }
+          } catch { /* 帧未就绪，继续下一轮 */ }
+          setTimeout(() => { void tick() }, 350)
+        }
+        void tick()
+      }, 150)
+    } catch {
+      setPairingMsg('打不开摄像头——检查权限，或直接粘贴配对文本')
+    }
+  }
+
+  useEffect(() => () => stopScan(), [])
 
   const doSync = async () => {
     setCloudBusy(true)
@@ -267,6 +326,12 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                     <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={() => void doPair()}>生成配对码</button>
                   )}
                 </div>
+                {qrUrl && (
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+                    <img src={qrUrl} width={120} height={120} alt="配对二维码" style={{ borderRadius: 10, border: '1px solid var(--line-strong)' }} />
+                    <span style={{ fontSize: 13, color: 'var(--ink-faint)' }}>手机在同页点「扫码导入」对准此码；没有摄像头就复制上面文本粘贴</span>
+                  </div>
+                )}
               </div>
               <div className="set-row">
                 <label>从桌面导入</label>
@@ -275,9 +340,16 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                   text={<>手机端用：粘贴桌面「配对到手机」生成的文本，自动填好云端代理地址与凭据。注意：会覆盖本机已填的凭据——桌面端已配置好的不要点导入。</>}
                 />
                 <div style={{ display: 'flex', gap: 8, flex: 1 }}>
-                  <input className="input" value={pairingImport} placeholder="手机端：粘贴配对文本后点「导入」" onChange={(e) => setPairingImport(e.target.value)} aria-label="配对文本导入" />
+                  <input className="input" value={pairingImport} placeholder="手机端：粘贴配对文本，或点「扫码导入」" onChange={(e) => setPairingImport(e.target.value)} aria-label="配对文本导入" />
+                  <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={() => (scanning ? stopScan() : void doStartScan())}>{scanning ? '取消扫码' : '扫码导入'}</button>
                   <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={doImportPairing}>导入</button>
                 </div>
+                {scanning && (
+                  <div style={{ flex: 1 }}>
+                    <video ref={videoRef} style={{ width: 240, borderRadius: 10, border: '1px solid var(--line-strong)' }} muted playsInline />
+                    <div style={{ fontSize: 13, color: 'var(--ink-faint)' }}>对准桌面上的配对二维码…</div>
+                  </div>
+                )}
               </div>
               {pairingMsg && (
                 <div className="set-row">
