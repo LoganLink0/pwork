@@ -4,6 +4,7 @@ import { Icon } from '../components/shell/icons'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 import { byRecentUse, loadQuickSites, makeSite, normalizeSiteUrl, saveQuickSites, type QuickSite } from '../engine/quickLaunch'
 import { toast } from '../engine/toast'
+import { confirmDialog } from '../engine/confirm'
 
 /**
  * 处理模块主页：工具箱 + 快速启动。
@@ -152,10 +153,12 @@ export function Process() {
                   type="button"
                   className="mini-btn"
                   onClick={() => {
-                    if (window.confirm(`删除「${editing.name}」的快捷入口？`)) {
-                      persist(sites.filter((s) => s.id !== editing.id))
-                      setEditing(null)
-                    }
+                    void confirmDialog({ title: `删除「${editing.name}」的快捷入口？`, danger: true, confirmLabel: '删除' }).then((ok) => {
+                      if (ok) {
+                        persist(sites.filter((s) => s.id !== editing.id))
+                        setEditing(null)
+                      }
+                    })
                   }}
                 >
                   删除

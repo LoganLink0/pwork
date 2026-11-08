@@ -9,6 +9,7 @@ import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
 import { useUi } from '../store/ui'
 import { DEFAULT_PREFS, FONT_FAMILY_OPTIONS, FONT_SCALE_OPTIONS, READING_WIDTH_OPTIONS } from '../engine/prefs'
+import { confirmDialog } from '../engine/confirm'
 import { InfoTip } from '../components/shell/InfoTip'
 import { loadCoachConfig, saveCoachConfig, llmConfigFrom, AI_VENDORS, PROVIDER_PRESETS, type CoachConfig, type CoachProvider } from '../modules/review/engine/coach'
 import { chatCompletion } from '../modules/review/engine/llm'
@@ -575,8 +576,7 @@ export function Settings() {
                 style={{ flex: 'none' }}
                 title="清空当前数据，恢复到这份快照保存时的状态"
                 onClick={() => {
-                  if (!window.confirm(`确定恢复到 ${fmtLocal(preSnapAt)} 导入前的状态？当前数据会先被清掉，再由快照导回。`)) return
-                  void doRestoreSnapshot()
+                  void confirmDialog({ title: `恢复到 ${fmtLocal(preSnapAt)} 导入前的状态？`, body: '当前数据会先被清掉，再由快照导回。', danger: true, confirmLabel: '恢复' }).then((ok) => { if (ok) void doRestoreSnapshot() })
                 }}
               >
                 恢复到导入前
@@ -924,7 +924,8 @@ export function Settings() {
               className="btn-ghost"
               disabled={errors.length === 0}
               onClick={async () => {
-                if (!window.confirm(`确定清空 ${errors.length} 条错误日志？导出过的内容不受影响。`)) return
+                const ok = await confirmDialog({ title: `清空 ${errors.length} 条错误日志？`, body: '导出过的内容不受影响。', danger: true, confirmLabel: '清空' })
+                if (!ok) return
                 await clearErrors()
                 await refreshErrors()
               }}

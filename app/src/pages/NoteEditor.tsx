@@ -8,6 +8,7 @@ import { useNotes } from '../store/notes'
 import { fmtLocal } from '../engine/datetime'
 import { toast } from '../engine/toast'
 import { recordError } from '../engine/errorLog'
+import { confirmDialog } from '../engine/confirm'
 import {
   MAX_ATTACHMENTS_PER_NOTE,
   attachmentDataUrl,
@@ -220,7 +221,9 @@ export function NoteEditor() {
 
   /** 摘除附件：删文件 + 元数据移除（正文不留引用语法，v1 附件与正文分列呈现） */
   const removeAttachment = async (att: NoteAttachment, id: string) => {
-    if (!id || !window.confirm(`摘除附件「${att.name}」？文件会从附件目录删除。`)) return
+    if (!id) return
+    const ok = await confirmDialog({ title: `摘除附件「${att.name}」？`, body: '文件会从附件目录删除。', danger: true, confirmLabel: '摘除' })
+    if (!ok) return
     try {
       await deleteAttachmentFile(att.file)
     } catch (err) {

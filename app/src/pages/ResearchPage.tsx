@@ -41,6 +41,7 @@ import { downloadFile } from '../db/repo'
 import { listBlocks } from '../db/blocksRepo'
 import { ArticleEditor } from '../components/writer/ArticleEditor'
 import { toast } from '../engine/toast'
+import { confirmDialog } from '../engine/confirm'
 
 const WEB_ANSWER_SYSTEM =
   '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'
@@ -154,7 +155,10 @@ export function ResearchPage() {
     if (!t) return
     // 类型优先按任务建立时的标签映射（旧任务 kind 存的是类型名）
     const useType: ResearchType = RESEARCH_TYPES.find((x) => x.name === task?.kind)?.id ?? type
-    if (force && !window.confirm('重新生成会覆盖当前框架（已填的发现保留，但可能对不上新章节）——继续？')) return
+    if (force) {
+      const ok = await confirmDialog({ title: '重新生成会覆盖当前框架？', body: '已填的发现保留，但可能对不上新章节。', confirmLabel: '重新生成' })
+      if (!ok) return
+    }
     setFwBusy(true)
     let next: ResearchFramework | null = null
     if (coachReady) {
@@ -196,7 +200,10 @@ export function ResearchPage() {
     const existing = profiles.find((p) => p.name === t)
     if (existing) {
       const oldFw = loadFramework(existing.id)
-      if (oldFw?.generatedBy === 'ai' && !window.confirm(`「${t}」已有 AI 定制的调研框架，重新开始会用内置模板覆盖角度（发现流水保留）。继续？`)) return
+      if (oldFw?.generatedBy === 'ai') {
+        const ok = await confirmDialog({ title: `「${t}」已有 AI 定制的调研框架`, body: '重新开始会用内置模板覆盖角度（发现流水保留）。', confirmLabel: '重新开始' })
+        if (!ok) return
+      }
     }
     const p = existing ?? (await saveProfile({ name: t, kind: typeName(type) }))
     setProfileId(p.id)
@@ -380,7 +387,7 @@ export function ResearchPage() {
 
   const removeTask = async () => {
     if (!profile) return
-    if (!window.confirm(`删除调研任务「${profile.name}」？框架与发现一并移除（备份中仍可找回）。`)) return
+    if (!(await confirmDialog({ title: `删除调研任务「${profile.name}」？`, body: '框架与发现一并移除（备份中仍可找回）。', danger: true, confirmLabel: '删除' }))) return
     // 先删发现再删任务：数据层的删除任务只把块"摘成未归类"（服务案例场景），
     // 调研发现若走那条路会泄进周报外部数据——必须显式删（2026-10-13 自查发现）
     for (const b of taskBlocks) await removeBlock(b.id)

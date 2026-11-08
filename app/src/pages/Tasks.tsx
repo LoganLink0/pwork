@@ -7,6 +7,7 @@ import { resolveLane } from '../engine/taskLane'
 import { scheduleGroups, type ScheduleEntry } from '../engine/taskSchedule'
 import { Icon } from '../components/shell/icons'
 import { toast } from '../engine/toast'
+import { confirmDialog } from '../engine/confirm'
 import type { TaskItem, TaskLane, TaskOriginKind } from '../types/models'
 
 const VIEW_KEY = 'pwork-tasks-view'
@@ -252,7 +253,7 @@ export function Tasks() {
                   title="从列表移除（软删除，导出备份中仍可找回）"
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (window.confirm('从列表移除这条待办？（可从备份找回）')) void remove(t.id)
+                    void confirmDialog({ title: '从列表移除这条待办？', body: '可从备份找回。', danger: true, confirmLabel: '移除' }).then((ok) => { if (ok) void remove(t.id) })
                   }}
                 >
                   删除

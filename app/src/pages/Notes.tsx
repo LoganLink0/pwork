@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from '../components/shell/icons'
 import { useNotes } from '../store/notes'
 import { localDateOf, relTime, todayLocal } from '../engine/datetime'
+import { confirmDialog } from '../engine/confirm'
 
 /** 日期分组头：今天/昨天用自然语言，更早用「10月24日 · 周六」 */
 function dayLabel(dateKey: string): string {
@@ -131,7 +132,7 @@ export function Notes() {
                       style={{ padding: '2px 10px', color: 'var(--danger)' }}
                       title="从库里彻底删除，不可恢复"
                       onClick={() => {
-                        if (window.confirm(`彻底删除「${n.title || n.id}」？此操作不可恢复。`)) void purge(n.id)
+                        void confirmDialog({ title: `彻底删除「${n.title || n.id}」？`, body: '此操作不可恢复。', danger: true, confirmLabel: '彻底删除' }).then((ok) => { if (ok) void purge(n.id) })
                       }}
                     >
                       彻底删除

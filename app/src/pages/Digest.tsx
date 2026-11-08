@@ -10,6 +10,7 @@ import { topicAnomalies } from '../engine/digestAnomaly'
 import { obsidianDaily } from '../engine/obsidian'
 import { downloadFile } from '../db/repo'
 import { cloudConfigured, syncFromCloud } from '../db/cloudSync'
+import { confirmDialog } from '../engine/confirm'
 import { recordError } from '../engine/errorLog'
 
 // 进页拉云端：进本页时若配置了云端同步就拉一轮增量——应用开着不动也能在日报页看到云端新抓的
@@ -184,7 +185,7 @@ export function Digest() {
               onConvert={() => convert(item.id, item.title)}
               converted={converted.has(item.id)}
               onDelete={() => {
-                if (window.confirm(`删除「${item.title.slice(0, 24)}」？（软删除，从日报/条目库移除，备份中 14 天内可找回）`)) void deleteItem(item.id)
+                void confirmDialog({ title: `删除「${item.title.slice(0, 24)}」？`, body: '软删除：从日报/条目库移除，备份中 14 天内可找回。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void deleteItem(item.id) })
               }}
             />
           ))}

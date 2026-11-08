@@ -3406,3 +3406,22 @@ html[data-wheel] body {
     scroll-snap-align: center;
   }
 }
+
+/* ── 应用内确认弹层（替代 window.confirm，2026-11-08 走查第三批）── */
+.confirm-mask {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(24, 20, 16, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.confirm-card {
+  background: var(--surface, #fff); border-radius: 14px;
+  border: 1px solid var(--line, #e6e4df);
+  box-shadow: 0 18px 60px rgba(24, 20, 16, 0.28);
+  padding: 22px 24px 18px;
+  max-width: 420px; width: 100%;
+}
+.confirm-title { display: block; font-size: 16px; line-height: 1.5; }
+.confirm-body { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-soft, #66625a); line-height: 1.7; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.confirm-actions .btn-ghost, .confirm-actions .btn-primary { padding: 8px 18px; font-size: 14px; }

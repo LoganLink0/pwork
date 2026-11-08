@@ -12,6 +12,7 @@ import { auditSources, verdictLabel, classifySourceError } from '../engine/sourc
 import { probeFeedUrl } from '../engine/feedProbe'
 import { discoverLeads } from '../engine/sourceDiscover'
 import { probeYtdlp } from '../engine/ytdlp'
+import { confirmDialog } from '../engine/confirm'
 import { isDesktopApp } from '../engine/platform'
 import { fmtLocal } from '../engine/datetime'
 import { sourcesToOpml, parseOpml } from '../engine/opml'
@@ -186,8 +187,7 @@ export function Sources() {
                 type="button"
                 className="btn-ghost"
                 onClick={() => {
-                  if (!window.confirm(`全部启用 ${sources.length} 个信源？`)) return
-                  for (const s of sources.filter((x) => !x.active)) void toggleActive(s.id, true)
+                  void confirmDialog({ title: `全部启用 ${sources.length} 个信源？`, confirmLabel: '全部启用' }).then((ok) => { if (ok) for (const s of sources.filter((x) => !x.active)) void toggleActive(s.id, true) })
                 }}
               >
                 全部启用
@@ -198,8 +198,7 @@ export function Sources() {
                 className="btn-ghost"
                 title="临时停用全部信源（如调试时不想抓取）；逐个恢复或再点全部启用"
                 onClick={() => {
-                  if (!window.confirm(`全部暂停 ${sources.filter((s) => s.active).length} 个活跃信源？暂停后不参与抓取，随时可恢复。`)) return
-                  for (const s of sources.filter((x) => x.active)) void toggleActive(s.id, false)
+                  void confirmDialog({ title: `全部暂停 ${sources.filter((s) => s.active).length} 个活跃信源？`, body: '暂停后不参与抓取，随时可恢复。', confirmLabel: '全部暂停' }).then((ok) => { if (ok) for (const s of sources.filter((x) => x.active)) void toggleActive(s.id, false) })
                 }}
               >
                 全部暂停
@@ -444,7 +443,7 @@ export function Sources() {
                       type="button"
                       className="mini-btn"
                       onClick={() => {
-                        if (window.confirm(`删除信源「${s.name}」？（软删除，条目保留）`)) void removeSource(s.id)
+                        void confirmDialog({ title: `删除信源「${s.name}」？`, body: '软删除：条目保留。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void removeSource(s.id) })
                       }}
                     >
                       删除

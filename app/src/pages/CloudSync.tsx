@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCloudConfig, saveCloudConfig, lastSyncAt, testConnection, syncFromCloud, pushSourcesToCloud, syncIngestBlocks, getScheduleHours, pushScheduleHours, type CloudConfig } from '../db/cloudSync'
 import { createPairing, parsePairingText } from '../db/pairing'
+import { confirmDialog } from '../engine/confirm'
 import { deviceId, loadSyncConfig, saveSyncConfig, syncNow, pullChangedRecords, type SyncConfig } from '../db/syncRecords'
 import { fmtLocal } from '../engine/datetime'
 import { recordError } from '../engine/errorLog'
@@ -397,8 +398,7 @@ export function CloudSyncCards({ active }: { active: boolean }) {
               disabled={syncBusy}
               title="无视增量水位，把云端全部同步记录拉一遍合并。设备重建或怀疑漏数据时用；日常同步不必点"
               onClick={() => {
-                if (!window.confirm('从云端全量拉取所有同步记录并合并？数据按修改时间新者为准，不会丢失本机较新的修改。')) return
-                void doFullPull()
+                void confirmDialog({ title: '从云端全量拉取所有同步记录并合并？', body: '数据按修改时间新者为准，不会丢失本机较新的修改。', confirmLabel: '全量拉取' }).then((ok) => { if (ok) void doFullPull() })
               }}
             >
               从云端全量拉取

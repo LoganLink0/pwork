@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBlocks } from '../store/blocks'
 import { fileToBlockContent } from '../engine/fileImport'
+import { confirmDialog } from '../engine/confirm'
 
 /**
  * 外部数据（2026-10-13 降级定位）：周报的数据源。手工添加 / CSV·JSON 导入 / 推送接口
@@ -69,7 +70,7 @@ export function InputBlocks() {
                 type="button"
                 className="mini-btn"
                 onClick={() => {
-                  if (window.confirm(`删除数据块「${b.title}」？（软删除，备份中仍可找回）`)) void remove(b.id)
+                  void confirmDialog({ title: `删除数据块「${b.title}」？`, body: '软删除：备份中仍可找回。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void remove(b.id) })
                 }}
               >
                 删除

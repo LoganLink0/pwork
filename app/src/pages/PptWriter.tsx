@@ -13,6 +13,7 @@ import {
 } from '../engine/pptWriter'
 import { downloadFile } from '../db/repo'
 import { chatCompletionCached } from '../engine/aiCached'
+import { confirmDialog } from '../engine/confirm'
 import { llmConfigured } from '../modules/review/engine/coach'
 
 const coachReady = llmConfigured
@@ -415,7 +416,7 @@ export function PptWriter() {
                   type="button"
                   className="btn-ghost"
                   onClick={() => {
-                    if (window.confirm('丢弃当前大纲？逐页修改的内容将无法找回（材料与主题保留）。')) setOutline(null)
+                    void confirmDialog({ title: '丢弃当前大纲？', body: '逐页修改的内容将无法找回（材料与主题保留）。', danger: true, confirmLabel: '丢弃' }).then((ok) => { if (ok) setOutline(null) })
                   }}
                 >
                   丢弃大纲

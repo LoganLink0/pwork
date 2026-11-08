@@ -138,9 +138,9 @@ describe('调研分析页（任务式）', () => {
     await user.type(ta, '发现内容一段')
     await user.tab()
 
-    // 删除任务（window.confirm 自动接受）
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // 删除任务（应用内确认弹层：点确认键）
     await user.click(screen.getByRole('button', { name: '删除任务' }))
+    await user.click(await screen.findByTestId('confirm-confirm'))
     await waitFor(() => {
       expect(screen.queryByLabelText('发现')).not.toBeInTheDocument()
     })

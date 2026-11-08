@@ -149,8 +149,9 @@ describe('速记模块（W1）', () => {
     await s.softDelete(n.id)
     await gotoNotes(user)
     await user.click(screen.getByRole('button', { name: /回收站/ }))
-    window.confirm = () => true
     await user.click(await screen.findByRole('button', { name: '彻底删除' }))
+    // 应用内确认弹层（替代 window.confirm）：点确认键
+    await user.click(await screen.findByTestId('confirm-confirm'))
     await waitFor(() => expect(useNotes.getState().trash).toHaveLength(0))
     expect(await db2.notes.get(n.id)).toBeUndefined()
   })
