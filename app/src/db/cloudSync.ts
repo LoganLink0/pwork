@@ -227,7 +227,28 @@ async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | n
     }
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('D1 查询失败')) throw e
-    // 网关本身不在（连接被拒/超时）→ 尝试直连（浏览器会被 CORS 拦，但 Node/测试语境可用）
+    // 网关本身不在（连接被拒/超时）→ 走自建 worker 的 CORS 代理（2026-11-08 手机端主通路：
+    // worker 挂 CORS 头转发官方端点，workers.dev 被阻的部署此路自然缺席），仍未连通再退
+    // 官方直连（浏览器会被 CORS 拦，但 Node/测试语境可用）
+    if (config.endpoint.trim()) {
+      try {
+        const viaProxy = await fetch(`${config.endpoint.trim().replace(/\/+$/, '')}/api/d1/query`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+          body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, sql, params }),
+          signal: AbortSignal.timeout(30_000),
+        })
+        if (!viaProxy.ok) {
+          const body = await viaProxy.text().catch(() => '')
+          const detail = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${viaProxy.status}`
+          throw new Error(`D1 查询失败：${detail}（云端代理返回；检查 API Token 与部署的 worker 是否已更新到最新版）`)
+        }
+        return await readD1Results(viaProxy)
+      } catch (e2) {
+        // 代理有响应但报业务错误 → 如实抛；代理本身不可达（workers.dev 被阻等）→ 落官方直连
+        if (e2 instanceof Error && e2.message.startsWith('D1 查询失败')) throw e2
+      }
+    }
     resp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
       {
@@ -237,6 +258,11 @@ async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | n
       },
     )
   }
+  return readD1Results(resp)
+}
+
+/** D1 官方响应解析（网关/云端代理/直连三条通路的响应同形状，共用此解析） */
+async function readD1Results(resp: Response): Promise<Record<string, unknown>[]> {
   if (!resp.ok) {
     const body = await resp.text().catch(() => '')
     throw new Error(`Cloudflare API HTTP ${resp.status}${body ? `：${body.slice(0, 120)}` : ''}`)
@@ -347,7 +373,7 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
       message:
         config.mode === 'endpoint'
           ? '连不上（workers.dev 在大陆网络常被阻断）——建议切到 D1 直连模式'
-          : '连不上：本地网关（127.0.0.1:8788）未在运行，或 账户 ID / 数据库 ID / Token 有误',
+          : '连不上：本地网关（127.0.0.1:8788）与云端代理地址都未连通，或 账户 ID / 数据库 ID / Token 有误',
     }
   }
 }

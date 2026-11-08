@@ -103,6 +103,36 @@ export default {
     // ── 健康检查：开放、无数据（部署向导与启动器探测用） ──
     if (path === '/api/health') return json({ ok: true, time: new Date().toISOString() })
 
+    // ── D1 代理（手机端通路，2026-11-08）：官方 api.cloudflare.com 不发 CORS 头，浏览器页面
+    //    直连必被拦（预检 405），手机端又没有本地网关——worker 挂 CORS 头转发官方端点补上这条通路。
+    //    鉴权由 Cloudflare 按 Bearer Token 官方裁定，worker 不存任何凭据；账户/库 ID 做格式校验
+    //    防路径注入。绑定自定义域后大陆可达；workers.dev 被阻的部署此路自然缺席（前端自行回落）。
+    if (path === '/api/d1/query' && request.method === 'POST') {
+      const auth = request.headers.get('authorization') ?? ''
+      if (!/^Bearer\s+\S+/i.test(auth)) return json({ error: 'unauthorized' }, 401)
+      const body = (await request.json().catch(() => null)) as
+        | { accountId?: unknown; databaseId?: unknown; sql?: unknown; params?: unknown }
+        | null
+      const accountId = typeof body?.accountId === 'string' ? body.accountId : ''
+      const databaseId = typeof body?.databaseId === 'string' ? body.databaseId : ''
+      const sql = typeof body?.sql === 'string' ? body.sql : ''
+      // 账户 ID 为 32 位十六进制、数据库 ID 为 UUID——拼进上游 URL 前严格校验，非此格式一律拒绝
+      if (!/^[0-9a-f]{32}$/i.test(accountId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId) || !sql.trim()) {
+        return json({ error: 'bad request' }, 400)
+      }
+      const upstream = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: auth },
+          body: JSON.stringify({ sql, params: Array.isArray(body?.params) ? body!.params : [] }),
+          signal: AbortSignal.timeout(60_000),
+        },
+      )
+      // 官方响应（含 success/errors 形状）原样透传，前端解析逻辑与网关/直连共用
+      return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
+    }
+
     // ── 写操作：必须鉴权 ──
     if (path === '/api/fetch' && request.method === 'POST') {
       if (!checkAuth(request, env)) return json({ error: 'unauthorized' }, 401)

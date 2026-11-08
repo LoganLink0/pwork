@@ -90,6 +90,47 @@ describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
     expect(calls[1]).toContain('/accounts/acc1/d1/database/db1/query')
   })
 
+  it('网关不在 + 配了云端代理地址 → 先走 worker 的 CORS 代理（手机端主通路），不落官方直连', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: 'https://pwork.example.workers.dev', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url))
+      if (String(url).includes('127.0.0.1:8788')) throw new TypeError('Failed to fetch')
+      return new Response(JSON.stringify({ success: true, result: [{ results: [] }] }), { status: 200 })
+    }))
+    const r = await syncFromCloud()
+    expect(r.ok).toBe(true)
+    expect(calls[1]).toBe('https://pwork.example.workers.dev/api/d1/query')
+    expect(calls.length).toBe(2)
+  })
+
+  it('网关与云端代理都不可达 → 落官方直连（三级回落走满）', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: 'https://blocked.example.workers.dev', token: 'cf-token', accountId: 'acc1', databaseId: 'db1' })
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url))
+      if (!String(url).includes('api.cloudflare.com')) throw new TypeError('Failed to fetch')
+      return new Response(JSON.stringify({ success: true, result: [{ results: [] }] }), { status: 200 })
+    }))
+    const r = await syncFromCloud()
+    expect(r.ok).toBe(true)
+    expect(calls[2]).toContain('/accounts/acc1/d1/database/db1/query')
+  })
+
+  it('云端代理返回业务错误 → 如实抛出不落直连（错误不被两级回落掩盖）', async () => {
+    saveCloudConfig({ mode: 'd1', endpoint: 'https://pwork.example.workers.dev', token: 'bad-token', accountId: 'acc1', databaseId: 'db1' })
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url))
+      if (String(url).includes('127.0.0.1:8788')) throw new TypeError('Failed to fetch')
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
+    }))
+    const r = await syncFromCloud()
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('D1 查询失败')
+    expect(calls.length).toBe(2)
+  })
+
   it('D1 缺配置 → 明确报错', async () => {
     saveCloudConfig({ mode: 'd1', endpoint: '', token: '', accountId: '', databaseId: '' })
     const r = await syncFromCloud()

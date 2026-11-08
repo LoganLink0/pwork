@@ -217,6 +217,58 @@ describe('ingest 限额与规范化（Token 泄漏止损）', () => {
   })
 })
 
+describe('D1 代理（手机端通路：挂 CORS 转发官方端点，鉴权由官方裁定）', () => {
+  const GOOD = { accountId: 'a'.repeat(32), databaseId: '12345678-1234-1234-1234-123456789012', sql: 'SELECT 1', params: [] }
+
+  it('无 Bearer → 401 且不外呼', async () => {
+    let called = 0
+    globalThis.fetch = (async () => { called++; return new Response('{}', { status: 200 }) }) as typeof fetch
+    const res = await worker.fetch(new Request('https://w/api/d1/query', { method: 'POST', body: JSON.stringify(GOOD) }), { TOKEN: 't' } as never)
+    expect(res.status).toBe(401)
+    expect(called).toBe(0)
+  })
+
+  it('账户/库 ID 格式坏 → 400（拼上游 URL 前拦截，防路径注入）', async () => {
+    globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch
+    const res = await worker.fetch(
+      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: 'Bearer t' }, body: JSON.stringify({ ...GOOD, accountId: '../other/account' }) }),
+      { TOKEN: 't' } as never,
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it('正常请求 → 转发官方端点带原 Bearer，响应透传 + CORS 头', async () => {
+    let seenUrl = ''
+    let seenAuth = ''
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      seenUrl = String(url)
+      seenAuth = String((init?.headers as Record<string, string>)?.authorization ?? '')
+      return new Response(JSON.stringify({ success: true, result: [{ results: [{ n: 3 }] }] }), { status: 200 })
+    }) as typeof fetch
+    const res = await worker.fetch(
+      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: 'Bearer cf_tok' }, body: JSON.stringify(GOOD) }),
+      { TOKEN: 't' } as never,
+    )
+    expect(res.status).toBe(200)
+    expect(seenUrl).toContain(`/accounts/${'a'.repeat(32)}/d1/database/12345678-1234-1234-1234-123456789012/query`)
+    expect(seenAuth).toBe('Bearer cf_tok')
+    expect(res.headers.get('access-control-allow-origin')).toBe('*')
+    const data = (await res.json()) as { result?: { results?: unknown[] }[] }
+    expect(data.result?.[0]?.results?.[0]).toEqual({ n: 3 })
+  })
+
+  it('上游 401 → 状态与错误体原样透传（官方裁定，worker 不吞不改）', async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ success: false, errors: [{ message: 'Invalid API Token' }] }), { status: 401 })) as typeof fetch
+    const res = await worker.fetch(
+      new Request('https://w/api/d1/query', { method: 'POST', headers: { authorization: 'Bearer bad' }, body: JSON.stringify(GOOD) }),
+      { TOKEN: 't' } as never,
+    )
+    expect(res.status).toBe(401)
+    const data = (await res.json()) as { errors?: { message?: string }[] }
+    expect(data.errors?.[0]?.message).toBe('Invalid API Token')
+  })
+})
+
 describe('外联 URL 守卫（SSRF 止损）', () => {
   it('公网 http/https 放行', () => {
     expect(() => assertPublicHttpUrl('https://api.deepseek.com/v1')).not.toThrow()
