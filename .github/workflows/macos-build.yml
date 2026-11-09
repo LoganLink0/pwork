@@ -83,9 +83,9 @@ jobs:
 
       - name: 直接执行二进制并断言进程存活（runner 无 GUI 会话，open 会被 launchd 拒）
         run: |
-          /Applications/PWORK.app/Contents/MacOS/PWORK > app-run.log 2>&1 &
+          /Applications/PWORK.app/Contents/MacOS/app > app-run.log 2>&1 &
           sleep 15
-          pgrep -fl PWORK || { echo '应用进程未存活——启动日志：'; cat app-run.log; exit 1; }
+          pgrep -x app || { echo '应用进程未存活——启动日志：'; cat app-run.log; exit 1; }
 
       - name: 本地网关健康断言（127.0.0.1:8788）
         run: |
