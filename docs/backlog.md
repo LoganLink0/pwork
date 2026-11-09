@@ -50,6 +50,7 @@
 
 ## 已接受（带依据，不再动作）
 
+- **worker D1 代理的跨文件污点 medium（2026-11-09 用户拍板接受）**：/api/d1/query 的账户/库 ID 流入上游 URL 模板被静态分析标记；三层压制——ID 严格格式校验（32hex/UUID，注入串直接 400）、上游主机写死 api.cloudflare.com、guardedFetch 重定向逐跳重校验；可变部分仅合法 ID 字符集。封印 f7fd47a7（90 项发现，项目源码 9 项全部为此项及网关既有设计面）。
 - **sprintf-js 中危依赖**：mammoth 的 CLI 参数解析链引入，本项目只用 mammoth.browser（不含该路径）且格式串不受外部输入控制；漏洞区间为全版本、无修复版可钉，降级会破坏 Word 提取。依据：开发复盘 3.17。
 - **Mimosa 提交门禁的 library_source/callgraph 提示**：静态分析器能力边界（50000 文件上限），非未处理发现；深扫结论 0 代码发现，封印标识见扫描历史。
 - **安装包体积（2026-10-12 起为 210MiB）**：内嵌 WebView2 x64 离线安装器的代价（`webviewInstallMode: offlineInstaller`），换取目标机无网/无 WebView2 可装。旧条目"3.80MiB 体积：Tauri WebView2 复用的正常水位"已被此决策取代；若日后要发"小包"，把 webviewInstallMode 改回 `downloadBootstrapper` 即可（需目标机联网）。

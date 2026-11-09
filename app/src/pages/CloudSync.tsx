@@ -297,21 +297,24 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                   aria-label="数据库 ID"
                 />
               </div>
-              <div className="set-row">
-                <label>API Token</label>
+              <details className="adv-block">
+                <summary>高级：改用 Cloudflare API Token（默认粘贴部署输出的 Token 即可）</summary>
+                <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
+                  <label>API Token</label>
             <InfoTip
               label="凭据怎么填"
               text={<>推荐：直接粘贴部署完成时输出的「端点地址 + Token」（ptk_ 开头那个）——填到上面两处即可，不用去 Cloudflare 控制台。也可以改用 Cloudflare API Token（约 2 分钟）：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌 → 权限「账户 → D1 → 编辑」→ 复制粘贴。两种都能用。</>}
             />
-                <input
-                  className="input"
-                  type="password"
-                  placeholder="按下方指引在 Cloudflare 控制台创建（只显示一次）"
-                  value={cloud.token}
-                  onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
-                  aria-label="API Token"
-                />
-              </div>
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="按下方指引在 Cloudflare 控制台创建（只显示一次）"
+                    value={cloud.token}
+                    onChange={(e) => { const next = { ...cloud, token: e.target.value }; setCloud(next); saveCloud(next) }}
+                    aria-label="API Token"
+                  />
+                </div>
+              </details>
               <div className="set-row">
                 <label>配对到手机</label>
                 <InfoTip

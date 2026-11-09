@@ -3425,3 +3425,14 @@ html[data-wheel] body {
 .confirm-body { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-soft, #66625a); line-height: 1.7; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .confirm-actions .btn-ghost, .confirm-actions .btn-primary { padding: 8px 18px; font-size: 14px; }
+
+/* 设置页高级选项折叠（API Token 等降位入口，2026-11-09 走查二批④） */
+.adv-block { margin: 0; }
+.adv-block summary {
+  cursor: pointer; font-size: 13px; color: var(--ink-faint);
+  list-style: none; display: flex; align-items: center; gap: 6px;
+}
+.adv-block summary::-webkit-details-marker { display: none; }
+.adv-block summary::before { content: '▸'; font-size: 12px; }
+.adv-block[open] summary::before { content: '▾'; }
+.adv-block[open] summary { margin-bottom: var(--sp-3); }
