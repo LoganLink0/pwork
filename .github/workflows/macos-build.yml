@@ -54,6 +54,66 @@ jobs:
           path: app/out/
           if-no-files-found: error
 
+  # 真机冒烟验收（2026-11-09 方案 A：GitHub mac runner = 免费的远程真机）——
+  # 安装 → 启动 → 进程存活 / 版本一致 / 本地网关健康 / 主界面截图挂 artifact。
+  # 覆盖不了交互手感与权限弹窗，那些仍需真机或用户代验。
+  smoke-macos:
+    needs: build-macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pwork-macos
+          path: out
+
+      - name: 安装应用到 /Applications
+        run: |
+          xattr -cr out/PWORK.app 2>/dev/null || true
+          cp -R out/PWORK.app /Applications/
+          ls -la /Applications/PWORK.app/Contents/MacOS/
+
+      - name: 断言版本与 package.json 一致
+        run: |
+          EXPECTED=$(node -p "require('./app/package.json').version")
+          ACTUAL=$(defaults read /Applications/PWORK.app/Contents/Info.plist CFBundleShortVersionString)
+          echo "期望 ${EXPECTED} / 实际 ${ACTUAL}"
+          [ "$EXPECTED" = "$ACTUAL" ] || { echo '版本不一致'; exit 1; }
+
+      - name: 启动应用并断言进程存活
+        run: |
+          open /Applications/PWORK.app
+          sleep 15
+          pgrep -fl PWORK.app || { echo '应用进程未存活'; exit 1; }
+
+      - name: 本地网关健康断言（127.0.0.1:8788）
+        run: |
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if curl -s --max-time 5 http://127.0.0.1:8788/health | grep -q '"ok":true'; then ok=1; break; fi
+            sleep 3
+          done
+          [ "$ok" = 1 ] || { echo '网关健康检查未通过'; exit 1; }
+
+      - name: 截取主界面截图
+        run: |
+          sleep 5
+          screencapture -x smoke-screen.png
+          mkdir -p smoke
+          cp smoke-screen.png smoke/
+          ls -la smoke/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pwork-macos-smoke
+          path: smoke/
+          if-no-files-found: warn
+
+      - name: 收尾关闭应用
+        if: always()
+        run: pkill -f PWORK.app || true
+
   release:
     needs: build-macos
     runs-on: ubuntu-latest
