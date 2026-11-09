@@ -31,10 +31,10 @@ if (!browser) {
 const cards = [
   {
     out: join(assets, 'promo8-1-overview.png'),
-    title: '开源 11 天，八个版本，<em>一天多一个</em>',
+    title: '开源两周，十个版本，<em>一天多一个</em>',
     sub: '五步引导 30 秒上手——写下来、加工、成稿、复盘，四步一个循环',
     shot: join(shotsDir, 's2-desktop-home.png'),
-    proof: '532 项自动化测试 · <b>每一次提交全量重跑</b>',
+    proof: '542 项自动化测试 · <b>每一次提交全量重跑</b>',
   },
   {
     out: join(assets, 'promo8-2-desktop.png'),
@@ -83,7 +83,7 @@ const cards = [
     title: '数据去哪了，<em>一张图看懂</em>',
     sub: '实线全部在你的电脑里；虚线是仅有的两条可选外发通道，默认关闭',
     shot: join(assets, 'data-security.png'),
-    proof: '<b>数据安全</b> · 无账号无遥测，532 项测试与开源代码可查',
+    proof: '<b>数据安全</b> · 无账号无遥测，542 项测试与开源代码可查',
   },
 ]
 
