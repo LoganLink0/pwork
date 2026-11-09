@@ -3376,10 +3376,20 @@ html[data-wheel] body {
   display: inline-flex;
   margin-left: 3px;
   /* 上标定位：吸在标题/标签文字的右上角（2026-11-09 用户反馈——此前垂直居中显得压行）；
-     行内上下文走 vertical-align，flex 行内的标签右侧走 align-self 顶部对齐 */
-  vertical-align: super;
+     行内上下文走 vertical-align: top（贴行盒顶=字面顶），flex 行内的标签右侧走 align-self 顶部对齐 */
+  vertical-align: top;
   align-self: flex-start;
   line-height: 1;
+}
+/* set-row 里标签是独立列，行距 gap 会把问号推离标签悬在空档——
+   负外边距贴回标签右上角，上边距抵消行内边距使问号顶对齐标签顶（2026-11-09 量测） */
+.set-row .info-tip {
+  margin-left: calc(var(--sp-4) * -1 + 3px);
+  margin-top: var(--sp-2);
+}
+/* 大字号卡片标题（h2）里 vertical-align 到不了字面顶，位移补偿吸到标题右上角 */
+h2 .info-tip {
+  transform: translateY(-10px);
 }
 .info-tip-btn {
   width: 14px;
