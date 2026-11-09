@@ -23,9 +23,9 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
 const ANNOUNCES = [
   {
     title: '0.1.17 更新',
-    desc: '手机扫码配对、删除确认升级、条目库按月浏览、AI 问句修复',
-    to: '/help',
-    internal: true,
+    desc: '手机扫码配对、删除确认升级、条目库按月浏览',
+    to: 'https://loganlink0.github.io/pwork/#changelog',
+    internal: false,
   },
   {
     title: '新手引导',

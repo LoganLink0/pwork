@@ -392,6 +392,13 @@ button.nav-item {
   font-size: var(--fs-xs);
   color: var(--ink-soft);
   line-height: 1.5;
+  /* 锁两行：轮换到行数多的公告时卡片高度不变，不再顶起上方布局（2026-11-09 用户反馈）；
+     完整内容走「前往」看发布页更新日志 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(var(--fs-xs) * 1.5 * 2);
 }
 .an-foot {
   display: flex;
@@ -1754,6 +1761,59 @@ a.mcard .m-link:hover {
 }
 .faq-group:first-child {
   margin-top: 0;
+}
+
+/* 常见问题/术语表分组折叠（2026-11-09 用户反馈）：默认展开，点组名收起/展开，便于快速定位 */
+.faq-fold > summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.faq-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.faq-fold .faq-group::after {
+  display: none;
+}
+.faq-chevron {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: var(--fs-sm);
+}
+.faq-fold:not([open]) > summary .faq-chevron {
+  transform: rotate(-90deg);
+}
+.faq-count {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+/* 大图查看补关闭钮（2026-11-09 用户反馈）：此前图下提示被 88vh 大图推出视口，等于只有 Esc 能关 */
+.zoom-close {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.zoom-close:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.zoom-hint {
+  margin-top: var(--sp-2);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: var(--fs-sm);
 }
 
 .errlog-item {
@@ -3314,17 +3374,21 @@ html[data-wheel] body {
 .info-tip {
   position: relative;
   display: inline-flex;
-  margin-left: 6px;
-  vertical-align: middle;
+  margin-left: 3px;
+  /* 上标定位：吸在标题/标签文字的右上角（2026-11-09 用户反馈——此前垂直居中显得压行）；
+     行内上下文走 vertical-align，flex 行内的标签右侧走 align-self 顶部对齐 */
+  vertical-align: super;
+  align-self: flex-start;
+  line-height: 1;
 }
 .info-tip-btn {
-  width: 17px;
-  height: 17px;
-  border: 1.4px solid var(--ink-faint);
+  width: 14px;
+  height: 14px;
+  border: 1.2px solid var(--ink-faint);
   border-radius: 50%;
   background: none;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
   display: flex;

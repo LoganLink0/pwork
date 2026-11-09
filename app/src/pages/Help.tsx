@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CONFIG_GUIDE, DATA_POINTS, FAQ, GLOSSARY, MODULES, SHORTCUTS } from '../content/help'
 import { loadKeybinds, displayCombo } from '../engine/keybinds'
@@ -29,6 +29,16 @@ export function Help() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = HELP_TABS.find((t) => t.id === searchParams.get('tab'))?.id ?? 'quick'
   const [zoomImg, setZoomImg] = useState<string | null>(null)
+
+  // 大图查看的 Esc 关闭走窗口级监听——此前挂在遮罩的 tabIndex/focus 上，焦点不稳时按 Esc 无效（2026-11-09 用户反馈）
+  useEffect(() => {
+    if (!zoomImg) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomImg(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomImg])
   return (
     <section className="settings-page">
       <div className="page-head">
@@ -162,8 +172,12 @@ export function Help() {
             const groupFaq = FAQ.filter((f) => f.group === group)
             if (groupFaq.length === 0) return null
             return (
-              <div key={group}>
-                <div className="faq-group">{group}</div>
+              <details key={group} open className="faq-fold">
+                <summary className="faq-group">
+                  {group}
+                  <span className="faq-count">{groupFaq.length} 条</span>
+                  <span className="faq-chevron">▾</span>
+                </summary>
                 {groupFaq.map((f) => (
                   <div key={f.q} style={{ marginBottom: 'var(--sp-4)' }}>
                     <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 4 }}>{f.q}</div>
@@ -178,7 +192,7 @@ export function Help() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </details>
             )
           })}
         </div>
@@ -192,15 +206,19 @@ export function Help() {
             const groupTerms = GLOSSARY.filter((g) => g.group === group)
             if (groupTerms.length === 0) return null
             return (
-              <div key={group}>
-                <div className="faq-group">{group}</div>
+              <details key={group} open className="faq-fold">
+                <summary className="faq-group">
+                  {group}
+                  <span className="faq-count">{groupTerms.length} 条</span>
+                  <span className="faq-chevron">▾</span>
+                </summary>
                 {groupTerms.map((g) => (
                   <div className="set-row" key={g.term} style={{ alignItems: 'flex-start' }}>
                     <label style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{g.term}</label>
                     <span className="val" style={{ color: 'var(--ink-soft)' }}>{g.def}</span>
                   </div>
                 ))}
-              </div>
+              </details>
             )
           })}
         </div>
@@ -211,21 +229,20 @@ export function Help() {
         <div
           className="overlay img-zoom-overlay"
           role="dialog"
+          aria-modal="true"
           aria-label="图片放大查看"
           onClick={() => setZoomImg(null)}
-          onKeyDown={(e) => e.key === 'Escape' && setZoomImg(null)}
-          tabIndex={-1}
-          ref={(el) => el?.focus()}
+          data-testid="img-zoom"
         >
+          <button type="button" className="zoom-close" aria-label="关闭大图" data-testid="img-zoom-close" onClick={() => setZoomImg(null)}>
+            ✕
+          </button>
           <img
             src={zoomImg}
             alt="放大查看"
-            style={{ maxWidth: 'min(1400px, 94vw)', maxHeight: '88vh', display: 'block', margin: '0 auto', borderRadius: 'var(--r-md)' }}
-            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 'min(1400px, 94vw)', maxHeight: '80vh', display: 'block', margin: '0 auto', borderRadius: 'var(--r-md)' }}
           />
-          <p style={{ textAlign: 'center', color: '#fff', fontSize: 'var(--fs-sm)', marginTop: 'var(--sp-2)' }}>
-            点任意位置关闭
-          </p>
+          <div className="zoom-hint">按 Esc、点右上角 ✕ 或点击任意位置关闭</div>
         </div>
       )}
     </section>

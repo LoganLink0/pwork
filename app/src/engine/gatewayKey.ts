@@ -5,6 +5,9 @@ import { PROVIDER_PRESETS, probeGateway, testGatewayChat, type CoachProvider } f
  * 网关 Key 直配（2026-10-26）：引导页与 设置 → AI 共用的「选厂商 → 填 Key → 保存即测试」。
  * 桌面版经 Tauri invoke 写 gateway.env 并热更新；浏览器版经网关 POST /key 写 .env.local 并热更新。
  * 保存后立即经网关发一条真实对话验证 Key——通/不通都返回明确消息（用户要求，不允许静默）。
+ * Key 的桌面唯一落点是 gateway.env（AppData，不进备份不进对话）；localStorage 不存 Key。
+ * gateway.env 与开发侧 .env.local 是同一把 Key 的互备副本，两处同失则只能重建——
+ * 2026-11-09 profile 重置事故后立此存照（复盘 3.64）。
  */
 export interface GatewayKeyResult {
   ok: boolean

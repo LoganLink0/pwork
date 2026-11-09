@@ -266,17 +266,15 @@
     font-size: 12px; font-weight: 600; padding: 3px 12px; white-space: nowrap;
   }
 
-  /* 版本时间线（软件外面区块） */
-  .timeline { margin: 28px 0 0; padding: 0; list-style: none; border-left: 2px solid var(--line-strong); }
-  .timeline li { position: relative; padding: 0 0 18px 22px; font-size: 14.5px; color: var(--ink-soft); }
-  .timeline li::before {
-    content: ''; position: absolute; left: -6px; top: 7px;
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--surface); border: 2px solid var(--accent);
-  }
-  .timeline li:last-child { padding-bottom: 0; }
-  .timeline .v { font-family: var(--mono); font-weight: 700; color: var(--ink); margin-right: 8px; }
-  .timeline .t { color: var(--ink-faint); font-size: 13px; margin-left: 8px; }
+  /* 版本更新日志（软件外面区块；应用侧栏公告卡「前往」落点 #changelog，2026-11-09） */
+  .changelog { margin: 28px 0 0; display: grid; gap: 14px; }
+  .cl-item { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .cl-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .cl-head .v { font-family: var(--mono); font-weight: 700; color: var(--ink); font-size: 16px; }
+  .cl-head .t { color: var(--ink-faint); font-size: 13px; }
+  .cl-item ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 14px; line-height: 1.85; }
+  .cl-item li::marker { color: var(--accent); }
+  .cl-item b { color: var(--ink); font-weight: 600; }
 
   /* 微信群二维码（反馈区卡片内） */
   .qr-in-card { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
@@ -471,14 +469,90 @@ $ <span class="d">数据去向</span>
           <p>微信交流群和 GitHub Discussions 都开着，用着别扭的地方直接说——好的想法，会变成下一个版本。</p>
         </div>
       </div>
-      <ul class="timeline">
-        <li><span class="v">0.1.8</span>开源首发，Windows 双版安装包<span class="t">10-27</span></li>
-        <li><span class="v">0.1.11</span>macOS 版发布，应用内自动更新上线<span class="t">10-30</span></li>
-        <li><span class="v">0.1.13</span>运行日志可导出，macOS 自动构建流水线跑通<span class="t">11-01</span></li>
-        <li><span class="v">0.1.15</span>字号行宽字体随你调，书签与 Obsidian 一键搬家<span class="t">11-05</span></li>
-        <li><span class="v">0.1.16</span>全文阅读、AI 全库问答、手机端全面重做<span class="t">11-07</span></li>
-        <li><span class="v">0.1.17</span>手机扫码配对、删除确认升级、条目按月浏览<span class="t">11-09</span></li>
-      </ul>
+      <div class="changelog" id="changelog">
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.17</span><span class="t">2026-11-09</span></div>
+          <ul>
+            <li><b>手机端两步配对</b>：桌面出二维码，手机扫一下即完成云端配置，全程不进 Cloudflare 控制台</li>
+            <li><b>部署完零控制台</b>：一键部署后端点、Token、账户、数据库四项自动填好</li>
+            <li><b>条目库按月浏览</b>：上千条不再卡，更早的条目按月份翻到</li>
+            <li><b>AI 全库问答修好自然语言</b>：整句话提问恢复正常</li>
+            <li>删除确认统一为应用内弹层（危险操作红键）；加载状态不再闪「0 条」</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.16</span><span class="t">2026-11-07</span></div>
+          <ul>
+            <li><b>通知中心</b>：提醒不再弹完即失，铃铛带未读数，可回看历史</li>
+            <li><b>手机端导航重构</b>：21 个页面全部直达，子页标签一键切换</li>
+            <li>侧栏「最近打开」与版本公告卡；帮助页重排 + 数据流向图</li>
+            <li>设置分类四字命名，全站文案瘦身</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.15</span><span class="t">2026-11-05</span></div>
+          <ul>
+            <li><b>条目正文全文</b>：自动抓全文进库参与检索，应用内阅读视图</li>
+            <li><b>划选摘录</b>：看文章划两句直接存进速记，自动带出处</li>
+            <li><b>速记图片附件</b>：截图 Ctrl+V 直接贴，一条最多 10 张</li>
+            <li><b>历史数据搬家</b>：书签、Obsidian、flomo、Notion、印象笔记选文件即导</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.14</span><span class="t">2026-11-03</span></div>
+          <ul>
+            <li><b>工具轮盘悬浮小窗</b>：鼠标边弹出不夺焦点，还能一键置顶任何窗口</li>
+            <li><b>信源健康自检</b>：噪声源、零命中源自报，还会推荐值得订阅的源头</li>
+            <li>B站 UP 主、YouTube 频道可当订阅源；剪贴板速记 Ctrl+Alt+V</li>
+            <li>信息日报主题异动点名；更新源国内直连</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.13</span><span class="t">2026-11-01</span></div>
+          <ul>
+            <li><b>安装包 48MB 瘦到 8MB</b>：下载从几分钟变几秒</li>
+            <li>迁移窗口重做：实时进度条 + 看门狗，不再有卡死的静默画面</li>
+            <li>给开发者的 Shell 通知桥：命令跑完一行 curl 弹通知</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.12</span><span class="t">2026-10-31</span></div>
+          <ul>
+            <li><b>数据独立成文件</b>：pwork.db 单文件可直接复制备份</li>
+            <li><b>vault 镜像</b>：每条数据一个 Markdown，Obsidian 等工具直接可读</li>
+            <li>应用内更新首次真实命中：装一次，后面一键升级</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.11</span><span class="t">2026-10-29</span></div>
+          <ul>
+            <li><b>数据防丢三道闸</b>：持久化保护 + 每周自动备份 + 启动健康检查</li>
+            <li><b>可读档案</b>：全库导出 zip，每条数据一个 Markdown 可回导</li>
+            <li>AI 全库问答；键盘快捷键自定义；macOS 内测首包</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.10</span><span class="t">2026-10-28</span></div>
+          <ul>
+            <li><b>一键上云在应用里完成</b>，不再弹终端窗口</li>
+            <li>信息日报自动保鲜；AI 厂商扩到 16 家；工具轮盘可视化编辑</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.9</span><span class="t">2026-10-27</span></div>
+          <ul>
+            <li>修复桌面版点击外链没反应的问题</li>
+            <li>侧栏 GitHub 入口与明暗主题切换</li>
+          </ul>
+        </div>
+        <div class="cl-item">
+          <div class="cl-head"><span class="v">0.1.8</span><span class="t">2026-10-26</span></div>
+          <ul>
+            <li><b>开源首发</b>（MIT）：源码全部公开，欢迎审查与共建</li>
+            <li>首访引导定稿；联网版与完全离线版双安装包</li>
+          </ul>
+        </div>
+      </div>
       <p class="loop-back">完整版本历史在 <a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页</a>——每一版、每一条改动，都留着。</p>
     </div>
   </section>
