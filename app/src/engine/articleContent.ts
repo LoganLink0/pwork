@@ -1,6 +1,7 @@
 /**
  * 条目正文抓取与提取（G1 批，2026-11-04）。信源 feed 只给摘要，条目的投票/检索/摘录
- * 全作用在残缺原料上——本模块把正文抓下来，Readability 提取纯文本，回填 item.content。
+ * 全作用在残缺原料上——本模块把正文抓下来，Readability 提取后转 Markdown（标题层级/列表/
+ * 引用/代码块保留，2026-11-10 用户需求：多级标题可区分），回填 item.content。
  *
  * 设计红线（2026-11-03 应急预估的对策落点）：
  * - 后台队列串行限速（单条间隔 800ms），失败记入失败表不自动重试；阅读视图可手动单条重抓；
@@ -105,18 +106,67 @@ export async function fetchArticleHtml(url: string, timeoutMs = FETCH_TIMEOUT_MS
 /** 块级叶元素选择器：容器块（如 blockquote 包 p）由叶子出文本，防止嵌套重复 */
 const BLOCK_SELECTOR = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, figcaption'
 
-/** Readability 输出的 HTML → 带段落结构的纯文本（块间 \n\n，块内空白折叠） */
-function blocksToText(html: string): string {
+/** 行内元素 → Markdown 片段：加粗/斜体/行内代码保留，链接只留文字（原链在条目上），图片跳过 */
+function inlineMd(el: Element): string {
+  let out = ''
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += (node.textContent ?? '').replace(/\s+/g, ' ')
+      continue
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) continue
+    const child = node as Element
+    const tag = child.tagName
+    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'IMG') continue
+    const inner = inlineMd(child)
+    if (!inner.trim()) continue
+    if (tag === 'STRONG' || tag === 'B') out += `**${inner.trim()}**`
+    else if (tag === 'EM' || tag === 'I') out += `*${inner.trim()}*`
+    else if (tag === 'CODE') out += `\`${inner.trim()}\``
+    else if (tag === 'BR') out += '\n'
+    else out += inner // A / SPAN / 其他：只留内容
+  }
+  return out
+}
+
+/** 有序列表项的序号：数同层前驱 li 个数 */
+function liMarker(li: Element): string {
+  const ol = li.closest('ol')
+  if (!ol) return '- '
+  let n = 1
+  for (const s of Array.from(ol.children)) {
+    if (s === li) break
+    if (s.tagName === 'LI') n++
+  }
+  return `${n}. `
+}
+
+/** Readability 输出的 HTML → Markdown（块间 \n\n；标题层级/列表/引用/代码块保留） */
+function blocksToMarkdown(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const parts: string[] = []
   for (const el of doc.body.querySelectorAll(BLOCK_SELECTOR)) {
     if (el.querySelector(BLOCK_SELECTOR)) continue
-    const raw = el.textContent ?? ''
-    const t = el.tagName === 'PRE' ? raw.trim() : raw.replace(/\s+/g, ' ').trim()
+    let t = el.tagName === 'PRE' ? (el.textContent ?? '').trim() : inlineMd(el).replace(/[ \t]+/g, ' ').trim()
     if (!t) continue
     // CMS 残留清理：源站以转义文本内嵌的标签占位（如微信图 `< img id="wx_img" …>`），
     // 页面用 CSS 藏起来但 Readability 会当正文保留——整块长得像标签且无汉字的块丢弃
     if (el.tagName !== 'PRE' && t.startsWith('<') && t.endsWith('>') && !/[\u4e00-\u9fff]/.test(t)) continue
+    const tag = el.tagName
+    if (/^H[1-6]$/.test(tag)) {
+      t = `${'#'.repeat(Number(tag[1]))} ${t}`
+    } else if (tag === 'LI') {
+      t = `${liMarker(el)}${t.replace(/^[-*]\s+/, '')}`
+    } else if (tag === 'FIGCAPTION') {
+      t = `*${t}*`
+    } else if (tag === 'PRE') {
+      t = `\`\`\`\n${t}\n\`\`\``
+    } else if (el.closest('blockquote') && tag !== 'BLOCKQUOTE') {
+      t = t
+        .split('\n')
+        .map((l) => `> ${l}`.trimEnd())
+        .join('\n')
+    }
     parts.push(t)
   }
   if (parts.length > 0) return parts.join('\n\n')
@@ -125,7 +175,7 @@ function blocksToText(html: string): string {
 }
 
 /**
- * 提取正文纯文本。任意外部 HTML 是敌意输入边界：解析失败返回错误对象（与 parseFeed
+ * 提取正文为 Markdown。任意外部 HTML 是敌意输入边界：解析失败返回错误对象（与 parseFeed
  * 的错误契约一致），不让单条坏页面炸穿队列。
  */
 export function extractArticleText(html: string): ExtractOk | FetchErr {
@@ -135,7 +185,7 @@ export function extractArticleText(html: string): ExtractOk | FetchErr {
     const parsed = new Readability(doc).parse()
     if (!parsed?.content) return { ok: false, error: '无法识别正文结构（可能是登录墙或纯媒体页）' }
     const contentHtml = typeof parsed.content === 'string' ? parsed.content : (parsed.content as unknown as Element).outerHTML
-    text = blocksToText(contentHtml)
+    text = blocksToMarkdown(contentHtml)
   } catch (e) {
     return { ok: false, error: `正文解析失败：${e instanceof Error ? e.message : String(e)}` }
   }

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import type { Item } from '../../types/models'
 import { fetchContentForItem, isContentFailed } from '../../engine/articleContent'
 import { useNotes } from '../../store/notes'
@@ -19,8 +21,10 @@ interface SelAnchor {
 }
 
 /**
- * 条目阅读视图（G1 批）：把回填的正文纯文本当书读——固定浮层，标题/来源/原文链接齐备。
- * 正文只以纯文本渲染（段落来自提取时的 \n\n 结构），任何 HTML 都不进 DOM，XSS 无处落地。
+ * 条目阅读视图（G1 批）：把回填的正文当书读——固定浮层，标题/来源/原文链接齐备。
+ * 正文是 Markdown（提取侧保留标题层级/列表/引用/代码块，2026-11-10），经 marked 渲染 +
+ * DOMPurify 消毒后进 DOM（与速记预览同款通路；外部 HTML 先在提取侧转成受控 Markdown，
+ * 渲染侧再消毒一道，XSS 无处落地）。摘录/复制走渲染后选区的 toString()，天然纯文本。
  *
  * 交互（2026-11-04 用户反馈一轮改造）：
  * - 打开即抓：进来没有正文就当场抓取并显示进度（等在空态里让用户手点会劝退人）；
@@ -130,7 +134,11 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
     setSel(null)
   }
 
-  const paragraphs = (content ?? '').split(/\n{2,}/).filter((p) => p.trim())
+  // 正文 Markdown → 消毒后 HTML（外部内容双闸：提取侧只产受控 Markdown，渲染侧 DOMPurify 兜底）
+  const renderedHtml = useMemo(
+    () => (content ? DOMPurify.sanitize(marked.parse(content, { async: false })) : ''),
+    [content],
+  )
 
   return createPortal(
     <div
@@ -156,9 +164,15 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
               <a href={item.url} target="_blank" rel="noreferrer noopener">打开原链接 ↗</a>
             </div>
           </div>
-          <button type="button" className="mini-btn" onClick={onClose} aria-label="关闭阅读视图">
-            关闭 ✕
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* 存量条目抓于纯文本时代，重抓一次即换新 Markdown 格式（标题层级可区分） */}
+            <button type="button" className="mini-btn" onClick={() => { setGrabbed(null); void grab() }} disabled={grabbing}>
+              重新抓取
+            </button>
+            <button type="button" className="mini-btn" onClick={onClose} aria-label="关闭阅读视图">
+              关闭 ✕
+            </button>
+          </div>
         </header>
 
         {content ? (
@@ -166,11 +180,8 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
             className="reader-body"
             ref={bodyRef}
             onScroll={() => setSel(null)}
-          >
-            {paragraphs.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
+          />
         ) : grabbing ? (
           <div className="reader-body reader-empty">
             <div className="reader-spinner" aria-hidden />

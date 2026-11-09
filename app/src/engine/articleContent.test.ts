@@ -103,6 +103,52 @@ describe('extractArticleText（Readability 提取 + 纯文本净化）', () => {
     expect(r.text.length).toBeLessThanOrEqual(20_001)
     expect(r.text.endsWith('…')).toBe(true)
   })
+
+  it('标题层级保留为 Markdown 井号（2026-11-10 用户需求：多级标题可区分）', () => {
+    const html = `<html><body><article>
+<h1>综述标题</h1>
+<p>${'开篇一段交代背景。'.repeat(30)}</p>
+<h2>第一节 技术路线</h2>
+<p>${'第一节正文内容。'.repeat(30)}</p>
+<h3>子方向 细分方案</h3>
+<p>${'子方向正文内容。'.repeat(30)}</p>
+</article></body></html>`
+    const r = extractArticleText(html)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.text).toContain('# 综述标题')
+    expect(r.text).toContain('## 第一节 技术路线')
+    expect(r.text).toContain('### 子方向 细分方案')
+  })
+
+  it('列表与代码块保留结构：无序列表、有序列表、围栏代码', () => {
+    const html = `<html><body><article>
+<h2>要点清单</h2>
+<p>${'引言段落交代上下文。'.repeat(30)}</p>
+<ul><li>第一个要点</li><li>第二个要点</li></ul>
+<ol><li>步骤甲</li><li>步骤乙</li></ol>
+<pre>const ok = true</pre>
+</article></body></html>`
+    const r = extractArticleText(html)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.text).toContain('- 第一个要点')
+    expect(r.text).toContain('- 第二个要点')
+    expect(r.text).toContain('1. 步骤甲')
+    expect(r.text).toContain('2. 步骤乙')
+    expect(r.text).toContain('```\nconst ok = true\n```')
+  })
+
+  it('行内格式保留：加粗与斜体', () => {
+    const html = `<html><body><article>
+<p>${'普通段落交代背景。'.repeat(20)}<strong>关键结论加粗强调</strong>与<em>斜体补充</em>同段出现。</p>
+</article></body></html>`
+    const r = extractArticleText(html)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.text).toContain('**关键结论加粗强调**')
+    expect(r.text).toContain('*斜体补充*')
+  })
 })
 
 describe('isArticleEligible（正文抓取准入）', () => {
