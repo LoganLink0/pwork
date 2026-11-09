@@ -192,7 +192,14 @@ export function extractArticleText(html: string): ExtractOk | FetchErr {
   if (text.length < MIN_ARTICLE_CHARS) {
     return { ok: false, error: `正文过短（${text.length} 字符，不足 ${MIN_ARTICLE_CHARS}）——可能是登录墙或摘要页` }
   }
-  if (text.length > MAX_CONTENT_CHARS) text = `${text.slice(0, MAX_CONTENT_CHARS)}…`
+  if (text.length > MAX_CONTENT_CHARS) {
+    // 超长截断不得撕裂结构：切点回退到前一个块边界，半截代码围栏补回闭合（2026-11-10 自查）
+    let cut = text.lastIndexOf('\n\n', MAX_CONTENT_CHARS)
+    if (cut < MIN_ARTICLE_CHARS) cut = MAX_CONTENT_CHARS
+    text = `${text.slice(0, cut).trimEnd()}…`
+    const fences = (text.match(/^```/gm) ?? []).length
+    if (fences % 2 === 1) text = `${text}\n\`\`\``
+  }
   return { ok: true, text }
 }
 

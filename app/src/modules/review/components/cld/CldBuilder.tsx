@@ -6,6 +6,7 @@ import { cyclePathLabel, detectLoops, rootCandidates } from '../../engine/cld'
 import { useDraft } from '../../store/draft'
 import { emptyCld, type CldEdge, type CldGraph, type CldPolarity } from '../../types/models'
 import { Icon } from '../../../../components/shell/icons'
+import { confirmDialog } from '../../../../engine/confirm'
 import { KnowledgeCapsule } from '../ui/KnowledgeCapsule'
 import { CldCanvas } from './CldCanvas'
 
@@ -78,7 +79,16 @@ export function CldBuilder() {
   function loadTemplate(templateId: string) {
     const tpl = CLD_TEMPLATES.find((t) => t.id === templateId)
     if (!tpl) return
-    if (cld.nodes.length > 0 && !window.confirm(CLD.templateConfirm)) return
+    if (cld.nodes.length > 0) {
+      // 覆盖确认走应用内弹层（走查统一化补漏：回路模块三处原生 confirm 残留，2026-11-10）
+      void confirmDialog({ title: CLD.templateConfirm, body: '当前画布上的节点与连线会被模板内容替换。', confirmLabel: '载入模板' }).then((ok) => {
+        if (!ok) return
+        const copy = JSON.parse(JSON.stringify(tpl.graph)) as CldGraph
+        void mutateCld(() => copy)
+        setMsg(CLD.loadTemplate(tpl.name))
+      })
+      return
+    }
     const copy = JSON.parse(JSON.stringify(tpl.graph)) as CldGraph
     void mutateCld(() => copy)
     setMsg(CLD.loadTemplate(tpl.name))

@@ -30,19 +30,33 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   term: '术语',
 }
 
-/** 标题命中 → 命中；正文命中 → 命中并截取关键词前后各 20 字的片段 */
+/** Markdown 记号净化：预览片段给人看——井号、加粗、斜体、反引号、列表符、围栏行不露出（2026-11-10 自查） */
+function plainText(md: string): string {
+  return md
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/^```.*$/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+}
+
+/** 标题命中 → 命中；正文命中 → 命中并截取关键词前后各 20 字的片段（净化后截取） */
 function hit(
   kind: SearchKind, id: string, title: string, sub: string, to: string,
   q: string, bodies: string[] = [],
 ): SearchHit | null {
   if (title.toLowerCase().includes(q)) return { kind, id, title: title.slice(0, 60), sub, to }
   for (const b of bodies) {
-    const idx = b.toLowerCase().indexOf(q)
+    const plain = plainText(b)
+    const idx = plain.toLowerCase().indexOf(q)
     if (idx >= 0) {
       const start = Math.max(0, idx - 20)
       return {
         kind, id, title: title.slice(0, 60), sub, to,
-        snippet: `${start > 0 ? '…' : ''}${b.slice(start, idx + q.length + 20)}…`,
+        snippet: `${start > 0 ? '…' : ''}${plain.slice(start, idx + q.length + 20)}…`,
       }
     }
   }

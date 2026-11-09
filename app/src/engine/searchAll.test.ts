@@ -40,6 +40,17 @@ describe('searchAll 正文级检索（G1 批：item.content 参与命中）', ()
     const hits = await searchAll('量子纠缠')
     expect(hits.filter((h) => h.kind === 'item')).toHaveLength(0)
   })
+
+  it('Markdown 正文命中时预览片段不露记号（标题井号/加粗/行内代码，2026-11-10 自查）', async () => {
+    await putItem(makeItem('itm_md1', { content: '## 部署要点\n\n把 **环境变量** 写进 `gateway.env` 再重启进程即可生效。' }))
+    const hits = await searchAll('gateway.env')
+    const itemHit = hits.find((h) => h.kind === 'item')
+    expect(itemHit).toBeTruthy()
+    expect(itemHit?.snippet).toContain('gateway.env')
+    expect(itemHit?.snippet).not.toContain('##')
+    expect(itemHit?.snippet).not.toContain('**')
+    expect(itemHit?.snippet).not.toContain('`gateway.env`')
+  })
 })
 
 describe('askKeywords 自然语言问句切词（2026-11-08 AI 问答空态根因修复）', () => {

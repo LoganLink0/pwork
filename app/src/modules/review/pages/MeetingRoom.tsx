@@ -4,6 +4,7 @@ import { getTemplate } from '../content/templates'
 import { DETAIL, MEETING, WIZARD } from '../content/copy'
 import { useDraft } from '../store/draft'
 import { deleteReview } from '../db/repo'
+import { confirmDialog } from '../../../engine/confirm'
 import type { MeetingRoles, ReviewRecord } from '../types/models'
 import { StepComparison } from '../components/wizard/StepComparison'
 import { StepLogic } from '../components/wizard/StepLogic'
@@ -160,7 +161,10 @@ export function MeetingRoom() {
 
   async function abandonDraft() {
     const d = useDraft.getState().draft
-    if (!d || !window.confirm(DETAIL.confirmDelete)) return
+    if (!d) return
+    // 删除确认走应用内弹层（走查统一化补漏，2026-11-10）
+    const ok = await confirmDialog({ title: DETAIL.confirmDelete, danger: true, confirmLabel: '删除' })
+    if (!ok) return
     await deleteReview(d.id)
     useDraft.setState({ draft: null, step: 0 })
     navigate('/review')
