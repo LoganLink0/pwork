@@ -447,8 +447,10 @@ pub fn run() {
             .map(|c| c.as_ref() == Some(shortcut))
             .unwrap_or(false);
           if is_capture {
-            // 剪贴板速记：不唤窗口不夺焦点——读剪贴板、入库、发通知都在前端事件里完成（看到就摘）
-            let _ = app.emit("clipboard-capture", ());
+            // 剪贴板速记：不唤窗口不夺焦点——读剪贴板、入库、发通知都在前端事件里完成（看到就摘）；
+            // 触发瞬间的前台窗口标题随事件下发，速记里标来源（2026-11-10 用户反馈）
+            let from = system::foreground_window_title();
+            let _ = app.emit("clipboard-capture", serde_json::json!({ "from": from }));
             return;
           }
           let is_wheel = state

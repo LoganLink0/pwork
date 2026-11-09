@@ -30,6 +30,7 @@ import { storageReady } from './db/schema'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
+import { useNotifyHub } from './engine/notifyCenter'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
@@ -383,8 +384,9 @@ export default function App() {
   useEffect(() => {
     if (!isDesktopApp()) return
     let unlisten: (() => void) | null = null
-    tauriListen('clipboard-capture', () => {
+    tauriListen('clipboard-capture', (e) => {
       void (async () => {
+        const from = ((e.payload as { from?: string } | undefined)?.from ?? '').trim()
         let text = ''
         try {
           text = await readText()
@@ -398,9 +400,11 @@ export default function App() {
           toast('info', '剪贴板里没有文本——先复制一段文字再按')
           return
         }
-        const body = text.length > 50_000 ? `${text.slice(0, 50_000)}\n\n…（剪贴板内容超过 5 万字，已截断保存）` : text
+        const truncated = text.length > 50_000 ? `${text.slice(0, 50_000)}\n\n…（剪贴板内容超过 5 万字，已截断保存）` : text
+        // 来源行 + 剪贴板标签（2026-11-10 用户反馈：剪贴板速记看不出从哪复制来的）
+        const body = from ? `${truncated}\n\n—— 来自 ${from}` : truncated
         try {
-          await useNotes.getState().create({ body, source: 'quick' })
+          await useNotes.getState().create({ body, source: 'quick', tags: ['剪贴板'] })
         } catch (err) {
           toast('error', '速记保存失败——请到速记页确认数据状态')
           void recordError({ where: '剪贴板速记', kind: 'app', message: err instanceof Error ? err.message : String(err) })
@@ -409,6 +413,8 @@ export default function App() {
         const flat = body.replace(/\s+/g, ' ')
         const preview = flat.length > 40 ? `${flat.slice(0, 40)}…` : flat
         toast('ok', `已存入速记：${preview}`)
+        // 应用在后台时 toast 看不见——回执进通知中心，切回应用铃铛有未读（系统通知在权限可用时照发）
+        useNotifyHub.getState().push({ kind: 'done', title: '剪贴板已存入速记', desc: preview, to: '/input/notes' })
         void sendSystemNotify('已存入速记', preview)
       })()
     })

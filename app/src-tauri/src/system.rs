@@ -53,6 +53,28 @@ pub fn foreground_hwnd() -> Option<isize> {
   None
 }
 
+/// 前台窗口标题（剪贴板速记的来源标注；热键触发瞬间前台=用户正在用的应用）。
+/// 抓不到（macOS 无等价简易接口/标题为空）返回空串，前端省略来源行。
+#[cfg(windows)]
+pub fn foreground_window_title() -> String {
+  use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+  let h = unsafe { GetForegroundWindow() };
+  if h.is_invalid() {
+    return String::new();
+  }
+  let mut buf = [0u16; 256];
+  let n = unsafe { GetWindowTextW(h, &mut buf) };
+  if n <= 0 {
+    return String::new();
+  }
+  String::from_utf16_lossy(&buf[..n as usize]).trim().to_string()
+}
+
+#[cfg(not(windows))]
+pub fn foreground_window_title() -> String {
+  String::new()
+}
+
 /// 把前台还给指定窗口（轮盘弹出后调用）：同进程 WebView2 渲染路径会在
 /// NOACTIVATE 窗口 show 时抢走前台（同进程前台=主窗场景实测），这里显式归还。
 #[cfg(windows)]
