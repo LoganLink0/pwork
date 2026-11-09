@@ -186,7 +186,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           <button
             type="button"
             className="mini-btn"
-            title="从日报/条目库移除（软删除，14 天内可从备份找回）"
+            title="从日报/条目库移除（移入条目库回收站，可随时恢复）"
             onClick={onDelete}
           >
             删除

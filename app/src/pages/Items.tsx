@@ -1,24 +1,26 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useCollect } from '../store/collect'
 import { useTasks } from '../store/tasks'
 import { confirmDialog } from '../engine/confirm'
 import { ItemCard } from '../components/collect/ItemCard'
 import { itemTiers } from '../engine/itemTier'
 import { rejectionStats } from '../engine/rejectionStats'
+import { relTime } from '../engine/datetime'
 import type { Item } from '../types/models'
 
 type StageFilter = 'all' | 'must' | 'kept' | 'discarded'
 
-/** 条目库页（PRD §4.4）：分层/状态筛选 + 搜索 + 展开详情与标注 */
+/** 条目库页（PRD §4.4）：分层/状态筛选 + 搜索 + 展开详情与标注；回收站 + 搜索定位（2026-11-10 走查补） */
 export function Items() {
-  const { items, loaded, setVote, setNotes, toggleKeep, cycleOt, deleteItem } = useCollect()
+  const { items, loaded, setVote, setNotes, toggleKeep, cycleOt, deleteItem, restoreItem, listDeleted } = useCollect()
   const [stage, setStage] = useState<StageFilter>('all')
   const [query, setQuery] = useState('')
   const [otOnly, setOtOnly] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const createTask = useTasks((s) => s.create)
   const [converted, setConverted] = useState<Set<string>>(new Set())
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // 按月切片（2026-11-08 走查 P1：全量渲染单页 2000+ 按钮）：默认最新有数据的月份，
   // 可翻历史月份——顺带解除旧版「只看近 30 天」的硬窗口（更早的条目从此可达）
@@ -30,6 +32,36 @@ export function Items() {
   const [selMonth, setSelMonth] = useState<string | null>(null) // null=跟随最新有数据的月份
   const curMonth = selMonth ?? months[0] ?? ''
   const monthItems = useMemo(() => items.filter((i) => i.fetchedAt.slice(0, 7) === curMonth), [items, curMonth])
+
+  // 搜索/待办溯源定位（走查断点修复：按月分页后命中旧条目点过去看不到）：?focus=id →
+  // 切到条目所在月份并展开滚动到位，随后清参防重复滚动
+  const focusId = searchParams.get('focus')
+  const focusDoneRef = useRef(false)
+  useEffect(() => {
+    if (!focusId || focusDoneRef.current || !loaded) return
+    const target = items.find((i) => i.id === focusId)
+    if (!target) return
+    focusDoneRef.current = true
+    setTrashMode(false)  // 回收站视图挡列表（走查抓出：回收站里点搜索跳转看不到目标）
+    setSelMonth(target.fetchedAt.slice(0, 7))
+    setExpandedId(focusId)
+    setSearchParams({}, { replace: true })
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-item-id="${focusId}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+  }, [focusId, items, loaded, setSearchParams])
+
+  // 回收站（与速记回收站对称）：软删条目就地恢复，别让「14 天可找回」停留在备份导入的重路上
+  const [trashMode, setTrashMode] = useState(false)
+  const [trash, setTrash] = useState<Item[]>([])
+  const reloadTrash = () => void listDeleted().then(setTrash)
+  useEffect(() => {
+    reloadTrash()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const doRestore = (id: string) => {
+    void restoreItem(id).then(() => reloadTrash())
+  }
   const monthShift = (ym: string, delta: number): string => {
     const [y, m] = ym.split('-').map(Number)
     const d = new Date(y, m - 1 + delta, 1)
@@ -86,12 +118,14 @@ export function Items() {
         <span className="sub">全库 {items.length} 条 · 已筛除的条目保留 14 天后自动清除（有标注的除外）</span>
       </div>
 
+      {!trashMode && (
       <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', alignItems: 'center' }}>
         <button type="button" className="chip" disabled={!months.includes(monthShift(curMonth, -1))} onClick={() => setSelMonth(monthShift(curMonth, -1))} aria-label="上一个有条目的月份">◀</button>
         <b style={{ fontSize: 16 }}>{curMonth || '—'}</b>
         <button type="button" className="chip" disabled={!months.includes(monthShift(curMonth, 1))} onClick={() => setSelMonth(monthShift(curMonth, 1))} aria-label="下一个有条目的月份">▶</button>
         <span style={{ color: 'var(--ink-faint)', fontSize: 13 }}>本月 {monthItems.length} 条</span>
       </div>
+      )}
 
       <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap', alignItems: 'center' }}>
         {stageChips.map((c) => (
@@ -100,6 +134,14 @@ export function Items() {
           </button>
         ))}
         <button type="button" className={`chip${otOnly ? ' on' : ''}`} onClick={() => setOtOnly(!otOnly)}>🎯 机会/威胁/趋势</button>
+        <button
+          type="button"
+          className={`chip${trashMode ? ' on' : ''}`}
+          onClick={() => { setTrashMode(!trashMode); if (!trashMode) reloadTrash() }}
+          aria-pressed={trashMode}
+        >
+          回收站（{trash.length}）
+        </button>
         <input
           className="input"
           style={{ maxWidth: 220, marginLeft: 'auto' }}
@@ -110,7 +152,32 @@ export function Items() {
         />
       </div>
 
-      {stage === 'discarded' && rejects && (
+      {trashMode && (
+        trash.length === 0 ? (
+          <div className="empty">
+            <div className="e-ico" aria-hidden>🗑</div>
+            <p>回收站是空的。删除的条目会在这里保留，随时可恢复。</p>
+          </div>
+        ) : (
+          <div className="set-card" style={{ marginBottom: 'var(--sp-4)' }}>
+            {trash.map((t) => (
+              <div key={t.id} className="set-row" style={{ alignItems: 'center' }}>
+                <label style={{ fontWeight: 600, color: 'var(--ink)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {t.title || '（无标题）'}
+                </label>
+                <span className="val" style={{ color: 'var(--ink-soft)' }}>
+                  {t.sourceName} · 删除于 {relTime(t.deletedAt ?? t.updatedAt)}
+                </span>
+                <button type="button" className="btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => doRestore(t.id)}>
+                  恢复
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {!trashMode && stage === 'discarded' && rejects && (
         <div className="notice" style={{ marginBottom: 'var(--sp-3)' }}>
           本月筛除 {rejects.total} 条：
           {rejects.byReason
@@ -122,7 +189,7 @@ export function Items() {
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {!trashMode && (filtered.length === 0 ? (
         <div className="empty">
           <div className="e-ico" aria-hidden>🗂</div>
           <p>{!loaded ? '正在读取条目…' : monthItems.length === 0 ? '这个月还没有条目。去信息日报抓取，或先在信源管理添加源。' : '没有匹配的条目。'}</p>
@@ -135,25 +202,28 @@ export function Items() {
         </div>
       ) : (
         filtered.map((item: Item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            showStage
-            expanded={expandedId === item.id}
-            onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
-            onVote={(v) => void setVote(item.id, v)}
-            tier={tiers.get(item.id)}
-            onNotes={(t) => void setNotes(item.id, t)}
-            onKeep={() => void toggleKeep(item.id)}
-            onCycleOt={() => void cycleOt(item.id)}
-            onConvert={() => convert(item.id, item.title)}
+          <div key={item.id} data-item-id={item.id}>
+            <ItemCard
+              item={item}
+              showStage
+              expanded={expandedId === item.id}
+              onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+              onVote={(v) => void setVote(item.id, v)}
+              tier={tiers.get(item.id)}
+              onNotes={(t) => void setNotes(item.id, t)}
+              onKeep={() => void toggleKeep(item.id)}
+              onCycleOt={() => void cycleOt(item.id)}
+              onConvert={() => convert(item.id, item.title)}
               onDelete={() => {
-                void confirmDialog({ title: `删除「${item.title.slice(0, 24)}」？`, body: '软删除：从日报/条目库移除，备份中 14 天内可找回。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void deleteItem(item.id) })
+                void confirmDialog({ title: `删除「${item.title.slice(0, 24)}」？`, body: '软删除：移入条目库回收站，可随时恢复。', danger: true, confirmLabel: '删除' }).then((ok) => {
+                  if (ok) void deleteItem(item.id).then(reloadTrash)  // 等写库完成再刷计数（竞争修复 2026-11-10）
+                })
               }}
-            converted={converted.has(item.id)}
-          />
+              converted={converted.has(item.id)}
+            />
+          </div>
         ))
-      )}
+      ))}
     </section>
   )
 }

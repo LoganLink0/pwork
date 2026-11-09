@@ -194,6 +194,22 @@ export async function listRecentItems(days = 30): Promise<Item[]> {
     .sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt))
 }
 
+/** 软删条目列表（条目库回收站视图，删除时间倒序）——与速记回收站对称（2026-11-10 走查补） */
+export async function listDeletedItems(): Promise<Item[]> {
+  const all = await db.items.toArray()
+  return all
+    .filter((i) => i.deletedAt)
+    .map(normalizeItem)
+    .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''))
+}
+
+/** 从回收站恢复软删条目：置空删除标记，回到全部列表/日报 */
+export async function restoreItem(id: string): Promise<void> {
+  const raw = await db.items.get(id)
+  if (!raw || !raw.deletedAt) return
+  await db.items.put({ ...normalizeItem(raw), deletedAt: null, updatedAt: new Date().toISOString() })
+}
+
 /** 读取防御（铁律 2）：旧数据可能缺 annotation/score 细分 */
 /** 旧 5 星 → 三档投票的一次性映射（读取时惰性迁移，写回后 stars 字段自然消亡） */
 export function mapStarsToVote(stars: number | undefined | null): 'want' | 'meh' | 'no' | null {

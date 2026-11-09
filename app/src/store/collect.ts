@@ -12,6 +12,8 @@ import {
   itemsPerSource7d,
   listAllSources,
   listRecentItems,
+  listDeletedItems,
+  restoreItem as restoreItemDb,
   resetSourceHealth,
   updateAnnotation,
   updateSource,
@@ -71,6 +73,8 @@ interface CollectState {
   setNotes: (itemId: string, notes: string) => Promise<void>
   toggleKeep: (itemId: string) => Promise<void>
   deleteItem: (itemId: string) => Promise<void>
+  restoreItem: (itemId: string) => Promise<void>
+  listDeleted: () => Promise<Item[]>
   cycleOt: (itemId: string) => Promise<void>
   /** 视频链接入库（C 路线·链接捕获）：解析后的元数据直接评分入库——手动捕获即明确意图，跳过预筛 */
   captureLink: (meta: { title: string; author: string; description: string; url: string }) => Promise<{ ok: boolean; error?: string; duplicated?: boolean }>
@@ -131,6 +135,15 @@ export const useCollect = create<CollectState>((set, get) => ({
     set({ sources, items, items7d })
     set(await reloadDigest(get()))
   },
+
+  restoreItem: async (itemId) => {
+    await restoreItemDb(itemId)
+    const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
+    set({ sources, items, items7d })
+    set(await reloadDigest(get()))
+  },
+
+  listDeleted: () => listDeletedItems(),
 
   runFetchAll: async () => {
     const { sources, config } = get()

@@ -52,7 +52,11 @@ function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
     )
   }
   const to =
-    kind === 'review' ? `/review/archive/${task.origin.refId}` : kind === 'note' ? `/input/notes/${task.origin.refId}` : '/input/items'
+    kind === 'review'
+      ? `/review/archive/${task.origin.refId}`
+      : kind === 'note'
+        ? `/input/notes/${task.origin.refId}`
+        : `/input/items?focus=${task.origin.refId}`
   return (
     <Link className="origin" data-k={kind} to={to} title="溯源">
       {label}
