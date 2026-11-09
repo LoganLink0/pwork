@@ -539,11 +539,13 @@ export function Settings() {
         <div className="set-body">
 
           <div className="set-row">
-            <label>全量备份</label>
-            <InfoTip
-              label="全量导出内容范围"
-              text={<>导出内容：速记、信源、条目、采集设置、任务、目标、复盘（含行动项与洞察）、外部数据块。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。</>}
-            />
+            <label>
+              全量备份
+              <InfoTip
+                label="全量导出内容范围"
+                text={<>导出内容：速记、信源、条目、采集设置、任务、目标、复盘（含行动项与洞察）、外部数据块。条目只含已评分和已保留的，未处理与已筛除的不导出。导入时相同内容按修改时间新者为准；FUPAN 旧版导出的文件也能导入。</>}
+              />
+            </label>
             <button type="button" className="btn-primary" style={{ flex: 'none' }} onClick={() => void doExport()}>
               全量导出
             </button>
@@ -702,7 +704,26 @@ export function Settings() {
               <button type="button" className={autoBk.enabled ? 'on' : ''} onClick={() => setAutoBackup({ enabled: true })} aria-pressed={autoBk.enabled}>
                 开
               </button>
-              <button type="button" className={!autoBk.enabled ? 'on' : ''} onClick={() => setAutoBackup({ enabled: false })} aria-pressed={!autoBk.enabled}>
+              <button
+                type="button"
+                className={!autoBk.enabled ? 'on' : ''}
+                onClick={() => {
+                  // 关闭自动备份必须过知情确认（2026-11-09 用户定稿：默认强制备份，退出需知情同意）——
+                  // 数据安全三道闸少一道后，误删/损坏/覆盖安装事故将没有任何自动可恢复副本
+                  if (autoBk.enabled) {
+                    void confirmDialog({
+                      title: '关闭自动备份？',
+                      body: '关闭后，日常的误删、文件损坏、覆盖安装事故将没有任何自动可恢复副本；浏览器版清除浏览数据会连数据一起清掉。数据安全三道闸会少一道，且事后无法追溯。',
+                      danger: true,
+                      confirmLabel: '仍要关闭（我了解风险）',
+                      cancelLabel: '保持开启',
+                    }).then((ok) => { if (ok) setAutoBackup({ enabled: false }) })
+                  } else {
+                    setAutoBackup({ enabled: true })
+                  }
+                }}
+                aria-pressed={!autoBk.enabled}
+              >
                 关
               </button>
             </div>

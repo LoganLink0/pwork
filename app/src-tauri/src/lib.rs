@@ -174,6 +174,10 @@ fn save_gateway_key(
         }
     }
     std::fs::write(&file, format!("{}\n", lines.join("\n"))).map_err(|e| e.to_string())?;
+    // 同目录轮换副本（复盘 3.64）：gateway.env 是 Key 的唯一落点，损坏/丢失即不可逆——
+    // 副本同权限同目录，永不进导出与备份包裹
+    let bak = data_dir.join("gateway.env.autobak");
+    let _ = std::fs::copy(&file, &bak);
     // 热更新：重新从盘上加载（与启动时同一路径），后续请求立即用新 Key
     *state.lock().unwrap() = gateway::GatewayConfig::load(&data_dir);
     Ok(())

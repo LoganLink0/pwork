@@ -263,11 +263,13 @@ export function CloudSyncCards({ active }: { active: boolean }) {
           ) : (
             <>
               <div className="set-row">
-                <label>云端代理地址</label>
-            <InfoTip
-              label="云端代理地址说明"
-              text={<>可选。手机浏览器连不到电脑的本地网关，需要填它才能走云端代理：填 https://pwork-api.loganlink0.cn（你部署的云端服务地址，在桌面版这里也能看到）。桌面版可不填——优先走本机网关，连不上才用它。</>}
-            />
+                <label>
+                  云端代理地址
+                  <InfoTip
+                    label="云端代理地址说明"
+                    text={<>可选。手机浏览器连不到电脑的本地网关，需要填它才能走云端代理：填 https://pwork-api.loganlink0.cn（你部署的云端服务地址，在桌面版这里也能看到）。桌面版可不填——优先走本机网关，连不上才用它。</>}
+                  />
+                </label>
                 <input
                   className="input"
                   placeholder="桌面可留空；手机端填云端服务地址（见右侧说明）"
@@ -300,11 +302,13 @@ export function CloudSyncCards({ active }: { active: boolean }) {
               <details className="adv-block">
                 <summary>高级：改用 Cloudflare API Token（默认粘贴部署输出的 Token 即可）</summary>
                 <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
-                  <label>API Token</label>
-            <InfoTip
-              label="凭据怎么填"
-              text={<>推荐：直接粘贴部署完成时输出的「端点地址 + Token」（ptk_ 开头那个）——填到上面两处即可，不用去 Cloudflare 控制台。也可以改用 Cloudflare API Token（约 2 分钟）：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌 → 权限「账户 → D1 → 编辑」→ 复制粘贴。两种都能用。</>}
-            />
+                  <label>
+                    API Token
+                    <InfoTip
+                      label="凭据怎么填"
+                      text={<>推荐：直接粘贴部署完成时输出的「端点地址 + Token」（ptk_ 开头那个）——填到上面两处即可，不用去 Cloudflare 控制台。也可以改用 Cloudflare API Token（约 2 分钟）：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer noopener">dash.cloudflare.com/profile/api-tokens</a> → 创建令牌 → 自定义令牌 → 权限「账户 → D1 → 编辑」→ 复制粘贴。两种都能用。</>}
+                    />
+                  </label>
                   <input
                     className="input"
                     type="password"
@@ -316,11 +320,13 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                 </div>
               </details>
               <div className="set-row">
-                <label>配对到手机</label>
-                <InfoTip
-                  label="配对说明"
-                  text={<>生成一行配对文本（含云端代理地址与配对码），发到手机粘贴导入——手机端全程不需要 Cloudflare 控制台。重新生成会让旧配对码作废。</>}
-                />
+                <label>
+                  配对到手机
+                  <InfoTip
+                    label="配对说明"
+                    text={<>生成一行配对文本（含云端代理地址与配对码），发到手机粘贴导入——手机端全程不需要 Cloudflare 控制台。重新生成会让旧配对码作废。</>}
+                  />
+                </label>
                 <div style={{ display: 'flex', gap: 8, flex: 1 }}>
                   <input className="input" readOnly value={pairingText} placeholder="点右侧「生成配对码」…" aria-label="配对文本" />
                   {pairingText ? (
@@ -337,11 +343,13 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                 )}
               </div>
               <div className="set-row">
-                <label>从桌面导入</label>
-                <InfoTip
-                  label="导入说明"
-                  text={<>手机端用：粘贴桌面「配对到手机」生成的文本，自动填好云端代理地址与凭据。注意：会覆盖本机已填的凭据——桌面端已配置好的不要点导入。</>}
-                />
+                <label>
+                  从桌面导入
+                  <InfoTip
+                    label="导入说明"
+                    text={<>手机端用：粘贴桌面「配对到手机」生成的文本，自动填好云端代理地址与凭据。注意：会覆盖本机已填的凭据——桌面端已配置好的不要点导入。</>}
+                  />
+                </label>
                 <div style={{ display: 'flex', gap: 8, flex: 1 }}>
                   <input className="input" value={pairingImport} placeholder="手机端：粘贴配对文本，或点「扫码导入」" onChange={(e) => setPairingImport(e.target.value)} aria-label="配对文本导入" />
                   <button type="button" className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={() => (scanning ? stopScan() : void doStartScan())}>{scanning ? '取消扫码' : '扫码导入'}</button>

@@ -3381,13 +3381,8 @@ html[data-wheel] body {
   align-self: flex-start;
   line-height: 1;
 }
-/* set-row 里标签是独立列，行距 gap 会把问号推离标签悬在空档——
-   负外边距贴回标签右上角，上边距抵消行内边距使问号顶对齐标签顶（2026-11-09 量测） */
-.set-row .info-tip {
-  margin-left: calc(var(--sp-4) * -1 + 3px);
-  margin-top: var(--sp-2);
-}
-/* 大字号卡片标题（h2）里 vertical-align 到不了字面顶，位移补偿吸到标题右上角 */
+/* 行内问号已挪进标签/标题元素内部（2026-11-09 第六轮）：随文字换行永远贴右上角，
+   不再依赖 set-row 负边距补偿（窄窗换行形态下补偿会失效）；h2 大字号仍需位移到字面顶 */
 h2 .info-tip {
   transform: translateY(-10px);
 }

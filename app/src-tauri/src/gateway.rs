@@ -69,6 +69,10 @@ impl GatewayConfig {
         // 工作目录——从下载目录等位置启动时，工作目录下预置的 .env 可劫持上游地址（安全审计 F10）
         let mut vars: Vec<(String, String)> = Vec::new();
         parse_env_file(&data_dir.join("gateway.env"), &mut vars);
+        // Key 兜底（复盘 3.64）：gateway.env 缺失/无 Key 时回落同目录轮换副本 gateway.env.autobak
+        if var_from(&vars, "PWORK_LLM_API_KEY").map(|v| v.is_empty()).unwrap_or(true) {
+            parse_env_file(&data_dir.join("gateway.env.autobak"), &mut vars);
+        }
         if cfg!(debug_assertions) {
             parse_env_file(&PathBuf::from(".env.local"), &mut vars);
             parse_env_file(&PathBuf::from(".env"), &mut vars);
