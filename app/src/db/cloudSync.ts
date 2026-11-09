@@ -208,48 +208,47 @@ async function pushViaEndpoint(config: CloudConfig): Promise<PushResult> {
 /* ------------------------------ ② D1 直连模式 ------------------------------ */
 
 async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | number)[]): Promise<Record<string, unknown>[]> {
-  // api.cloudflare.com 不发 CORS 头（预检 405），浏览器页面直连必被拦——D1 查询先走本地
-  // 网关代理（8788，随 dev/serve/桌面版自启，已带跨域头）；网关不在（网络级失败）再退
-  // 直连（Node 语境可用）。网关有响应但报错（如 Token 无效 401）必须如实抛出——
-  // 2026-10-28 修复：旧版把这类业务错误也吞进 fallback 直连，浏览器端被 CORS 拦后
-  // 只剩 "Failed to fetch"，真实原因（凭据错）被完全掩盖
-  let resp: Response
+  // 三级回落（2026-11-09 重构：网关业务错误不再终止——配对码凭据在网关层会被官方 401 拒，
+  // 必须落到云端代理层（配对码的设计通路）；全部通路失败时报最后一层的真实原因。
+  // api.cloudflare.com 不发 CORS 头（预检 405），浏览器直连必被拦——此层仅 Node/测试语境可用）
+  let lastErr: string | null = null
+
+  // ① 本地网关（桌面版随应用自启；凭据转发官方裁定）
+  let resp: Response | null = null
   try {
-    resp = await fetch('http://127.0.0.1:8788/d1/query', {
+    const viaGateway = await fetch('http://127.0.0.1:8788/d1/query', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, token: config.token, sql, params }),
       signal: AbortSignal.timeout(30_000),
     })
-    if (!resp.ok) {
-      const body = await resp.text().catch(() => '')
-      const detail = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${resp.status}`
-      throw new Error(`D1 查询失败：${detail}（检查 账户 ID / 数据库 ID / API Token；API Token 需在 Cloudflare 控制台创建，不是部署输出的 ptk_ 开头 Token）`)
+    if (viaGateway.ok) return await readD1Results(viaGateway)
+    const body = await viaGateway.text().catch(() => '')
+    lastErr = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${viaGateway.status}`
+  } catch {
+    // 网关不在（连接被拒/超时）
+  }
+
+  // ② 自建 worker 的 CORS 代理（配对码凭据的设计通路；workers.dev 被阻的部署此路自然缺席）
+  if (config.endpoint.trim()) {
+    try {
+      const viaProxy = await fetch(`${config.endpoint.trim().replace(/\/+$/, '')}/api/d1/query`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
+        body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, sql, params }),
+        signal: AbortSignal.timeout(30_000),
+      })
+      if (viaProxy.ok) return await readD1Results(viaProxy)
+      const body = await viaProxy.text().catch(() => '')
+      const detail = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${viaProxy.status}`
+      lastErr = `云端代理：${detail}`
+    } catch {
+      // 代理不可达（workers.dev 被阻等）→ 落官方直连
     }
-  } catch (e) {
-    if (e instanceof Error && e.message.startsWith('D1 查询失败')) throw e
-    // 网关本身不在（连接被拒/超时）→ 走自建 worker 的 CORS 代理（2026-11-08 手机端主通路：
-    // worker 挂 CORS 头转发官方端点，workers.dev 被阻的部署此路自然缺席），仍未连通再退
-    // 官方直连（浏览器会被 CORS 拦，但 Node/测试语境可用）
-    if (config.endpoint.trim()) {
-      try {
-        const viaProxy = await fetch(`${config.endpoint.trim().replace(/\/+$/, '')}/api/d1/query`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: `Bearer ${config.token}` },
-          body: JSON.stringify({ accountId: config.accountId, databaseId: config.databaseId, sql, params }),
-          signal: AbortSignal.timeout(30_000),
-        })
-        if (!viaProxy.ok) {
-          const body = await viaProxy.text().catch(() => '')
-          const detail = body.match(/"error"\s*:\s*"([^"]+)"/)?.[1] ?? `HTTP ${viaProxy.status}`
-          throw new Error(`D1 查询失败：${detail}（云端代理返回；检查 API Token 与部署的 worker 是否已更新到最新版）`)
-        }
-        return await readD1Results(viaProxy)
-      } catch (e2) {
-        // 代理有响应但报业务错误 → 如实抛；代理本身不可达（workers.dev 被阻等）→ 落官方直连
-        if (e2 instanceof Error && e2.message.startsWith('D1 查询失败')) throw e2
-      }
-    }
+  }
+
+  // ③ 官方直连（无 CORS 头，浏览器页面会被拦；Node/测试语境可用）
+  try {
     resp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`,
       {
@@ -258,8 +257,12 @@ async function d1QueryImpl(config: CloudConfig, sql: string, params: (string | n
         body: JSON.stringify({ sql, params }),
       },
     )
+    return await readD1Results(resp)
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith('Cloudflare API HTTP')) lastErr = `官方直连：${e.message}`
+    if (lastErr) throw new Error(`D1 查询失败：${lastErr}`)
+    throw e
   }
-  return readD1Results(resp)
 }
 
 /** D1 官方响应解析（网关/云端代理/直连三条通路的响应同形状，共用此解析） */

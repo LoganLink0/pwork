@@ -118,7 +118,7 @@ describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
     expect(calls[2]).toContain('/accounts/acc1/d1/database/db1/query')
   })
 
-  it('云端代理返回业务错误 → 如实抛出不落直连（错误不被两级回落掩盖）', async () => {
+  it('云端代理返回业务错误 → 落官方直连试满三层，最终报真实原因（2026-11-09 新语义）', async () => {
     saveCloudConfig({ mode: 'd1', endpoint: 'https://pwork.example.workers.dev', token: 'bad-token', accountId: 'acc1', databaseId: 'db1' })
     const calls: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -129,7 +129,8 @@ describe('D1 直连模式（大陆网络绕过 workers.dev）', () => {
     const r = await syncFromCloud()
     expect(r.ok).toBe(false)
     expect(r.error).toContain('D1 查询失败')
-    expect(calls.length).toBe(2)
+    expect(calls.length).toBe(3)
+    expect(calls[2]).toContain('api.cloudflare.com')
   })
 
   it('D1 缺配置 → 明确报错', async () => {
