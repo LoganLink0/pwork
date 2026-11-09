@@ -81,11 +81,11 @@ jobs:
           echo "期望 ${EXPECTED} / 实际 ${ACTUAL}"
           [ "$EXPECTED" = "$ACTUAL" ] || { echo '版本不一致'; exit 1; }
 
-      - name: 启动应用并断言进程存活
+      - name: 直接执行二进制并断言进程存活（runner 无 GUI 会话，open 会被 launchd 拒）
         run: |
-          open /Applications/PWORK.app
+          /Applications/PWORK.app/Contents/MacOS/PWORK > app-run.log 2>&1 &
           sleep 15
-          pgrep -fl PWORK.app || { echo '应用进程未存活'; exit 1; }
+          pgrep -fl PWORK || { echo '应用进程未存活——启动日志：'; cat app-run.log; exit 1; }
 
       - name: 本地网关健康断言（127.0.0.1:8788）
         run: |
@@ -96,13 +96,10 @@ jobs:
           done
           [ "$ok" = 1 ] || { echo '网关健康检查未通过'; exit 1; }
 
-      - name: 截取主界面截图
+      - name: 收集运行日志
         run: |
-          sleep 5
-          screencapture -x smoke-screen.png
           mkdir -p smoke
-          cp smoke-screen.png smoke/
-          ls -la smoke/
+          cp app-run.log smoke/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         with:
