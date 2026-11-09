@@ -72,6 +72,7 @@ jobs:
         run: |
           xattr -cr out/PWORK.app 2>/dev/null || true
           cp -R out/PWORK.app /Applications/
+          chmod +x /Applications/PWORK.app/Contents/MacOS/app
           ls -la /Applications/PWORK.app/Contents/MacOS/
 
       - name: 断言版本与 package.json 一致
