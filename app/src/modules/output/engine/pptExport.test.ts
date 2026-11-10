@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildReportSlides } from './pptExport'
 import { estimateLines } from './pptRender'
-import type { ReportSnapshot } from '../types/models'
-import type { ReportData } from './reportData'
+import type { ReportSnapshot } from '../../../types/models'
+import type { ReportData } from '../../../engine/reportData'
 
 function mkData(over: Partial<ReportData> = {}): ReportData {
   return {

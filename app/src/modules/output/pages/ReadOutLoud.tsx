@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { gatherReportData, type ReportData, type ReportMode } from '../engine/reportData'
+import { gatherReportData, type ReportData, type ReportMode } from '../../../engine/reportData'
 
 const MODE_LABEL = { weekly: '周报', monthly: '月报' } as const
 

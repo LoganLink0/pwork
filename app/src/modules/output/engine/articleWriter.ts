@@ -2,9 +2,9 @@
  * 文章草稿（输出 O4）：速记与洞察卡按周期聚合成素材 → AI 整理成文章骨架（人逐节修改）→ 导出 Markdown。
  * 与报告撰写同一分工方式：AI 只产出结构化草稿，编辑权在人。
  */
-import { db } from '../db/schema'
-import { localDateOf, todayLocal } from './datetime'
-import { parseAiJson } from './aiJson'
+import { db } from '../../../db/schema'
+import { localDateOf, todayLocal } from '../../../engine/datetime'
+import { parseAiJson } from '../../../engine/aiJson'
 
 export interface ArticleMaterial {
   id: string

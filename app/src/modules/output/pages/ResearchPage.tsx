@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBlocks } from '../store/blocks'
-import { useProfiles } from '../store/profiles'
-import { fileToBlockContent } from '../engine/fileImport'
+import { useBlocks } from '../../../store/blocks'
+import { useProfiles } from '../../../store/profiles'
+import { fileToBlockContent } from '../../../engine/fileImport'
 import { extractMaterial } from '../engine/pptWriter'
 import {
   ARTICLE_VIEWS,
@@ -31,17 +31,17 @@ import {
   type ResearchFramework,
   type ResearchType,
 } from '../engine/research'
-import { byRecentUse, loadQuickSites, markQuickSiteUsed } from '../engine/quickLaunch'
-import { parseAiJson } from '../engine/aiJson'
-import { chatCompletionCached } from '../engine/aiCached'
-import { chatCompletion } from '../modules/review/engine/llm'
-import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../modules/review/engine/coach'
-import { gatewaySearchConfigured, gatewayWebSearch } from '../engine/webSearch'
-import { downloadFile } from '../db/repo'
-import { listBlocks } from '../db/blocksRepo'
-import { ArticleEditor } from '../components/writer/ArticleEditor'
-import { toast } from '../engine/toast'
-import { confirmDialog } from '../engine/confirm'
+import { byRecentUse, loadQuickSites, markQuickSiteUsed } from '../../../engine/quickLaunch'
+import { parseAiJson } from '../../../engine/aiJson'
+import { chatCompletionCached } from '../../../engine/aiCached'
+import { chatCompletion } from '../../review/engine/llm'
+import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../../review/engine/coach'
+import { gatewaySearchConfigured, gatewayWebSearch } from '../../../engine/webSearch'
+import { downloadFile } from '../../../db/repo'
+import { listBlocks } from '../../../db/blocksRepo'
+import { ArticleEditor } from '../components/ArticleEditor'
+import { toast } from '../../../engine/toast'
+import { confirmDialog } from '../../../engine/confirm'
 
 const WEB_ANSWER_SYSTEM =
   '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'

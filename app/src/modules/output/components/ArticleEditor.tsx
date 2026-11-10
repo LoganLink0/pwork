@@ -1,4 +1,4 @@
-import type { ArticleDraft } from '../../engine/articleWriter'
+import type { ArticleDraft } from '../engine/articleWriter'
 
 /** 文章草稿编辑器（共用）：标题/开头/逐节编辑/增删排序。文章草稿页与调研对象工作台共用 */
 export function ArticleEditor({ draft, onChange }: { draft: ArticleDraft; onChange: (d: ArticleDraft) => void }) {

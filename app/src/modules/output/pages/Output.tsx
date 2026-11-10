@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Icon } from '../components/shell/icons'
-import { useTasks } from '../store/tasks'
-import { useCollect } from '../store/collect'
-import { useGoals } from '../store/goals'
-import { useNotes } from '../store/notes'
+import { Icon } from '../../../components/shell/icons'
+import { useTasks } from '../../../store/tasks'
+import { useCollect } from '../../../store/collect'
+import { useGoals } from '../../../store/goals'
+import { useNotes } from '../../../store/notes'
 
 interface Tool { to: string; icon: string; name: string; desc: string; status: string }
 

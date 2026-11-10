@@ -4,7 +4,7 @@
  * 渲染由确定性转换器完成——AI 出错范围可控，产物必然是原生可编辑对象。
  * 材料提取：txt/md 直读；docx 走 mammoth；pdf 走 pdfjs-dist（均懒加载）。
  */
-import { parseAiJson } from './aiJson'
+import { parseAiJson } from '../../../engine/aiJson'
 
 export interface WriterMaterial {
   name: string

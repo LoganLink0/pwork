@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { db } from '../db/schema'
-import { gatherReportData } from './reportData'
-import { todayLocal } from './datetime'
-import type { TaskItem } from '../types/models'
+import { db } from '../../../db/schema'
+import { gatherReportData } from '../../../engine/reportData'
+import { todayLocal } from '../../../engine/datetime'
+import type { TaskItem } from '../../../types/models'
 
 /** 循环待办的报告口径（1.5 批）：完成记录计入闭环清单、循环任务不进闭环率分母 */
 

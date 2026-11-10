@@ -7,8 +7,8 @@
  *  ④ 配色常量集中定义：BG/PRIMARY/ACCENT/TEXT/MUTED（v3 同源），禁止逐页手挑。
  * 快照 ≥2 条时自动点亮"趋势图表页"。
  */
-import type { ReportData } from './reportData'
-import type { ReportSnapshot } from '../types/models'
+import type { ReportData } from '../../../engine/reportData'
+import type { ReportSnapshot } from '../../../types/models'
 
 export interface SlideSpec {
   kind: 'title' | 'stats' | 'bullets' | 'chart' | 'section' | 'table'

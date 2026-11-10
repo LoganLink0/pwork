@@ -10,12 +10,12 @@ import {
   type ArticleDraft,
   type ArticleMaterial,
 } from '../engine/articleWriter'
-import { downloadFile } from '../db/repo'
-import { confirmDialog } from '../engine/confirm'
-import { chatCompletionCached } from '../engine/aiCached'
-import { llmConfigured } from '../modules/review/engine/coach'
+import { downloadFile } from '../../../db/repo'
+import { confirmDialog } from '../../../engine/confirm'
+import { chatCompletionCached } from '../../../engine/aiCached'
+import { llmConfigured } from '../../review/engine/coach'
 import { exportArticleDocx, ARTICLE_VIEWS, type ArticleView } from '../engine/articleWriter'
-import { ArticleEditor } from '../components/writer/ArticleEditor'
+import { ArticleEditor } from '../components/ArticleEditor'
 
 const coachReady = llmConfigured
 

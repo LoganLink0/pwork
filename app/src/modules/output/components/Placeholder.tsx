@@ -1,6 +1,6 @@
-import { PLACEHOLDER } from '../content/placeholder'
+import { PLACEHOLDER } from '../../../content/placeholder'
 import { Link } from 'react-router-dom'
-import { Icon } from '../components/shell/icons'
+import { Icon } from '../../../components/shell/icons'
 
 /** 占位页（PRD §4.7）：不做假功能、不留死链接——说清将要做什么、为什么现在没有、现在能做什么 */
 export function Placeholder({ kind }: { kind: string }) {

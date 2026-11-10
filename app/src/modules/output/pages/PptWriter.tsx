@@ -11,10 +11,10 @@ import {
   type WriterOutline,
   type WriterSlide,
 } from '../engine/pptWriter'
-import { downloadFile } from '../db/repo'
-import { chatCompletionCached } from '../engine/aiCached'
-import { confirmDialog } from '../engine/confirm'
-import { llmConfigured } from '../modules/review/engine/coach'
+import { downloadFile } from '../../../db/repo'
+import { chatCompletionCached } from '../../../engine/aiCached'
+import { confirmDialog } from '../../../engine/confirm'
+import { llmConfigured } from '../../review/engine/coach'
 
 const coachReady = llmConfigured
 

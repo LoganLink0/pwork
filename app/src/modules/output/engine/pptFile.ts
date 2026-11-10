@@ -1,8 +1,8 @@
 /**
  * .pptx 文件写出层：动态引入 pptxgenjs（首包精简），渲染规格并触发下载。
  */
-import type { ReportData } from './reportData'
-import type { ReportSnapshot } from '../types/models'
+import type { ReportData } from '../../../engine/reportData'
+import type { ReportSnapshot } from '../../../types/models'
 import { buildReportSlides } from './pptExport'
 
 export async function exportReportPptx(d: ReportData, snapshots: ReportSnapshot[] = []): Promise<string> {

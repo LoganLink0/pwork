@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { gatherReportData, type ReportData, type ReportMode } from '../engine/reportData'
-import { todayLocal } from '../engine/datetime'
+import { gatherReportData, type ReportData, type ReportMode } from '../../../engine/reportData'
+import { todayLocal } from '../../../engine/datetime'
 
 /** 数据快照卡片（输出 O3）：闭环率/目标/洞察 → 分享卡片图（Canvas，复用 v3 配色） */
 export function DataCard() {

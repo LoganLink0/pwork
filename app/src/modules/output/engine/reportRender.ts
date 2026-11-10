@@ -2,7 +2,7 @@
  * 报告渲染器（输出 O1）：ReportData → Markdown / 独立 HTML。
  * 纯函数；HTML 自包含（内联 v3 同源配色），可直接发送或存 vault。
  */
-import type { ReportData } from './reportData'
+import type { ReportData } from '../../../engine/reportData'
 
 const MODE_LABEL = { weekly: '周报', monthly: '月报' } as const
 

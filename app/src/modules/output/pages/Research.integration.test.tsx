@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import App from '../App'
-import { db } from '../db/schema'
+import App from '../../../App'
+import { db } from '../../../db/schema'
 
 /**
  * 调研分析页（/output/research，2026-10-13 第一性原理重构）：
@@ -109,7 +109,7 @@ describe('调研分析页（任务式）', () => {
 
   it('旧任务（无框架）选中后 → ② 区直接给「生成框架」入口（2026-10-13 修复"选中后无法生成"）', async () => {
     // 造一个"旧版"任务：profile 存在、localStorage 无框架
-    const { saveProfile } = await import('../db/profilesRepo')
+    const { saveProfile } = await import('../../../db/profilesRepo')
     const p = await saveProfile({ name: '饿死', kind: '公司调研' })
     const user = userEvent.setup()
     render(<App />)
@@ -151,8 +151,8 @@ describe('调研分析页（任务式）', () => {
 
   it('旧版分节发现自动合并成一条流水（2026-10-21 迁移）', async () => {
     // 造一个"旧版"任务：profile 存在、框架是旧分节结构、发现按节存了三块
-    const { saveProfile } = await import('../db/profilesRepo')
-    const { saveBlock } = await import('../db/blocksRepo')
+    const { saveProfile } = await import('../../../db/profilesRepo')
+    const { saveBlock } = await import('../../../db/blocksRepo')
     const p = await saveProfile({ name: '旧任务迁移', kind: '公司调研' })
     await saveBlock({ title: '一、公司画像与业务', content: '员工 2 万人。', profileId: p.id })
     await saveBlock({ title: '三、切入判断', content: '从供应链切入。', profileId: p.id })

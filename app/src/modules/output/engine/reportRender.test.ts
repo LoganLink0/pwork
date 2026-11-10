@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { reportToHtml, reportToMarkdown, reportTitle } from './reportRender'
-import type { ReportData } from './reportData'
+import type { ReportData } from '../../../engine/reportData'
 
 function mkData(over: Partial<ReportData> = {}): ReportData {
   return {
@@ -88,7 +88,7 @@ describe('外部数据块（输出扩展）', () => {
     expect(html).toContain('a&lt;b')
   })
   it('parseBlockLines：中英冒号混排，超长键归文本', async () => {
-    const { parseBlockLines } = await import('./reportData')
+    const { parseBlockLines } = await import('../../../engine/reportData')
     const r = parseBlockLines('新增线索: 23\n成交金额：86万\n普通备注一行')
     expect(r.kv).toEqual([
       { k: '新增线索', v: '23' },
