@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CONTROL_LABEL, DELTA_LABEL, CONFIDENCE_LABEL, HELP } from '../content/copy'
 import { EXAMPLE_META, EXAMPLE_UBER_CLD, buildExampleClap } from '../content/example'
+import { listReviews } from '../../../db/repo'
 import { Icon } from '../../../components/shell/icons'
 import { useDraft } from '../store/draft'
 import { CldCanvas } from '../components/cld/CldCanvas'
@@ -32,6 +33,13 @@ export function Help() {
 
   async function loadExample() {
     setLoading(true)
+    // 示例档已存在则直接跳转（盲审 P2：连点/重复载入会堆出多份相同示例档）
+    const existing = (await listReviews()).find((r) => r.title === EXAMPLE_META.title && r.status === 'in-progress')
+    if (existing) {
+      setLoading(false)
+      navigate(`/review/wizard?resume=${existing.id}`)
+      return
+    }
     await startDraft({
       templateId: 'personal-weekly',
       type: 'personal',

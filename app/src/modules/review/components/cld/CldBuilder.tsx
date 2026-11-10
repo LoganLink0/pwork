@@ -171,13 +171,19 @@ export function CldBuilder() {
   function toAction(nodeId: string) {
     const node = cld.nodes.find((n) => n.id === nodeId)
     if (!node) return
+    const text = `围绕「${node.label}」制定下一步发力计划`
+    // 与 toInsight 同款去重（盲审 P2：双击生成重复行动卡→归档后两张重复任务）
+    if (cld.project.actions.some((a) => a.text === text)) {
+      setMsg(CLD.duplicate)
+      return
+    }
     void updateClap((clap) => ({
       ...clap,
       project: {
         ...clap.project,
         actions: [
           ...clap.project.actions,
-          { kind: 'start', text: `围绕「${node.label}」制定下一步发力计划`, ifThen: '', confidence: 1 },
+          { kind: 'start', text, ifThen: '', confidence: 1 },
         ],
       },
     }))

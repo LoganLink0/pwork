@@ -4,6 +4,7 @@ import { LIBRARY, } from '../content/copy'
 import { KnowledgeCapsule } from '../components/ui/KnowledgeCapsule'
 import { currentIntervalDays, daysUntilDue, isDue, isRetired, lastRevisitPartial, type RevisitResult } from '../engine/revisit'
 import { deleteInsight, listInsights, listReviews, updateInsight } from '../db/repo'
+import { confirmDialog } from '../../../engine/confirm'
 import { hashTheme } from '../engine/theme'
 import type { InsightRecord, ReviewRecord } from '../types/models'
 import { stickyStraight } from '../components/ui/sticky'
@@ -81,7 +82,9 @@ export function Library() {
   }
 
   async function removeInsight(ins: InsightRecord) {
-    if (!window.confirm(LIBRARY.confirmDel)) return
+    // 应用内确认弹层（盲审 P1：Tauri WebView 中原生 confirm 不受保证）
+    const ok = await confirmDialog({ title: LIBRARY.confirmDel, danger: true, confirmLabel: '删除' })
+    if (!ok) return
     setInsights((list) => (list ? list.filter((i) => i.id !== ins.id) : list))
     await deleteInsight(ins.id)
   }

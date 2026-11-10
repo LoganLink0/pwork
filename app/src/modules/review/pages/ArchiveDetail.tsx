@@ -4,6 +4,7 @@ import { ARCHIVE, DETAIL, GREETING, MEETING, SCENARIO_LABEL } from '../content/c
 import { reviewToMarkdown } from '../engine/markdown'
 import { fmtLocal } from '../engine/datetime'
 import { deleteReview, getReview, listActionsByReview } from '../db/repo'
+import { confirmDialog } from '../../../engine/confirm'
 import { getNote } from '../../../db/repo'
 import type { ActionItem, ReviewRecord } from '../types/models'
 import { DeltaBadge } from '../components/ui/DeltaBadge'
@@ -83,7 +84,9 @@ export function ArchiveDetail() {
   }
 
   async function onDelete() {
-    if (!window.confirm(DETAIL.confirmDelete)) return
+    // 应用内确认弹层（盲审 P1：Tauri WebView 中原生 confirm 不受保证）
+    const ok = await confirmDialog({ title: DETAIL.confirmDelete, danger: true, confirmLabel: '删除' })
+    if (!ok) return
     await deleteReview(rec!.id)
     navigate('/review')
   }

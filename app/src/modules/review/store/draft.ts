@@ -22,6 +22,10 @@ import { ARCHIVE, SCENARIO_LABEL } from '../content/copy'
 import { createTasksFromActions } from '../../../db/tasksRepo'
 import { useTasks } from '../../../store/tasks'
 
+// startDraft 创建互斥（模块级同步标记）：StrictMode 双挂载/快速双击时挡住并发进入，
+// 防止堆出成对空「进行中」档（盲审 P1；异步查重防不住是因为两次运行时 draft 均未落 set）
+let creating = false
+
 interface StartOpts {
   templateId: string
   type: ReviewType
@@ -35,7 +39,7 @@ interface StartOpts {
 interface DraftState {
   draft: ReviewRecord | null
   step: number
-  startDraft: (opts: StartOpts) => Promise<void>
+  startDraft: (opts: StartOpts) => Promise<string | undefined>
   loadDraft: (id: string) => Promise<void>
   setStep: (step: number) => void
   update: (patch: Partial<ReviewRecord>) => Promise<void>
@@ -52,12 +56,18 @@ export const useDraft = create<DraftState>((set, get) => ({
   step: 0,
 
   startDraft: async (opts) => {
-    const now = new Date().toISOString()
-    // 复用仍未动笔的空草稿（切快慢版/换模板都会另起新档——空档复用一条，避免仪表盘越积越多）
-    const emptySnap = JSON.stringify(emptyClap())
-    const existing = (await listReviews()).find(
-      (r) => r.status === 'in-progress' && JSON.stringify(r.clap) === emptySnap,
-    )
+    // 创建互斥（盲审 P1：StrictMode 双挂载下 effect 两次运行时 draft 都还是 null，
+    // 异步查重没防住，仪表盘堆积成对空「进行中」档）——同步标记挡住并发进入
+    if (creating) return
+    creating = true
+    try {
+      const now = new Date().toISOString()
+      // 复用仍未动笔的空草稿（切快慢版/换模板都会另起新档——空档复用一条，避免仪表盘越积越多）；
+      // 复用分支补 meeting（盲审 P0：个人空档被团队复用后 meeting undefined，会议室角色区永不渲染死锁）
+      const emptySnap = JSON.stringify(emptyClap())
+      const existing = (await listReviews()).find(
+        (r) => r.status === 'in-progress' && JSON.stringify(r.clap) === emptySnap,
+      )
     const draft: ReviewRecord = existing
       ? {
           ...existing,
@@ -66,7 +76,8 @@ export const useDraft = create<DraftState>((set, get) => ({
           templateId: opts.templateId,
           title: opts.title,
           quick: opts.quick,
-          noteIds: opts.noteIds?.length ? opts.noteIds : undefined,
+          noteIds: opts.noteIds?.length ? opts.noteIds : existing.noteIds,
+          meeting: opts.type === 'team' ? (existing.meeting ?? defaultMeeting()) : existing.meeting,
           updatedAt: now,
         }
       : {
@@ -89,6 +100,10 @@ export const useDraft = create<DraftState>((set, get) => ({
     // 反向回写 note.links.reviewIds（铁律 4：ID 引用双向可溯源）
     if (opts.noteIds?.length) {
       for (const nid of opts.noteIds) await attachReviewToNote(nid, draft.id)
+    }
+    return draft.id
+    } finally {
+      creating = false
     }
   },
 

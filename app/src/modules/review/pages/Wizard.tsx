@@ -182,6 +182,9 @@ export function Wizard() {
         title: `${template.name} · ${new Date().toLocaleDateString('zh-CN')}`,
         quick,
         noteIds: noteParam ? [noteParam] : undefined,
+      }).then((created) => {
+        // 新建后把 resume=<id> 写进 URL（盲审 P1：刷新/意外关闭后不回原草稿而是另起新空档）
+        if (created) setParams((p) => { const q = new URLSearchParams(p); q.set('resume', created); q.delete('template'); return q }, { replace: true })
       })
     }
     // 刻意只依赖 URL 参数：草稿状态一律从 getState 读取，避免创建竞态

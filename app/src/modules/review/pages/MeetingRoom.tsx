@@ -8,7 +8,6 @@ import { confirmDialog } from '../../../engine/confirm'
 import type { MeetingRoles, ReviewRecord } from '../types/models'
 import { StepComparison } from '../components/wizard/StepComparison'
 import { StepLogic } from '../components/wizard/StepLogic'
-import { CldBuilder } from '../components/cld/CldBuilder'
 import { StepAcknowledge } from '../components/wizard/StepAcknowledge'
 import { StepProject } from '../components/wizard/StepProject'
 import { PhaseTimer } from '../components/meeting/PhaseTimer'
@@ -145,6 +144,13 @@ export function MeetingRoom() {
   const phase = draft?.meeting?.phase ?? 0
   const draftReady = draft !== null && (resumeId ? draft.id === resumeId : draft.templateId === templateId)
   const valid = draft && draftReady ? meetingPhaseValid(phase, draft) : false
+
+  // 已归档档案不再进编辑界面（盲审 P2：与 Wizard 同款守卫——后退键回会议室会静默改掉已归档记录）
+  const draftStatus = draft?.status
+  useEffect(() => {
+    if (resumeId && draftStatus === 'archived') navigate(`/review/archive/${resumeId}`, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在 resume 载入到已归档草稿时触发一次
+  }, [resumeId, draftStatus])
 
   function setPhase(p: number) {
     void updateMeeting((m) => ({ ...m, phase: p }))
@@ -321,7 +327,6 @@ export function MeetingRoom() {
             <div className="hint-warn">{MEETING.causeRule(needCount, goodCount)}</div>
             {(goodCount > 6 || needCount > 6) && <p className="hint-warn">{MEETING.voteHint}</p>}
             <StepLogic quick={false} />
-            <CldBuilder />
           </section>
         </div>
       )}
