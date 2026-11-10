@@ -149,14 +149,20 @@ export async function getPreImportSnapshot(): Promise<PreImportSnapshot | null> 
 }
 
 /**
- * 恢复到导入前：先清空全部业务表（含软删除记录——快照里原样带着，恢复后一致），
- * 再按包裹整体导回。恢复路径必须在同一事务语义下先清后导，半途失败会抛给调用方入错误日志。
+ * 清空全部业务表（含软删除记录——恢复后与备份一致；kv 不在清理范围，本地设置与快照保留）
+ * 后按包裹整体导回。恢复路径必须在同一事务语义下先清后导，半途失败会抛给调用方入错误日志。
+ * 导入前快照恢复与突变守卫的一键恢复共用此入口。
  */
-export async function restorePreImportSnapshot(): Promise<ImportResult> {
-  const snap = await getPreImportSnapshot()
-  if (!snap) throw new Error('没有可恢复的导入前快照')
+export async function wipeAndImport(bundleText: string): Promise<ImportResult> {
   await Promise.all(
     [db.notes, db.sources, db.items, db.tasks, db.reviews, db.actions, db.insights, db.goals, db.blocks, db.profiles, db.caseFiles, db.snapshots].map((t) => t.clear()),
   )
-  return importBundle(JSON.stringify(snap.bundle))
+  return importBundle(bundleText)
+}
+
+/** 恢复到导入前 */
+export async function restorePreImportSnapshot(): Promise<ImportResult> {
+  const snap = await getPreImportSnapshot()
+  if (!snap) throw new Error('没有可恢复的导入前快照')
+  return wipeAndImport(JSON.stringify(snap.bundle))
 }

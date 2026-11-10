@@ -3248,6 +3248,32 @@ html[data-wheel] body {
   flex-wrap: wrap;
 }
 
+/* ---------- 主库突变守卫恢复窗口（2026-11-10）：复用迁移窗口的遮罩与卡形 ---------- */
+.guard-modal {
+  width: min(560px, 92vw);
+}
+.guard-drops {
+  margin: 0 0 14px;
+  padding: 12px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.guard-drops b {
+  color: var(--danger);
+}
+.guard-quo {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.guard-file {
+  display: none;
+}
+
 /* ---------- 速记附件（R2 批，桌面粘贴即存）：chips 行 + 阅读态画廊 ---------- */
 .att-row {
   display: flex;

@@ -23,9 +23,11 @@ import { applySourceCredit } from './engine/sourceCredit'
 import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
+import { runMutationGuard, type GuardResult } from './engine/dbGuard'
 import { runStartupNotifiesFromDb, notifyDigestReady, sendSystemNotify } from './engine/notify'
 import { loadKeybinds } from './engine/keybinds'
 import { MigrationModal } from './components/shell/MigrationModal'
+import { DbGuardModal } from './components/shell/DbGuardModal'
 import { storageReady } from './db/schema'
 import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
@@ -199,6 +201,8 @@ export default function App() {
   const loadTasks = useTasks((s) => s.load)
   // 数据存储升级窗口（08 S2）：桌面版检测到旧数据待迁移时展示；完成自动重开 / 暂不则本会话继续旧存储
   const [migrationPending, setMigrationPending] = useState(false)
+  // 主库突变守卫（2026-11-10）：启动比对发现数据骤减时全屏弹出，回答前不进主界面动作
+  const [guardAlert, setGuardAlert] = useState<GuardResult | null>(null)
   const startServicesRef = useRef<() => void>(() => {})
 
   useEffect(() => {
@@ -209,17 +213,38 @@ export default function App() {
     track(useGoals.getState().load(), '应用启动加载目标库')
     // 存储耐久第一道闸（0.3a）：启动即静默申请持久化保护；结果不弹通知（设置 → 数据管理 可查状态）
     track(requestPersistence(), '申请持久化存储')
-    // 数据不丢第三道闸（0.3f）：库打不开立即弹错误条给恢复指引，不静默带病运行
+    // 数据不丢第三道闸（0.3f）+ 主库突变守卫（2026-11-10 第四道闸）：库打不开立即弹错误条给
+    // 恢复指引；打得开则比对核心表计数与上次基准——某表骤减 95% 以上弹恢复窗口，并拦下本轮
+    // 自动备份（不给「变少后的库」写进备份链，把好备份轮换掉）
     track(
-      runStartupHealthCheck().then((r) => {
-        if (!r.ok) {
+      (async () => {
+        const h = await runStartupHealthCheck()
+        if (!h.ok) {
           void recordError({
             where: 'App.启动健康检查', kind: 'app',
-            message: `数据库打开失败，数据可能损坏：${r.error}。${recoveryGuidance(isDesktopApp())}`,
+            message: `数据库打开失败，数据可能损坏：${h.error}。${recoveryGuidance(isDesktopApp())}`,
           })
+          return
         }
-      }),
-      '启动数据健康检查',
+        const g = await runMutationGuard()
+        if (g.triggered) {
+          setGuardAlert(g)
+          return
+        }
+        // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
+        const r = await runAutoBackupIfDue()
+        if (r.downloaded) {
+          const where = r.location === 'dir' ? '备份文件夹' : r.location === 'disk' ? 'AppData 备份目录' : '下载文件夹'
+          toast('ok', `自动备份完成（${where}${r.fileName ? `：${r.fileName}` : ''}）`)
+        }
+        if (r.error) {
+          void recordError({ where: 'App.自动备份', kind: 'app', message: `自动备份失败：${r.error}` }, { silent: true })
+        }
+        if (r.rotateError) {
+          void recordError({ where: 'App.自动备份', kind: 'app', message: r.rotateError }, { silent: true })
+        }
+      })(),
+      '启动数据健康检查与自动备份',
     )
     // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知设置 可关）
     track(runStartupNotifiesFromDb(), '启动通知检查')
@@ -233,22 +258,6 @@ export default function App() {
         '注册全局热键',
       )
     }
-    // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
-    track(
-      runAutoBackupIfDue().then((r) => {
-        if (r.downloaded) {
-          const where = r.location === 'dir' ? '备份文件夹' : r.location === 'disk' ? 'AppData 备份目录' : '下载文件夹'
-          toast('ok', `自动备份完成（${where}${r.fileName ? `：${r.fileName}` : ''}）`)
-        }
-        if (r.error) {
-          void recordError({ where: 'App.自动备份', kind: 'app', message: `自动备份失败：${r.error}` }, { silent: true })
-        }
-        if (r.rotateError) {
-          void recordError({ where: 'App.自动备份', kind: 'app', message: r.rotateError }, { silent: true })
-        }
-      }),
-      '自动备份',
-    )
     // 打开应用自动同步云端（2026-10-12 用户拍板，04 设计"无定时，打开时同步"的补课）：
     // 已配置才拉；失败只入错误日志不弹条（云端偶发不可达不该每次打开都红条），成功拉到新条目则刷新采集库
     if (!autoSyncRan) {
@@ -484,6 +493,7 @@ export default function App() {
           }}
         />
       )}
+      {guardAlert && <DbGuardModal result={guardAlert} onKeep={() => setGuardAlert(null)} />}
       </RoutedBoundary>
     </HashRouter>
   )

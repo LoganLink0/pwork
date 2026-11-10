@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { runMigration } from '../../db/storage/migration'
+import { TABLE_LABEL } from '../../db/tableLabels'
 
 /**
  * 数据存储升级窗口（08 设计 S2）：桌面版检测到旧存储有数据时的一次性确认。
@@ -125,22 +126,4 @@ export function MigrationModal({ onSkip }: { onSkip: () => void }) {
       </div>
     </div>
   )
-}
-
-const TABLE_LABEL: Record<string, string> = {
-  notes: '速记',
-  sources: '信息源',
-  items: '信息条目',
-  tasks: '待办',
-  goals: '目标',
-  reviews: '复盘',
-  actions: '行动项',
-  insights: '洞察',
-  snapshots: '周趋势',
-  blocks: '数据块',
-  profiles: '调研对象',
-  caseFiles: '案例文件',
-  aiCache: 'AI 缓存',
-  errorLog: '错误日志',
-  kv: '本地设置',
 }

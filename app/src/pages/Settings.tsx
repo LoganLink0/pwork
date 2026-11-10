@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle, savePreImportSnapshot, getPreImportSnapshot, restorePreImportSnapshot } from '../db/backup'
+import { getQuarantine, readQuarantineBundle, clearQuarantine, refreshReferenceAfterRestore, type QuarantineInfo } from '../engine/dbGuard'
 import { pushCloudPrefs } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
@@ -123,6 +124,22 @@ export function Settings() {
     void getPreImportSnapshot().then((s) => setPreSnapAt(s?.at ?? null))
   }, [])
 
+  // 突变守卫隔离副本（2026-11-10）：启动守卫触发时留的那份「减少后状态」副本，此处可取走或删掉
+  const [quarInfo, setQuarInfo] = useState<QuarantineInfo | null>(null)
+  useEffect(() => {
+    void getQuarantine().then(setQuarInfo)
+  }, [])
+  const downloadQuarantine = async () => {
+    if (!quarInfo) return
+    try {
+      const text = await readQuarantineBundle(quarInfo)
+      const stamp = quarInfo.at.slice(0, 16).replace('T', '-')
+      downloadFile(`pwork-quarantine-${stamp}.json`, text, 'application/json')
+    } catch (e) {
+      setImportMsg(`隔离副本取不出：${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   // 错误日志（2026-10 用户要求：出错立即暴露 + 可查"哪里发生了什么"）——默认只看最近 5 条，其余折叠
   const [errors, setErrors] = useState<ErrorLogEntry[]>([])
   const [errBusy, setErrBusy] = useState(false)
@@ -234,6 +251,8 @@ export function Settings() {
   const doRestoreSnapshot = async () => {
     try {
       const r = await restorePreImportSnapshot()
+      // 有意的清表恢复——守卫基准随之刷新，下次启动不把这次恢复当突变
+      await refreshReferenceAfterRestore()
       await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load(), useGoals.getState().load()])
       setImportMsg(`已恢复到导入前的状态：${formatImportDetail(r) || '无变化'}`)
     } catch (e) {
@@ -582,6 +601,33 @@ export function Settings() {
                 }}
               >
                 恢复到导入前
+              </button>
+            </div>
+          )}
+          {quarInfo && (
+            <div className="set-row">
+              <label>突变时的数据副本</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                {fmtLocal(quarInfo.at)} 启动守卫发现数据骤减时自动留的副本
+                {quarInfo.where === 'file' ? `（备份文件夹里的 ${quarInfo.fileName}）` : '（存在应用本地存储）'}；确认现状没问题后可取走或删除
+              </span>
+              <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="把这份副本下载成 JSON 文件" onClick={() => void downloadQuarantine()}>
+                取走副本
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ flex: 'none' }}
+                title="删除这份副本的记录（桌面版备份文件夹里的文件会留在原地，可自行删除）"
+                onClick={() => {
+                  void confirmDialog({ title: '删除这份突变时的数据副本？', body: '删除后这份副本不再显示；桌面版备份文件夹里的文件会留在原地。', danger: true, confirmLabel: '删除' }).then(async (ok) => {
+                    if (!ok) return
+                    await clearQuarantine()
+                    setQuarInfo(null)
+                  })
+                }}
+              >
+                删除副本
               </button>
             </div>
           )}
