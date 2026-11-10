@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // runCollect 打桩：本文件只验证 store 层的失败恢复与耗时透出
-vi.mock('../engine/collect', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('../engine/collect')>()
+vi.mock('../modules/input/engine/collect', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('../modules/input/engine/collect')>()
   return { ...orig, runCollect: vi.fn() }
 })
 
 import { useCollect } from './collect'
-import { runCollect } from '../engine/collect'
+import { runCollect } from '../modules/input/engine/collect'
 import { listErrors } from '../engine/errorLog'
-import type { RunSummary } from '../engine/collect'
+import type { RunSummary } from '../modules/input/engine/collect'
 
 /** 「立即抓取」的失败路径（2026-10 事故回归：拒绝穿透曾让按钮永久停在「抓取中」） */
 

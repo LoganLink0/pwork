@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchVideoMeta, type VideoMeta } from '../../../engine/ytdlp'
+import { fetchVideoMeta, type VideoMeta } from '../../input/engine/ytdlp'
 import { isDesktopApp } from '../../../engine/platform'
 import { useCollect } from '../../../store/collect'
 

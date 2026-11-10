@@ -19,11 +19,11 @@ import {
   updateSource,
   type SourceInput,
 } from '../db/collect'
-import { runCollect, maintenance, type RunSummary } from '../engine/collect'
+import { runCollect, maintenance, type RunSummary } from '../modules/input/engine/collect'
 import { writeReferenceAfterPurge } from '../engine/dbGuard'
-import { backfillContentOnce, enqueueContent, onContentUpdate } from '../engine/articleContent'
-import { fingerprintOf } from '../engine/fingerprint'
-import { scoreByRules } from '../engine/rules'
+import { backfillContentOnce, enqueueContent, onContentUpdate } from '../modules/input/engine/articleContent'
+import { fingerprintOf } from '../modules/input/engine/fingerprint'
+import { scoreByRules } from '../modules/input/engine/rules'
 import { newId } from '../db/repo'
 import { recordError, track } from '../engine/errorLog'
 import { toast } from '../engine/toast'

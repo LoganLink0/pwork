@@ -29,8 +29,8 @@ const IDLE = (window as unknown as { requestIdleCallback?: (cb: () => void) => v
 const preloadIdle = (cb: () => void) => (IDLE ? IDLE(cb) : setTimeout(cb, 1200))
 preloadIdle(() => {
   void import('./pages/Settings')
-  void import('./pages/Notes')
-  void import('./pages/Digest')
+  void import('./modules/input/pages/Notes')
+  void import('./modules/input/pages/Digest')
   void import('./pages/Help')
 })
 

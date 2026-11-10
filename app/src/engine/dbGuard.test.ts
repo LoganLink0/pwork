@@ -253,7 +253,7 @@ describe('例行清理闸（守卫 × TTL 清理竞态修正，2026-11-10）', (
         release = r
       }),
     )
-    const { maintenance } = await import('../engine/collect')
+    const { maintenance } = await import('../modules/input/engine/collect')
     const run1 = maintenance() // 挂在闸上
     await new Promise((r) => setTimeout(r, 20))
     expect((await db.items.toArray()).length).toBe(3) // 闸未放行：数据不动
@@ -268,7 +268,7 @@ describe('例行清理闸（守卫 × TTL 清理竞态修正，2026-11-10）', (
   it('不持闸（默认已放行）时 maintenance 行为不变——非启动场景零影响', async () => {
     holdUntilGuardSettled(Promise.resolve())
     await db.items.bulkAdd([expiredDiscarded('g4')])
-    const { maintenance } = await import('../engine/collect')
+    const { maintenance } = await import('../modules/input/engine/collect')
     expect(await maintenance()).toBe(1)
   })
 })

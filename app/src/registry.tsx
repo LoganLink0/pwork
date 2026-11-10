@@ -71,19 +71,19 @@ export const PAGE_REGISTRY: PageReg[] = [
     loader: () => import('./pages/Goals').then((m) => ({ default: m.Goals })) },
 
   { path: '/input/notes', label: '速记', mark: 'mark-input', meta: ['速记', '输入 · 速记'], nav: 'module:input', sidebar: true, countFrom: 'notes',
-    loader: () => import('./pages/Notes').then((m) => ({ default: m.Notes })),
+    loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.Notes })),
     children: [
-      { path: '', index: true, loader: () => import('./pages/Notes').then((m) => ({ default: m.NotesEmptyPane })) },
-      { path: ':id', loader: () => import('./pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
+      { path: '', index: true, loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.NotesEmptyPane })) },
+      { path: ':id', loader: () => import('./modules/input/pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
     ] },
   { path: '/input/digest', label: '信息日报', mark: 'mark-input', meta: ['信息日报', '输入 · 信息采集'], nav: 'module:input', sidebar: true,
-    loader: () => import('./pages/Digest').then((m) => ({ default: m.Digest })) },
+    loader: () => import('./modules/input/pages/Digest').then((m) => ({ default: m.Digest })) },
   { path: '/input/sources', label: '信源', mark: 'mark-input', meta: ['信源', '输入 · 信息采集'], nav: 'module:input', sidebar: true, countFrom: 'sources',
-    loader: () => import('./pages/Sources').then((m) => ({ default: m.Sources })) },
+    loader: () => import('./modules/input/pages/Sources').then((m) => ({ default: m.Sources })) },
   { path: '/input/items', label: '条目库', mark: 'mark-input', meta: ['条目库', '输入 · 信息采集'], nav: 'module:input', sidebar: true,
-    loader: () => import('./pages/Items').then((m) => ({ default: m.Items })) },
+    loader: () => import('./modules/input/pages/Items').then((m) => ({ default: m.Items })) },
   { path: '/input/blocks', label: '外部数据', mark: 'mark-input', meta: ['外部数据', '输出 · 周报数据源'], nav: 'palette', paletteSub: '周报数据源',
-    loader: () => import('./pages/InputBlocks').then((m) => ({ default: m.InputBlocks })) },
+    loader: () => import('./modules/input/pages/InputBlocks').then((m) => ({ default: m.InputBlocks })) },
 
 
   { path: '/process', label: '处理', mark: 'mark-process', meta: ['处理', '模块 · 工具箱'], nav: 'module:process', sidebar: true,
