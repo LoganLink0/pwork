@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchVideoMeta, type VideoMeta } from '../../engine/ytdlp'
-import { isDesktopApp } from '../../engine/platform'
-import { useCollect } from '../../store/collect'
+import { fetchVideoMeta, type VideoMeta } from '../../../engine/ytdlp'
+import { isDesktopApp } from '../../../engine/platform'
+import { useCollect } from '../../../store/collect'
 
 /**
  * 视频链接入库（C 路线·链接捕获）：粘贴视频链接 → 本机 yt-dlp 解析标题/作者/简介

@@ -1,11 +1,11 @@
 import { Link, useParams } from 'react-router-dom'
-import { Icon } from '../components/shell/icons'
+import { Icon } from '../../../components/shell/icons'
 import { CATEGORY_META, ENGINE_LABEL, getTool } from '../content/processTools'
-import { TtsTool } from '../components/process/TtsTool'
-import { AsrTool } from '../components/process/AsrTool'
-import { CardTool } from '../components/process/CardTool'
-import { ImageProcessTool } from '../components/process/ImageProcessTool'
-import { CaptureTool } from '../components/process/CaptureTool'
+import { TtsTool } from '../components/TtsTool'
+import { AsrTool } from '../components/AsrTool'
+import { CardTool } from '../components/CardTool'
+import { ImageProcessTool } from '../components/ImageProcessTool'
+import { CaptureTool } from '../components/CaptureTool'
 
 function ToolBody({ id }: { id: string }) {
   switch (id) {

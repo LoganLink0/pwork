@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNotes } from '../../store/notes'
+import { useNotes } from '../../../store/notes'
 
 /** 浏览器语音识别的最小类型（Chrome/Edge 实现） */
 interface SpeechRecognitionLike {

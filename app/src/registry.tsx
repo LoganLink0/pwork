@@ -87,9 +87,9 @@ export const PAGE_REGISTRY: PageReg[] = [
 
 
   { path: '/process', label: '处理', mark: 'mark-process', meta: ['处理', '模块 · 工具箱'], nav: 'module:process', sidebar: true,
-    loader: () => import('./pages/Process').then((m) => ({ default: m.Process })) },
+    loader: () => import('./modules/process/pages/Process').then((m) => ({ default: m.Process })) },
   { path: '/process/t/:toolId', label: '工具', mark: 'mark-process', meta: ['工具', '模块 · 处理工具箱'], nav: 'none', metaPath: '/process/t',
-    loader: () => import('./pages/ProcessToolPage').then((m) => ({ default: m.ProcessToolPage })) },
+    loader: () => import('./modules/process/pages/ProcessToolPage').then((m) => ({ default: m.ProcessToolPage })) },
 
   { path: '/output', label: '输出', mark: 'mark-output', meta: ['输出', '模块 · 交付与成稿'], nav: 'module:output', sidebar: true,
     loader: () => import('./pages/Output').then((m) => ({ default: m.Output })) },

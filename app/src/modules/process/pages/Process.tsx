@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
-import { Icon } from '../components/shell/icons'
+import { Icon } from '../../../components/shell/icons'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
-import { byRecentUse, loadQuickSites, makeSite, normalizeSiteUrl, saveQuickSites, type QuickSite } from '../engine/quickLaunch'
-import { isDesktopApp } from '../engine/platform'
-import { recordError } from '../engine/errorLog'
-import { toast } from '../engine/toast'
-import { confirmDialog } from '../engine/confirm'
+import { byRecentUse, loadQuickSites, makeSite, normalizeSiteUrl, saveQuickSites, type QuickSite } from '../../../engine/quickLaunch'
+import { isDesktopApp } from '../../../engine/platform'
+import { recordError } from '../../../engine/errorLog'
+import { toast } from '../../../engine/toast'
+import { confirmDialog } from '../../../engine/confirm'
 
 /**
  * 处理模块主页：工具箱 + 快速启动。

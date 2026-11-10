@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import App from '../App'
 import { PAGE_REGISTRY } from '../registry'
 import { MODULE_NAV, PALETTE_PAGES, PAGE_META, WORKSPACE_NAV, crumbFor } from './nav'
-import { CATEGORY_ORDER, ENGINE_LABEL, PROCESS_TOOLS, toolRoute } from './processTools'
+import { CATEGORY_ORDER, ENGINE_LABEL, PROCESS_TOOLS, toolRoute } from '../modules/process/content/processTools'
 
 /**
  * 跨文件契约测试（AIHOT 审查教训的落地，2026-09-29；0.4-5 注册表化后升级）：
