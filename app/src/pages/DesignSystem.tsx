@@ -201,7 +201,7 @@ export function DesignSystem() {
       <div className="ds-section">
         <h2 style={{ fontSize: 'var(--fs-lg)' }}>命令面板</h2>
         <div className="ds-box">
-          <button type="button" className="btn-ghost" onClick={openPalette}>按 Ctrl+K 或点击打开命令面板</button>
+          <button type="button" className="btn-ghost" onClick={() => openPalette()}>按 Ctrl+K 或点击打开命令面板</button>
           <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 'var(--sp-2)' }}>
             快速动作 / 页面 / 速记混合搜索；W3 任务库上线后扩展（开放问题 C-4）。
           </p>

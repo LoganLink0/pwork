@@ -92,7 +92,7 @@ export function ReportGenerator() {
     const content = kind === 'md' ? mdWithAi : html
     downloadFile(`${title}.${kind}`, content, kind === 'md' ? 'text/markdown' : 'text/html')
     // 下载回执（盲审 P2：md/html 点击后无反馈，与 PPT/Word 导出风格对齐）
-    setMsg(`已下载 ${title}.${kind}——在浏览器下载列表里`)
+    setPptMsg(`已下载 ${title}.${kind}——在浏览器下载列表里`)
   }
 
   const exportPpt = async () => {

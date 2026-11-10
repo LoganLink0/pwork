@@ -10,7 +10,7 @@ function mkData(over: Partial<ReportData> = {}): ReportData {
     rangeLabel: '近 7 天 · 至 2026-09-06',
     sinceLocal: '2026-08-31',
     today: '2026-09-06',
-    tasks: { closed: [{ title: '完成任务甲', closedAt: '2026-09-02T00:00:00.000Z' }], openCount: 2, overdueCount: 1, closureRate: 33 },
+    tasks: { closed: [{ title: '完成任务甲', closedAt: '2026-09-02T00:00:00.000Z' }], openCount: 2, overdueCount: 1, closureRate: 33, droppedCount: 0 },
     goals: { active: [{ title: '完成闭环验证', due: '2026-09-06' }], doneInRange: 1 },
     insights: [{ text: '洞察一' }, { text: '洞察二' }],
     topItems: [{ title: 'AI 周刊', url: 'https://e.com/1', score: 82, sourceName: '阮一峰', otFlag: null }],

@@ -173,7 +173,7 @@ export function CldBuilder() {
     if (!node) return
     const text = `围绕「${node.label}」制定下一步发力计划`
     // 与 toInsight 同款去重（盲审 P2：双击生成重复行动卡→归档后两张重复任务）
-    if (cld.project.actions.some((a) => a.text === text)) {
+    if (draft!.clap.project.actions.some((a) => a.text === text)) {
       setMsg(CLD.duplicate)
       return
     }

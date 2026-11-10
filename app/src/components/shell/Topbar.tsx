@@ -21,7 +21,7 @@ export function Topbar() {
         <b>{title}</b>
         <span>{trail}</span>
       </div>
-      <button type="button" className="searchbox" onClick={openPalette} aria-label="打开搜索与命令面板">
+      <button type="button" className="searchbox" onClick={() => openPalette()} aria-label="打开搜索与命令面板">
         <Icon name="search" /> <span>搜索或跳转…</span> <kbd>Ctrl K</kbd>
       </button>
       {updateReady && (

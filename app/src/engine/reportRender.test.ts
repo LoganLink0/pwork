@@ -13,6 +13,7 @@ function mkData(over: Partial<ReportData> = {}): ReportData {
       openCount: 2,
       overdueCount: 1,
       closureRate: 33,
+      droppedCount: 0,
     },
     goals: { active: [{ title: '完成周复盘闭环验证', due: '2026-09-06' }], doneInRange: 0 },
     insights: [{ text: '外部机会要进 SWOT 才能变成策略' }],
@@ -38,7 +39,7 @@ describe('reportToMarkdown（输出 O1）', () => {
   })
 
   it('空数据 → 各板块优雅占位', () => {
-    const md = reportToMarkdown(mkData({ insights: [], topItems: [], tasks: { closed: [], openCount: 0, overdueCount: 0, closureRate: 0 } }))
+    const md = reportToMarkdown(mkData({ insights: [], topItems: [], tasks: { closed: [], openCount: 0, overdueCount: 0, closureRate: 0, droppedCount: 0 } }))
     expect(md).toContain('（本期没有任务记录）')
     expect(md).toContain('（本期没有新洞察卡）')
     expect(md).toContain('（本期没有高分信息条目）')
@@ -99,7 +100,7 @@ describe('外部数据块（输出扩展）', () => {
 
 describe('reportToHtml（自包含 HTML）', () => {
   it('统计卡与板块渲染，HTML 转义生效', () => {
-    const html = reportToHtml(mkData({ tasks: { closed: [{ title: '<b>注入</b>', closedAt: '2026-09-02T00:00:00.000Z' }], openCount: 0, overdueCount: 0, closureRate: 100 } }))
+    const html = reportToHtml(mkData({ tasks: { closed: [{ title: '<b>注入</b>', closedAt: '2026-09-02T00:00:00.000Z' }], openCount: 0, overdueCount: 0, closureRate: 100, droppedCount: 0 } }))
     expect(html).toContain('100%')
     expect(html).toContain('&lt;b&gt;注入&lt;/b&gt;')
     expect(html).not.toContain('<b>注入</b>')

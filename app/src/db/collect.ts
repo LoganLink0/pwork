@@ -207,7 +207,7 @@ export async function listDeletedItems(): Promise<Item[]> {
 export async function restoreItem(id: string): Promise<void> {
   const raw = await db.items.get(id)
   if (!raw || !raw.deletedAt) return
-  await db.items.put({ ...normalizeItem(raw), deletedAt: null, updatedAt: new Date().toISOString() })
+  await db.items.put({ ...normalizeItem(raw), deletedAt: undefined, updatedAt: new Date().toISOString() })
 }
 
 /** 读取防御（铁律 2）：旧数据可能缺 annotation/score 细分 */
