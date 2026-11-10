@@ -8,6 +8,8 @@ export interface RawFeedItem {
   url: string
   summary: string
   publishedAt: string | null
+  /** 播客附件（1.3 批）：条目带音频附件时存在；seconds 为时长（itunes:duration 提供，解析不出为 null） */
+  audio?: { seconds: number | null }
 }
 
 export interface ParseResult {
@@ -53,6 +55,60 @@ function dateOf(item: Element, atom: boolean): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
+/* ------------------------- 播客附件识别（1.3 批） ------------------------- */
+
+/** 音频扩展名：MIME 缺失/不规范时的第二判据（实测部分播客源 enclosure 不带 type） */
+const AUDIO_EXT = /\.(mp3|m4a|m4b|aac|ogg|oga|opus|wav|flac)(\?|#|$)/i
+
+/**
+ * 条目是否带音频附件 + 时长（纯函数）：RSS 看 <enclosure>、Atom 看 <link rel="enclosure">；
+ * MIME audio/* 或音频扩展名双判据。时长取 <itunes:duration>（秒数或 HH:MM:SS/MM:SS），
+ * 缺失或无法解析返回 null——只做发现与记录，不做播放器。
+ */
+export function audioInfoOf(item: Element, atom: boolean): { seconds: number | null } | null {
+  let url: string | null = null
+  let mime: string | null = null
+  if (atom) {
+    const link = [...item.querySelectorAll('link')].find((l) => l.getAttribute('rel') === 'enclosure')
+    if (link) {
+      url = link.getAttribute('href')
+      mime = link.getAttribute('type')
+    }
+  } else {
+    const enc = item.querySelector('enclosure')
+    if (enc) {
+      url = enc.getAttribute('url')
+      mime = enc.getAttribute('type')
+    }
+  }
+  if (!url) return null
+  const isAudio = (mime ?? '').startsWith('audio/') || AUDIO_EXT.test(url)
+  if (!isAudio) return null
+  const raw = textOf(item.getElementsByTagName('itunes:duration')[0] ?? null) ||
+    textOf(item.getElementsByTagName('duration')[0] ?? null)
+  return { seconds: parseDurationSeconds(raw) }
+}
+
+/** itunes:duration 解析：纯数字按秒；HH:MM:SS / MM:SS 按位求和；垃圾值返回 null */
+export function parseDurationSeconds(raw: string): number | null {
+  const t = raw.trim()
+  if (!t) return null
+  if (/^\d+$/.test(t)) return Number(t)
+  const parts = t.split(':').map((p) => Number(p))
+  if (parts.length < 2 || parts.length > 3 || parts.some((p) => !Number.isInteger(p) || p < 0)) return null
+  return parts.reduce((acc, p) => acc * 60 + p, 0)
+}
+
+/** 秒数 → 人话时长：无时长只说「含音频」；展示用，不进存储 */
+export function formatAudioDuration(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) return '含音频'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return m > 0 ? `含音频 ${h} 小时 ${m} 分钟` : `含音频 ${h} 小时`
+  if (m > 0) return `含音频 ${m} 分钟`
+  return '含音频不到 1 分钟'
+}
+
 /** 解析 RSS/Atom 文本；非 XML 或无条目 → ok:false */
 export function parseFeed(xml: string): ParseResult {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
@@ -71,7 +127,8 @@ export function parseFeed(xml: string): ParseResult {
     const title = textOf(el.querySelector('title'))
     const url = linkOf(el, isAtom)
     if (!title || !url) continue
-    items.push({ title, url, summary: summaryOf(el, isAtom), publishedAt: dateOf(el, isAtom) })
+    const audio = audioInfoOf(el, isAtom)
+    items.push({ title, url, summary: summaryOf(el, isAtom), publishedAt: dateOf(el, isAtom), ...(audio ? { audio } : {}) })
   }
   if (items.length === 0) {
     return { ok: false, items: [], error: '条目缺少标题或链接' }

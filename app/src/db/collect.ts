@@ -230,6 +230,8 @@ export function normalizeItem(raw: Item): Item {
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     content: typeof raw.content === 'string' ? raw.content : undefined,
     prev: isValidPrev(raw.prev) ? raw.prev : undefined,
+    hasAudio: raw.hasAudio === true,
+    audioSeconds: typeof raw.audioSeconds === 'number' && Number.isFinite(raw.audioSeconds) && raw.audioSeconds >= 0 ? raw.audioSeconds : null,
     otFlag: raw.otFlag ?? null,
     eventGroup: raw.eventGroup ?? null,
     expiresAt: raw.expiresAt ?? null,

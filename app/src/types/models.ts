@@ -298,6 +298,10 @@ export interface Item {
   /** 上一版正文（版本回退，R7 批）：「重新抓取」覆盖正文前把旧版存这里，只存一份不建版本链；
    *  恢复动作与当前版互换，可来回切。检索/报告/镜像投影均不消费此字段。 */
   prev?: { content: string; savedAt: string }
+  /** 播客条目（1.3 批）：feed 附件是音频（enclosure MIME audio/* 或音频扩展名）时为 true；
+   *  audioSeconds 为时长秒数（itunes:duration 提供，解析不出为 null）。只做发现与记录，不做播放器。 */
+  hasAudio?: boolean
+  audioSeconds?: number | null
   /** 规范化 URL + 归一化标题 的哈希 → 去重主键 */
   fingerprint: string
   /** 可选：多源同事件聚合键（C2 起用） */

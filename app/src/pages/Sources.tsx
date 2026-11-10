@@ -68,6 +68,8 @@ export function Sources() {
   }
   // 信源信用可见性：各源近 60 天投票统计（store 载 60 天，与引擎 applySourceCredit 同口径；升降由引擎在打开应用时自动做，这里只展示依据）
   const credit = useMemo(() => voteStatsBySource(items), [items])
+  // 播客信源标记（1.3 批）：该源有条目带音频附件即标记（源自 RSS 音频 enclosure，抓取时识别）
+  const audioSources = useMemo(() => new Set(items.filter((i) => i.hasAudio).map((i) => i.sourceId)), [items])
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   // 信息日报空态「去挑推荐信源」带 ?catalog=1 直达展开态
@@ -405,6 +407,7 @@ export function Sources() {
               <tr key={s.id} data-testid="src-row">
                 <td className="src-name">
                   {s.kind === 'ytdlp' && <span className="tier-badge tier-15" title="yt-dlp 信源：抓取时调本机 yt-dlp 拉投稿清单（标题+链接）" style={{ marginRight: 6 }}>yt</span>}
+                  {s.kind !== 'ytdlp' && audioSources.has(s.id) && <span className="tier-badge tier-15" title="播客信源：条目带音频附件（只做发现与记录，播放请用播客客户端）" style={{ marginRight: 6 }}>播客</span>}
                   {s.name}
                 </td>
                 <td>

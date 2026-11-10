@@ -191,6 +191,7 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
                 type="button"
                 className="mini-btn"
                 onClick={() => void restorePrev()}
+                disabled={grabbing}
                 title={`上一版存于 ${new Date(item.prev.savedAt).toLocaleString()}`}
               >
                 恢复上一版

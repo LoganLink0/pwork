@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseFeed, fetchFeed } from './rss'
+import { parseFeed, fetchFeed, parseDurationSeconds, formatAudioDuration } from './rss'
 
 const RSS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
@@ -65,6 +65,77 @@ describe('parseFeed', () => {
     const noLink = `<rss version="2.0"><channel><item><title>只有标题</title></item></channel></rss>`
     expect(parseFeed(noLink).ok).toBe(false)
     expect(parseFeed(noLink).error).toContain('标题或链接')
+  })
+})
+
+/** 播客附件识别（1.3 批）：enclosure MIME/扩展名双判据 + itunes:duration 三形态 */
+describe('播客附件识别（audioInfoOf / parseDurationSeconds）', () => {
+  const podcastRss = (enc: string, duration = '') =>
+    `<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
+      <item><title>第 42 期</title><link>https://a.com/ep42</link>${enc}${duration}</item>
+    </channel></rss>`
+
+  it('MIME audio/* 识别 + 秒数时长', () => {
+    const r = parseFeed(podcastRss('<enclosure type="audio/mpeg" url="https://a.com/ep42.mp3"/>', '<itunes:duration>3725</itunes:duration>'))
+    expect(r.items[0]?.audio).toEqual({ seconds: 3725 })
+  })
+
+  it('HH:MM:SS 与 MM:SS 时长形态', () => {
+    const r1 = parseFeed(podcastRss('<enclosure type="audio/mpeg" url="https://a.com/e.mp3"/>', '<itunes:duration>1:02:05</itunes:duration>'))
+    expect(r1.items[0]?.audio?.seconds).toBe(3725)
+    const r2 = parseFeed(podcastRss('<enclosure type="audio/mpeg" url="https://a.com/e.mp3"/>', '<itunes:duration>05:30</itunes:duration>'))
+    expect(r2.items[0]?.audio?.seconds).toBe(330)
+  })
+
+  it('无时长 / 垃圾时长 → seconds null，不编造', () => {
+    const r1 = parseFeed(podcastRss('<enclosure type="audio/mpeg" url="https://a.com/e.mp3"/>'))
+    expect(r1.items[0]?.audio).toEqual({ seconds: null })
+    const r2 = parseFeed(podcastRss('<enclosure type="audio/mpeg" url="https://a.com/e.mp3"/>', '<itunes:duration>大约一小时</itunes:duration>'))
+    expect(r2.items[0]?.audio?.seconds).toBeNull()
+  })
+
+  it('MIME 缺失时按音频扩展名兜底识别', () => {
+    const r = parseFeed(podcastRss('<enclosure url="https://cdn.a.com/e42.m4a?token=1"/>', '<itunes:duration>600</itunes:duration>'))
+    expect(r.items[0]?.audio?.seconds).toBe(600)
+  })
+
+  it('非音频附件（视频/文档）不识别为播客', () => {
+    const video = parseFeed(podcastRss('<enclosure type="video/mp4" url="https://a.com/e.mp4"/>'))
+    expect(video.items[0]?.audio).toBeUndefined()
+    const doc = parseFeed(podcastRss('<enclosure type="application/pdf" url="https://a.com/e.pdf"/>'))
+    expect(doc.items[0]?.audio).toBeUndefined()
+  })
+
+  it('Atom 的 link rel=enclosure 同样识别', () => {
+    const atom = `<feed xmlns="http://www.w3.org/2005/Atom"><entry>
+      <title>Ep 7</title><link rel="alternate" href="https://a.com/ep7"/>
+      <link rel="enclosure" type="audio/ogg" href="https://a.com/ep7.ogg"/>
+      <itunes:duration xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">1800</itunes:duration>
+    </entry></feed>`
+    const r = parseFeed(atom)
+    expect(r.items[0]?.audio).toEqual({ seconds: 1800 })
+  })
+
+  it('普通 RSS 无附件 → 不带 audio 字段（普通信源零影响）', () => {
+    const r = parseFeed(RSS_SAMPLE)
+    for (const item of r.items) expect(item.audio).toBeUndefined()
+  })
+
+  it('parseDurationSeconds 边界', () => {
+    expect(parseDurationSeconds('')).toBeNull()
+    expect(parseDurationSeconds('0')).toBe(0)
+    expect(parseDurationSeconds(' 90 ')).toBe(90)
+    expect(parseDurationSeconds('1:2:3:4')).toBeNull()
+    expect(parseDurationSeconds('-5')).toBeNull()
+    expect(parseDurationSeconds('1.5:30')).toBeNull()
+  })
+
+  it('formatAudioDuration 出人话', () => {
+    expect(formatAudioDuration(null)).toBe('含音频')
+    expect(formatAudioDuration(30)).toBe('含音频不到 1 分钟')
+    expect(formatAudioDuration(600)).toBe('含音频 10 分钟')
+    expect(formatAudioDuration(3600)).toBe('含音频 1 小时')
+    expect(formatAudioDuration(3725)).toBe('含音频 1 小时 2 分钟')
   })
 })
 

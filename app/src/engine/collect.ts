@@ -99,7 +99,7 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
 
 function buildScoredItem(
   source: Source,
-  raw: { title: string; url: string; summary: string; publishedAt: string | null },
+  raw: { title: string; url: string; summary: string; publishedAt: string | null; audio?: { seconds: number | null } },
   fp: string,
   domainSeen: number,
   config: CollectConfig,
@@ -134,12 +134,13 @@ function buildScoredItem(
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
+    ...(raw.audio ? { hasAudio: true, audioSeconds: raw.audio.seconds } : {}),
   }
 }
 
 function buildDiscardedItem(
   source: Source,
-  raw: { title: string; url: string; summary: string; publishedAt: string | null },
+  raw: { title: string; url: string; summary: string; publishedAt: string | null; audio?: { seconds: number | null } },
   fp: string,
   now: string,
   reason: string,
@@ -166,6 +167,7 @@ function buildDiscardedItem(
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
+    ...(raw.audio ? { hasAudio: true, audioSeconds: raw.audio.seconds } : {}),
   }
 }
 

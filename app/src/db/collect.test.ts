@@ -217,4 +217,16 @@ describe('旧 5 星数据迁移（2026-10-20：三档投票替代 5 星，读取
     const junk2 = { ...mkItem(), prev: { content: '', savedAt: 'x' } as unknown as Item['prev'] }
     expect(normalizeItem(junk2).prev).toBeUndefined()
   })
+
+  it('normalizeItem 对播客字段读取防御：缺省回 false/null，非法值清洗（1.3 批）', () => {
+    const base = normalizeItem(mkItem())
+    expect(base.hasAudio).toBe(false)
+    expect(base.audioSeconds).toBeNull()
+    const good = normalizeItem(mkItem({ hasAudio: true, audioSeconds: 600 }))
+    expect(good.hasAudio).toBe(true)
+    expect(good.audioSeconds).toBe(600)
+    const junk = normalizeItem(mkItem({ hasAudio: 'yes' as unknown as boolean, audioSeconds: -5 }))
+    expect(junk.hasAudio).toBe(false)
+    expect(junk.audioSeconds).toBeNull()
+  })
 })

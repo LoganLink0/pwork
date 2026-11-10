@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Item } from '../../types/models'
 import { fmtLocal, fmtCompact } from '../../engine/datetime'
+import { formatAudioDuration } from '../../engine/rss'
 import { TIER_LABEL } from '../../engine/itemTier'
 import { Icon } from '../shell/icons'
 import { useNotes } from '../../store/notes'
@@ -83,6 +84,11 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
         <div className="d-meta">
           <span>{item.sourceName}</span>
           <span className="tnum" title={`入库：${fmtLocal(item.fetchedAt)}`}>入库 {fmtCompact(item.fetchedAt)}</span>
+          {item.hasAudio && (
+            <span className="tagchip" title="这条来自播客类信源（带音频附件）；应用只做发现与记录，播放请在你的播客客户端进行">
+              {formatAudioDuration(item.audioSeconds ?? null)}
+            </span>
+          )}
           {item.tags.map((t) => (
             <span className="tagchip" key={t}>#{t}</span>
           ))}
