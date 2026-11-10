@@ -207,4 +207,14 @@ describe('旧 5 星数据迁移（2026-10-20：三档投票替代 5 星，读取
     const modern = mkItem({ annotation: { notes: '', vote: 'no', keepForever: false, linkedReviewId: null } })
     expect(normalizeItem(modern).annotation.vote).toBe('no')
   })
+
+  it('normalizeItem 对 prev（上一版正文）读取防御：缺字段/坏数据回 undefined，合法值保留', () => {
+    expect(normalizeItem(mkItem()).prev).toBeUndefined()
+    const good = { content: '上一版正文内容。', savedAt: '2026-11-10T00:00:00.000Z' }
+    expect(normalizeItem(mkItem({ prev: good })).prev).toEqual(good)
+    const junk1 = { ...mkItem(), prev: { content: 123, savedAt: '2026-11-10T00:00:00.000Z' } as unknown as Item['prev'] }
+    expect(normalizeItem(junk1).prev).toBeUndefined()
+    const junk2 = { ...mkItem(), prev: { content: '', savedAt: 'x' } as unknown as Item['prev'] }
+    expect(normalizeItem(junk2).prev).toBeUndefined()
+  })
 })

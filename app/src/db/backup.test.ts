@@ -7,7 +7,7 @@ import { createGoal } from './goalsRepo'
 import { saveBlock } from './blocksRepo'
 import { saveProfile } from './profilesRepo'
 import { addCaseFile } from './caseFilesRepo'
-import type { Note } from '../types/models'
+import type { Item, Note } from '../types/models'
 
 /**
  * 备份全量回归（铁律 6）：v2 包裹必须带上后来新增的五张表
@@ -111,5 +111,29 @@ describe('升级链夹具（0.3g）：0.1.10 真实备份形态 × 当前导入�
     const again = await importBundle(fixtureRaw)
     expect(again.detail.notes).toMatchObject({ added: 0, updated: 0, skipped: 1 })
     expect(await db.notes.count()).toBe(1)
+  })
+})
+
+describe('上一版正文（prev）随备份往返（R7 版本回退批）', () => {
+  it('导出→清库→导入，prev 原样回来', async () => {
+    const item: Item = {
+      id: 'itm_prev_rt', sourceId: 's1', sourceName: '源', url: 'https://a.com/p', title: '标题',
+      summary: '', fingerprint: 'fp_prev_rt', eventGroup: null, publishedAt: null,
+      fetchedAt: '2026-11-10T00:00:00.000Z', stage: 'kept',
+      score: { total: 50, source: 10, novelty: 10, relevance: 20, utility: 10 }, scoreReason: '', aiBy: 'rules',
+      tags: [], otFlag: null, expiresAt: null,
+      annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
+      content: '当前版正文。',
+      prev: { content: '上一版正文。', savedAt: '2026-11-10T01:00:00.000Z' },
+      createdAt: '2026-11-10T00:00:00.000Z', updatedAt: '2026-11-10T00:00:00.000Z', schemaVersion: 1,
+    }
+    await db.items.put(item)
+    const bundle = await buildBackupBundle()
+    await db.clearAll()
+    await importBundle(JSON.stringify(bundle))
+    const back = await db.items.get('itm_prev_rt')
+    expect(back?.content).toBe('当前版正文。')
+    expect(back?.prev?.content).toBe('上一版正文。')
+    expect(back?.prev?.savedAt).toBe('2026-11-10T01:00:00.000Z')
   })
 })

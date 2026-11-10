@@ -254,9 +254,12 @@ const inflight = new Map<string, Promise<FetchOutcome>>()
 
 /**
  * 抓单条正文并回填：队列与阅读视图（含打开时自动抓取）共用同一契约。
- * 成功写 content 并回调（带正文文本，阅读视图即时显示）；失败登记失败表，content 保持空。
+ * 默认不改已有正文（后台队列不重复请求源站）；「重新抓取」带 force 才真正重抓并覆盖，
+ * 覆盖前把旧版存进 prev（只存一份）——重抓抓差了可在阅读视图一键回退（R7 版本回退批）。
+ * 成功写 content 并回调（带正文文本，阅读视图即时显示）；失败登记失败表，content 保持不变。
  */
-export function fetchContentForItem(id: string): Promise<FetchOutcome> {
+export function fetchContentForItem(id: string, opts?: { force?: boolean }): Promise<FetchOutcome> {
+  if (opts?.force) return doFetchContent(id, true)
   const running = inflight.get(id)
   if (running) return running
   const p = doFetchContent(id).finally(() => inflight.delete(id))
@@ -264,11 +267,11 @@ export function fetchContentForItem(id: string): Promise<FetchOutcome> {
   return p
 }
 
-async function doFetchContent(id: string): Promise<FetchOutcome> {
+async function doFetchContent(id: string, force = false): Promise<FetchOutcome> {
   const item = await getItem(id)
   if (!item) return { ok: false, error: '条目不存在' }
   // 已有正文的条目直接返回（阅读视图先抓完、后台队列随后轮到同一条时不再重复请求源站）
-  if (item.content) return { ok: true, error: null, text: item.content }
+  if (item.content && !force) return { ok: true, error: null, text: item.content }
   const fetched = await fetchArticleHtml(item.url)
   if (!fetched.ok) {
     markFailed(id)
@@ -279,7 +282,14 @@ async function doFetchContent(id: string): Promise<FetchOutcome> {
     markFailed(id)
     return { ok: false, error: extracted.error }
   }
-  await putItem({ ...item, content: extracted.text, updatedAt: new Date().toISOString() })
+  const now = new Date().toISOString()
+  await putItem({
+    ...item,
+    content: extracted.text,
+    // 覆盖已有正文时旧版进 prev；首次回填不动已有 prev（若有）
+    prev: item.content ? { content: item.content, savedAt: now } : item.prev,
+    updatedAt: now,
+  })
   clearContentFailed(id)
   updateListener?.(id)
   return { ok: true, error: null, text: extracted.text }

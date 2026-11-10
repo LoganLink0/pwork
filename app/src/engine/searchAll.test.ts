@@ -51,6 +51,17 @@ describe('searchAll 正文级检索（G1 批：item.content 参与命中）', ()
     expect(itemHit?.snippet).not.toContain('**')
     expect(itemHit?.snippet).not.toContain('`gateway.env`')
   })
+
+  it('上一版正文（prev）不参与检索命中——只搜当前正文（R7 版本回退批）', async () => {
+    await putItem(makeItem('itm_prev1', {
+      content: '当前版本讲的是知识管理方法。',
+      prev: { content: '旧版本提到量子纠缠通信协议。', savedAt: '2026-11-10T00:00:00.000Z' },
+    }))
+    const stale = await searchAll('量子纠缠')
+    expect(stale.find((h) => h.kind === 'item')).toBeUndefined()
+    const current = await searchAll('知识管理')
+    expect(current.find((h) => h.kind === 'item')).toBeTruthy()
+  })
 })
 
 describe('askKeywords 自然语言问句切词（2026-11-08 AI 问答空态根因修复）', () => {

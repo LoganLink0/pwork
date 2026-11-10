@@ -4,6 +4,8 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { Item } from '../../types/models'
 import { fetchContentForItem, isContentFailed } from '../../engine/articleContent'
+import { putItem } from '../../db/collect'
+import { confirmDialog } from '../../engine/confirm'
 import { useNotes } from '../../store/notes'
 import { toast } from '../../engine/toast'
 
@@ -43,10 +45,10 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
   const bodyRef = useRef<HTMLDivElement>(null)
   const createNote = useNotes((s) => s.create)
 
-  const grab = async () => {
+  const grab = async (force = false) => {
     setGrabbing(true)
     setGrabErr(null)
-    const r = await fetchContentForItem(item.id)
+    const r = await fetchContentForItem(item.id, { force })
     setGrabbing(false)
     if (r.ok && r.text) {
       setGrabbed(r.text)
@@ -54,6 +56,24 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
     } else {
       setGrabErr(r.error ?? '抓取失败')
     }
+  }
+
+  /** 恢复上一版正文（R7）：与 prev 互换，可来回切——误重抓的救回入口 */
+  const restorePrev = async () => {
+    const p = item.prev
+    if (!p || !item.content) return
+    const ok = await confirmDialog({
+      title: '恢复上一版正文？',
+      body: '当前正文会先存为「上一版」，再点一次即可换回来。',
+      danger: true,
+      confirmLabel: '恢复',
+    })
+    if (!ok) return
+    const now = new Date().toISOString()
+    await putItem({ ...item, content: p.content, prev: { content: item.content, savedAt: now }, updatedAt: now })
+    setGrabbed(p.content)
+    onUpdated(item.id)
+    toast('ok', '已恢复上一版（当前版可再次换回）')
   }
 
   // 打开即抓：没有正文且上次没失败过才自动抓（失败过的不打扰源站，按钮留给用户决定）
@@ -165,8 +185,19 @@ export function ArticleReader({ item, onClose, onUpdated }: ArticleReaderProps) 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            {/* 存量条目重抓覆盖正文前旧版自动进 prev——抓差了用「恢复上一版」一键换回 */}
+            {item.prev && (
+              <button
+                type="button"
+                className="mini-btn"
+                onClick={() => void restorePrev()}
+                title={`上一版存于 ${new Date(item.prev.savedAt).toLocaleString()}`}
+              >
+                恢复上一版
+              </button>
+            )}
             {/* 存量条目抓于纯文本时代，重抓一次即换新 Markdown 格式（标题层级可区分） */}
-            <button type="button" className="mini-btn" onClick={() => { setGrabbed(null); void grab() }} disabled={grabbing}>
+            <button type="button" className="mini-btn" onClick={() => { setGrabbed(null); void grab(true) }} disabled={grabbing}>
               重新抓取
             </button>
             <button type="button" className="mini-btn" onClick={onClose} aria-label="关闭阅读视图">

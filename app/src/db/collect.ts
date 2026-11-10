@@ -219,11 +219,17 @@ export function mapStarsToVote(stars: number | undefined | null): 'want' | 'meh'
   return 'no'
 }
 
+/** 上一版正文的结构校验（读取防御，铁律 2）：旧备份缺字段/坏数据一律回 undefined */
+function isValidPrev(p: Item['prev']): p is NonNullable<Item['prev']> {
+  return !!p && typeof p.content === 'string' && p.content.length > 0 && typeof p.savedAt === 'string'
+}
+
 export function normalizeItem(raw: Item): Item {
   return {
     ...raw,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     content: typeof raw.content === 'string' ? raw.content : undefined,
+    prev: isValidPrev(raw.prev) ? raw.prev : undefined,
     otFlag: raw.otFlag ?? null,
     eventGroup: raw.eventGroup ?? null,
     expiresAt: raw.expiresAt ?? null,

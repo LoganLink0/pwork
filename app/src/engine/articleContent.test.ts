@@ -202,6 +202,44 @@ describe('正文队列（真实 db：写入回填 / 失败登记 / 手动解除�
     await vi.waitFor(() => expect(queueDepth()).toBe(0))
   })
 
+  it('force 重抓（阅读视图「重新抓取」）覆盖正文，旧版自动进 prev', async () => {
+    const item = makeItem({ id: `itm_${Date.now()}_fv1`, url: 'https://a.com/fv1', content: '第一版旧正文，讲的是完全不同的话题内容。'.repeat(8) })
+    await putItem(item)
+    vi.stubGlobal('fetch', stubFetch({ 'https://a.com/fv1': { body: ARTICLE_HTML } }))
+    const r = await fetchContentForItem(item.id, { force: true })
+    expect(r.ok).toBe(true)
+    const after = await getItem(item.id)
+    expect(after?.content).toContain('某公司发布新一代模型')
+    expect(after?.prev?.content).toContain('第一版旧正文')
+    expect(typeof after?.prev?.savedAt).toBe('string')
+  })
+
+  it('force 重抓失败：正文与 prev 都保持原样', async () => {
+    const item = makeItem({ id: `itm_${Date.now()}_fv2`, url: 'https://a.com/fv404', content: '失败场景的旧正文，保持原样不动。'.repeat(8) })
+    await putItem(item)
+    vi.stubGlobal('fetch', stubFetch({}))
+    const r = await fetchContentForItem(item.id, { force: true })
+    expect(r.ok).toBe(false)
+    const after = await getItem(item.id)
+    expect(after?.content).toContain('失败场景的旧正文')
+    expect(after?.prev).toBeUndefined()
+  })
+
+  it('首次回填（无正文）不写 prev，已有 prev 不被清掉', async () => {
+    const item = makeItem({
+      id: `itm_${Date.now()}_fv3`, url: 'https://a.com/fv3',
+      prev: { content: '更早的一版旧正文。'.repeat(8), savedAt: '2026-11-01T00:00:00.000Z' },
+    })
+    await putItem(item)
+    vi.stubGlobal('fetch', stubFetch({ 'https://a.com/fv3': { body: ARTICLE_HTML } }))
+    const r = await fetchContentForItem(item.id)
+    expect(r.ok).toBe(true)
+    const after = await getItem(item.id)
+    expect(after?.content).toContain('某公司发布新一代模型')
+    expect(after?.prev?.content).toContain('更早的一版旧正文')
+    expect(after?.prev?.savedAt).toBe('2026-11-01T00:00:00.000Z')
+  })
+
   it('进行中去重：并发两次抓同一条只发一次请求', async () => {
     const item = makeItem({ id: `itm_${Date.now()}_dedup`, url: 'https://a.com/dedup' })
     await putItem(item)
