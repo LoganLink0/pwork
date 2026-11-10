@@ -5,6 +5,7 @@ import { useGoals } from '../store/goals'
 import { todayLocal } from '../engine/datetime'
 import { resolveLane } from '../engine/taskLane'
 import { scheduleGroups, type ScheduleEntry } from '../engine/taskSchedule'
+import { RECURRENCE_DAYS, RECURRENCE_LABEL, type RecurrenceInterval } from '../db/tasksRepo'
 import { Icon } from '../components/shell/icons'
 import { toast } from '../engine/toast'
 import { confirmDialog } from '../engine/confirm'
@@ -28,8 +29,7 @@ const LANE_META: Record<TaskLane, { name: string; rule: string }> = {
 }
 
 /** 本地日期展示：相对词带具体日期（'看到截止日期'的主体——悬停 tooltip 没人会发现） */
-function dueLabel(due: string | undefined, today: string): { text: string; over: boolean; soon: boolean } {
-  if (!due) return { text: '无期限', over: false, soon: false }
+function dueLabel(due: string | undefined, today: string): { text: string; over: boolean; soon: boolean } {  if (!due) return { text: '无期限', over: false, soon: false }
   const diff = Math.round((new Date(due + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86_400_000)
   const d = new Date(due + 'T12:00:00')
   const date = `${d.getMonth() + 1}月${d.getDate()}日`
@@ -64,14 +64,56 @@ function OriginBadge({ task }: { task: { origin?: TaskItem['origin'] } }) {
   )
 }
 
+/**
+ * 完成热力条（1.5 批习惯追踪）：近 12 周（84 天）逐日完成次数，格子按周排列、
+ * 颜色深浅表示当天完成的次数（所有循环任务的 doneDates 汇总）。没有完成记录时不渲染——
+ * 空态不加噪音。悬停给日期与次数，纯展示。
+ */
+function HabitHeatStrip({ tasks, today }: { tasks: TaskItem[]; today: string }) {
+  const { cells, total } = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const t of tasks) {
+      for (const d of t.doneDates ?? []) counts.set(d, (counts.get(d) ?? 0) + 1)
+    }
+    const base = new Date(today + 'T12:00:00')
+    const cells: { day: string; count: number }[] = []
+    for (let i = 83; i >= 0; i--) {
+      const dt = new Date(base)
+      dt.setDate(base.getDate() - i)
+      const p = (n: number) => String(n).padStart(2, '0')
+      const day = `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`
+      cells.push({ day, count: counts.get(day) ?? 0 })
+    }
+    return { cells, total: [...counts.values()].reduce((a, b) => a + b, 0) }
+  }, [tasks, today])
+  if (total === 0) return null
+  const max = Math.max(...cells.map((c) => c.count), 1)
+  const level = (n: number) => (n === 0 ? 0 : n === 1 ? 1 : Math.ceil((n / max) * 3))
+  return (
+    <div className="heat-wrap" data-testid="habit-heat" aria-label="近 12 周循环完成记录">
+      <span className="heat-label">近 12 周完成 {total} 次</span>
+      <div className="heat-strip">
+        {cells.map((c) => (
+          <span
+            key={c.day}
+            className={`heat-cell heat-${level(c.count)}`}
+            title={`${c.day}${c.count > 0 ? ` · 完成 ${c.count} 次` : ''}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function Tasks() {
   const { tasks, stats, create, setStatus, postpone, remove, setLane, update, load, scanProjectTodos, loaded: tasksLoaded } = useTasks()
   const goals = useGoals((s) => s.goals)
   const [draft, setDraft] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState({ title: '', due: '' })
+  const [editDraft, setEditDraft] = useState({ title: '', due: '', recurrence: '' })
   const [draftDue, setDraftDue] = useState('')
+  const [draftRecurrence, setDraftRecurrence] = useState('')
   const [view, setView] = useState<'lanes' | 'schedule'>(() =>
     localStorage.getItem(VIEW_KEY) === 'schedule' ? 'schedule' : 'lanes',
   )
@@ -79,11 +121,15 @@ export function Tasks() {
 
   const startEdit = (t: TaskItem) => {
     setEditingTaskId(t.id)
-    setEditDraft({ title: t.title, due: t.due ?? '' })
+    setEditDraft({ title: t.title, due: t.due ?? '', recurrence: t.recurrenceDays ? String(t.recurrenceDays) : '' })
   }
 
   const saveEdit = async (id: string) => {
-    await update(id, editDraft)
+    await update(id, {
+      title: editDraft.title,
+      due: editDraft.due,
+      recurrenceDays: editDraft.recurrence ? (Number(editDraft.recurrence) as RecurrenceInterval) : null,
+    })
     setEditingTaskId(null)
   }
 
@@ -139,9 +185,15 @@ export function Tasks() {
 
   const submit = async () => {
     if (!draft.trim()) return
-    await create({ title: draft, due: draftDue || undefined, origin: { kind: 'manual', refId: null } })
+    await create({
+      title: draft,
+      due: draftDue || undefined,
+      recurrenceDays: draftRecurrence ? (Number(draftRecurrence) as RecurrenceInterval) : undefined,
+      origin: { kind: 'manual', refId: null },
+    })
     setDraft('')
     setDraftDue('')
+    setDraftRecurrence('')
   }
 
   const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
@@ -181,6 +233,18 @@ export function Tasks() {
                 onChange={(e) => setEditDraft((s) => ({ ...s, due: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && void saveEdit(t.id)}
               />
+              <select
+                style={{ flex: 'none' }}
+                value={editDraft.recurrence}
+                aria-label="任务重复间隔"
+                title="重复间隔——完成后自动派生下一期（复盘行动项来源的任务不建议循环）"
+                onChange={(e) => setEditDraft((s) => ({ ...s, recurrence: e.target.value }))}
+              >
+                <option value="">不重复</option>
+                {RECURRENCE_DAYS.map((d) => (
+                  <option key={d} value={d}>{RECURRENCE_LABEL[d]}</option>
+                ))}
+              </select>
             </div>
             <div className="task-row-meta">
               <button type="button" className="mini-btn" onClick={() => void saveEdit(t.id)}>保存</button>
@@ -247,6 +311,14 @@ export function Tasks() {
           <div className="task-row-meta">
             {/* 来源徽章贴标题下（元数据行）；已结束行复用同位置 */}
             {!closed && <OriginBadge task={t} />}
+            {t.recurrenceDays && (
+              <span
+                className="tagchip"
+                title={`每${RECURRENCE_LABEL[t.recurrenceDays]}循环：完成后自动派生下一期（从完成日算起）`}
+              >
+                <Icon name="repeat" size={12} /> {RECURRENCE_LABEL[t.recurrenceDays]}循环 · 已完成 {(t.doneDates ?? []).length} 次
+              </span>
+            )}
             {closed ? (
               <>
                 <OriginBadge task={t} />
@@ -398,6 +470,9 @@ export function Tasks() {
         </div>
       </div>
 
+      {/* 完成热力条（1.5 批习惯追踪）：近 12 周逐日完成次数，有循环完成记录才出现 */}
+      <HabitHeatStrip tasks={tasks} today={today} />
+
       <div className="quick-add" data-testid="quick-add">
         <span className="qa-plus" aria-hidden>＋</span>
         <input
@@ -416,6 +491,18 @@ export function Tasks() {
           onChange={(e) => setDraftDue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
+        <select
+          style={{ flex: 'none' }}
+          value={draftRecurrence}
+          aria-label="新任务重复间隔（可选）"
+          title="重复间隔（可选）——完成后自动派生下一期，从完成日算起"
+          onChange={(e) => setDraftRecurrence(e.target.value)}
+        >
+          <option value="">不重复</option>
+          {RECURRENCE_DAYS.map((d) => (
+            <option key={d} value={d}>{RECURRENCE_LABEL[d]}</option>
+          ))}
+        </select>
         <span className="qa-hint"><kbd>↵</kbd> 添加</span>
       </div>
 

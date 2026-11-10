@@ -58,15 +58,35 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
 
   const live = allTasks.filter((t) => t.deletedAt === null)
   const droppedCount = live.filter((t) => t.status === 'dropped').length
-  // 闭环率分母剔除已放弃任务（盲审 P2：放弃项拉低闭环率且无法从报告数字解释）
-  const rated = live.filter((t) => t.status !== 'dropped')
-  const closed = live
-    .filter((t) => t.status === 'done' && inRange(t.closedAt))
-    .map((t) => ({ title: t.title, closedAt: t.closedAt! }))
+  // 循环待办（1.5 批）：勾选完成即派生重开，永远处于 todo 态——
+  // 完成记录（doneDates）落在区间内的次数计入闭环清单；循环任务本身移出闭环率分母
+  //（否则永久 todo 会把闭环率拖到 0，数字无法解释）
+  const recurring = live.filter((t) => t.recurrenceDays)
+  const recurringClosures: { title: string; closedAt: string }[] = []
+  for (const t of recurring) {
+    for (const d of t.doneDates ?? []) {
+      if (d >= sinceLocal && d <= todayLocal(now)) recurringClosures.push({ title: t.title, closedAt: `${d}T12:00:00` })
+    }
+  }
+  // 闭环率分母剔除已放弃任务（盲审 P2）。循环待办的口径（1.5 批，可解释数字红线）：
+  // 一次性任务按「完成数/任务数」；循环任务「本期完成过至少一次」即算闭环（本期完成多次
+  // 也只计 1——循环没有「攒闭环」的概念，只回答这个周期有没有兑现）。分母为 0 时回 0（既有约定）。
+  const rated = live.filter((t) => t.status !== 'dropped' && !t.recurrenceDays)
+  const recFulfilled = recurring.filter((t) => (t.doneDates ?? []).some((d) => d >= sinceLocal && d <= todayLocal(now))).length
+  const closed = [
+    ...live
+      .filter((t) => t.status === 'done' && inRange(t.closedAt))
+      .map((t) => ({ title: t.title, closedAt: t.closedAt! })),
+    ...recurringClosures.sort((a, b) => a.closedAt.localeCompare(b.closedAt)),
+  ]
   const open = live.filter((t) => t.status === 'todo')
   const today = todayLocal(now)
   const overdueCount = open.filter((t) => (t.due ?? '9999') < today).length
-  const closureRate = rated.length === 0 ? 0 : Math.round((rated.filter((t) => t.status === 'done').length / rated.length) * 100)
+  const rateDenominator = rated.length + recurring.length
+  const closureRate =
+    rateDenominator === 0
+      ? 0
+      : Math.round(((rated.filter((t) => t.status === 'done').length + recFulfilled) / rateDenominator) * 100)
 
   const activeGoals = allGoals
     .filter((g) => g.status === 'active' && g.deletedAt === null)

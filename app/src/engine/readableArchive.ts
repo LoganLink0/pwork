@@ -11,6 +11,7 @@
  */
 import JSZip from 'jszip'
 import { stringify as stringifyYaml } from 'yaml'
+import { RECURRENCE_LABEL } from '../db/tasksRepo'
 import type { Goal, Item, Note, Source, TaskItem } from '../types/models'
 import type { ActionItem, InsightRecord, ReviewRecord } from '../modules/review/types/models'
 
@@ -51,7 +52,12 @@ function noteBody(n: Note): string {
 function taskBody(t: TaskItem): string {
   const due = t.due ?? '无期限'
   const status = t.status === 'done' ? '已完成' : t.status === 'dropped' ? '已搁置' : '进行中'
-  return `# ${t.title}\n\n- 期限：${due}\n- 状态：${status}${t.ifThen ? `\n- 执行意图：${t.ifThen}` : ''}\n`
+  const lines = [`# ${t.title}`, '', `- 期限：${due}`, `- 状态：${status}`]
+  // 循环待办与完成记录（1.5 批）：镜像与可读档案里保持人可读（Obsidian 同样可读）
+  if (t.recurrenceDays) lines.push(`- 重复：${RECURRENCE_LABEL[t.recurrenceDays]}（完成后自动派生下一期）`)
+  if (t.doneDates?.length) lines.push(`- 已完成：${t.doneDates.length} 次，最近 ${t.doneDates[t.doneDates.length - 1]}`)
+  if (t.ifThen) lines.push(`- 执行意图：${t.ifThen}`)
+  return lines.join('\n') + '\n'
 }
 
 function goalBody(g: Goal): string {

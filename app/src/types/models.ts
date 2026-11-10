@@ -170,6 +170,11 @@ export interface TaskItem {
   status: 'todo' | 'done' | 'dropped'
   /** 'YYYY-MM-DD' 本地日期（逾期判断） */
   due?: string
+  /** 循环待办（1.5 批）：重复间隔天数（1=每天 7=每周 14=两周 30=每月 90=每季）；缺省=一次性任务。
+   *  勾选完成时从完成日派生下一期到期日并立即重开（防逾期雪崩），完成记录进 doneDates。 */
+  recurrenceDays?: 1 | 7 | 14 | 30 | 90
+  /** 完成记录（习惯追踪）：完成的本地日 'YYYY-MM-DD'，最多保留 52 条（截最旧的） */
+  doneDates?: string[]
   /** 若来自复盘行动项，保留 if-then 执行意图 */
   ifThen?: string
   /** 分诊车道（缺省 3=可绕开；due 到期日自动升为 1 显示） */

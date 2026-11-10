@@ -11,18 +11,30 @@ import { todayLocal } from '../engine/datetime'
 
 export const TASK_SCHEMA_VERSION = 1
 
+/** 循环待办合法间隔（1.5 批）：1=每天 7=每周 14=两周 30=每月 90=每季 */
+export const RECURRENCE_DAYS = [1, 7, 14, 30, 90] as const
+export type RecurrenceInterval = (typeof RECURRENCE_DAYS)[number]
+/** 间隔 → 界面叫法（徽章/下拉/镜像 frontmatter 共用，同一概念全站同名） */
+export const RECURRENCE_LABEL: Record<RecurrenceInterval, string> = { 1: '每天', 7: '每周', 14: '每两周', 30: '每月', 90: '每季' }
+/** 完成记录保留条数：习惯数据看趋势用一年量足够，防无限增长 */
+export const DONE_DATES_CAP = 52
+
 export interface CreateTaskInput {
   title: string
   due?: string
   ifThen?: string
   lane?: TaskLane
   origin?: { kind: TaskOriginKind; refId?: string | null }
+  recurrenceDays?: RecurrenceInterval
 }
 
 const ORIGIN_KINDS: readonly TaskOriginKind[] = ['review', 'note', 'item', 'manual', 'todo-file'] as const
 
+const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 function normalizeTask(raw: TaskItem): TaskItem {
   const kind = (raw.origin?.kind ?? 'manual') as TaskOriginKind
+  const dates = Array.isArray(raw.doneDates) ? raw.doneDates.filter((d) => typeof d === 'string' && LOCAL_DATE.test(d)) : []
   return {
     ...raw,
     status: raw.status ?? 'todo',
@@ -31,6 +43,10 @@ function normalizeTask(raw: TaskItem): TaskItem {
     ifThen: raw.ifThen ?? undefined,
     // 旧备份可能带已退役的来源类型（如投标），归一为手动，防运行时死分支
     origin: raw.origin && ORIGIN_KINDS.includes(kind) ? raw.origin : { kind: 'manual', refId: null },
+    recurrenceDays: (RECURRENCE_DAYS as readonly number[]).includes(raw.recurrenceDays as number)
+      ? raw.recurrenceDays
+      : undefined,
+    doneDates: dates.length > 0 ? [...new Set(dates)].slice(-DONE_DATES_CAP) : undefined,
     closedAt: raw.closedAt ?? null,
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? TASK_SCHEMA_VERSION,
@@ -38,6 +54,33 @@ function normalizeTask(raw: TaskItem): TaskItem {
 }
 
 export { normalizeTask }
+
+/** 本地日期 +N 天（纯函数；跨月/跨年/闰日交给 Date 求解，输出仍为本地 'YYYY-MM-DD'） */
+export function addDaysLocal(dateLocal: string, days: number): string {
+  const [y, m, d] = dateLocal.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days, 12)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`
+}
+
+/**
+ * 循环完成派生（纯函数，1.5 批）：勾选完成时从完成日派生下一期到期日并立即重开——
+ * 逾期不雪崩（连欠三周也只欠这一期），完成记录 +1（近 52 条，截最旧的）。
+ * 复盘来源的行动项是一次性承诺：循环的下一期不回写复盘，行动项保持其闭环态。
+ */
+export function deriveRecurrenceNext(
+  raw: TaskItem,
+  doneLocal: string,
+): Pick<TaskItem, 'status' | 'due' | 'doneDates' | 'closedAt' | 'updatedAt'> {
+  const interval = raw.recurrenceDays as RecurrenceInterval
+  return {
+    status: 'todo',
+    due: addDaysLocal(doneLocal, interval),
+    doneDates: [...(raw.doneDates ?? []), doneLocal].slice(-DONE_DATES_CAP),
+    closedAt: null,
+    updatedAt: new Date().toISOString(),
+  }
+}
 
 export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
   const now = new Date().toISOString()
@@ -48,6 +91,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
     lane: input.lane,
     due: input.due,
     ifThen: input.ifThen,
+    recurrenceDays: input.recurrenceDays,
     origin: { kind: input.origin?.kind ?? 'manual', refId: input.origin?.refId ?? null },
     closedAt: null,
     createdAt: now,
@@ -79,10 +123,17 @@ export async function getTask(id: string): Promise<TaskItem | undefined> {
   return raw ? normalizeTask(raw) : undefined
 }
 
-/** 闭环/重开/放弃 —— 任务库是状态 SSOT；复盘来源反向同步 ActionItem（FUPAN 统计口径不变） */
+/** 闭环/重开/放弃 —— 任务库是状态 SSOT；复盘来源反向同步 ActionItem（FUPAN 统计口径不变）。
+ *  循环待办（1.5 批）：勾选完成走派生重开（deriveRecurrenceNext），复盘来源的行动项保持闭环不回写 */
 export async function setTaskStatus(id: string, status: TaskItem['status']): Promise<void> {
   const raw = await db.tasks.get(id)
   if (!raw) return
+  if (status === 'done' && raw.recurrenceDays) {
+    const next = deriveRecurrenceNext(normalizeTask(raw), todayLocal())
+    await db.tasks.put({ ...normalizeTask(raw), ...next })
+    // 复盘来源的行动项是一次性承诺：行动项保持其闭环态，循环的下一期不回写复盘
+    return
+  }
   const closing = status === 'done' || status === 'dropped'
   await db.tasks.put({
     ...normalizeTask(raw),
@@ -127,15 +178,24 @@ export async function setTaskLane(id: string, lane: TaskLane): Promise<void> {
   await db.tasks.put({ ...normalizeTask(raw), lane, updatedAt: new Date().toISOString() })
 }
 
-/** 编辑待办（标题/期限；期限空串=清除）。行内编辑入口的后端（2026-10-24）。
+/** 编辑待办（标题/期限/重复间隔；期限空串=清除，重复间隔 null=改回一次性）。行内编辑入口的后端（2026-10-24）。
  *  复盘行动项生成的任务（origin.refId=行动项 id）：标题/期限同步回写行动项，防双份漂移 */
-export async function updateTaskFields(id: string, patch: { title?: string; due?: string }): Promise<void> {
+export async function updateTaskFields(
+  id: string,
+  patch: { title?: string; due?: string; recurrenceDays?: RecurrenceInterval | null },
+): Promise<void> {
   const raw = await db.tasks.get(id)
   if (!raw) return
   const next = {
     ...normalizeTask(raw),
     title: patch.title !== undefined ? patch.title.trim() || raw.title : raw.title,
     due: patch.due !== undefined ? patch.due || undefined : raw.due,
+    recurrenceDays:
+      patch.recurrenceDays === undefined
+        ? raw.recurrenceDays
+        : patch.recurrenceDays === null
+          ? undefined
+          : patch.recurrenceDays,
     updatedAt: new Date().toISOString(),
   }
   await db.tasks.put(next)

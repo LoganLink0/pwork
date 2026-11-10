@@ -10,6 +10,7 @@ import {
   setTaskLane,
   updateTaskFields,
   type CreateTaskInput,
+  type RecurrenceInterval,
 } from '../db/tasksRepo'
 import type { TaskItem, TaskLane } from '../types/models'
 import { toTodoTaskInputs } from '../engine/todoScan'
@@ -45,8 +46,8 @@ interface TasksState {
   postpone: (id: string, days?: number) => Promise<void>
   remove: (id: string) => Promise<void>
   setLane: (id: string, lane: TaskLane) => Promise<void>
-  /** 行内编辑：标题与期限（空期限=清除） */
-  update: (id: string, patch: { title?: string; due?: string }) => Promise<void>
+  /** 行内编辑：标题与期限（空期限=清除）与重复间隔（null=改回一次性） */
+  update: (id: string, patch: { title?: string; due?: string; recurrenceDays?: RecurrenceInterval | null }) => Promise<void>
   /** 扫描各项目 TODO.md → 导入未完成项（幂等）。trigger='open' 为开机静默（无手势不弹授权）；'manual' 可选目录/请求授权 */
   scanProjectTodos: (trigger: 'open' | 'manual') => Promise<TodoScanOutcome>
 }
