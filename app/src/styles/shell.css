@@ -3331,11 +3331,65 @@ html[data-wheel] body {
 .corner-toasts {
   position: fixed;
   right: var(--sp-4);
-  bottom: var(--sp-4);
+  bottom: calc(var(--sp-4) + 60px);  /* 让出常驻「问小 P」圆钮的位置，回执叠在它上方 */
   z-index: 120;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+}
+
+/* 问小 P（2026-11-10 用户点子）：常驻圆钮，点击唤起命令面板（Ctrl K 同款）。
+   P 字标 = Perfect Partner 完美搭档——AI 入口从此有性格、有位置、看得见 */
+.little-p {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 90;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(232, 131, 58, 0.35);
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.little-p:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(232, 131, 58, 0.45);
+}
+.little-p img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: block;
+}
+.little-p .little-p-tag {
+  position: absolute;
+  right: 54px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 8px);
+  padding: 3px 10px;
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.little-p:hover .little-p-tag,
+.little-p:focus-visible .little-p-tag {
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  /* 移动端让出底部导航（60px）：圆钮悬在导航上方 */
+  .little-p {
+    bottom: 74px;
+  }
 }
 .corner-card {
   display: flex;
