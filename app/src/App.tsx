@@ -31,6 +31,7 @@ import { cloudConfigured, syncFromCloud } from './db/cloudSync'
 import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
 import { useNotifyHub } from './engine/notifyCenter'
+import { LittleP } from './components/shell/LittleP'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
@@ -448,6 +449,7 @@ export default function App() {
         <FirstRunRedirect />
         <ExternalLinks />
         <GlobalShortcuts />
+        <LittleP />
         <div className="app">
           <Sidebar />
           <div className="main">
