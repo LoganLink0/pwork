@@ -34,6 +34,7 @@ export function CommandPalette() {
 
 function PaletteDialog() {
   const close = useUi((s) => s.closePalette)
+  const via = useUi((s) => s.paletteVia)
   const openQuick = useUi((s) => s.openQuick)
   const notes = useNotes((s) => s.notes)
   const navigate = useNavigate()
@@ -171,10 +172,10 @@ function PaletteDialog() {
       ...(query.trim()
         ? [{
             key: 'ask-ai',
-            group: 'AI 问答',
+            group: '问小 P（AI 全库问答）',
             icon: 'zap',
-            label: `问 AI：「${query.trim().slice(0, 30)}」`,
-            sub: '速记、条目、洞察里找答案',
+            label: `问问小 P：「${query.trim().slice(0, 30)}」`,
+            sub: '小 P 去速记、条目、洞察里找答案',
             accent: true,
             run: runAsk,
           }]
@@ -216,7 +217,7 @@ function PaletteDialog() {
           <input
             ref={inputRef}
             value={query}
-            placeholder="搜索页面 / 速记 / 全库，或执行动作…"
+            placeholder={via === 'littlep' ? '问小 P 一句话，或直接搜索全库…' : '搜索页面 / 速记 / 全库，或执行动作…'}
             onChange={(e) => {
               setQuery(e.target.value)
               setSel(0)
@@ -236,7 +237,7 @@ function PaletteDialog() {
           )}
           {ask.phase === 'done' && (
             <div style={{ padding: 'var(--sp-3) var(--sp-4)' }}>
-              <div className="p-group">AI 回答（基于你库里的内容）</div>
+              <div className="p-group">小 P 回答（基于你库里的内容）</div>
               <div style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--fs-sm)', lineHeight: 1.7, padding: 'var(--sp-2) 0' }}>{ask.answer}</div>
               {(ask.sources?.length ?? 0) > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)', paddingTop: 'var(--sp-2)' }}>

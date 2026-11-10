@@ -72,7 +72,7 @@ export default defineConfig(({ mode }) => ({
       registerType: mode === 'demo' ? 'autoUpdate' : 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: '个人工作台 PWORK',
+        name: 'PWORK 个人工作台',
         short_name: '工作台',
         description: '本地优先的四模块个人操作系统——输入 → 处理 → 输出 → 回路，数据只属于你',
         lang: 'zh-CN',

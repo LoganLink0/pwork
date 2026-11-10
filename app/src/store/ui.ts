@@ -6,10 +6,12 @@ import { applyAndSavePrefs, loadPrefs, type Prefs } from '../engine/prefs'
  *  轮盘不在此管理：它是独立无焦点小窗（label=wheel），开关由 Rust 热键直控 */
 interface UiState {
   paletteOpen: boolean
+  /** 面板打开来源：littlep（问小 P 圆钮）时输入框占位切换为提问式（2026-11-10 问小 P 衍生优化） */
+  paletteVia: 'key' | 'littlep'
   quickOpen: boolean
   theme: ThemePref
   prefs: Prefs
-  openPalette: () => void
+  openPalette: (via?: 'key' | 'littlep') => void
   closePalette: () => void
   openQuick: () => void
   closeQuick: () => void
@@ -24,10 +26,11 @@ interface UiState {
 
 export const useUi = create<UiState>((set) => ({
   paletteOpen: false,
+  paletteVia: 'key',
   quickOpen: false,
   theme: loadTheme(),
   prefs: loadPrefs(),
-  openPalette: () => set({ paletteOpen: true }),
+  openPalette: (via = 'key') => set({ paletteOpen: true, paletteVia: via }),
   closePalette: () => set({ paletteOpen: false }),
   openQuick: () => set({ quickOpen: true }),
   closeQuick: () => set({ quickOpen: false }),
