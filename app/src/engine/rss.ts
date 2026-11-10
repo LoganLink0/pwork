@@ -109,6 +109,13 @@ export function formatAudioDuration(seconds: number | null): string {
   return '含音频不到 1 分钟'
 }
 
+/** 关键词监控地址（1.4 批）：必应搜索的原生 RSS 输出（cn.bing.com/search?format=rss）。
+ *  不经第三方桥接——官方文档查证 Google News 路由已从 RSSHub 移除，公共实例对 bing/search
+ *  路由实测返回空；原生输出大陆直连可达、无中间层。关键词 URL 编码（空格/#/&/引号等）。 */
+export function keywordFeedUrl(keyword: string): string {
+  return `https://cn.bing.com/search?format=rss&q=${encodeURIComponent(keyword.trim())}`
+}
+
 /** 解析 RSS/Atom 文本；非 XML 或无条目 → ok:false */
 export function parseFeed(xml: string): ParseResult {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')

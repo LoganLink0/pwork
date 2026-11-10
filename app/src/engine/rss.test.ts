@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseFeed, fetchFeed, parseDurationSeconds, formatAudioDuration } from './rss'
+import { parseFeed, fetchFeed, parseDurationSeconds, formatAudioDuration, keywordFeedUrl } from './rss'
 
 const RSS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
@@ -136,6 +136,26 @@ describe('播客附件识别（audioInfoOf / parseDurationSeconds）', () => {
     expect(formatAudioDuration(600)).toBe('含音频 10 分钟')
     expect(formatAudioDuration(3600)).toBe('含音频 1 小时')
     expect(formatAudioDuration(3725)).toBe('含音频 1 小时 2 分钟')
+  })
+})
+
+/** 关键词监控地址（1.4 批）：必应原生 RSS，关键词 URL 编码 */
+describe('keywordFeedUrl（关键词监控）', () => {
+  it('中文关键词生成必应搜索订阅地址', () => {
+    expect(keywordFeedUrl('人工智能')).toBe(`https://cn.bing.com/search?format=rss&q=${encodeURIComponent('人工智能')}`)
+  })
+
+  it('空格与特殊字符（# & 引号）全部编码，原始字符不进 URL', () => {
+    const kw = 'AI #1 "chat" & more'
+    const url = keywordFeedUrl(kw)
+    expect(url).toBe(`https://cn.bing.com/search?format=rss&q=${encodeURIComponent(kw)}`)
+    expect(url).not.toContain('"')
+    expect(url).not.toContain(' ')
+    expect(decodeURIComponent(url.split('&q=')[1]!)).toBe(kw)
+  })
+
+  it('两端空白修剪', () => {
+    expect(keywordFeedUrl('  人工智能  ')).toBe(keywordFeedUrl('人工智能'))
   })
 })
 

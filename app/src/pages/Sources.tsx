@@ -13,6 +13,7 @@ import { probeFeedUrl } from '../engine/feedProbe'
 import { discoverLeads } from '../engine/sourceDiscover'
 import { probeYtdlp } from '../engine/ytdlp'
 import { confirmDialog } from '../engine/confirm'
+import { keywordFeedUrl } from '../engine/rss'
 import { isDesktopApp } from '../engine/platform'
 import { fmtLocal } from '../engine/datetime'
 import { sourcesToOpml, parseOpml } from '../engine/opml'
@@ -72,6 +73,9 @@ export function Sources() {
   const audioSources = useMemo(() => new Set(items.filter((i) => i.hasAudio).map((i) => i.sourceId)), [items])
   const [editId, setEditId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  // 关键词监控（1.4 批）：表单里输入关键词生成必应原生 RSS 订阅地址，零引擎改动
+  const [kwMode, setKwMode] = useState(false)
+  const [kw, setKw] = useState('')
   // 信息日报空态「去挑推荐信源」带 ?catalog=1 直达展开态
   const [searchParams] = useSearchParams()
   const [catalogOpen, setCatalogOpen] = useState(() => searchParams.get('catalog') === '1')
@@ -81,14 +85,30 @@ export function Sources() {
   const inactiveFail = sources.filter((s) => !s.active && s.health.failStreak >= 3)
 
   const submit = async () => {
-    if (!form || !form.name.trim() || !form.url.trim()) return
+    if (!form) return
+    let url = form.url
+    let name = form.name
+    // 关键词监控（1.4 批）：关键词生成必应原生 RSS 地址，名称自动补默认；非新增模式不走此路
+    if (kwMode && !editId && (form.kind ?? 'rss') === 'rss') {
+      const word = kw.trim()
+      if (!word) {
+        setMsg('先输入要监控的关键词')
+        return
+      }
+      url = keywordFeedUrl(word)
+      name = form.name.trim() || `${word} · 关键词监控`
+    }
+    if (!name.trim() || !url.trim()) return
+    const payload = { ...form, url, name }
     if (editId) {
-      await editSource(editId, form)
+      await editSource(editId, payload)
       setEditId(null)
     } else {
-      await addSource(form)
+      await addSource(payload)
     }
     setForm(null)
+    setKwMode(false)
+    setKw('')
     setMsg('已保存')
   }
 
@@ -181,7 +201,7 @@ export function Sources() {
             </button>
           )}
           {form === null && (
-            <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null) }}>＋ 添加信源</button>
+            <button type="button" className="btn-primary" onClick={() => { setForm({ ...EMPTY_FORM }); setEditId(null); setKwMode(false); setKw('') }}>＋ 添加信源</button>
           )}
           {sources.length > 1 && (
             sources.every((s) => !s.active) ? (
@@ -317,36 +337,71 @@ export function Sources() {
               )}
             </label>
             <label>地址
-              <input
-                className="input"
-                value={form.url}
-                placeholder={form.kind === 'ytdlp' ? 'https://space.bilibili.com/UP主ID/video 或 https://youtube.com/@频道/videos' : 'https://…（原生 RSS / RSSHub 路由）'}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-              />
-              {form.kind === 'rss' && (
-                <span style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', marginTop: 4 }}>
+              {kwMode && !editId && (form.kind ?? 'rss') === 'rss' ? (
+                <>
+                  <input
+                    className="input"
+                    value={kw}
+                    placeholder="输入要监控的关键词，如：人工智能"
+                    onChange={(e) => setKw(e.target.value)}
+                  />
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', wordBreak: 'break-all', marginTop: 4 }}>
+                    {kw.trim()
+                      ? `将订阅必应搜索结果：${keywordFeedUrl(kw)}`
+                      : '输入关键词后自动生成订阅地址（必应搜索，大陆直连可达；每天自动更新）'}
+                  </span>
                   <button
                     type="button"
                     className="btn-ghost"
-                    style={{ flex: 'none' }}
-                    disabled={probingForm || !form.url.trim()}
-                    onClick={() => {
-                      setProbingForm(true)
-                      void probeFeedUrl(form.url).then((r) => {
-                        setProbingForm(false)
-                        if (r.feedUrl) {
-                          setForm((f) => (f ? { ...f, url: r.feedUrl! } : f))
-                          setMsg(`已探测到 feed 地址（${r.how === 'input' ? '输入本身就是 feed' : r.how === 'link' ? '页面声明' : '惯例路径'}）`)
-                        } else {
-                          setMsg('没探测到 feed 地址——试 RSSHub 路由，或看 帮助 → 配置指南 的找 feed 方法')
-                        }
-                      })
-                    }}
+                    style={{ flex: 'none', marginTop: 4, alignSelf: 'flex-start' }}
+                    onClick={() => { setKwMode(false); setKw('') }}
                   >
-                    {probingForm ? '探测中…' : '自动探测 feed'}
+                    改为手动输入地址
                   </button>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>只有站点主页地址？点它自动找 feed</span>
-                </span>
+                </>
+              ) : (
+                <>
+                  <input
+                    className="input"
+                    value={form.url}
+                    placeholder={form.kind === 'ytdlp' ? 'https://space.bilibili.com/UP主ID/video 或 https://youtube.com/@频道/videos' : 'https://…（原生 RSS / RSSHub 路由）'}
+                    onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  />
+                  {(form.kind ?? 'rss') === 'rss' && !editId && (
+                    <span style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{ flex: 'none' }}
+                        disabled={probingForm || !form.url.trim()}
+                        onClick={() => {
+                          setProbingForm(true)
+                          void probeFeedUrl(form.url).then((r) => {
+                            setProbingForm(false)
+                            if (r.feedUrl) {
+                              setForm((f) => (f ? { ...f, url: r.feedUrl! } : f))
+                              setMsg(`已探测到 feed 地址（${r.how === 'input' ? '输入本身就是 feed' : r.how === 'link' ? '页面声明' : '惯例路径'}）`)
+                            } else {
+                              setMsg('没探测到 feed 地址——试 RSSHub 路由，或看 帮助 → 配置指南 的找 feed 方法')
+                            }
+                          })
+                        }}
+                      >
+                        {probingForm ? '探测中…' : '自动探测 feed'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{ flex: 'none' }}
+                        title="没有现成 feed？输入关键词订阅必应搜索结果"
+                        onClick={() => { setKwMode(true); setKw(''); setForm((f) => (f ? { ...f, url: '' } : f)) }}
+                      >
+                        用关键词订阅
+                      </button>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>只有站点主页地址？点它自动找 feed</span>
+                    </span>
+                  )}
+                </>
               )}
             </label>
             <label>主题域
@@ -372,7 +427,7 @@ export function Sources() {
               操作
               <span style={{ display: 'flex', gap: 'var(--sp-2)' }}>
                 <button type="button" className="btn-primary" onClick={() => void submit()}>保存</button>
-                <button type="button" className="btn-ghost" onClick={() => { setForm(null); setEditId(null) }}>取消</button>
+                <button type="button" className="btn-ghost" onClick={() => { setForm(null); setEditId(null); setKwMode(false); setKw('') }}>取消</button>
               </span>
             </div>
           </div>
@@ -441,7 +496,7 @@ export function Sources() {
                 </td>
                 <td>
                   <div className="src-actions">
-                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight, kind: s.kind }); setEditId(s.id) }}>编辑</button>
+                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight, kind: s.kind }); setEditId(s.id); setKwMode(false); setKw('') }}>编辑</button>
                     <button
                       type="button"
                       className="mini-btn"
