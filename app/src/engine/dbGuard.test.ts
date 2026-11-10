@@ -6,6 +6,8 @@ import {
   GUARD_MIN_BASE,
   runMutationGuard,
   writeReference,
+  writeReferenceAfterPurge,
+  holdUntilGuardSettled,
   acknowledgeCurrentState,
   refreshReferenceAfterRestore,
   getQuarantine,
@@ -16,6 +18,7 @@ import {
 } from './dbGuard'
 import { wipeAndImport, restorePreImportSnapshot, savePreImportSnapshot, getPreImportSnapshot } from '../db/backup'
 import { buildBackupBundle } from '../store/collect'
+import type { Item } from '../types/models'
 import type { Note } from '../types/models'
 
 /**
@@ -228,6 +231,45 @@ describe('wipeAndImport（守卫恢复与导入前快照共用的清表恢复入
     await restorePreImportSnapshot()
     expect((await db.notes.toArray()).map((n) => n.id)).toEqual(['keep-a'])
     expect(await getPreImportSnapshot()).not.toBeNull()
+  })
+})
+
+describe('例行清理闸（守卫 × TTL 清理竞态修正，2026-11-10）', () => {
+  const expiredDiscarded = (id: string): Item => ({
+    id, sourceId: 's', sourceName: '源', url: `https://a.com/${id}`, title: `过期条目 ${id}`,
+    summary: '', fingerprint: `fp_${id}`, eventGroup: null, publishedAt: null,
+    fetchedAt: '2026-10-01T00:00:00.000Z', stage: 'discarded',
+    score: { total: 50, source: 10, novelty: 10, relevance: 20, utility: 10 }, scoreReason: '', aiBy: 'rules',
+    tags: [], otFlag: null, expiresAt: '2026-10-20T00:00:00.000Z',
+    annotation: { notes: '', vote: null, keepForever: false, linkedReviewId: null },
+    createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z', deletedAt: undefined, schemaVersion: 1,
+  })
+
+  it('闸未放行时 maintenance 不清理；放行后清理，writeReferenceAfterPurge 刷新基准', async () => {
+    await db.items.bulkAdd([expiredDiscarded('g1'), expiredDiscarded('g2'), expiredDiscarded('g3')])
+    let release!: () => void
+    holdUntilGuardSettled(
+      new Promise<void>((r) => {
+        release = r
+      }),
+    )
+    const { maintenance } = await import('../engine/collect')
+    const run1 = maintenance() // 挂在闸上
+    await new Promise((r) => setTimeout(r, 20))
+    expect((await db.items.toArray()).length).toBe(3) // 闸未放行：数据不动
+    release()
+    expect(await run1).toBe(3) // 放行后正常清理
+    await writeReferenceAfterPurge()
+    const counts = (await db.kv.get('pwork-last-counts'))?.value as { counts: Record<string, number> }
+    expect(counts.counts.items).toBe(0)
+    holdUntilGuardSettled(Promise.resolve()) // 复位闸，不影响其他用例
+  })
+
+  it('不持闸（默认已放行）时 maintenance 行为不变——非启动场景零影响', async () => {
+    holdUntilGuardSettled(Promise.resolve())
+    await db.items.bulkAdd([expiredDiscarded('g4')])
+    const { maintenance } = await import('../engine/collect')
+    expect(await maintenance()).toBe(1)
   })
 })
 

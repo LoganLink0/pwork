@@ -20,6 +20,7 @@ import {
   type SourceInput,
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../engine/collect'
+import { writeReferenceAfterPurge } from '../engine/dbGuard'
 import { backfillContentOnce, enqueueContent, onContentUpdate } from '../engine/articleContent'
 import { fingerprintOf } from '../engine/fingerprint'
 import { scoreByRules } from '../engine/rules'
@@ -101,8 +102,17 @@ export const useCollect = create<CollectState>((set, get) => ({
   loaded: false,
 
   load: async () => {
-    // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默
-    track(maintenance(), '采集例行清理 maintenance')
+    // 例行维护：TTL 清理（铁律 3 允许的物理清理路径）；失败入错误日志，不再静默。
+    // 清理完成后刷新突变守卫基准——例行清理不是数据突变，下一轮比对以清理后的状态为准
+    //（2026-11-10 自查修正：离开两周回来一次性清掉大量过期条目曾被守卫误报为数据灾难）
+    track(
+      maintenance()
+        .then((purged) => (purged > 0 ? writeReferenceAfterPurge() : undefined))
+        .catch((e: unknown) => {
+          void recordError({ where: '采集.例行清理', kind: 'app', message: `TTL 清理或基准刷新失败：${e instanceof Error ? e.message : String(e)}` }, { silent: true })
+        }),
+      '采集例行清理 maintenance',
+    )
     // 正文回填：每次打开跑一次（内部有单次闸），缺正文的旧条目按队列上限渐进补齐。
     // 测试环境不进队列（与网关自启的 VITEST 守卫同纪律）：集成测试挂载 App 时，
     // 后台串行抓取的真实 800ms 间隔会横跨多个用例持续搅动，拖垮后续渲染断言

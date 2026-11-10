@@ -18,6 +18,7 @@ import { fetchYtdlpPlaylist } from './ytdlp'
 import { prefilter, scoreByRules } from './rules'
 import { fingerprintOf } from './fingerprint'
 import { todayLocal } from './datetime'
+import { waitForGuardSettled } from './dbGuard'
 import type { CollectConfig, Item, Source } from '../types/models'
 
 const CONCURRENCY = 5
@@ -219,5 +220,8 @@ export async function runCollect(sources: Source[], config: CollectConfig): Prom
 
 /** 应用打开时的例行维护：TTL 清理（后台静默） */
 export async function maintenance(): Promise<number> {
+  // 例行清理闸（2026-11-10 自查修正）：等启动守卫比对落定再物理清理——
+  // 大批量过期清理若发生在比对前后，守卫会拿错基准误报数据灾难
+  await waitForGuardSettled()
   return cleanupExpired()
 }

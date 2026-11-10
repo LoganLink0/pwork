@@ -23,7 +23,7 @@ import { applySourceCredit } from './engine/sourceCredit'
 import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
-import { runMutationGuard, type GuardResult } from './engine/dbGuard'
+import { runMutationGuard, holdUntilGuardSettled, type GuardResult } from './engine/dbGuard'
 import { runStartupNotifiesFromDb, notifyDigestReady, sendSystemNotify } from './engine/notify'
 import { loadKeybinds } from './engine/keybinds'
 import { MigrationModal } from './components/shell/MigrationModal'
@@ -207,31 +207,39 @@ export default function App() {
 
   useEffect(() => {
     const startServices = () => {
+    // 数据不丢第三道闸 + 主库突变守卫（第四道闸，2026-11-10）：比对基准落定后才放行例行
+    // TTL 物理清理（maintenance 等闸）——大批量过期清理若与比对并发/后置，守卫会拿错基准
+    // 把例行清理误判成数据灾难（自查修正）。守卫触发即弹恢复窗口并拦下本轮自动备份。
+    const guardChain = (async () => {
+      const h = await runStartupHealthCheck()
+      if (!h.ok) {
+        void recordError({
+          where: 'App.启动健康检查', kind: 'app',
+          message: `数据库打开失败，数据可能损坏：${h.error}。${recoveryGuidance(isDesktopApp())}`,
+        })
+        return 'skip'
+      }
+      const g = await runMutationGuard()
+      if (g.triggered) {
+        setGuardAlert(g)
+        return 'skip'
+      }
+      return 'ok'
+    })()
+    holdUntilGuardSettled(guardChain.then(() => {}))
     track(load(), '应用启动加载速记库')
     track(loadCollect(), '应用启动加载采集库')
     track(loadTasks(), '应用启动加载任务库')
     track(useGoals.getState().load(), '应用启动加载目标库')
     // 存储耐久第一道闸（0.3a）：启动即静默申请持久化保护；结果不弹通知（设置 → 数据管理 可查状态）
     track(requestPersistence(), '申请持久化存储')
-    // 数据不丢第三道闸（0.3f）+ 主库突变守卫（2026-11-10 第四道闸）：库打不开立即弹错误条给
-    // 恢复指引；打得开则比对核心表计数与上次基准——某表骤减 95% 以上弹恢复窗口，并拦下本轮
-    // 自动备份（不给「变少后的库」写进备份链，把好备份轮换掉）
+    // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知设置 可关）
+    track(runStartupNotifiesFromDb(), '启动通知检查')
+    // 自动备份：守卫未触发才跑——不给「变少后的库」写进备份链把好备份轮换掉。
+    // 完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
     track(
-      (async () => {
-        const h = await runStartupHealthCheck()
-        if (!h.ok) {
-          void recordError({
-            where: 'App.启动健康检查', kind: 'app',
-            message: `数据库打开失败，数据可能损坏：${h.error}。${recoveryGuidance(isDesktopApp())}`,
-          })
-          return
-        }
-        const g = await runMutationGuard()
-        if (g.triggered) {
-          setGuardAlert(g)
-          return
-        }
-        // 自动备份：完成后告知落点；发生降级（目录权限失效改走下载）要明说——按旧路径找备份会扑空
+      guardChain.then(async (verdict) => {
+        if (verdict !== 'ok') return
         const r = await runAutoBackupIfDue()
         if (r.downloaded) {
           const where = r.location === 'dir' ? '备份文件夹' : r.location === 'disk' ? 'AppData 备份目录' : '下载文件夹'
@@ -243,11 +251,9 @@ export default function App() {
         if (r.rotateError) {
           void recordError({ where: 'App.自动备份', kind: 'app', message: r.rotateError }, { silent: true })
         }
-      })(),
-      '启动数据健康检查与自动备份',
+      }),
+      '启动自动备份',
     )
-    // 系统通知（0.4-1）：待办到期与复盘节奏，启动查一次、每类每日最多一条（设置 → 通知设置 可关）
-    track(runStartupNotifiesFromDb(), '启动通知检查')
     // 键位中心（0.4-3）：轮盘全局键按用户配置重注册（默认键 Rust 侧已注册；改动/占用失败会弹错误条）
     if (isDesktopApp()) {
       const kb = loadKeybinds()

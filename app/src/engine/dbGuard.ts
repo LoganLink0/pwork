@@ -287,3 +287,26 @@ export async function refreshReferenceAfterRestore(io: GuardIo = defaultIo): Pro
   await writeReference(await countCoreTables(), io)
   await clearQuarantine()
 }
+
+/* --------------------- 例行清理闸（2026-11-10 自查修正） ---------------------
+ * TTL 物理清理必须在启动比对基准落定之后执行：用户离开两周回来一次性清掉大量过期条目，
+ * 清理与比对并发（或清理发生在上一轮基准写入之后）都会让守卫拿错基准误报数据灾难。
+ * App 启动链先 holdUntilGuardSettled(守卫链)，例行清理（maintenance）开局先等闸放行；
+ * 清理完成后调用 writeReferenceAfterPurge 刷新基准——清理不是突变，下一轮以清理后为准。 */
+
+let guardGate: Promise<void> = Promise.resolve()
+
+/** App 启动链调用：传入守卫比对完成（含触发拦截）的 promise，例行清理等它落定 */
+export function holdUntilGuardSettled(settled: Promise<void>): void {
+  guardGate = settled
+}
+
+/** 例行清理的等待入口：守卫未启用（测试/非启动场景）时立即可过 */
+export function waitForGuardSettled(): Promise<void> {
+  return guardGate.catch(() => {})
+}
+
+/** 例行 TTL 清理后刷新基准 */
+export async function writeReferenceAfterPurge(io: GuardIo = defaultIo): Promise<void> {
+  await writeReference(await countCoreTables(), io)
+}
