@@ -89,8 +89,13 @@ export function AsrTool() {
   const saveAsNote = async () => {
     const text = (finalText + interim).trim()
     if (!text) return
-    await createNote({ body: text, tags: ['语音'], source: 'quick' })
-    setSavedMsg('已存为速记（输入 → 速记）')
+    // try/catch 兜底（盲审 P1：createNote reject 时无任何提示，savedMsg 永不出现）
+    try {
+      await createNote({ body: text, tags: ['语音'], source: 'quick' })
+      setSavedMsg('已存为速记（输入 → 速记）')
+    } catch (e) {
+      setErrorMsg(`存为速记失败：${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   const fullText = (finalText + interim).trim()
@@ -115,6 +120,8 @@ export function AsrTool() {
         style={{ minHeight: 140, resize: 'vertical', lineHeight: 1.8 }}
         placeholder="识别结果会出现在这里……"
         value={fullText}
+        readOnly={listening}
+        title={listening ? '聆听中——暂态识别词会不断追加，先停止再编辑' : undefined}
         onChange={(e) => setFinalText(e.target.value)}
         aria-label="识别结果"
       />

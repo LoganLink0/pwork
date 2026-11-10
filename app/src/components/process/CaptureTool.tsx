@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchVideoMeta, type VideoMeta } from '../../engine/ytdlp'
 import { isDesktopApp } from '../../engine/platform'
 import { useCollect } from '../../store/collect'
@@ -31,7 +32,8 @@ export function CaptureTool() {
   if (!isDesktopApp()) {
     return (
       <p style={{ color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)' }}>
-        视频链接入库需要本机 yt-dlp 解析，仅桌面版可用——网页版请直接把链接存为速记。
+        视频链接入库需要本机 yt-dlp 解析，仅桌面版可用——网页版请直接把链接存为速记：
+        <Link to="/input/notes" style={{ marginLeft: 6 }}>去速记 →</Link>
       </p>
     )
   }
@@ -59,15 +61,21 @@ export function CaptureTool() {
     if (!meta) return
     setSaving(true)
     setError('')
-    const r = await captureLink(meta)
-    setSaving(false)
-    if (!r.ok) {
-      setError(r.duplicated ? '这个链接已经在条目库里了（按链接与标题去重）' : r.error ?? '入库失败')
-      return
+    // try/finally 兜底（盲审 P1：写库 reject 时按钮永久卡「入库中…」且无提示）
+    try {
+      const r = await captureLink(meta)
+      if (!r.ok) {
+        setError(r.duplicated ? '这个链接已经在条目库里了（按链接与标题去重）' : r.error ?? '入库失败')
+        return
+      }
+      setDoneMsg('已存入条目库——可在条目库检索、投票，当日评分靠前会进信息日报')
+      setMeta(null)
+      setLink('')
+    } catch (e) {
+      setError(`入库失败：${e instanceof Error ? e.message : String(e)}——可到错误日志看详情`)
+    } finally {
+      setSaving(false)
     }
-    setDoneMsg('已存入条目库——可在条目库检索、投票，当日评分靠前会进信息日报')
-    setMeta(null)
-    setLink('')
   }
 
   return (

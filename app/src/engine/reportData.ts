@@ -19,6 +19,7 @@ export interface ReportData {
     openCount: number
     overdueCount: number
     closureRate: number
+    droppedCount: number
   }
   goals: { active: { title: string; due?: string; progressNote?: string }[]; doneInRange: number }
   insights: { text: string }[]
@@ -56,13 +57,16 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
   ])
 
   const live = allTasks.filter((t) => t.deletedAt === null)
+  const droppedCount = live.filter((t) => t.status === 'dropped').length
+  // 闭环率分母剔除已放弃任务（盲审 P2：放弃项拉低闭环率且无法从报告数字解释）
+  const rated = live.filter((t) => t.status !== 'dropped')
   const closed = live
     .filter((t) => t.status === 'done' && inRange(t.closedAt))
     .map((t) => ({ title: t.title, closedAt: t.closedAt! }))
   const open = live.filter((t) => t.status === 'todo')
   const today = todayLocal(now)
   const overdueCount = open.filter((t) => (t.due ?? '9999') < today).length
-  const closureRate = live.length === 0 ? 0 : Math.round((live.filter((t) => t.status === 'done').length / live.length) * 100)
+  const closureRate = rated.length === 0 ? 0 : Math.round((rated.filter((t) => t.status === 'done').length / rated.length) * 100)
 
   const activeGoals = allGoals
     .filter((g) => g.status === 'active' && g.deletedAt === null)
@@ -94,7 +98,7 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
     rangeLabel,
     sinceLocal,
     today: todayLocal(now),
-    tasks: { closed, openCount: open.length, overdueCount, closureRate },
+    tasks: { closed, openCount: open.length, overdueCount, closureRate, droppedCount },
     goals: { active: activeGoals, doneInRange },
     insights,
     topItems,

@@ -281,7 +281,13 @@ export function PptWriter() {
               style={{ maxWidth: 90 }}
               value={pageTarget}
               aria-label="目标页数"
-              onChange={(e) => setPageTarget(Math.max(6, Math.min(30, Number(e.target.value) || 12)))}
+              // 盲审 P1：钳制放 onChange 会把逐键输入的中间态（如「1」）污染成边界值（键入 15 显示 30）——
+              // 输入只存原始值，钳制移到失焦时收口
+              onChange={(e) => setPageTarget(Number(e.target.value))}
+              onBlur={(e) => {
+                const n = Number(e.target.value)
+                setPageTarget(Number.isFinite(n) ? Math.max(6, Math.min(30, Math.round(n))) : 12)
+              }}
             />
           </div>
         </div>

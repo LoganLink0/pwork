@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { toast } from '../../engine/toast'
 
 /** 图片压缩 / 缩放 / 格式转换：纯 Canvas 本地处理 */
 export function ImageProcessTool() {
@@ -16,6 +17,7 @@ export function ImageProcessTool() {
     if (!f) return
     setFile(f)
     setResult(null)
+    imgRef.current = null  // 换文件先清旧图：坏文件零反馈时不得拿上一张图出结果（盲审 P1）
     if (prevUrl.current) URL.revokeObjectURL(prevUrl.current)
     const url = URL.createObjectURL(f)
     setSrcUrl(url)
@@ -24,22 +26,38 @@ export function ImageProcessTool() {
       imgRef.current = img
       setSrcSize({ w: img.naturalWidth, h: img.naturalHeight })
     }
+    img.onerror = () => {
+      // 无法解码（盲审 P1：此前零反馈，控件照常展示误导用户）
+      imgRef.current = null
+      toast('error', '这个文件无法作为图片打开——换一张图片试试')
+    }
     img.src = url
   }
 
   const process = () => {
     const img = imgRef.current
-    if (!img) return
+    if (!img) {
+      toast('error', '还没有可处理的图片——重新选择一张能打开的图片')
+      return
+    }
     const targetW = Math.max(1, Math.round(img.naturalWidth * (maxWidthPct / 100)))
     const targetH = Math.round(img.naturalHeight * (targetW / img.naturalWidth))
     const canvas = document.createElement('canvas')
     canvas.width = targetW
     canvas.height = targetH
     const ctx = canvas.getContext('2d')!
+    // 有损格式（jpeg/webp）先铺白底：透明 PNG 直接 drawImage 会转出黑底（盲审 P2 实测）
+    if (format !== 'png') {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, targetW, targetH)
+    }
     ctx.drawImage(img, 0, 0, targetW, targetH)
     canvas.toBlob(
       (blob) => {
-        if (!blob) return
+        if (!blob) {
+          toast('error', `这个浏览器不支持编码 ${format.toUpperCase()}——换 PNG 格式试试`)
+          return
+        }
         if (prevUrl.current) URL.revokeObjectURL(prevUrl.current)
         const url = URL.createObjectURL(blob)
         prevUrl.current = url
@@ -89,10 +107,18 @@ export function ImageProcessTool() {
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>原图 {fmtSize(file.size)} · 本地处理，不上传</span>
           </div>
           {result && (
-            <div className="notice">
-               {result.w}×{result.h} · {fmtSize(result.size)}
-              {file.size > 0 && result.size < file.size && <>（比原图小 {Math.round((1 - result.size / file.size) * 100)}%）</>}　
-              <a href={result.url} download={`image.${ext}`} className="btn-ghost" style={{ textDecoration: 'none' }}></a>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+              {/* 处理结果预览（盲审 P1：产物此前不可见、下载链接是空文本） */}
+              <img
+                src={result.url}
+                alt="处理后预览"
+                style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 'var(--r-md)', border: '1px solid var(--line-strong)' }}
+              />
+              <div className="notice">
+                {result.w}×{result.h} · {fmtSize(result.size)}
+                {file.size > 0 && result.size < file.size && <>（比原图小 {Math.round((1 - result.size / file.size) * 100)}%）</>}　
+                <a href={result.url} download={`image.${ext}`} className="btn-ghost" style={{ textDecoration: 'none' }}>下载 {ext.toUpperCase()}</a>
+              </div>
             </div>
           )}
         </>

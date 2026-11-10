@@ -56,7 +56,23 @@ const WEB_ANSWER_SYSTEM =
 export function ResearchPage() {
   const { blocks, load: loadBlocks, save: saveBlock, remove: removeBlock } = useBlocks()
   const { profiles, load: loadProfiles, save: saveProfile, remove: removeProfile } = useProfiles()
-  const [profileId, setProfileId] = useState<string | null>(null)
+  // 上次选中的任务记入 localStorage（盲审 P1：刷新后回到未选状态，需再点一次标签）
+  const [profileId, setProfileIdState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('pwork-research-last-profile')
+    } catch {
+      return null
+    }
+  })
+  const setProfileId = (id: string | null) => {
+    setProfileIdState(id)
+    try {
+      if (id) localStorage.setItem('pwork-research-last-profile', id)
+      else localStorage.removeItem('pwork-research-last-profile')
+    } catch {
+      /* 超配额放弃，功能不受影响 */
+    }
+  }
   const [target, setTarget] = useState('')
   const [type, setType] = useState<ResearchType>('company')
   const [fw, setFw] = useState<ResearchFramework | null>(null)
@@ -102,13 +118,48 @@ export function ResearchPage() {
     void loadProfiles()
   }, [loadBlocks, loadProfiles])
 
-  // 切换任务时载入其框架与发现
+  // 切换任务时载入其框架与发现；分析草稿按任务分键持久化（盲审 P1：内存草稿切任务/刷新即丢）
+  const draftKey = profileId ? `pwork-research-draft:${profileId}` : null
   useEffect(() => {
     setFw(profileId ? loadFramework(profileId) : null)
     setFindingDraft(null)
-    setDraft(null)
     setMsg('')
+    if (profileId) {
+      try {
+        const raw = localStorage.getItem(`pwork-research-draft:${profileId}`)
+        setDraft(raw ? (JSON.parse(raw) as ArticleDraft) : null)
+      } catch {
+        setDraft(null)
+      }
+    } else {
+      setDraft(null)
+    }
   }, [profileId])
+  // 草稿防抖落盘（与文章页同款 800ms；卸载/隐藏时冲一次，防最后不足 1 秒的编辑丢失）
+  const draftFlushRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    if (!draft || !draftKey) return
+    const write = () => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(draft))
+      } catch {
+        /* 超配额时放弃草稿保存，功能不受影响 */
+      }
+    }
+    draftFlushRef.current = write
+    const t = window.setTimeout(write, 800)
+    return () => window.clearTimeout(t)
+  }, [draft, draftKey])
+  useEffect(() => {
+    const flush = () => draftFlushRef.current?.()
+    window.addEventListener('beforeunload', flush)
+    document.addEventListener('visibilitychange', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      document.removeEventListener('visibilitychange', flush)
+      flush()
+    }
+  }, [])
 
   // 旧版分节发现的自动合并（一次性）：按节存的块拼成一条流水，节标题转分隔行
   useEffect(() => {
@@ -393,6 +444,7 @@ export function ResearchPage() {
     for (const b of taskBlocks) await removeBlock(b.id)
     await removeProfile(profile.id)
     localStorage.removeItem(`pwork-research-fw:${profile.id}`)
+    localStorage.removeItem(`pwork-research-draft:${profile.id}`)
     setProfileId(null)
     setFw(null)
   }
@@ -615,7 +667,19 @@ export function ResearchPage() {
               >
                 {aiBusy ? 'AI 整理中…' : 'AI 整理成分析草稿'}
               </button>
-              <button type="button" className="btn-ghost" disabled={!articleMaterials.length} onClick={() => setDraft(view.skeleton())}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={!articleMaterials.length}
+                onClick={() => {
+                  // 已有草稿时覆盖需确认（盲审 P1：误点直接丢整篇改过的稿）
+                  if (draft) {
+                    void confirmDialog({ title: '改用手动骨架？', body: '当前分析草稿的全部修改会被空骨架覆盖。', danger: true, confirmLabel: '覆盖' }).then((ok) => { if (ok) setDraft(view.skeleton()) })
+                    return
+                  }
+                  setDraft(view.skeleton())
+                }}
+              >
                 用手动骨架（不需要 AI）
               </button>
               {!coachReady && (

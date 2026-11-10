@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { Icon } from '../components/shell/icons'
 import { CATEGORY_META, CATEGORY_ORDER, PROCESS_TOOLS, ENGINE_LABEL, toolRoute } from '../content/processTools'
 import { byRecentUse, loadQuickSites, makeSite, normalizeSiteUrl, saveQuickSites, type QuickSite } from '../engine/quickLaunch'
+import { isDesktopApp } from '../engine/platform'
+import { recordError } from '../engine/errorLog'
 import { toast } from '../engine/toast'
 import { confirmDialog } from '../engine/confirm'
 
@@ -23,8 +26,20 @@ export function Process() {
   }
 
   const openSite = (site: QuickSite) => {
-    window.open(site.url, '_blank', 'noreferrer noopener')
-    persist(sites.map((s) => (s.id === site.id ? { ...s, lastUsedAt: Date.now() } : s)))
+    // 桌面版 window.open 被 Tauri WebView 静默吞掉（盲审 P0：死点击还假装成功）——走系统浏览器命令；
+    // 打开成功才记 lastUsedAt（失败时 chips 重排是假反馈），失败给提示
+    if (isDesktopApp()) {
+      tauriInvoke('open_external_url', { url: site.url })
+        .then(() => persist(sites.map((s) => (s.id === site.id ? { ...s, lastUsedAt: Date.now() } : s))))
+        .catch((err) => {
+          void recordError({ where: '快速启动', kind: 'app', message: `打开失败 ${site.url}: ${err instanceof Error ? err.message : String(err)}` })
+          toast('error', '打开失败——可复制网址到浏览器手动打开')
+        })
+      return
+    }
+    const win = window.open(site.url, '_blank', 'noreferrer noopener')
+    if (win) persist(sites.map((s) => (s.id === site.id ? { ...s, lastUsedAt: Date.now() } : s)))
+    else toast('error', '浏览器拦截了弹出窗口——允许弹窗后重试')
   }
 
   const saveEditing = () => {

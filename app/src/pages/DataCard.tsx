@@ -6,14 +6,24 @@ import { todayLocal } from '../engine/datetime'
 /** 数据快照卡片（输出 O3）：闭环率/目标/洞察 → 分享卡片图（Canvas，复用 v3 配色） */
 export function DataCard() {
   const [data, setData] = useState<ReportData | null>(null)
+  const [loadErr, setLoadErr] = useState<{ mode: ReportMode; msg: string } | null>(null)
   const [mode, setMode] = useState<ReportMode>('weekly')
-  const [url, setUrl] = useState<string | null>(null)
+  const [shot, setShot] = useState<{ mode: ReportMode; url: string } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prev = useRef<string | null>(null)
+  const gatherSeq = useRef(0)
 
   useEffect(() => {
-    void gatherReportData(mode).then(setData)
+    // 并发守卫 + 失败兜底（盲审 P2：失败时生成按钮永久禁用无原因）；
+    // 错误/成品带 mode 标记渲染期比对——切周期旧图自动失效，effect 内不做同步 setState
+    const seq = ++gatherSeq.current
+    void gatherReportData(mode)
+      .then((d) => { if (seq === gatherSeq.current) { setData(d); setLoadErr(null) } })
+      .catch((e) => { if (seq === gatherSeq.current) setLoadErr({ mode, msg: e instanceof Error ? e.message : String(e) }) })
   }, [mode])
+
+  const loadErrNow = loadErr && loadErr.mode === mode ? loadErr.msg : ''
+  const url = shot && shot.mode === mode ? shot.url : null
 
   const W = 1000
   const H = 700
@@ -65,7 +75,7 @@ export function DataCard() {
     // data: URL 不需要 revoke；prev 只用于清掉可能的旧 object URL
     prev.current = null
     canvasRef.current = canvas
-    setUrl(u)
+    setShot({ mode, url: u })
   }
 
   return (
@@ -85,8 +95,13 @@ export function DataCard() {
               <button type="button" className={mode === 'weekly' ? 'on' : ''} onClick={() => setMode('weekly')}>周报</button>
               <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报</button>
             </div>
-            <button type="button" className="btn-primary" disabled={!data} onClick={generate} data-testid="datacard-btn">生成卡片</button>
+            <button type="button" className="btn-primary" disabled={!data || Boolean(loadErrNow)} onClick={generate} data-testid="datacard-btn">生成卡片</button>
           </div>
+          {loadErrNow && (
+            <div className="notice" style={{ borderLeftColor: 'var(--danger)', marginBottom: 'var(--sp-3)' }} role="alert">
+              数据汇总失败：{loadErrNow}——可切一下周期重试。
+            </div>
+          )}
           {url && (
             <div style={{ paddingTop: 'var(--sp-3)' }}>
               <img src={url} alt="数据快照卡片" style={{ maxWidth: '100%', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />

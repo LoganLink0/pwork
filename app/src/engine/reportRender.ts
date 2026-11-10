@@ -18,8 +18,10 @@ export function reportToMarkdown(d: ReportData): string {
   L.push('')
   L.push('## 一、任务')
   L.push('')
-  L.push(`- 已闭环 **${d.tasks.closed.length}** 项 · 闭环率 **${d.tasks.closureRate}%** · 未闭环 ${d.tasks.openCount} 项（逾期 ${d.tasks.overdueCount}）`)
-  for (const t of d.tasks.closed.slice(0, 5)) L.push(`  - ✅ ${t.title}`)
+  L.push(`- 已闭环 **${d.tasks.closed.length}** 项 · 闭环率 **${d.tasks.closureRate}%** · 未闭环 ${d.tasks.openCount} 项（逾期 ${d.tasks.overdueCount}）${d.tasks.droppedCount > 0 ? ` · 放弃 ${d.tasks.droppedCount} 项（不计入闭环率）` : ''}`)
+  const closedShown = d.tasks.closed.slice(0, 5)
+  for (const t of closedShown) L.push(`  - ✅ ${t.title}`)
+  if (d.tasks.closed.length > closedShown.length) L.push(`  - （其余 ${d.tasks.closed.length - closedShown.length} 项已闭环任务略）`)
   if (d.tasks.openCount === 0 && d.tasks.closed.length === 0) L.push('  - （本期没有任务记录）')
   L.push('')
   L.push('## 二、目标进展')
@@ -83,7 +85,9 @@ function stat(v: string, label: string): string {
 
 export function reportToHtml(d: ReportData, aiSummary = ''): string {
   const title = reportTitle(d)
-  const taskItems = d.tasks.closed.slice(0, 8).map((t) => `<li>✅ ${esc(t.title)}</li>`).join('')
+  const closedAll = d.tasks.closed
+  const taskItems = closedAll.slice(0, 8).map((t) => `<li>✅ ${esc(t.title)}</li>`).join('')
+  const taskMore = closedAll.length > 8 ? `<li>（其余 ${closedAll.length - 8} 项已闭环任务略）</li>` : ''
   const goalItems = d.goals.active
     .map((g) => `<li>◎ ${esc(g.title)}${g.due ? `（${esc(g.due)}）` : ''}</li>`)
     .join('')
@@ -147,7 +151,7 @@ export function reportToHtml(d: ReportData, aiSummary = ''): string {
   ${aiHtml}
   <div class="card">
     <h2>任务</h2>
-    <ul>${taskItems || '<li>（本期没有任务记录）</li>'}</ul>
+    <ul>${taskItems}${taskMore || (closedAll.length === 0 ? '<li>（本期没有任务记录）</li>' : '')}</ul>
     <h2>目标进展</h2>
     <ul>${goalItems || '<li>（没有进行中的目标）</li>'}</ul>
     ${d.goals.doneInRange ? `<p>本期达成目标 ${d.goals.doneInRange} 个 🎉</p>` : ''}

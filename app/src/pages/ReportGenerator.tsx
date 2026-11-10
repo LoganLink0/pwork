@@ -21,6 +21,7 @@ export function ReportGenerator() {
   const [format, setFormat] = useState<'md' | 'html'>('md')
   const [aiSummary, setAiSummary] = useState('')
   const [aiState, setAiState] = useState<'idle' | 'running' | 'error'>('idle')
+  const [gatherErr, setGatherErr] = useState<{ mode: ReportMode; msg: string } | null>(null)
   const [aiError, setAiError] = useState('')
   const [prevRate, setPrevRate] = useState<number | null>(null)
   const [pptBusy, setPptBusy] = useState(false)
@@ -43,12 +44,18 @@ export function ReportGenerator() {
     void gatherReportData(mode).then(async (d) => {
       if (seq !== gatherSeq.current) return // 快速切换周期时只认最后一次
       setData(d)
+      setGatherErr(null)
       // 每次生成报告即落一行当日快照（趋势与环比的数据源）
       await saveSnapshot(d)
       setSnapshots(await listSnapshots(8))
       setPrevRate((await latestSnapshotBefore())?.closureRate ?? null)
+    }).catch((e) => {
+      if (seq !== gatherSeq.current) return
+      // 盲审 P2：加载失败无声卡死（下载/导出永久禁用）——错误带 mode 标记渲染期比对
+      setGatherErr({ mode, msg: e instanceof Error ? e.message : String(e) })
     })
   }, [mode])
+  const gatherErrNow = gatherErr && gatherErr.mode === mode ? gatherErr.msg : ''
 
   const md = useMemo(() => (data ? reportToMarkdown(data) : ''), [data])
   const html = useMemo(() => (data ? reportToHtml(data, aiSummary) : ''), [data, aiSummary])
@@ -84,6 +91,8 @@ export function ReportGenerator() {
   const download = (kind: 'md' | 'html') => {
     const content = kind === 'md' ? mdWithAi : html
     downloadFile(`${title}.${kind}`, content, kind === 'md' ? 'text/markdown' : 'text/html')
+    // 下载回执（盲审 P2：md/html 点击后无反馈，与 PPT/Word 导出风格对齐）
+    setMsg(`已下载 ${title}.${kind}——在浏览器下载列表里`)
   }
 
   const exportPpt = async () => {
@@ -147,7 +156,7 @@ export function ReportGenerator() {
 
           <div className="set-row">
             <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
-              外部数据块 {data ? data.blocks.length : 0} 个 · <Link to="/input/blocks">维护外部数据</Link>（保存后自动并入报告/朗读/PPT）
+              外部数据块 {data ? data.blocks.length : 0} 个 · <Link to="/input/blocks">维护外部数据</Link>（保存后自动并入报告与 PPT；朗读暂不含）
             </span>
           </div>
 
@@ -250,8 +259,23 @@ export function ReportGenerator() {
             }}
             data-testid="report-preview"
           >
-            {format === 'md' ? mdWithAi : 'HTML 版请下载后用浏览器打开（自包含单文件，v3 配色）。'}
+            {format === 'md' ? mdWithAi : ''}
           </pre>
+          {format === 'html' && (
+            // HTML 成品内嵌预览（盲审 P2：此前切 HTML 格式预览区只剩一句提示）——
+            // srcdoc 沙箱本源渲染自包含单文件
+            <iframe
+              title="HTML 报告预览"
+              srcDoc={html}
+              sandbox=""
+              style={{ width: '100%', height: 420, border: '1px solid var(--line)', borderRadius: 'var(--r-md)', background: '#fff' }}
+            />
+          )}
+          {gatherErrNow && (
+            <div className="notice" style={{ borderLeftColor: 'var(--danger)', marginTop: 'var(--sp-3)' }} role="alert">
+              报告数据加载失败：{gatherErrNow}——可切一下周期重试。
+            </div>
+          )}
         </div>
       </div>
     </section>

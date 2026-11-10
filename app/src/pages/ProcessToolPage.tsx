@@ -54,7 +54,10 @@ export function ProcessToolPage() {
             <h3>怎么点亮</h3>
             <p>拿到对应服务商的 Key 后，到 设置 → AI 设置 配置接入。</p>
           </div>
-          <Link to="/process" className="btn-ghost">← 回工具箱</Link>
+          <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
+            <Link to="/settings" className="btn-primary">去 AI 设置 →</Link>
+            <Link to="/process" className="btn-ghost">← 回工具箱</Link>
+          </div>
         </div>
       </section>
     )

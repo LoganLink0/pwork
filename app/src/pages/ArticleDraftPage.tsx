@@ -11,6 +11,7 @@ import {
   type ArticleMaterial,
 } from '../engine/articleWriter'
 import { downloadFile } from '../db/repo'
+import { confirmDialog } from '../engine/confirm'
 import { chatCompletionCached } from '../engine/aiCached'
 import { llmConfigured } from '../modules/review/engine/coach'
 import { exportArticleDocx, ARTICLE_VIEWS, type ArticleView } from '../engine/articleWriter'
@@ -186,8 +187,25 @@ export function ArticleDraftPage() {
               {aiError && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{aiError}</span>}
             </div>
           ) : (
-            <div className="set-row">
+            <div className="set-row" style={{ flexWrap: 'wrap' }}>
               <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ok)' }}>骨架已生成，在下方逐节修改。</span>
+              {/* 盲审 P1：骨架生成后原入口全部消失、无重来/丢弃路径（AI 产出不满意即死路），补齐与 PPT 页同款的重开入口 */}
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={aiBusy}
+                onClick={() => void confirmDialog({ title: '重新生成骨架？', body: '当前草稿的全部修改会被覆盖。', danger: true, confirmLabel: '重新生成' }).then((ok) => { if (ok) { localStorage.removeItem(DRAFT_KEY); setDraft(null); void generate() } })}
+              >
+                ⟳ 重新生成
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => void confirmDialog({ title: '改用手动骨架？', body: '当前草稿的全部修改会被空骨架覆盖。', danger: true, confirmLabel: '改用手动骨架' }).then((ok) => { if (ok) { localStorage.removeItem(DRAFT_KEY); setDraft(defaultArticleSkeleton()) } })}
+              >
+                用手动骨架（不需要 AI）
+              </button>
+              {aiError && <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--danger)' }}>{aiError}</span>}
             </div>
           )}
         </div>

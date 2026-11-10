@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { gatherReportData, type ReportData, type ReportMode } from '../engine/reportData'
 
@@ -8,13 +8,22 @@ const MODE_LABEL = { weekly: '周报', monthly: '月报' } as const
 export function ReadOutLoud() {
   const [mode, setMode] = useState<ReportMode>('weekly')
   const [data, setData] = useState<ReportData | null>(null)
+  const [loadErr, setLoadErr] = useState<{ mode: ReportMode; msg: string } | null>(null)
   const [speaking, setSpeaking] = useState(false)
   const supported = typeof window !== 'undefined' && 'speechSynthesis' in window
+  const gatherSeq = useRef(0)
 
   useEffect(() => {
-    void gatherReportData(mode).then(setData)
+    // 周期快速切换并发守卫 + 失败兜底（盲审 P2：rejection 后无声卡死在「正在汇总」）；
+    // 错误带 mode 标记、渲染期比对（避免 effect 内同步 setState）
+    const seq = ++gatherSeq.current
+    void gatherReportData(mode)
+      .then((d) => { if (seq === gatherSeq.current) { setData(d); setLoadErr(null) } })
+      .catch((e) => { if (seq === gatherSeq.current) setLoadErr({ mode, msg: e instanceof Error ? e.message : String(e) }) })
     return () => window.speechSynthesis?.cancel()
   }, [mode])
+
+  const loadErrNow = loadErr && loadErr.mode === mode ? loadErr.msg : ''
 
   const speakText = useMemo(() => {
     if (!data) return ''
@@ -23,7 +32,7 @@ export function ReadOutLoud() {
       `任务：闭环${data.tasks.closed.length}项，闭环率${data.tasks.closureRate}%；未闭环${data.tasks.openCount}项，逾期${data.tasks.overdueCount}项。`,
       data.tasks.closed[0] ? `已完成：${data.tasks.closed[0].title}。` : '',
       data.goals.active[0] ? `进行中目标：${data.goals.active[0].title}。` : '',
-      data.insights[0] ? `本周洞察：${data.insights[0].text}。` : '',
+      data.insights[0] ? `${mode === 'weekly' ? '本周' : '本月'}洞察：${data.insights[0].text}。` : '',
       data.topItems[0] ? `外部环境，值得关注：${data.topItems[0].title}。` : '',
       data.signals[0] ? `提醒：${data.signals[0].message}。` : '',
     ]
@@ -70,13 +79,18 @@ export function ReadOutLoud() {
                 <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报</button>
               </div>
               {!speaking ? (
-                <button type="button" className="btn-primary" disabled={!speakText} onClick={speak}>▶ 开始朗读</button>
+                <button type="button" className="btn-primary" disabled={!speakText || Boolean(loadErrNow)} onClick={speak}>▶ 开始朗读</button>
               ) : (
                 <button type="button" className="btn-ghost" onClick={stop}>■ 停止</button>
               )}
             </div>
+            {loadErrNow && (
+              <div className="notice" style={{ borderLeftColor: 'var(--danger)' }} role="alert">
+                素材汇总失败：{loadErrNow}——可切一下周期重试。
+              </div>
+            )}
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', lineHeight: 2, paddingTop: 'var(--sp-2)' }} data-testid="speak-text">
-              {speakText || '正在汇总本周期素材…'}
+              {speakText || (loadErrNow ? '' : '正在汇总本周期素材…')}
             </div>
           </div>
         </div>
