@@ -7,6 +7,8 @@ import { ItemCard } from '../components/collect/ItemCard'
 import { itemTiers } from '../engine/itemTier'
 import { rejectionStats } from '../engine/rejectionStats'
 import { relTime } from '../engine/datetime'
+import { toast } from '../engine/toast'
+import { listSavedFilters, saveSavedFilter, deleteSavedFilter, describeFilterState, type SavedFilter, type ItemsFilterState } from '../engine/savedFilters'
 import type { Item } from '../types/models'
 
 type StageFilter = 'all' | 'must' | 'kept' | 'discarded'
@@ -57,8 +59,57 @@ export function Items() {
   const reloadTrash = () => void listDeleted().then(setTrash)
   useEffect(() => {
     reloadTrash()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次
   }, [])
+
+  // 保存的过滤器（1.2 批）：把当前筛选组合存个名字，一键套用、命令面板直达；月份不入档（会过期）
+  const [filters, setFilters] = useState<SavedFilter[]>([])
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const reloadFilters = () => void listSavedFilters().then(setFilters)
+  useEffect(() => {
+    reloadFilters()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次
+  }, [])
+  const applyFilterState = (s: ItemsFilterState) => {
+    setStage(s.stage)
+    setQuery(s.query)
+    setOtOnly(s.otOnly)
+  }
+  const filterActive = (f: SavedFilter) => f.state.stage === stage && f.state.query === query && f.state.otOnly === otOnly
+  const doSaveFilter = () => {
+    const name = saveName.trim()
+    if (!name) {
+      toast('error', '先给这个筛选起个名字')
+      return
+    }
+    void saveSavedFilter(name, { stage, query, otOnly })
+      .then(() => {
+        setSaveOpen(false)
+        setSaveName('')
+        reloadFilters()
+        toast('ok', `筛选「${name}」已保存，命令面板输入名字可直接调用`)
+      })
+      .catch((e: unknown) => toast('error', e instanceof Error ? e.message : String(e)))
+  }
+  const doDeleteFilter = (f: SavedFilter) => {
+    void confirmDialog({ title: `删除筛选「${f.name}」？`, body: '只删除这个筛选入口，不影响任何条目数据。', danger: true, confirmLabel: '删除' }).then((ok) => {
+      if (ok) void deleteSavedFilter(f.id).then(reloadFilters)
+    })
+  }
+  // URL 直达（命令面板/收藏入口同机制）：?flt=<id> → 套用后清参防重复
+  const fltId = searchParams.get('flt')
+  const fltDoneRef = useRef(false)
+  useEffect(() => {
+    if (!fltId || fltDoneRef.current) return
+    fltDoneRef.current = true
+    void listSavedFilters().then((list) => {
+      const f = list.find((x) => x.id === fltId)
+      if (f) applyFilterState(f.state)
+      setSearchParams({}, { replace: true })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只依赖 fltId：套用一次即清参
+  }, [fltId, setSearchParams])
   const doRestore = (id: string) => {
     void restoreItem(id).then(() => reloadTrash())
   }
@@ -150,7 +201,66 @@ export function Items() {
           onChange={(e) => setQuery(e.target.value)}
           aria-label="搜索条目"
         />
+        <button
+          type="button"
+          className={`chip${saveOpen ? ' on' : ''}`}
+          onClick={() => { setSaveOpen(!saveOpen); setSaveName('') }}
+          title="把当前筛选组合存个名字，之后一键套用，命令面板也能直达"
+        >
+          存为筛选
+        </button>
       </div>
+
+      {saveOpen && (
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            className="input"
+            style={{ maxWidth: 240 }}
+            placeholder="给这个筛选起个名字，如「AI 周刊必看」"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') doSaveFilter()
+              if (e.key === 'Escape') setSaveOpen(false)
+            }}
+            autoFocus
+            aria-label="筛选名称"
+          />
+          <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)' }}>
+            将保存：{describeFilterState({ stage, query, otOnly })}
+          </span>
+          <button type="button" className="btn-primary" onClick={doSaveFilter}>保存</button>
+          <button type="button" className="btn-ghost" onClick={() => setSaveOpen(false)}>取消</button>
+        </div>
+      )}
+
+      {!trashMode && filters.length > 0 && (
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ color: 'var(--ink-faint)', fontSize: 13 }}>我的筛选：</span>
+          {filters.map((f) => (
+            <span key={f.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+              <button
+                type="button"
+                className={`chip${filterActive(f) ? ' on' : ''}`}
+                title={describeFilterState(f.state)}
+                aria-pressed={filterActive(f)}
+                onClick={() => applyFilterState(f.state)}
+              >
+                {f.name}
+              </button>
+              <button
+                type="button"
+                className="chip"
+                aria-label={`删除筛选 ${f.name}`}
+                title="删除这个筛选"
+                onClick={() => doDeleteFilter(f)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {trashMode && (
         trash.length === 0 ? (

@@ -7,6 +7,7 @@ import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
+import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
 import { relTime } from '../../engine/datetime'
 
 interface PaletteItem {
@@ -42,9 +43,15 @@ function PaletteDialog() {
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const [libraryHits, setLibraryHits] = useState<SearchHit[]>([])
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
   const [ask, setAsk] = useState<{ phase: AskPhase; answer?: string; sources?: AskAiSource[]; error?: string }>({ phase: 'idle' })
   const askRef = useRef(ask)
   askRef.current = ask
+
+  // 保存的过滤器（1.2 批）：面板每次打开重新挂载，挂载即取一次
+  useEffect(() => {
+    void listSavedFilters().then(setSavedFilters)
+  }, [])
 
   const runAsk = () => {
     const q = query.trim()
@@ -110,6 +117,19 @@ function PaletteDialog() {
       .filter((p) => match(p.label))
       .map((p) => ({ key: `pg-${p.to}`, group: '页面', icon: p.icon, label: p.label, sub: p.sub, run: () => { close(); navigate(p.to) } }))
 
+    // 我的筛选组（1.2 批）：保存的过滤器按名字命中，点击跳条目库并套用（?flt= 机制）
+    const filterItems: PaletteItem[] = savedFilters
+      .filter((f) => match(f.name))
+      .slice(0, q ? 8 : 3)
+      .map((f) => ({
+        key: `flt-${f.id}`,
+        group: '我的筛选',
+        icon: 'search',
+        label: f.name,
+        sub: describeFilterState(f.state),
+        run: () => { close(); navigate(`/input/items?flt=${f.id}`) },
+      }))
+
     const noteItems: PaletteItem[] = notes
       .filter((n) => match(n.title) || match(n.body))
       .slice(0, q ? 8 : 3)
@@ -141,8 +161,8 @@ function PaletteDialog() {
           }))
       : []
 
-    return [...actions, ...pages, ...noteItems, ...helpItems]
-  }, [query, notes, close, openQuick, navigate])
+    return [...actions, ...pages, ...filterItems, ...noteItems, ...helpItems]
+  }, [query, notes, savedFilters, close, openQuick, navigate])
 
   // 使用处夹紧（代替 effect 内 setState）
   // 统一可导航列表：主列表 + 全库检索结果 + AI 问答入口——↑↓/Enter 覆盖全部条目
