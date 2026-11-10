@@ -12,6 +12,8 @@ export interface TemplateDef {
   type: ReviewType
   scenario: ScenarioKey
   tagline: string
+  /** 什么时候用：真实生活里的那一刻（2026-11-10 用户反馈——缺场景与故事感） */
+  when?: string
   /** 支持 3 分钟快答版 */
   quick: boolean
   /** 模式：wizard 分步向导（M1）/ meeting 会议模式（M3） */

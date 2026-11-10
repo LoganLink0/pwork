@@ -91,6 +91,44 @@ export function NewReview() {
 
       <MaterialCard />
 
+      {/* 场景故事引子（2026-11-10 用户反馈：缺场景与故事感，用户不知道什么时候用）——
+          真实生活里的三个高频时刻，点了直达对应复盘 */}
+      <div className="set-card" style={{ marginBottom: 'var(--sp-5)' }}>
+        <h2>对号入座——哪个瞬间像你现在的样子？</h2>
+        <div className="desc">复盘不是仪式。它是这些时刻里，顺手做的一件小事。</div>
+        <div className="set-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+          {[
+            {
+              story: '这周过得稀里糊涂，会议、任务、琐事在脑子里搅成一团。周五晚上花 10 分钟，把它们理成「继续做 / 停止做 / 换个做法」。',
+              label: '来一次周复盘 →',
+              templateId: 'personal-weekly',
+            },
+            {
+              story: '今天有件事卡在心里过不去。睡前 3 分钟写下来：发生了什么、为什么、明天改变哪一件小事。',
+              label: '来一次日复盘 →',
+              templateId: 'personal-daily',
+            },
+            {
+              story: '项目刚收尾，团队气氛微妙。一场备好角色和议程的回顾会，不跑题、不追责，只找下次能改进的一件事。',
+              label: '开一场团队回顾会 →',
+              templateId: 'team-project',
+            },
+          ].map((s) => (
+            <div key={s.templateId} style={{ display: 'flex', gap: 'var(--sp-3)', alignItems: 'center' }}>
+              <span className="val" style={{ flex: 1, color: 'var(--ink-soft)', lineHeight: 1.7 }}>{s.story}</span>
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ flex: 'none', whiteSpace: 'nowrap' }}
+                onClick={() => navigate(`/review/wizard?template=${s.templateId}`)}
+              >
+                {s.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
@@ -103,6 +141,7 @@ export function NewReview() {
             key={t.id}
             kind={KIND_BY_TYPE[t.type]}
             title={t.name}
+            when={t.when}
             tagline={usage.get(t.id) ? `用过 ${usage.get(t.id)} 次 · ${t.tagline}` : t.tagline}
             onClick={() => {
               const note = searchParams.get('note') ?? ''

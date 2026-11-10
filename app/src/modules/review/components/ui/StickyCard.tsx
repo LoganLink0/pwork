@@ -7,6 +7,8 @@ interface StickyCardProps {
   kind: StickyKind
   title: string
   tagline?: string
+  /** 什么时候用：真实生活里的那一刻（2026-11-10 场景化补强） */
+  when?: string
   /** 里程碑占位标记（开发期） */
   milestone?: string
   onClick?: () => void
@@ -19,7 +21,7 @@ function tilt(seed: string): string {
   return `${h - 3}deg`
 }
 
-export function StickyCard({ kind, title, tagline, milestone, onClick }: StickyCardProps) {
+export function StickyCard({ kind, title, tagline, when, milestone, onClick }: StickyCardProps) {
   const style = { '--tilt': tilt(title) } as CSSProperties
   return (
     <div
@@ -41,6 +43,7 @@ export function StickyCard({ kind, title, tagline, milestone, onClick }: StickyC
     >
       <div className="sticky-title">{title}</div>
       {tagline && <div className="sticky-tagline">{tagline}</div>}
+      {when && <div className="sticky-when">什么时候用：{when}</div>}
       {milestone && <span className="sticky-mile">{milestone} 开放</span>}
     </div>
   )

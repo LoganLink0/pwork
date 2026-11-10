@@ -40,6 +40,16 @@
   line-height: 1.65;
 }
 
+/* 什么时候用：真实生活里的那一刻（2026-11-10 场景化补强）——与 tagline 视觉分层 */
+.sticky .sticky-when {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed color-mix(in srgb, var(--ink-faint) 35%, transparent);
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
 .sticky .sticky-mile {
   position: absolute;
   top: var(--sp-3);
