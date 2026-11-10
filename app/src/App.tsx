@@ -24,6 +24,7 @@ import { autoRefreshInterestProfile } from './engine/interestProfile'
 import { requestPersistence } from './engine/storageHealth'
 import { runStartupHealthCheck, recoveryGuidance } from './engine/dbHealth'
 import { runMutationGuard, holdUntilGuardSettled, type GuardResult } from './engine/dbGuard'
+import type { RecurrenceInterval } from './db/tasksRepo'
 import { runStartupNotifiesFromDb, notifyDigestReady, sendSystemNotify } from './engine/notify'
 import { loadKeybinds } from './engine/keybinds'
 import { MigrationModal } from './components/shell/MigrationModal'
@@ -367,40 +368,35 @@ export default function App() {
   // 冒名进程截获对话内容，必须让用户看见而不是静默降级（安全审计 F12）
   useEffect(() => {
     if (!isDesktopApp()) return
-    let unlisten: (() => void) | null = null
-    void import('@tauri-apps/api/event')
+    const un = import('@tauri-apps/api/event')
       .then(({ listen }) => listen('gateway-conflict', () => {
         window.alert('端口 8788 已被其他进程占用，应用内嵌 AI 网关没有启动。\n若不是你自己起的开发版网关，请检查占用 8788 的进程（可能截获对话内容）。')
         void recordError({ where: 'App.网关冲突', kind: 'app', message: '端口 8788 被其他进程占用，内嵌网关未启动——AI 与抓取网关通路不可用' })
       }))
-      .then((fn) => {
-        unlisten = fn
-      })
-      .catch(() => {})
-    return () => unlisten?.()
+      .catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
   }, [])
 
   // 桌面版：置顶热键切换结果 → toast（系统工具台第一批，08 后增）
   useEffect(() => {
     if (!isDesktopApp()) return
-    let unlisten: (() => void) | null = null
-    tauriListen<string>('topmost-toggled', (e) => {
+    const un = tauriListen<string>('topmost-toggled', (e) => {
       const msg = e.payload
       toast(msg.startsWith('失败') ? 'error' : 'ok', msg)
-    })
-      .then((fn) => {
-        unlisten = fn
-      })
-      .catch(() => {})
-    return () => unlisten?.()
+    }).catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
   }, [])
 
   // 桌面版：剪贴板速记热键（系统工具台第二批）——读剪贴板入速记库，不唤窗口不打断当前应用。
   // 超长内容截断保存（速记是随手摘录，整本书量级的内容不该静默进库）；空剪贴板给出提示
   useEffect(() => {
     if (!isDesktopApp()) return
-    let unlisten: (() => void) | null = null
-    tauriListen('clipboard-capture', (e) => {
+    // 注册即挂注销链（StrictMode 双挂载下先注册的监听器不泄漏——泄漏会让剪贴板速记双份落库）
+    const un = tauriListen('clipboard-capture', (e) => {
       void (async () => {
         const from = ((e.payload as { from?: string } | undefined)?.from ?? '').trim()
         let text = ''
@@ -433,28 +429,70 @@ export default function App() {
         useNotifyHub.getState().push({ kind: 'done', title: '剪贴板已存入速记', desc: preview, to: '/input/notes' })
         void sendSystemNotify('已存入速记', preview)
       })()
-    })
-      .then((fn) => {
-        unlisten = fn
-      })
-      .catch(() => {})
-    return () => unlisten?.()
+    }).catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
+  }, [])
+
+  // 桌面版：外部接入写库（2.1 批）——其他项目 / 外部 AI 客户端经网关 /api/library/* 提交写入，
+  // 网关校验令牌与字段后发 library-write 事件，这里走既有 normalize/store 落库（与剪贴板速记同款通路）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    // 注册即挂注销链（StrictMode 双挂载下先注册的监听器不泄漏——泄漏会双重落库，2.1 批走查抓出）
+    const un = tauriListen<{ kind: string; title?: string; body?: string; tags?: string[]; due?: string | null; recurrenceDays?: number | null }>('library-write', (e) => {
+      const { kind } = e.payload
+      if (kind === 'note') {
+        const body = String(e.payload.body ?? '')
+        const tags = Array.isArray(e.payload.tags) ? e.payload.tags.map(String) : []
+        void useNotes
+          .getState()
+          .create({ body, tags, source: 'manual' })
+          .then(() => {
+            const preview = body.replace(/\s+/g, ' ').slice(0, 40)
+            toast('ok', `外部接入：已存入速记（${preview}${preview.length >= 40 ? '…' : ''}）`)
+            useNotifyHub.getState().push({ kind: 'done', title: '外部接入已存入速记', desc: preview, to: '/input/notes' })
+          })
+          .catch((err: unknown) => {
+            toast('error', '外部接入写入速记失败——详见错误日志')
+            void recordError({ where: '外部接入.速记', kind: 'app', message: err instanceof Error ? err.message : String(err) })
+          })
+      } else if (kind === 'task') {
+        const title = String(e.payload.title ?? '')
+        void useTasks
+          .getState()
+          .create({
+            title,
+            due: typeof e.payload.due === 'string' && e.payload.due ? e.payload.due : undefined,
+            recurrenceDays: typeof e.payload.recurrenceDays === 'number' ? (e.payload.recurrenceDays as RecurrenceInterval) : undefined,
+            origin: { kind: 'manual', refId: null },
+          })
+          .then(() => {
+            toast('ok', `外部接入：已创建待办「${title.slice(0, 30)}」`)
+            useNotifyHub.getState().push({ kind: 'done', title: '外部接入已创建待办', desc: title, to: '/tasks' })
+          })
+          .catch((err: unknown) => {
+            toast('error', '外部接入创建待办失败——详见错误日志')
+            void recordError({ where: '外部接入.待办', kind: 'app', message: err instanceof Error ? err.message : String(err) })
+          })
+      }
+    }).catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
   }, [])
 
   // 桌面版：Shell 通知桥（系统工具台第二批）——外部命令经网关 /notify 弹通知（构建/安装/长任务结束叫人回来）
   useEffect(() => {
     if (!isDesktopApp()) return
-    let unlisten: (() => void) | null = null
-    tauriListen<{ title: string; body: string }>('shell-notify', (e) => {
+    const un = tauriListen<{ title: string; body: string }>('shell-notify', (e) => {
       const { title, body } = e.payload
       toast('info', body ? `${title}：${body}` : title)
       void sendSystemNotify(title, body)
-    })
-      .then((fn) => {
-        unlisten = fn
-      })
-      .catch(() => {})
-    return () => unlisten?.()
+    }).catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
   }, [])
 
   return (

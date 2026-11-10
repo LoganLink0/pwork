@@ -121,12 +121,22 @@ fn sql_to_json(v: SqlValue) -> Json {
   }
 }
 
-fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
+/// 应用数据目录（gateway.env / pwork.db / backups 的家）。
+/// PWORK_DATA_DIR 环境变量可覆盖——测试/多实例隔离用（隔离实例不碰真实库，2026-11-10 随 2.1 批）
+pub fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+  if let Ok(dir) = std::env::var("PWORK_DATA_DIR") {
+    if !dir.trim().is_empty() {
+      return Ok(PathBuf::from(dir.trim()));
+    }
+  }
   app
     .path()
     .app_data_dir()
-    .map(|d| d.join("pwork.db"))
     .map_err(|e| format!("定位应用数据目录失败：{}", e))
+}
+
+fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
+  app_data_dir(app).map(|d| d.join("pwork.db"))
 }
 
 fn open_conn(path: &PathBuf) -> Result<Connection, String> {

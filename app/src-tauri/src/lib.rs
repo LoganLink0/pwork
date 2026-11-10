@@ -129,6 +129,12 @@ fn display_combo(combo: &str) -> String {
     .join("+")
 }
 
+/// 设置 → 外部接入：读取库写入令牌（网关启动时缺失会自动生成并写回 gateway.env）
+#[tauri::command]
+fn get_library_token(state: tauri::State<gateway::SharedConfig>) -> String {
+  state.lock().unwrap().library_token.clone()
+}
+
 /// 引导页/设置页写入网关 Key：合并进 gateway.env（保留用户手写的其它行），并热更新运行中的网关——
 /// 无需重启应用，写完即可发起连接测试
 #[tauri::command]
@@ -154,7 +160,7 @@ fn save_gateway_key(
             return Err("上游地址/模型名含非法字符".into());
         }
     }
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let data_dir = db::app_data_dir(&app)?;
     let _ = std::fs::create_dir_all(&data_dir);
     let file = data_dir.join("gateway.env");
     let mut lines: Vec<String> = std::fs::read_to_string(&file)
@@ -495,7 +501,7 @@ pub fn run() {
       // 内嵌网关：AI Key 的安全存放点（127.0.0.1，随应用启停）。
       // 端口被占（如开发版 Node 网关在跑）时让位，但发事件告知前端——
       // 8788 也可能是恶意进程冒名占位，用户应能察觉（安全审计 F12）
-      let data_dir = app.path().app_data_dir()?;
+      let data_dir = db::app_data_dir(&app.handle())?;
       let _ = std::fs::create_dir_all(&data_dir);
       let shared_gw = gateway::start(data_dir, app.handle().clone());
       app.manage(shared_gw);
@@ -531,6 +537,7 @@ pub fn run() {
     .manage(db::DbState(std::sync::Mutex::new(None)))
     .invoke_handler(tauri::generate_handler![
       save_gateway_key,
+      get_library_token,
       open_deploy_wizard,
       open_external_url,
       deploy_cloud,

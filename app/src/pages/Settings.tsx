@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { downloadFile } from '../db/repo'
 import { importBundle, savePreImportSnapshot, getPreImportSnapshot, restorePreImportSnapshot } from '../db/backup'
 import { getQuarantine, readQuarantineBundle, clearQuarantine, refreshReferenceAfterRestore, type QuarantineInfo } from '../engine/dbGuard'
+import { toast } from '../engine/toast'
 import { pushCloudPrefs } from '../db/cloudSync'
 import { useNotes } from '../store/notes'
 import { useCollect, buildBackupBundle } from '../store/collect'
@@ -128,6 +129,15 @@ export function Settings() {
   const [quarInfo, setQuarInfo] = useState<QuarantineInfo | null>(null)
   useEffect(() => {
     void getQuarantine().then(setQuarInfo)
+  }, [])
+  // 外部接入令牌（2.1 批）：桌面版网关启动时自动生成，设置页展示与复制
+  const [libToken, setLibToken] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    void invoke<string>('get_library_token')
+      .then((t) => setLibToken(t || null))
+      .catch(() => setLibToken(null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载取一次
   }, [])
   const downloadQuarantine = async () => {
     if (!quarInfo) return
@@ -722,6 +732,38 @@ export function Settings() {
               flomo（HTML）/ Notion（zip）/ Evernote·印象笔记（.enex）
             </span>
           </div>
+          {isDesktopApp() && (
+            <div className="set-row">
+              <label>外部接入</label>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', lineHeight: 1.7 }}>
+                其他项目或外部 AI 客户端可经本机网关写入速记与待办（只增不删）：
+                <br />
+                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/library/notes</code> ·{' '}
+                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/library/tasks</code>
+                <br />
+                请求头带 <code>Authorization: Bearer 令牌</code>；notes 传 {'{body, title?, tags?}'}，tasks 传{' '}
+                {'{title, due?, recurrenceDays?}'}
+              </span>
+              <span className="val" style={{ fontSize: 'var(--fs-xs)', fontFamily: 'Cascadia Code, Consolas, monospace', userSelect: 'all' }}>
+                {libToken ?? '读取中…'}
+              </span>
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ flex: 'none' }}
+                title="复制接入令牌到剪贴板"
+                onClick={() => {
+                  if (!libToken) return
+                  void navigator.clipboard
+                    .writeText(libToken)
+                    .then(() => toast('ok', '接入令牌已复制'))
+                    .catch(() => toast('error', '复制失败——请手动选中复制'))
+                }}
+              >
+                复制令牌
+              </button>
+            </div>
+          )}
           {storage?.supported && (
             <div className="set-row">
               <label>存储保护</label>

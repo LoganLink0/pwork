@@ -30,6 +30,9 @@ pub struct GatewayConfig {
     pub search_url: String,
     pub search_model: String,
     pub search_key: String,
+    /// 外部接入令牌（2.1 批）：其他项目/外部 AI 客户端经 /api/library/* 写速记与待办时
+    /// 必须携带（Authorization: Bearer 或 X-PWORK-Token）。缺失时启动自动生成并写回 gateway.env
+    pub library_token: String,
     pub usage_log: PathBuf,
 }
 
@@ -104,8 +107,40 @@ impl GatewayConfig {
         let usage_log = data_dir.join("gateway-usage.log");
         let heavy_model = var_from(&vars, "PWORK_LLM_MODEL_HEAVY").unwrap_or_default();
         let light_model = var_from(&vars, "PWORK_LLM_MODEL_LIGHT").unwrap_or_default();
-        Self { port, chat_url, chat_key, chat_model, heavy_model, light_model, search_url, search_model, search_key, usage_log }
+        let library_token = var_from(&vars, "PWORK_LIBRARY_TOKEN").unwrap_or_default();
+        Self { port, chat_url, chat_key, chat_model, heavy_model, light_model, search_url, search_model, search_key, library_token, usage_log }
     }
+}
+
+/** 外部接入令牌生成：RandomState 每实例随机种子 + 时间/线程/进程熵，拼 32 位十六进制。
+ *  本机回环用的接入令牌，不承担跨网加密职责（网关只听 127.0.0.1）。 */
+fn generate_library_token() -> String {
+    use std::hash::{BuildHasher, Hash, Hasher};
+    let mut h1 = std::collections::hash_map::RandomState::new().build_hasher();
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0)
+        .hash(&mut h1);
+    std::thread::current().id().hash(&mut h1);
+    let a = h1.finish();
+    let mut h2 = std::collections::hash_map::RandomState::new().build_hasher();
+    a.hash(&mut h2);
+    std::process::id().hash(&mut h2);
+    format!("{a:016x}{:016x}", h2.finish())
+}
+
+/** gateway.env 单键插入/替换：保留其余行（与 lib.rs save_gateway_key 的合并语义一致） */
+fn upsert_env_file(path: &PathBuf, key: &str, value: &str) {
+    let prefix = format!("{key}=");
+    let mut lines: Vec<String> = fs::read_to_string(path)
+        .unwrap_or_default()
+        .lines()
+        .map(|l| l.trim_end().to_string())
+        .filter(|l| !l.starts_with(&prefix))
+        .collect();
+    lines.push(format!("{key}={value}"));
+    let _ = fs::write(path, lines.join("\n") + "\n");
 }
 
 /// 场景 → 轻重分组（与 Node 版 PURPOSE_GROUP 一致）：重活要推理与长输出，轻活短平快
@@ -126,11 +161,119 @@ fn model_for<'a>(cfg: &'a GatewayConfig, purpose: Option<&str>) -> &'a str {
     }
 }
 
+/* --------------------- 外部库写入（2.1 批）：校验器 + 限速 ---------------------
+ * 只增白名单（速记追加 / 待办创建），字段白名单逐一清洗——多余字段丢弃、类型不符拒绝。
+ * 令牌校验与写入频率限制在路由层；写库由前端 library-write 监听器走既有 normalize/store 完成。 */
+
+#[derive(Debug, PartialEq)]
+pub struct LibraryNoteInput {
+    pub title: String,
+    pub body: String,
+    pub tags: Vec<String>,
+}
+
+pub fn validate_note_payload(v: &Value) -> Result<LibraryNoteInput, String> {
+    let body = v.get("body").and_then(|x| x.as_str()).unwrap_or("").trim().to_string();
+    if body.is_empty() {
+        return Err("body 不能为空（外部写入的速记至少要有正文）".into());
+    }
+    if body.chars().count() > 20_000 {
+        return Err("body 超过 2 万字符上限".into());
+    }
+    let mut title = v.get("title").and_then(|x| x.as_str()).unwrap_or("").trim().to_string();
+    if title.is_empty() {
+        title = body.lines().next().unwrap_or("外部速记").trim().chars().take(24).collect();
+    }
+    if title.chars().count() > 60 {
+        title = title.chars().take(60).collect();
+    }
+    let mut tags: Vec<String> = Vec::new();
+    if let Some(arr) = v.get("tags").and_then(|x| x.as_array()) {
+        for t in arr {
+            let s = t.as_str().unwrap_or("").trim().trim_start_matches('#').trim().to_string();
+            if s.is_empty() || s.chars().count() > 16 {
+                continue;
+            }
+            if tags.len() >= 10 {
+                break;
+            }
+            if !tags.contains(&s) {
+                tags.push(s);
+            }
+        }
+    }
+    Ok(LibraryNoteInput { title, body, tags })
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LibraryTaskInput {
+    pub title: String,
+    pub due: Option<String>,
+    pub recurrence_days: Option<u8>,
+}
+
+/** due 形状校验：YYYY-MM-DD，月 1–12、日 1–31（深度合法性由前端 normalize 与展示层兜底） */
+fn due_shape_ok(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
+        return false;
+    }
+    let digits = |p: &[u8]| -> Option<u32> {
+        if !p.iter().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        Some(p.iter().fold(0u32, |acc, c| acc * 10 + (c - b'0') as u32))
+    };
+    let (y, m, d) = (digits(&b[0..4]), digits(&b[5..7]), digits(&b[8..10]));
+    match (y, m, d) {
+        (Some(_), Some(m), Some(d)) => (1..=12).contains(&m) && (1..=31).contains(&d),
+        _ => false,
+    }
+}
+
+pub fn validate_task_payload(v: &Value) -> Result<LibraryTaskInput, String> {
+    let title = v.get("title").and_then(|x| x.as_str()).unwrap_or("").trim().to_string();
+    if title.is_empty() {
+        return Err("title 不能为空".into());
+    }
+    if title.chars().count() > 120 {
+        return Err("title 超过 120 字上限".into());
+    }
+    let due = match v.get("due").and_then(|x| x.as_str()) {
+        None | Some("") => None,
+        Some(s) => {
+            if !due_shape_ok(s) {
+                return Err(format!("due 必须是 YYYY-MM-DD 格式（收到 {s}）"));
+            }
+            Some(s.to_string())
+        }
+    };
+    let recurrence_days = match v.get("recurrenceDays") {
+        None | Some(Value::Null) => None,
+        Some(x) => match x.as_u64() {
+            Some(n) if n == 1 || n == 7 || n == 14 || n == 30 || n == 90 => Some(n as u8),
+            _ => return Err("recurrenceDays 只接受 1 / 7 / 14 / 30 / 90".into()),
+        },
+    };
+    Ok(LibraryTaskInput { title, due, recurrence_days })
+}
+
+/** 写入限速（每分钟全端点合计上限）：网关循环单线程，用一个 (分钟窗口, 计数) 元组即可 */
+fn rate_ok(state: &mut (u64, u32), now_minute: u64, cap: u32) -> bool {
+    if now_minute != state.0 {
+        *state = (now_minute, 0);
+    }
+    if state.1 >= cap {
+        return false;
+    }
+    state.1 += 1;
+    true
+}
+
 /// 归一上游地址：允许填基础地址、带 /v1、或完整端点（与 Node 版一致）
 fn normalize_upstream(base: &str) -> String {
     let u = base.trim().trim_end_matches('/').to_string();
-    if u.ends_with("/chat/completions") {
-        return u;
+    if u.ends_with("/chat/completions") {        return u;
     }
     if regex_free_ends_with_version(&u) {
         return format!("{u}/chat/completions");
@@ -312,6 +455,16 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
     let shared: SharedConfig = Mutex::new(GatewayConfig::load(&data_dir)).into();
     let state = shared.clone();
     thread::spawn(move || {
+        // 外部接入令牌缺失即自动生成并写回 gateway.env（同目录同权限；合并写不覆盖其他键）
+        {
+            let mut cfg = state.lock().unwrap();
+            if cfg.library_token.is_empty() {
+                let token = generate_library_token();
+                upsert_env_file(&data_dir.join("gateway.env"), "PWORK_LIBRARY_TOKEN", &token);
+                cfg.library_token = token;
+                log::info!("[PWORK 网关] 外部接入令牌已生成并写入 gateway.env（设置 → 外部接入 可复制）");
+            }
+        }
         let port = state.lock().unwrap().port;
         let addr = format!("127.0.0.1:{port}");
         let Ok(server) = Server::http(&addr) else {
@@ -329,6 +482,8 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
             );
         }
         let usage_lock = Mutex::new(());
+        // 外部库写入限速状态（每分钟窗口，全 /api/library 端点合计）
+        let mut library_rate = (0u64, 0u32);
         for mut req in server.incoming_requests() {
             // 每个请求取配置快照：save_gateway_key 的热更新立即对后续请求生效
             let cfg = state.lock().unwrap().clone();
@@ -383,7 +538,7 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
-            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query" || path == "/notify";
+            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query" || path == "/notify" || path.starts_with("/api/library/");
             const MAX_BODY: usize = 1_048_576;
             let content_length = req
                 .headers()
@@ -444,6 +599,56 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                             }
                         }
                     },
+                }
+            } else if path.starts_with("/api/library/") && method == Method::Post {
+                // 外部库写入（2.1 批）：其他项目 / 外部 AI 客户端在令牌授权下追加速记、创建待办。
+                // 只增白名单；字段校验后发 library-write 事件，前端监听器走既有 normalize/store 落库
+                //（与剪贴板速记同款通路）——网关线程不直接触碰 SQLite 连接。
+                let kind = if path == "/api/library/notes" { "note" } else { "task" };
+                let mut token = String::new();
+                for h in req.headers().iter() {
+                    if h.field.equiv("Authorization") {
+                        let v = h.value.as_str().trim();
+                        token = v.strip_prefix("Bearer ").map(|t| t.trim().to_string()).unwrap_or_else(|| v.to_string());
+                        break;
+                    }
+                    if h.field.equiv("X-PWORK-Token") {
+                        token = h.value.as_str().trim().to_string();
+                        break;
+                    }
+                }
+                let now_minute = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() / 60)
+                    .unwrap_or(0);
+                if cfg.library_token.is_empty() {
+                    (503, json!({ "ok": false, "error": "外部接入未就绪（令牌生成失败）——重启应用" }))
+                } else if token != cfg.library_token {
+                    (401, json!({ "ok": false, "error": "令牌缺失或不匹配——外部写入需要 Bearer Token（PWORK 设置 → 外部接入 可复制）" }))
+                } else if !rate_ok(&mut library_rate, now_minute, 30) {
+                    (429, json!({ "ok": false, "error": "写入太频繁（每分钟上限 30 次），稍后再试" }))
+                } else {
+                    match body.as_deref() {
+                        Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                        Ok("") => (400, json!({ "ok": false, "error": "请求体为空——notes 传 {body, title?, tags?}；tasks 传 {title, due?, recurrenceDays?}" })),
+                        Ok(b) => match serde_json::from_str::<Value>(b) {
+                            Err(_) => (400, json!({ "ok": false, "error": "请求体不是 JSON" })),
+                            Ok(v) => {
+                                let validated = if kind == "note" {
+                                    validate_note_payload(&v).map(|n| json!({ "kind": "note", "title": n.title, "body": n.body, "tags": n.tags }))
+                                } else {
+                                    validate_task_payload(&v).map(|t| json!({ "kind": "task", "title": t.title, "due": t.due, "recurrenceDays": t.recurrence_days }))
+                                };
+                                match validated {
+                                    Err(msg) => (400, json!({ "ok": false, "error": msg })),
+                                    Ok(payload) => {
+                                        let _ = app.emit("library-write", payload);
+                                        (200, json!({ "ok": true }))
+                                    }
+                                }
+                            }
+                        },
+                    }
                 }
             } else if path == "/rss" && method == Method::Get {
                 // RSS 代理：网关服务端直抓源站，无 CORS/浏览器指纹限制——前端抓取的第一通路，
@@ -709,4 +914,58 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
         }
     });
     shared
+}
+
+#[cfg(test)]
+mod library_tests {
+    use super::{due_shape_ok, generate_library_token, rate_ok, validate_note_payload, validate_task_payload};
+    use serde_json::json;
+
+    #[test]
+    fn 速记校验_正文必填与截断() {
+        let err = validate_note_payload(&json!({ "title": "只有标题" })).unwrap_err();
+        assert!(err.contains("body 不能为空"));
+        let long = "x".repeat(20_001);
+        assert!(validate_note_payload(&json!({ "body": long })).unwrap_err().contains("上限"));
+        let long_tag = "标".repeat(17);
+        let ok = validate_note_payload(&json!({ "body": "第一行正文\n第二行", "tags": ["#外部", "外部", "", long_tag] })).unwrap();
+        assert_eq!(ok.title, "第一行正文");
+        assert_eq!(ok.tags, vec!["外部"]); // # 前缀剥离、去重、空与超长（>16 字）丢弃
+    }
+
+    #[test]
+    fn 待办校验_期限形状与循环白名单() {
+        let err = validate_task_payload(&json!({ "title": "x", "due": "2026/11/01" })).unwrap_err();
+        assert!(err.contains("YYYY-MM-DD"));
+        assert!(validate_task_payload(&json!({ "title": "x", "due": "2026-13-01" })).is_err());
+        assert!(validate_task_payload(&json!({ "title": "x", "recurrenceDays": 5 })).unwrap_err().contains("1 / 7 / 14 / 30 / 90"));
+        let ok = validate_task_payload(&json!({ "title": "  整理发票  ", "due": "2026-11-17", "recurrenceDays": 7 })).unwrap();
+        assert_eq!(ok.title, "整理发票");
+        assert_eq!(ok.due.as_deref(), Some("2026-11-17"));
+        assert_eq!(ok.recurrence_days, Some(7));
+    }
+
+    #[test]
+    fn due_形状边界() {
+        assert!(due_shape_ok("2026-01-01"));
+        assert!(!due_shape_ok("2026-1-1"));
+        assert!(!due_shape_ok("2026-00-10"));
+        assert!(!due_shape_ok("2026-01-32"));
+        assert!(!due_shape_ok(""));
+    }
+
+    #[test]
+    fn 限速_窗口切换重置() {
+        let mut st = (100u64, 30u32);
+        assert!(!rate_ok(&mut st, 100, 30)); // 同窗口已满
+        assert!(rate_ok(&mut st, 101, 30)); // 新窗口重置
+    }
+
+    #[test]
+    fn 令牌生成_非空且长度形状() {
+        let a = generate_library_token();
+        let b = generate_library_token();
+        assert_eq!(a.len(), 32);
+        assert_ne!(a, b);
+    }
 }
