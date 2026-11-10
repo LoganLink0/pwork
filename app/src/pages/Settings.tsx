@@ -606,10 +606,10 @@ export function Settings() {
           )}
           {quarInfo && (
             <div className="set-row">
-              <label>突变时的数据副本</label>
+              <label>数据突然减少时的副本</label>
               <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                {fmtLocal(quarInfo.at)} 启动守卫发现数据骤减时自动留的副本
-                {quarInfo.where === 'file' ? `（备份文件夹里的 ${quarInfo.fileName}）` : '（存在应用本地存储）'}；确认现状没问题后可取走或删除
+                {fmtLocal(quarInfo.at)} 发现数据突然变少时自动留的一份副本
+                {quarInfo.where === 'file' ? `（备份文件夹里的 ${quarInfo.fileName}）` : '（存在应用本地存储）'}；确认数据没问题后可取走或删除
               </span>
               <button type="button" className="btn-ghost" style={{ flex: 'none' }} title="把这份副本下载成 JSON 文件" onClick={() => void downloadQuarantine()}>
                 取走副本

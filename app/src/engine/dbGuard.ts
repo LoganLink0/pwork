@@ -265,7 +265,7 @@ export async function runMutationGuard(opts?: GuardOptions): Promise<GuardResult
     quarantine = null
   }
   void recordError({
-    where: '启动突变守卫',
+    where: '启动数据检查',
     kind: 'app',
     message:
       `${describeTriggers(triggers)}——数据可能被意外清空。` +
