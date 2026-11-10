@@ -266,6 +266,11 @@
     font-size: 12px; font-weight: 600; padding: 3px 12px; white-space: nowrap;
   }
 
+  /* 设计理念（2026-11-10 新增）：P 字标的三层含义——耳朵/援手/Partner */
+  .design-mark { margin: 0 auto 6px; text-align: center; }
+  .design-mark img { width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 6px 24px rgba(232, 131, 58, 0.28); }
+  .design-mark + .trust { margin-top: 18px; }
+
   /* 版本更新日志（软件外面区块；应用侧栏公告卡「前往」落点 #changelog，2026-11-09） */
   .changelog { margin: 28px 0 0; display: grid; gap: 14px; }
   .cl-item { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
@@ -301,6 +306,7 @@
   <div class="wrap">
     <a class="brand" href="#"><img class="mark" src="favicon.svg" alt="PWORK" width="26" height="26"><span>PWORK</span></a>
     <div class="topnav">
+      <a class="nav-link" href="#design">设计</a>
       <a class="nav-link" href="#loop">功能</a>
       <a class="nav-link" href="#trust">原则</a>
       <a class="nav-link" href="#proof">可信</a>
@@ -345,6 +351,34 @@
       </figure>
     </div>
   </div>
+
+  <section class="band" id="design">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">设计理念</div>
+        <h2>为什么是字母 P？因为它同时是三样东西</h2>
+        <p>很多人问那个橙色的圆标是什么意思。答案很简单：它是一只耳朵，一只伸出的手，也是 Partner 的首字母——这三件事，就是 PWORK 的全部设计哲学。</p>
+      </div>
+      <figure class="design-mark">
+        <img src="assets/logo-512.png" alt="PWORK 的 P 字圆标：橙色圆形里一个白色 P 字，字形同时像一只耳朵和一只摊开的手" width="150" height="150">
+      </figure>
+      <div class="trust">
+        <div class="card">
+          <b>它是一只耳朵</b>
+          <p>PWORK 学会的第一件事是「听」：你随手速记的、订阅抓来的、开会时说的，它都默默收好、整理成档。但它只在你自己的电脑里听——你的话，不出门。</p>
+        </div>
+        <div class="card">
+          <b>它是一只伸出的手</b>
+          <p>圆圆的手掌向上摊开，是「递东西」的姿势：每天一份信息日报、一键成稿的周报和 PPT、复盘后自动排队的行动项——都是它整理好，伸手递到你面前的。</p>
+        </div>
+        <div class="card">
+          <b>它是 Partner</b>
+          <p>P 也是 Partner 的 P。它不是一台催你干活的效率机器，是一个只属于你的工作伙伴：不注册、不上传、开源免费，打算陪你很多年。</p>
+        </div>
+      </div>
+      <p class="loop-back">所以下次看到这个橙色的 P，希望你想起的不是「一款软件」——是那个一直在你电脑里、听你说、帮你做的伙伴。</p>
+    </div>
+  </section>
 
   <section class="band band-surface" id="loop">
     <div class="wrap">
