@@ -41,6 +41,7 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 1. 版本号四处同步：`app/package.json`、`app/src-tauri/tauri.conf.json`、`app/src-tauri/Cargo.toml` 的 `version`，加设置关于页文案（Settings.tsx 搜 `v0.`；版本号注入 `__APP_VERSION__` 构建时自动跟随 package.json）；lock 文件用 `npm install --package-lock-only` 刷。
 2. 打联网版（默认配置，产物约 8MiB；带签名需 TAURI_SIGNING_PRIVATE_KEY=私钥内容，密钥在 app/.tauri/）：`cd app && npx tauri build` → 拿走 `bundle/nsis/` 产物，改名加 `-online` 后缀。
 3. 打离线版（约 224MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
+3b. **安装 smoke（必过）**：联网版静默安装（`/S`）→ 注册表 `DisplayVersion` 核对 → 启动 → 网关 `/health` 通 → **关闭路径**：WM_CLOSE 优雅关闭后 `Get-Process` 确认进程归零（0.1.18 起修复的"关闭后进程残留"回归项）；数据守卫恢复演练（`local/verify-recovery-drill.py`，隔离数据目录跑四阶段：造数→基准与自动备份→清库触守卫→一键恢复）。
 3a. 刷新在线演示版：`cd app && npm run build:demo` → 产物覆盖 `docs/demo/` → 提交推送（GitHub Pages 一两分钟自动上线；重引擎 64MB 不入演示构建，横幅已引导桌面版）。
 4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。
 4a. **CHANGELOG 同步**：发布说明定稿时，把本版变化清单同步进 [CHANGELOG.md](../CHANGELOG.md)（最新在上；GitHub Release 说明直接复用同一段）。
