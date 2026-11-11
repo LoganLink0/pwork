@@ -60,9 +60,8 @@ async function saveSnapshot(): Promise<string> {
   const name = `migration-backup-${stamp()}.json`
   const content = JSON.stringify(bundle, null, 2)
   try {
-    const { mkdir, writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-    await mkdir('backups', { baseDir: BaseDirectory.AppData, recursive: true })
-    await writeTextFile(`backups/${name}`, content, { baseDir: BaseDirectory.AppData })
+    const { writeBackupText } = await import('./desktopFiles')
+    await writeBackupText(name, content)
     return name
   } catch {
     // 写盘失败不阻断迁移：下载一份由用户保存（快照是回滚保险，不能因为保险本身失败而停止）

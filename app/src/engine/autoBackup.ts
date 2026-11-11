@@ -81,10 +81,9 @@ async function deliverBackup(fileName: string, content: string): Promise<{ locat
   if (await writeToCustomDir(fileName, content)) return { location: 'dir' }
   if (isDesktopApp()) {
     try {
-      const { mkdir, writeTextFile, readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      await mkdir('backups', { baseDir: BaseDirectory.AppData, recursive: true })
-      await writeTextFile(`backups/${fileName}`, content, { baseDir: BaseDirectory.AppData })
-      const back = await readTextFile(`backups/${fileName}`, { baseDir: BaseDirectory.AppData })
+      const { writeBackupText, readBackupText } = await import('../db/storage/desktopFiles')
+      await writeBackupText(fileName, content)
+      const back = await readBackupText(fileName)
       if (back !== content) throw new Error('备份写入校验失败：读回内容与写入内容不一致（磁盘可能不可靠），已改走下载兜底')
       const rotateError = await rotateDesktopBackups()
       return { location: 'disk', rotateError: rotateError ?? undefined }
@@ -107,14 +106,12 @@ export function pickStaleBackups(sortedNames: string[], keep: number = KEEP_AUTO
 /** 桌面版轮换：删掉超出保留数的旧自动备份。返回错误描述（null=正常），失败不阻断备份本身 */
 async function rotateDesktopBackups(): Promise<string | null> {
   try {
-    const { readDir, remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-    const entries = await readDir('backups', { baseDir: BaseDirectory.AppData })
-    const autos = entries
-      .filter((e) => e.isFile && e.name.startsWith('pwork-backup-') && e.name.endsWith('.json'))
-      .map((e) => e.name)
+    const { listBackupNames, removeBackup } = await import('../db/storage/desktopFiles')
+    const autos = (await listBackupNames())
+      .filter((name) => name.startsWith('pwork-backup-') && name.endsWith('.json'))
       .sort()
     for (const name of pickStaleBackups(autos)) {
-      await remove(`backups/${name}`, { baseDir: BaseDirectory.AppData })
+      await removeBackup(name)
     }
     return null
   } catch (e) {

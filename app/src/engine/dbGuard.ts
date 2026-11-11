@@ -47,8 +47,11 @@ export function describeTriggers(triggers: GuardTrigger[]): string {
 }
 
 /* --------------------- 桌面文件读写（库外基准与隔离副本都在 backups/） ---------------------
- * capabilities 的 fs 权限收窄在 AppData 的 backups/ 内（2026-10-26 审计④），库外文件全部放这里。
- * 接口注入便于测试；默认实现走 Tauri fs。 */
+ * 边界与 fs 权限审计④一致：只许碰数据目录的 backups 文件夹。实现走 Rust 命令
+ * backup_file_io（经 db/storage/desktopFiles 适配层）——数据目录解析在 Rust 侧，
+ * 尊重 PWORK_DATA_DIR 隔离变量；plugin-fs 的 BaseDirectory.AppData 不认该变量，
+ * 隔离实例的守卫文件会写进真实数据目录（0.1.18 恢复演练发现的缺陷）。
+ * 接口注入便于测试。 */
 
 export interface GuardIo {
   /** 读 backups/<name> 文本；读不到（不存在/无权限）返回 null */
@@ -62,25 +65,25 @@ export interface GuardIo {
 const defaultIo: GuardIo = {
   async readJsonFile(name) {
     try {
-      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      return await readTextFile(`backups/${name}`, { baseDir: BaseDirectory.AppData })
+      const { readBackupText } = await import('../db/storage/desktopFiles')
+      return await readBackupText(name)
     } catch {
       return null
     }
   },
   async writeTextFile(name, content) {
-    const { mkdir, writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-    await mkdir('backups', { baseDir: BaseDirectory.AppData, recursive: true })
-    await writeTextFile(`backups/${name}`, content, { baseDir: BaseDirectory.AppData })
+    const { writeBackupText } = await import('../db/storage/desktopFiles')
+    await writeBackupText(name, content)
   },
   async listBackupNames() {
-    const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-    const entries = await readDir('backups', { baseDir: BaseDirectory.AppData })
-    return entries.filter((e) => e.isFile).map((e) => e.name)
+    const { listBackupNames } = await import('../db/storage/desktopFiles')
+    return await listBackupNames()
   },
   async readBackupFile(name) {
-    const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-    return await readTextFile(`backups/${name}`, { baseDir: BaseDirectory.AppData })
+    const { readBackupText } = await import('../db/storage/desktopFiles')
+    const text = await readBackupText(name)
+    if (text === null) throw new Error(`备份文件读不出：${name}`)
+    return text
   },
 }
 

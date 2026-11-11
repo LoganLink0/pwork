@@ -139,6 +139,61 @@ fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
   app_data_dir(app).map(|d| d.join("pwork.db"))
 }
 
+/// 备份文件夹文件操作（backups/ 内裸文件名，边界与 capabilities fs 权限审计④一致：
+/// 只许碰数据目录的 backups 文件夹）。统一走 app_data_dir（尊重 PWORK_DATA_DIR），
+/// 替代前端 plugin-fs 的 BaseDirectory.AppData——后者不认该隔离变量，隔离演练实例的
+/// 守卫基准 / 自动备份 / 隔离副本会写进真实数据目录（0.1.18 恢复演练发现的缺陷）。
+#[tauri::command]
+pub fn backup_file_io(
+  app: AppHandle,
+  op: String,
+  name: String,
+  content: Option<String>,
+) -> Result<Json, String> {
+  if name.is_empty() && op != "list"
+    || name.contains('/')
+    || name.contains('\\')
+    || name.contains("..")
+    || name.starts_with('.')
+  {
+    return Err("文件名必须是备份文件夹内的裸文件名".into());
+  }
+  let dir = app_data_dir(&app)?.join("backups");
+  match op.as_str() {
+    "write" => {
+      std::fs::create_dir_all(&dir).map_err(|e| format!("创建备份文件夹失败：{}", e))?;
+      let text = content.ok_or_else(|| "write 操作缺少内容".to_string())?;
+      std::fs::write(dir.join(&name), text).map_err(|e| format!("备份文件写入失败：{}", e))?;
+      Ok(json!(null))
+    }
+    "read" => match std::fs::read_to_string(dir.join(&name)) {
+      Ok(text) => Ok(json!(text)),
+      // 不存在/读不出按 null（调用方自行兜底，与原 plugin-fs 失败语义一致）
+      Err(_) => Ok(json!(null)),
+    },
+    "list" => {
+      let mut names: Vec<String> = Vec::new();
+      if let Ok(entries) = std::fs::read_dir(&dir) {
+        for e in entries.flatten() {
+          if e.path().is_file() {
+            if let Some(n) = e.file_name().to_str() {
+              names.push(n.to_string());
+            }
+          }
+        }
+      }
+      names.sort();
+      Ok(json!(names))
+    }
+    // 已不存在视为删除成功（自动备份轮换幂等）
+    "remove" => match std::fs::remove_file(dir.join(&name)) {
+      Ok(()) => Ok(json!(null)),
+      Err(_) => Ok(json!(null)),
+    },
+    _ => Err("未知操作：read / write / list / remove".into()),
+  }
+}
+
 fn open_conn(path: &PathBuf) -> Result<Connection, String> {
   if let Some(dir) = path.parent() {
     std::fs::create_dir_all(dir).map_err(|e| format!("创建数据目录失败：{}", e))?;
