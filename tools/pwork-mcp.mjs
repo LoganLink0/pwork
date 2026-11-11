@@ -71,7 +71,7 @@ async function callGateway(path, payload, token) {
       body: JSON.stringify(payload),
     })
   } catch {
-    return { isError: true, text: 'PWORK 未运行或网关不可达（127.0.0.1:8788 无响应）——启动 PWORK 桌面版后再试' }
+    return { isError: true, text: `PWORK 未运行或网关不可达（${GATEWAY} 无响应）——启动 PWORK 桌面版后再试` }
   }
   let data = null
   try {
@@ -84,6 +84,9 @@ async function callGateway(path, payload, token) {
   }
   if (resp.status === 429) {
     return { isError: true, text: '写入太频繁（每分钟上限 30 次），稍后再试' }
+  }
+  if (resp.status === 404) {
+    return { isError: true, text: '这个网关没有库写入接口——需要 PWORK 桌面版 0.1.18 或更新版本（含外部接入功能）；网页版与旧版网关不支持' }
   }
   if (!resp.ok || !data?.ok) {
     return { isError: true, text: `写入失败：${data?.error ?? `HTTP ${resp.status}`}` }

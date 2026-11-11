@@ -71,7 +71,7 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 项目暂不接受捐赠；支持 PWORK 最有效的三个动作：给个 Star、推荐信源、把问题与想法发到 [Discussions](https://github.com/LoganLink0/pwork/discussions)。
 
-回归基线：542 项自动化测试全绿、tsc 零错误、lint 0 错误（4 条既有警告）。
+回归基线：636 项自动化测试全绿、tsc 零错误、lint 0 错误（4 条既有警告）。
 
 ## 许可证
 
