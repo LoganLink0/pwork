@@ -30,7 +30,7 @@ pub struct GatewayConfig {
     pub search_url: String,
     pub search_model: String,
     pub search_key: String,
-    /// 外部接入令牌（2.1 批）：其他项目/外部 AI 客户端经 /api/library/* 写速记与待办时
+    /// 外部接入令牌（2.1 批）：其他项目/外部 AI 客户端经 /api/v1/library/* 写速记与待办时
     /// 必须携带（Authorization: Bearer 或 X-PWORK-Token）。缺失时启动自动生成并写回 gateway.env
     pub library_token: String,
     pub usage_log: PathBuf,
@@ -482,7 +482,7 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
             );
         }
         let usage_lock = Mutex::new(());
-        // 外部库写入限速状态（每分钟窗口，全 /api/library 端点合计）
+        // 外部库写入限速状态（每分钟窗口，全 /api/v1/library 端点合计）
         let mut library_rate = (0u64, 0u32);
         for mut req in server.incoming_requests() {
             // 每个请求取配置快照：save_gateway_key 的热更新立即对后续请求生效
@@ -538,7 +538,7 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
 
             // 读请求体：非 UTF-8 / 读取失败必须如实报 400——静默转发空体会让上游报
             // "body missing"，排查方向全错（2026-10-11 真实踩坑：GBK 终端的 curl）
-            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query" || path == "/notify" || path.starts_with("/api/library/");
+            let reads_body = path.ends_with("/chat/completions") || path == "/search" || path == "/d1/query" || path == "/notify" || path.starts_with("/api/v1/library/");
             const MAX_BODY: usize = 1_048_576;
             let content_length = req
                 .headers()
@@ -600,11 +600,11 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                         }
                     },
                 }
-            } else if path.starts_with("/api/library/") && method == Method::Post {
+            } else if path.starts_with("/api/v1/library/") && method == Method::Post {
                 // 外部库写入（2.1 批）：其他项目 / 外部 AI 客户端在令牌授权下追加速记、创建待办。
                 // 只增白名单；字段校验后发 library-write 事件，前端监听器走既有 normalize/store 落库
                 //（与剪贴板速记同款通路）——网关线程不直接触碰 SQLite 连接。
-                let kind = if path == "/api/library/notes" { "note" } else { "task" };
+                let kind = if path == "/api/v1/library/notes" { "note" } else { "task" };
                 let mut token = String::new();
                 for h in req.headers().iter() {
                     if h.field.equiv("Authorization") {

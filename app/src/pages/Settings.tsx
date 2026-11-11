@@ -738,11 +738,14 @@ export function Settings() {
               <span className="val" style={{ fontSize: 'var(--fs-xs)', lineHeight: 1.7 }}>
                 其他项目或外部 AI 客户端可经本机网关写入速记与待办（只增不删）：
                 <br />
-                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/library/notes</code> ·{' '}
-                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/library/tasks</code>
+                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/notes</code> ·{' '}
+                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/tasks</code>
                 <br />
                 请求头带 <code>Authorization: Bearer 令牌</code>；notes 传 {'{body, title?, tags?}'}，tasks 传{' '}
                 {'{title, due?, recurrenceDays?}'}
+                <br />
+                MCP 客户端（如支持 MCP 的 AI 助手）：命令 <code>node 安装目录/mcp/pwork-mcp.mjs</code>（安装器已自带）；
+                其他项目的接入三步见仓库文档 docs/外部项目接入.md
               </span>
               <span className="val" style={{ fontSize: 'var(--fs-xs)', fontFamily: 'Cascadia Code, Consolas, monospace', userSelect: 'all' }}>
                 {libToken ?? '读取中…'}

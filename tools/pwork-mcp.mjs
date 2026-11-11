@@ -1,7 +1,7 @@
 /**
  * PWORK MCP 薄壳（阶段二 2.1 批）：stdio JSON-RPC（MCP 协议 2024-11-05，官方规范查证：
  * 消息换行分隔、stdout 只发 MCP 消息、错误分协议错误与工具执行错误两路）。
- * 工具集 = 本地网关 /api/library/* 的只增子集（速记追加 / 待办创建）——
+ * 工具集 = 本地网关 /api/v1/library/* 的只增子集（速记追加 / 待办创建）——
  * 写入经 PWORK 桌面版内嵌网关（127.0.0.1:8788）校验令牌后由应用落库。
  *
  * 令牌来源（按序取第一个非空）：环境变量 PWORK_LIBRARY_TOKEN → 桌面版 gateway.env 同名键。
@@ -96,12 +96,12 @@ async function callTool(name, args, token) {
     const payload = { body: String(args?.body ?? '') }
     if (args?.title != null) payload.title = String(args.title)
     if (Array.isArray(args?.tags)) payload.tags = args.tags.map(String)
-    return callGateway('/api/library/notes', payload, token)
+    return callGateway('/api/v1/library/notes', payload, token)
   }
   const payload = { title: String(args?.title ?? '') }
   if (typeof args?.due === 'string' && args.due) payload.due = args.due
   if (typeof args?.recurrenceDays === 'number') payload.recurrenceDays = args.recurrenceDays
-  return callGateway('/api/library/tasks', payload, token)
+  return callGateway('/api/v1/library/tasks', payload, token)
 }
 
 async function respond(msg) {

@@ -440,7 +440,7 @@ export default function App() {
     }
   }, [])
 
-  // 桌面版：外部接入写库（2.1 批）——其他项目 / 外部 AI 客户端经网关 /api/library/* 提交写入，
+  // 桌面版：外部接入写库（2.1 批）——其他项目 / 外部 AI 客户端经网关 /api/v1/library/* 提交写入，
   // 网关校验令牌与字段后发 library-write 事件，这里走既有 normalize/store 落库（与剪贴板速记同款通路）
   useEffect(() => {
     if (!isDesktopApp()) return
