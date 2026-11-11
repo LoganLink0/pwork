@@ -570,6 +570,18 @@ pub fn run() {
       attachments::attachment_read,
       attachments::attachment_delete,
     ])
-    .run(tauri::generate_context!())
-    .expect("error while building tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app_handle, event| {
+      // 主窗口销毁 = 整个应用退出（0.1.18 发版 smoke 发现的缺陷修复）：工具轮盘是
+      // 常驻隐藏小窗（visible:false），此前主窗口关闭后它把进程留成"零窗口假活"——
+      // 用户点主窗口 X 后进程残留、再点图标因单实例聚焦落空而毫无反应。
+      // 用 Destroyed（窗口已销毁的终态事件）兜住所有关闭来源（点 X / WM_CLOSE / 系统关机）
+      if let tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } = event {
+        if label == "main" {
+          log::info!("主窗口已关闭，应用退出");
+          app_handle.exit(0);
+        }
+      }
+    });
 }
