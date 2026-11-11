@@ -35,6 +35,7 @@ import { loadSyncConfig, saveSyncConfig, syncNow } from './db/syncRecords'
 import { toast } from './engine/toast'
 import { useNotifyHub } from './engine/notifyCenter'
 import { LittleP } from './components/shell/LittleP'
+import { actionById, wheelActionForKind } from './engine/actions'
 import { ErrorBoundary, ErrorBar } from './components/shell/ErrorReport'
 import { DemoBanner } from './components/shell/DemoBanner'
 import { Toaster } from './components/shell/Toast'
@@ -153,11 +154,15 @@ function WheelActionSink() {
     if (!isDesktopApp()) return
     const un = tauriListen<{ kind: string; target: string }>('wheel-action', (e) => {
       const { kind, target } = e.payload
-      if (kind === 'quick') openQuick()
-      else if (kind === 'fetch') {
-        void useCollect.getState().runFetchAll()
-        navigate('/input/digest')
-      } else if (kind === 'route' && target) navigate(target)
+      if (kind === 'route' && target) {
+        navigate(target)
+        return
+      }
+      // quick/fetch 两类格位经动作注册表执行（2.3 收敛：行为只在注册表定义一处）
+      if (kind === 'quick' || kind === 'fetch') {
+        const action = actionById(wheelActionForKind(kind))
+        action?.run({ navigate, openQuickNote: openQuick })
+      }
     })
     return () => {
       void un.then((f) => f())

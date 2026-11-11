@@ -8,6 +8,7 @@ import { useUi } from '../../store/ui'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
 import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
+import { paletteActions, type ActionCtx } from '../../engine/actions'
 import { relTime } from '../../engine/datetime'
 
 interface PaletteItem {
@@ -98,20 +99,19 @@ function PaletteDialog() {
     const q = query.trim().toLowerCase()
     const match = (s: string) => !q || s.toLowerCase().includes(q)
 
-    // 快速动作同样参与查询过滤：有查询词时 Enter 必须落在用户看到的匹配结果上
-    const actions: PaletteItem[] = []
-    if (match('新速记')) {
-      actions.push({ key: 'act-note', group: '快速动作', icon: 'zap', label: '新速记', sub: 'N', run: () => { close(); openQuick() } })
-    }
-    if (match('新建复盘')) {
-      actions.push({
-        key: 'act-review',
+    // 快速动作组（2.3 起从动作注册表派生——外部项目注册动作自动出现）：有查询词时
+    // Enter 必须落在用户看到的匹配结果上，故同样参与查询过滤
+    const ctx: ActionCtx = { navigate: (p) => navigate(p), openQuickNote: openQuick, openPalette: (via) => useUi.getState().openPalette(via) }
+    const actions: PaletteItem[] = paletteActions()
+      .filter((a) => match(a.label))
+      .map((a) => ({
+        key: `act-${a.id}`,
         group: '快速动作',
-        icon: 'plusCircle',
-        label: '新建复盘',
-        run: () => { close(); navigate('/review/new') },
-      })
-    }
+        icon: a.icon,
+        label: a.label,
+        sub: a.id === 'quick-note' ? 'N' : undefined,
+        run: () => { close(); a.run(ctx) },
+      }))
     // 页面组全部来自页面注册表派生（PALETTE_PAGES，0.4-5）——新增页面注册即出现在面板
     const pages: PaletteItem[] = PALETTE_PAGES
       .filter((p) => match(p.label))
