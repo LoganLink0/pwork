@@ -6,6 +6,7 @@ import { AsrTool } from '../components/AsrTool'
 import { CardTool } from '../components/CardTool'
 import { ImageProcessTool } from '../components/ImageProcessTool'
 import { CaptureTool } from '../components/CaptureTool'
+import { ExternalCallPanel } from '../components/ExternalCallPanel'
 
 function ToolBody({ id }: { id: string }) {
   switch (id) {
@@ -72,12 +73,23 @@ export function ProcessToolPage() {
           <Link to="/process" className="btn-ghost">← 工具箱</Link>
         </div>
       </div>
-      <div className="set-card">
-        <div className="set-body">
-          <ToolBody id={tool.id} />
+      {tool.engine !== 'external' && (
+        <div className="set-card">
+          <div className="set-body">
+            <ToolBody id={tool.id} />
+          </div>
         </div>
-      </div>
-      {tool.note && (
+      )}
+      <ExternalCallPanel tool={tool} />
+      {!tool.callUrl && (
+        <div style={{ display: 'flex', gap: 'var(--sp-3)', marginTop: 'var(--sp-4)' }}>
+          {tool.externalUrl && (
+            <a href={tool.externalUrl} target="_blank" rel="noreferrer noopener" className="btn-primary">打开 {tool.name} 官网 ↗</a>
+          )}
+          <Link to="/process" className="btn-ghost">← 回工具箱</Link>
+        </div>
+      )}
+      {tool.note && !tool.callUrl && (
         <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 'var(--sp-3)' }}>
           ℹ {tool.note}
         </p>

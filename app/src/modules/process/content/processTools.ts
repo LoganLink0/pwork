@@ -30,6 +30,11 @@ export interface ProcessTool {
   externalUrl?: string
   /** engine='app' 时必填：应用内路由（独立应用的入口页） */
   route?: string
+  /** 带上下文调用模板（2.4）：占位符 {selected}/{title}/{noteId}/{itemId}——
+   *  url 用浏览器打开（协议白名单校验），填了模板的工具页出现「带上文本调用」区 */
+  callUrl?: string
+  /** 调用按钮文案（缺省「带上文本打开」） */
+  callLabel?: string
 }
 
 export const CATEGORY_ORDER: ToolCategory[] = ['text', 'audio', 'image', 'video']
@@ -175,6 +180,31 @@ export const PROCESS_TOOLS: ProcessTool[] = [
     status: 'ready',
     externalUrl: 'https://www.remove.bg/zh',
     note: '外部工具，免费额度有限',
+  },
+  // ── 带上下文调用（2.4）：把你的文本带进外部工具 ──
+  {
+    id: 'ext-obsidian-new',
+    category: 'text',
+    name: '发到 Obsidian 新笔记',
+    desc: '把一段文字（预填最近一条速记）作为新笔记发到 Obsidian 当前库——采集与知识库的联动桥',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://obsidian.md/',
+    callUrl: 'obsidian://new?content={selected}',
+    callLabel: '发到 Obsidian',
+    note: '需要本机装有 Obsidian（系统会弹「打开 Obsidian」确认）；文本经 URL 编码传递',
+  },
+  {
+    id: 'ext-bing-search',
+    category: 'text',
+    name: '必应快查',
+    desc: '把一段文字（预填最近一条速记）直接丢进必应搜索——看到一半的词句随手查',
+    engine: 'external',
+    status: 'ready',
+    externalUrl: 'https://www.bing.com/',
+    callUrl: 'https://www.bing.com/search?q={selected}',
+    callLabel: '用必应搜这段文字',
+    note: '文本经 URL 编码传递，只在你点击时打开',
   },
 ]
 
