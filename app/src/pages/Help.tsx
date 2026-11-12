@@ -172,7 +172,7 @@ export function Help() {
             const groupFaq = FAQ.filter((f) => f.group === group)
             if (groupFaq.length === 0) return null
             return (
-              <details key={group} open className="faq-fold">
+              <details key={group} className="faq-fold">
                 <summary className="faq-group">
                   {group}
                   <span className="faq-count">{groupFaq.length} 条</span>
@@ -206,7 +206,7 @@ export function Help() {
             const groupTerms = GLOSSARY.filter((g) => g.group === group)
             if (groupTerms.length === 0) return null
             return (
-              <details key={group} open className="faq-fold">
+              <details key={group} className="faq-fold">
                 <summary className="faq-group">
                   {group}
                   <span className="faq-count">{groupTerms.length} 条</span>

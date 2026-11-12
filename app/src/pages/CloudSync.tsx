@@ -300,7 +300,7 @@ export function CloudSyncCards({ active }: { active: boolean }) {
                 />
               </div>
               <details className="adv-block">
-                <summary>高级：改用 Cloudflare API Token（默认粘贴部署输出的 Token 即可）</summary>
+                <summary>没有部署向导输出的 Token？展开改用 Cloudflare API Token（有 ptk_ 开头的 Token 就不用管这里）</summary>
                 <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
                   <label>
                     API Token

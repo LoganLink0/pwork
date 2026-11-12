@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 
 /**
  * 圆圈问号说明符（R 批用户拍板的说明承载形式）：卡片标题或字段标签右侧的
- * 圆圈「?」按钮，点击展开说明气泡，点外部/再点关闭。
- * 2026-11-06 用户验收改版：气泡 fixed 定位**朝右展开**（此前向上展开被卡片裁断），
- * 右缘出界自动翻到按钮左侧，任意容器裁剪都不影响（fixed 脱离文档裁剪上下文）。
- * 深浅主题自适应；气泡宽 340px。
+ * 圆圈「?」按钮，说明气泡贴按钮右侧展开，右缘出界自动翻到按钮左侧，任意容器
+ * 裁剪都不影响（fixed 脱离文档裁剪上下文）。深浅主题自适应；气泡宽 340px。
+ * 2026-11-12 用户拍板改版：鼠标悬浮即展示（不再要求手动点击）——桌面 hover、
+ * 键盘 focus、触屏点击三种触发并存；移开/失焦即收起，内容自然换行。
  */
 const POP_WIDTH = 340
 
@@ -32,6 +32,7 @@ export function InfoTip({ text, label }: { text: ReactNode; label?: string }) {
 
   useEffect(() => {
     if (!open) return
+    // 触屏没有 hover：点击按钮外部时收起；Escape 随时收起
     const onDocClick = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
     }
@@ -54,6 +55,10 @@ export function InfoTip({ text, label }: { text: ReactNode; label?: string }) {
         className="info-tip-btn"
         aria-label={label ?? '说明'}
         aria-expanded={open}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
         onClick={() => setOpen((v) => !v)}
       >
         ?

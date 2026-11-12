@@ -3572,9 +3572,8 @@ h2 .info-tip {
   border-color: var(--accent);
 }
 .info-tip-pop {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: -8px;
+  /* 定位（fixed + left/top）完全由组件内联计算：贴按钮右侧，右缘放不下翻左侧——
+     此处只留视觉样式，不写任何定位属性（2026-11-12 用户抓出位置漂移后的整改） */
   z-index: 60;
   width: 340px;
   background: var(--surface);
