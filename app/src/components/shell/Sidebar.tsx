@@ -214,12 +214,15 @@ export function Sidebar() {
         return (
           <>
             <div className="nav-group">最近打开</div>
-            {visible.map((it) => (
-              <NavLink key={it.path} to={it.path} className="nav-item nav-recent">
-                <span className="ico" aria-hidden><Icon name="clock" size={14} /></span>
-                {it.label}
-              </NavLink>
-            ))}
+            {/* nav-sub 容器与子模块同款左缘：三项缩进到「速记/信息日报」的层级（用户拍板） */}
+            <div className="nav-sub">
+              {visible.map((it) => (
+                <NavLink key={it.path} to={it.path} className="nav-item nav-recent">
+                  <span className="ico" aria-hidden><Icon name="clock" size={14} /></span>
+                  {it.label}
+                </NavLink>
+              ))}
+            </div>
           </>
         )
       })()}
