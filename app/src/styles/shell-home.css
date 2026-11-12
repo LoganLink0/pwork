@@ -271,7 +271,7 @@
 }
 
 .tile:hover {
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-hover);
   border-color: color-mix(in srgb, var(--mark, var(--line-strong)) 45%, var(--line));
   transform: translateY(-2px);
 }

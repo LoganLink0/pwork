@@ -547,8 +547,8 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-soft);
   background: var(--surface);
 }
 

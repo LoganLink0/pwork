@@ -10,22 +10,23 @@
 :root {
   color-scheme: light;
 
-  /* ------- 中性灰（微暖） ------- */
-  --bg: #f5f4f1;
+  /* ------- 中性灰（微暖，3.2 批暖一档：底色与 logo 米白同族） ------- */
+  --bg: #f7f3ea;
   --surface: #ffffff;
-  --surface-2: #faf9f7;
-  --line: #e6e4df;
-  --line-strong: #cfcac1;
+  --surface-2: #fbf8f2;
+  --line: #e8e2d5;
+  --line-strong: #d2cbbd;
   --ink: #211e1a;
   --ink-soft: #66625a;
   /* 原 #97928a 在白底仅 2.8:1，弱化文字也是正文（时间戳/提示 12px），压到 AA（≥4.5:1） */
   --ink-faint: #736e66;
 
-  /* ------- 唯一强调色：琥珀（三级） ------- */
+  /* ------- 唯一强调色：琥珀（三级 + 悬停底/焦点环配套，3.2 批令牌化） ------- */
   --accent: #e8833a;
-  /* 实心按钮底色：白字压 #b0500f 为 5.05:1（AA）。深浅主题共用，按主题调浅会跌破 4.5:1 */
+  /* 实心按钮底色：白字压 #b0500f 实测 5.25:1（AA）。深浅主题共用，按主题调浅会跌破 4.5:1 */
   --accent-deep: #b0500f;
   --accent-text: #a34e12;
+  --accent-soft: rgba(232, 131, 58, 0.10); /* 悬停底统一（原各处手写 color-mix 8% 值不统一） */
 
   /* ------- 类别标记色（仅边线与 12px 标签） ------- */
   --cat-good: #2f7d52;
@@ -68,19 +69,26 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  /* ------- 圆角与阴影（单阴影体系）：8 控件 / 12 浮层与内嵌件 / 16 卡片容器 ------- */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --shadow-1: 0 1px 2px rgba(33, 30, 26, 0.06);
-  --shadow-2: 0 2px 4px rgba(33, 30, 26, 0.06), 0 8px 20px rgba(33, 30, 26, 0.08);
-  --shadow-pop: 0 12px 32px rgba(33, 30, 26, 0.14);
+  /* ------- 圆角与阴影（3.2 批：阶梯 +2px 伙伴感；投影暖棕化与品牌同温；新增浮起档）：
+     10 控件 / 14 浮层与内嵌件 / 18 卡片容器 ------- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --shadow-1: 0 1px 2px rgba(90, 62, 32, 0.06);
+  --shadow-2: 0 2px 4px rgba(90, 62, 32, 0.07), 0 8px 20px rgba(90, 62, 32, 0.10);
+  --shadow-pop: 0 12px 32px rgba(90, 62, 32, 0.14);
+  --shadow-hover: 0 4px 10px rgba(90, 62, 32, 0.10), 0 14px 32px rgba(90, 62, 32, 0.16);
 
   /* ------- 动效（时长三档 + 统一缓动，只动 transform/opacity） ------- */
   --dur-1: 120ms; /* 微反馈：按压、hover 着色 */
   --dur-2: 200ms; /* 常规：卡片抬起、面板展开 */
   --dur-3: 320ms; /* 入场：路由切换、弹层 */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 完成态/成功反馈的回弹（3.1 圆钮弹跳同族） */
+
+  /* ------- 焦点环（双层：实色环承担可见性 5.25，外晕只作柔化；暗色用亮环） ------- */
+  --ring: var(--accent-deep);
+  --ring-soft: rgba(232, 131, 58, 0.18);
 
   /* ------- 布局 ------- */
   --content-w: 1200px;
@@ -93,7 +101,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #161310;
+    --bg: #181510;
     --surface: #242019;
     --surface-2: #2d2820;
     --line: #3b362d;
@@ -103,6 +111,7 @@
     --ink-faint: #908a7d;
     --accent: #e8833a;
     --accent-text: #eda868;
+    --accent-soft: rgba(232, 131, 58, 0.12);
     --cat-good: #5aab7f;
     --cat-need: #d3805c;
     --cat-insight: #6d9cc7;
@@ -111,21 +120,26 @@
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
     --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.50);
+    --ring: var(--accent);
+    --ring-soft: rgba(232, 131, 58, 0.25);
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #191816;
+  --bg: #1b1813;
   --surface: #222019;
   --surface-2: #2a2721;
   --line: #38352e;
   --line-strong: #4c473d;
   --ink: #ecebe7;
   --ink-soft: #b3afa5;
-  --ink-faint: #827d73;
+  /* 提亮一档（原 #827d73 对暗底仅 4.33 不达 AA——3.2 批对比度实测修正，5.17） */
+  --ink-faint: #918a7e;
   --accent: #e8833a;
   --accent-text: #eda868;
+  --accent-soft: rgba(232, 131, 58, 0.12);
   --cat-good: #5aab7f;
   --cat-need: #d3805c;
   --cat-insight: #6d9cc7;
@@ -134,4 +148,7 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.50);
+  --ring: var(--accent);
+  --ring-soft: rgba(232, 131, 58, 0.25);
 }
