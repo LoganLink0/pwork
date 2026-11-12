@@ -735,18 +735,6 @@ export function Settings() {
           {isDesktopApp() && (
             <div className="set-row">
               <label>外部接入</label>
-              <span className="val" style={{ fontSize: 'var(--fs-xs)', lineHeight: 1.7 }}>
-                其他项目或外部 AI 客户端可经本机网关写入速记与待办（只增不删）：
-                <br />
-                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/notes</code> ·{' '}
-                <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/tasks</code>
-                <br />
-                请求头带 <code>Authorization: Bearer 令牌</code>；notes 传 {'{body, title?, tags?}'}，tasks 传{' '}
-                {'{title, due?, recurrenceDays?}'}
-                <br />
-                MCP 客户端（如支持 MCP 的 AI 助手）：命令 <code>node 安装目录/mcp/pwork-mcp.mjs</code>（安装器已自带）；
-                其他项目的接入三步见仓库文档 docs/外部项目接入.md
-              </span>
               <span className="val" style={{ fontSize: 'var(--fs-xs)', fontFamily: 'Cascadia Code, Consolas, monospace', userSelect: 'all' }}>
                 {libToken ?? '读取中…'}
               </span>
@@ -765,9 +753,23 @@ export function Settings() {
               >
                 复制令牌
               </button>
+              <span className="val" style={{ color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)', lineHeight: 1.7 }}>
+                把上面这串令牌交给要接入的程序或 AI 助手，它就能往你的速记与待办里写内容（只增不删）——完整步骤见「帮助」页的「外部接入」
+                <details style={{ marginTop: 'var(--sp-2)' }}>
+                  <summary style={{ cursor: 'pointer', color: 'var(--accent-text)' }}>接口地址与字段（给开发接入用）</summary>
+                  <div style={{ paddingTop: 'var(--sp-2)', lineHeight: 1.9 }}>
+                    <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/notes</code>
+                    <br />
+                    <code style={{ userSelect: 'all' }}>POST http://127.0.0.1:8788/api/v1/library/tasks</code>
+                    <br />
+                    请求头 Authorization: Bearer 令牌；notes 传 {'{body, title?, tags?}'}，tasks 传 {'{title, due?, recurrenceDays?}'}；
+                    MCP 客户端命令：<code>node 安装目录/mcp/pwork-mcp.mjs</code>（安装器已自带）
+                  </div>
+                </details>
+              </span>
             </div>
           )}
-          {storage?.supported && (
+          {!isDesktopApp() && storage?.supported && (
             <div className="set-row">
               <label>存储保护</label>
               <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
