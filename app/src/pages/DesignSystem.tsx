@@ -4,6 +4,8 @@ import { useUi } from '../store/ui'
 /**
  * 设计系统样例页（W1 验收项）：令牌是宪法——新组件先入样例页再上页面。
  * 「未来组件」区块预览 W2（评分徽章）/ W3（任务行、来源徽章）规格，落地时以本页为准。
+ * 3.2 改版对照（2026-11-12）：六个维度的现值 vs 提案值并排展示，用户逐维拍板后
+ * 提案值才落 tokens.css——本页是唯一事实来源，拍板前提案值不进任何生产样式。
  */
 
 const COLOR_TOKENS: { name: string; varName: string }[] = [
@@ -221,6 +223,88 @@ export function DesignSystem() {
           评分徽章（W2）：≥80 琥珀描边 · 60–79 常规 · &lt;60 淡灰；hover 出 AI ≤30 字评分理由。
           任务行（W3）：复选框 + 标题 + 来源徽章（12px：复盘=琥珀 / 速记·信息=蓝 / 手动=灰）+ 到期日（逾期 danger）。
         </p>
+      </div>
+
+      <div className="ds-section">
+        <h2 style={{ fontSize: 'var(--fs-lg)' }}>3.2 改版对照（逐维拍板，提案值未落生产样式）</h2>
+        <div className="desc" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--sp-3)' }}>
+          方向=伙伴感升级（logo 动效确立的 Perfect Partner 语言），品牌锚不动：琥珀三级与米白基调保留。
+          每维左=现值，右=提案值。拍板哪维就落哪维，全部或部分皆可。
+        </div>
+
+        {/* A. 底色温度 */}
+        <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>A · 底色温度：暖一档（米调更足，伙伴感的底色）</div>
+          <div className="ds-row">
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ height: 56, background: '#f5f4f1', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>现 · #f5f4f1</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>现底色：偏中性灰白</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ height: 56, background: '#f7f3ea', border: '1px solid #e5ddcc', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>提案 · #f7f3ea</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>提案底色：米调+暖，与 logo 米白同族</div>
+            </div>
+          </div>
+        </div>
+
+        {/* B. 圆角 */}
+        <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>B · 圆角阶梯：整体 +2px（控件 8→10 / 浮层 12→14 / 卡片 16→18，圆润=伙伴感）</div>
+          <div className="ds-row">
+            {[['--r-sm', '--r-md', '--r-lg'], ['10px', '14px', '18px']].map((group, gi) => (
+              <div key={gi} className="ds-row" style={{ alignItems: 'center', flex: 1, minWidth: 200 }}>
+                {group.map((r) => (
+                  <div key={r} style={{ width: 64, height: 44, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: gi === 0 ? `var(${r})` : r, display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>{gi === 0 ? '现' : '新'} {r.replace('--r-', '')}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* C. 阴影色温 + 浮起档 */}
+        <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>C · 阴影：中性黑 → 暖棕投影（与品牌同温）；新增浮起档（卡片 hover 统一语言）</div>
+          <div className="ds-row">
+            <div style={{ width: 140, height: 64, background: 'var(--surface)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-2)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>现 · shadow-2</div>
+            <div style={{ width: 140, height: 64, background: '#fffdf9', borderRadius: '14px', boxShadow: '0 2px 4px rgba(90, 62, 32, 0.07), 0 8px 20px rgba(90, 62, 32, 0.10)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>提案 · 暖棕</div>
+            <div style={{ width: 140, height: 64, background: '#fffdf9', borderRadius: '14px', boxShadow: '0 4px 10px rgba(90, 62, 32, 0.10), 0 14px 32px rgba(90, 62, 32, 0.16)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--accent-text)', fontWeight: 600 }}>提案 · 浮起档</div>
+          </div>
+        </div>
+
+        {/* D. 悬停底 */}
+        <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>D · 悬停底色：新增 --accent-soft 令牌（现在各处手写 color-mix 琥珀 8%，值不统一）</div>
+          <div className="ds-row">
+            <button type="button" className="btn-ghost" style={{ background: 'color-mix(in srgb, var(--accent) 8%, transparent)', borderColor: 'var(--accent)' }}>现 · 手写 8%（示例）</button>
+            <button type="button" className="btn-ghost" style={{ background: 'rgba(232, 131, 58, 0.10)', borderColor: 'var(--accent)' }}>提案 · accent-soft 10%</button>
+          </div>
+        </div>
+
+        {/* E. 动效：完成态回弹曲线 */}
+        <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>E · 动效：新增回弹曲线 --ease-spring（完成态/成功反馈专用；点击两个按钮对比手感）</div>
+          <div className="ds-row">
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={(e) => { e.currentTarget.style.transform = 'scale(0.9)'; window.setTimeout(() => { e.currentTarget.style.transition = 'transform 300ms var(--ease)'; e.currentTarget.style.transform = 'scale(1)' }, 60); window.setTimeout(() => { e.currentTarget.style.transition = '' }, 400) }}
+            >现 · 标准缓动（--ease）</button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={(e) => { e.currentTarget.style.transform = 'scale(0.9)'; window.setTimeout(() => { e.currentTarget.style.transition = 'transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1)'; e.currentTarget.style.transform = 'scale(1)' }, 60); window.setTimeout(() => { e.currentTarget.style.transition = '' }, 500) }}
+            >提案 · 回弹（ease-spring）</button>
+          </div>
+        </div>
+
+        {/* F. 焦点环 */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>F · 焦点环：统一 token（现在 input:focus 手写琥珀 15%，其他控件各自为政）——Tab 到两个输入框对比</div>
+          <div className="ds-row">
+            <input className="input" placeholder="现 · 各控件自带" readOnly />
+            <input className="input" style={{ outline: 'none' }} placeholder="提案 · --ring 统一（Tab 试试）" onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)' }} onBlur={(e) => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.boxShadow = '' }} readOnly />
+          </div>
+        </div>
       </div>
 
       <div className="ds-section">
