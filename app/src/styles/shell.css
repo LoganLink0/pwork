@@ -27,7 +27,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3) var(--sp-4);
+  /* 底距 12px（3.2 批用户拍板缩短品牌行：原 16px，与导航密度收紧同节奏） */
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
   font-weight: 700;
   /* 品牌字号固定基准值，不随显示设置的字号缩放（用户拍板：左上角标识恒定） */
   font-size: 19px;
@@ -74,8 +75,8 @@ img.mark {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  /* 纵向 4px（行高约 28px，紧凑档）：首轮 7→6 每行仅 2px 不可感知被用户打回 */
-  padding: 4px var(--sp-3);
+  /* 纵向 5px（行高约 30px）：紧凑档 4px 用户实机看过后拍板回调一档 */
+  padding: 5px var(--sp-3);
   border-radius: var(--r-sm);
   color: var(--ink-soft);
   font-size: var(--fs-sm);
