@@ -167,7 +167,7 @@
 }
 
 .quicknote-btn:hover {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: var(--accent-soft);
 }
 
 .quicknote-btn:active {

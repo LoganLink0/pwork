@@ -284,8 +284,8 @@
 }
 .ai-vendor.on {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--ring-soft);
 }
 .ai-vendor-pick {
   /* 三行纵排（2026-10-27 用户拍板）：名称一行、模型名一行——窄布局不再与模型名挤同一行 */
@@ -515,7 +515,7 @@
 }
 .wheel-drop.drop-hover {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: 0 0 0 3px var(--ring-soft);
   color: var(--ink);
 }
 .wheel-slot-empty {
@@ -596,7 +596,7 @@
 }
 .wheel-action-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: 0 0 0 2px var(--ring-soft);
 }
 .wheel-action-card b {
   font-size: var(--fs-sm);
@@ -637,7 +637,7 @@
 .wheel-slot.on {
   border-color: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  box-shadow: 0 0 0 3px var(--ring-soft);
 }
 .wheel-slot.on {
   transform: rotate(calc(var(--i) * (360deg / var(--n)))) translate(138px) rotate(calc(-1 * var(--i) * (360deg / var(--n)))) scale(1.06);
@@ -797,7 +797,7 @@ html[data-wheel] body {
 .bottomnav .bn.on {
   color: var(--accent-text);
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .bottomnav .bn.on .ico {
@@ -871,7 +871,7 @@ html[data-wheel] body {
   border: 1px solid var(--accent);
   border-radius: var(--r-md);
   padding: var(--sp-2);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 4px var(--ring-soft);
   transition: box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
 }
 
