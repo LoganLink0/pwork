@@ -61,19 +61,21 @@ img.mark {
 
 .nav-group {
   /* 分类标题（输入/工作区等）与子模块项拉开层级：字号提升 + 保持弱化色。
-     上间距 12px（3.2 批收紧一档：21 行侧栏在 900px 视口首屏容纳「最近打开」全组） */
+     上间距 10px（3.2 批：21 行侧栏要在 900px 视口首屏容纳「最近打开」全组，
+     首轮 16→12 不可感知被用户打回，一步收紧到位） */
   font-size: var(--fs-md);
   font-weight: 600;
   color: var(--ink-soft);
   letter-spacing: 0.05em;
-  padding: 12px var(--sp-3) var(--sp-1);
+  padding: 10px var(--sp-3) var(--sp-1);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: 6px var(--sp-3);
+  /* 纵向 4px（行高约 28px，紧凑档）：首轮 7→6 每行仅 2px 不可感知被用户打回 */
+  padding: 4px var(--sp-3);
   border-radius: var(--r-sm);
   color: var(--ink-soft);
   font-size: var(--fs-sm);
