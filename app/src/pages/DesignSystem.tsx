@@ -325,8 +325,9 @@ export function DesignSystem() {
         <div style={{ marginTop: 'var(--sp-5)', borderTop: '1px solid var(--line)', paddingTop: 'var(--sp-3)' }}>
           <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>对比度实测（WCAG：正文 AA ≥ 4.5，非文本 ≥ 3.0；全部组合已逐对计算）</div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 2 }}>
-            <div>亮底提案 #f7f3ea 上：ink 14.99 ✓ · ink-soft 5.48 ✓ · ink-faint 4.57 ✓（余量薄，如实告知）</div>
+            <div>亮底提案 #f7f3ea 上：ink 14.99 ✓ · ink-soft 5.48 ✓ · ink-faint 加深 #6b665e 后 5.14 ✓（首版 #736e66 仅 4.57 余量薄，用户实机反馈偏淡后加深）</div>
             <div>暗底提案 #1b1813 上：ink 14.83 ✓ · ink-soft 8.08 ✓ · ink-faint 提亮 #918a7e 后 5.17 ✓（现值 #827d73 仅 4.33 不达标——现体系既有缺陷，随 A 维一并修正）</div>
+            <div>类别色 3.2 暖底复核：cat-need 原值 #b85c38 对新底三档 4.10–4.28 不达标 → 加深 #a5512f（bg 4.97 / surface 5.50 / surface-2 5.19）✓；cat-good/insight/action 与 danger/ok 全组合 ✓；暗色 27 组合 ✓</div>
             <div>琥珀文字 #a34e12 于提案悬停底（10% 叠白）：5.25 ✓ · 白字压琥珀深 #b0500f：5.25 ✓</div>
             <div>焦点环实色 #b0500f：白底 5.25 ✓ / 提案底 4.74 ✓（琥珀原色 #e8833a 做环只有 2.45–2.71，不达标——故环用深琥珀）</div>
             <div style={{ color: 'var(--ink-faint)' }}>既有发现（非提案引入）：琥珀 #e8833a 作选中边线对白底仅 2.71（3px 边线类），未来如需达标可切 --accent-deep——单独议题不在本批。</div>
