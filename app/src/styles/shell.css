@@ -17,7 +17,8 @@
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  padding: var(--sp-4) var(--sp-3);
+  /* 上下 8px（3.2 批用户拍板：顶部 16px 留白是品牌行"占空间"观感的来源之一，随之收紧） */
+  padding: var(--sp-2) var(--sp-3);
   overflow-y: auto;
   /* 滚动条位置常驻预留：模块折叠/展开、内容高度变化都不再改变可用宽度（用户报告的抖动） */
   scrollbar-gutter: stable;
@@ -27,8 +28,10 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  /* 3.2 批用户拍板缩短品牌行：头 8→4px、底 16→12px（首轮只收底部被用户指出，头尾一起收） */
-  padding: var(--sp-1) var(--sp-3) var(--sp-3);
+  /* 3.2 批用户拍板压缩品牌行：行高压实靠 line-height 1.25（默认行高才是这行的大头，
+     前两轮只收内边距不可感知——被用户两次打回后找到真源头），头 2px 底 8px */
+  line-height: 1.25;
+  padding: 2px var(--sp-3) var(--sp-2);
   font-weight: 700;
   /* 品牌字号固定基准值，不随显示设置的字号缩放（用户拍板：左上角标识恒定） */
   font-size: 19px;
