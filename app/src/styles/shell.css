@@ -3417,6 +3417,89 @@ html[data-wheel] body {
     bottom: 74px;
   }
 }
+
+/* ---------- 3.1 logo 动效（2026-11-12）：圆钮三态 + 面板思考态 ----------
+   纪律：只动 transform / opacity（光晕走伪元素透明度，不插值 box-shadow——插值会持续重绘）；
+   思考态一律 3 秒延迟渐显（业界防闪烁惯例：短问答不闪思考态）；系统减少动效偏好由
+   base.css 的全局总闸统一关闭。 */
+@keyframes lp-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+@keyframes lp-think {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
+}
+@keyframes lp-halo {
+  0% { opacity: 0; }
+  100% { opacity: 0.45; }
+}
+@keyframes lp-done {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.92); }
+  70% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+.little-p img {
+  animation: lp-breathe 4s var(--ease) infinite;
+}
+/* 思考态：图标慢脉冲（1.8s，业界 AI busy 节奏）+ 底层光晕呼吸（伪元素透明度），
+   3 秒延迟 both——延迟期内图标停在起始帧，短问答不闪思考态 */
+.little-p-asking img {
+  animation: lp-think 1.8s var(--ease) 3s infinite alternate both;
+}
+.little-p-asking::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 131, 58, 0.55), rgba(232, 131, 58, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  animation: lp-halo 1.8s ease-in-out 3s infinite alternate both;
+}
+/* 回答完成：一次轻点弹跳后无缝接续默认呼吸（双动画串联，img 以 askDoneAt 为 key 重挂载重放） */
+.little-p-done img {
+  animation: lp-done 0.6s var(--ease) 1, lp-breathe 4s var(--ease) 0.6s infinite;
+}
+/* 面板思考态：圆标脉冲 + 状态文字扫光（background-clip: text 渐变横扫——业界 shimmer 惯例，
+   单行小面积文字可接受 background-position 动画） */
+@keyframes p-asking-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes p-mark-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+@keyframes p-text-shimmer {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
+.p-asking {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  animation: p-asking-in 0.4s var(--ease) 3s both;
+}
+.p-asking-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+  animation: p-mark-pulse 1.8s var(--ease) 3s infinite alternate both;
+}
+.p-asking-text {
+  font-size: var(--fs-sm);
+  color: transparent;
+  background: linear-gradient(90deg, var(--ink-soft) 38%, var(--accent) 50%, var(--ink-soft) 62%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: p-text-shimmer 1.8s linear 3s infinite;
+}
 .corner-card {
   display: flex;
   flex-direction: column;

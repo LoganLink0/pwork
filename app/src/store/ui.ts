@@ -8,11 +8,17 @@ interface UiState {
   paletteOpen: boolean
   /** 面板打开来源：littlep（问小 P 圆钮）时输入框占位切换为提问式（2026-11-10 问小 P 衍生优化） */
   paletteVia: 'key' | 'littlep'
+  /** 问小 P 是否有一问进行中（3.1 logo 动效：圆钮思考态联动；面板关闭/回答完成即复位） */
+  askBusy: boolean
+  /** 最近一次回答完成的时间戳（0=无）：圆钮据此播放一次「答好了」轻点弹跳 */
+  askDoneAt: number
   quickOpen: boolean
   theme: ThemePref
   prefs: Prefs
   openPalette: (via?: 'key' | 'littlep') => void
   closePalette: () => void
+  setAskBusy: (busy: boolean) => void
+  setAskDone: () => void
   openQuick: () => void
   closeQuick: () => void
   setTheme: (pref: ThemePref) => void
@@ -27,11 +33,15 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   paletteOpen: false,
   paletteVia: 'key',
+  askBusy: false,
+  askDoneAt: 0,
   quickOpen: false,
   theme: loadTheme(),
   prefs: loadPrefs(),
   openPalette: (via = 'key') => set({ paletteOpen: true, paletteVia: via }),
   closePalette: () => set({ paletteOpen: false }),
+  setAskBusy: (busy) => set({ askBusy: busy }),
+  setAskDone: () => set({ askBusy: false, askDoneAt: Date.now() }),
   openQuick: () => set({ quickOpen: true }),
   closeQuick: () => set({ quickOpen: false }),
   setTheme: (pref) => {

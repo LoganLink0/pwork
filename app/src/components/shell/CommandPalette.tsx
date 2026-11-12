@@ -37,6 +37,8 @@ export function CommandPalette() {
 function PaletteDialog() {
   const close = useUi((s) => s.closePalette)
   const via = useUi((s) => s.paletteVia)
+  const setAskBusy = useUi((s) => s.setAskBusy)
+  const setAskDone = useUi((s) => s.setAskDone)
   const openQuick = useUi((s) => s.openQuick)
   const notes = useNotes((s) => s.notes)
   const navigate = useNavigate()
@@ -58,10 +60,20 @@ function PaletteDialog() {
     const q = query.trim()
     if (!q) return
     setAsk({ phase: 'asking' })
+    setAskBusy(true)
     askLibrary(q)
-      .then((r) => setAsk({ phase: 'done', answer: r.answer, sources: r.sources }))
-      .catch((e: unknown) => setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) }))
+      .then((r) => {
+        setAsk({ phase: 'done', answer: r.answer, sources: r.sources })
+        setAskDone()
+      })
+      .catch((e: unknown) => {
+        setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) })
+        setAskBusy(false)
+      })
   }
+
+  // 面板关闭（卸载）即复位圆钮思考态——用户 Esc 走人后圆钮不能停在「思考中」
+  useEffect(() => () => setAskBusy(false), [setAskBusy])
 
   // C-4 落地：跨模块全库检索（防抖；任务/条目/复盘/洞察——速记已在下方独立分组）
   useEffect(() => {
@@ -250,7 +262,10 @@ function PaletteDialog() {
         </div>
         <div className="p-list">
           {ask.phase === 'asking' && (
-            <div className="p-group" style={{ padding: 'var(--sp-4)' }}>正在全库里找（速记正文、条目摘要与批注、洞察全文）…</div>
+            <div className="p-asking">
+              <img src="favicon.svg" alt="" aria-hidden className="p-asking-mark" />
+              <span className="p-asking-text">正在全库里找（速记正文、条目摘要与批注、洞察全文）…</span>
+            </div>
           )}
           {ask.phase === 'error' && (
             <div className="p-group" style={{ padding: 'var(--sp-4)', color: 'var(--danger)' }}>问失败了：{ask.error}</div>
