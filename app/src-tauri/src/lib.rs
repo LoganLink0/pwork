@@ -420,7 +420,6 @@ pub fn run() {
       topmost: Mutex::new(None),
       capture: Mutex::new(None),
     })
-    .plugin(tauri_plugin_fs::init())
     // 剪贴板速记（系统工具台第二批）：全局热键读剪贴板入速记库
     .plugin(tauri_plugin_clipboard_manager::init())
     .plugin(
