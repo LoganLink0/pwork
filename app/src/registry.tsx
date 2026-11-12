@@ -133,7 +133,7 @@ export const PAGE_REGISTRY: PageReg[] = [
     loader: () => import('./pages/Help').then((m) => ({ default: m.Help })) },
   { path: '/welcome', label: '首访引导', mark: 'mark-workspace', meta: ['欢迎', '工作台 · 首访引导'], nav: 'none',
     loader: () => import('./pages/Welcome').then((m) => ({ default: m.Welcome })) },
-  { path: '/design', label: '设计系统', mark: 'mark-workspace', meta: ['设计系统', '工作台 · 组件样例'], nav: 'none',
+  { path: '/design', label: '设计系统', mark: 'mark-workspace', meta: ['设计系统', '工作台 · 组件样例'], nav: 'palette',
     loader: () => import('./pages/DesignSystem').then((m) => ({ default: m.DesignSystem })) },
   { path: '/cloud', label: '云端同步（旧入口）', mark: 'mark-workspace', meta: ['云端同步', '设置 · 云端同步'], nav: 'none', redirect: '/settings?tab=cloud' },
 ]
