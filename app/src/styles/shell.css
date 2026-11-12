@@ -3545,9 +3545,11 @@ html[data-wheel] body {
   line-height: 1;
 }
 /* 行内问号已挪进标签/标题元素内部（2026-11-09 第六轮）：随文字换行永远贴右上角，
-   不再依赖 set-row 负边距补偿（窄窗换行形态下补偿会失效）；h2 大字号仍需位移到字面顶 */
+   不再依赖 set-row 负边距补偿（窄窗换行形态下补偿会失效）；h2 大字号仍需位移到字面顶。
+   位移用 relative+top 写法：transform 会把包裹层变成内部 fixed 弹层的定位基准（坐标二次
+   偏移——2026-11-12 位置漂移事故根因；弹层已 portal 到 body 双保险，这里一并纠正） */
 h2 .info-tip {
-  transform: translateY(-10px);
+  top: -10px;
 }
 .info-tip-btn {
   width: 14px;
