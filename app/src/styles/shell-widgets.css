@@ -1,0 +1,450 @@
+/* ---------- 主库突变守卫恢复窗口（2026-11-10）：复用迁移窗口的遮罩与卡形 ---------- */
+.guard-modal {
+  width: min(560px, 92vw);
+}
+.guard-drops {
+  margin: 0 0 14px;
+  padding: 12px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.guard-drops b {
+  color: var(--danger);
+}
+.guard-quo {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.guard-file {
+  display: none;
+}
+
+/* ---------- 速记附件（R2 批，桌面粘贴即存）：chips 行 + 阅读态画廊 ---------- */
+.att-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-5) var(--sp-2);
+}
+.qn-modal .att-row {
+  padding: 0 0 var(--sp-2);
+}
+.att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  background: var(--surface-2, rgb(0 0 0 / 4%));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 6px 3px 10px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.att-chip .att-x {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.att-chip .att-x:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.att-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-5) var(--sp-4);
+}
+.att-thumb {
+  margin: 0;
+  max-width: min(280px, 100%);
+}
+.att-thumb img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+}
+.att-thumb .att-miss {
+  width: 120px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius, 8px);
+}
+.att-thumb figcaption {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+.n-att {
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+/* ---------- 右下角完成通知（R 批：长任务回执，点击跳回来源页） ---------- */
+.corner-toasts {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: calc(var(--sp-4) + 60px);  /* 让出常驻「问小 P」圆钮的位置，回执叠在它上方 */
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* 问小 P（2026-11-10 用户点子）：常驻圆钮，点击唤起命令面板（Ctrl K 同款）。
+   P 字标 = Perfect Partner 完美搭档——AI 入口从此有性格、有位置、看得见 */
+.little-p {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 90;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(232, 131, 58, 0.35);
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.little-p:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(232, 131, 58, 0.45);
+}
+.little-p img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: block;
+}
+.little-p .little-p-tag {
+  position: absolute;
+  right: 54px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 8px);
+  padding: 3px 10px;
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.little-p:hover .little-p-tag,
+.little-p:focus-visible .little-p-tag {
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  /* 移动端让出底部导航（60px）：圆钮悬在导航上方 */
+  .little-p {
+    bottom: 74px;
+  }
+}
+
+/* ---------- 3.1 logo 动效（2026-11-12）：圆钮三态 + 面板思考态 ----------
+   纪律：只动 transform / opacity（光晕走伪元素透明度，不插值 box-shadow——插值会持续重绘）；
+   思考态一律 3 秒延迟渐显（业界防闪烁惯例：短问答不闪思考态）；系统减少动效偏好由
+   base.css 的全局总闸统一关闭。 */
+@keyframes lp-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+@keyframes lp-think {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
+}
+@keyframes lp-halo {
+  0% { opacity: 0; }
+  100% { opacity: 0.45; }
+}
+@keyframes lp-done {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.92); }
+  70% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+.little-p img {
+  animation: lp-breathe 4s var(--ease) infinite;
+}
+/* 思考态：图标慢脉冲（1.8s，业界 AI busy 节奏）+ 底层光晕呼吸（伪元素透明度），
+   3 秒延迟 both——延迟期内图标停在起始帧，短问答不闪思考态 */
+.little-p-asking img {
+  animation: lp-think 1.8s var(--ease) 3s infinite alternate both;
+}
+.little-p-asking::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 131, 58, 0.55), rgba(232, 131, 58, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  animation: lp-halo 1.8s ease-in-out 3s infinite alternate both;
+}
+/* 回答完成：一次轻点弹跳后无缝接续默认呼吸（双动画串联，img 以 askDoneAt 为 key 重挂载重放） */
+.little-p-done img {
+  animation: lp-done 0.6s var(--ease) 1, lp-breathe 4s var(--ease) 0.6s infinite;
+}
+/* 面板思考态：圆标脉冲 + 状态文字扫光（background-clip: text 渐变横扫——业界 shimmer 惯例，
+   单行小面积文字可接受 background-position 动画） */
+@keyframes p-asking-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes p-mark-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+@keyframes p-text-shimmer {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
+.p-asking {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  animation: p-asking-in 0.4s var(--ease) 3s both;
+}
+.p-asking-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+  animation: p-mark-pulse 1.8s var(--ease) 3s infinite alternate both;
+}
+.p-asking-text {
+  font-size: var(--fs-sm);
+  color: transparent;
+  background: linear-gradient(90deg, var(--ink-soft) 38%, var(--accent) 50%, var(--ink-soft) 62%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: p-text-shimmer 1.8s linear 3s infinite;
+}
+.corner-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 280px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--ok, var(--accent));
+  border-left-width: 3px;
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+}
+.corner-card .corner-title {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.corner-card .corner-title span {
+  color: var(--ok, var(--accent));
+  margin-right: 4px;
+}
+.corner-card .corner-desc {
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+.corner-card .corner-action {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+
+/* ---------- 圆圈问号说明符（R 批：卡片标题/字段标签右上角，点击展开说明气泡） ---------- */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  margin-left: 3px;
+  /* 上标定位：吸在标题/标签文字的右上角（2026-11-09 用户反馈——此前垂直居中显得压行）；
+     行内上下文走 vertical-align: top（贴行盒顶=字面顶），flex 行内的标签右侧走 align-self 顶部对齐 */
+  vertical-align: top;
+  align-self: flex-start;
+  line-height: 1;
+}
+/* 行内问号已挪进标签/标题元素内部（2026-11-09 第六轮）：随文字换行永远贴右上角，
+   不再依赖 set-row 负边距补偿（窄窗换行形态下补偿会失效）；h2 大字号仍需位移到字面顶。
+   位移用 relative+top 写法：transform 会把包裹层变成内部 fixed 弹层的定位基准（坐标二次
+   偏移——2026-11-12 位置漂移事故根因；弹层已 portal 到 body 双保险，这里一并纠正） */
+h2 .info-tip {
+  top: -10px;
+}
+.info-tip-btn {
+  width: 14px;
+  height: 14px;
+  border: 1.2px solid var(--ink-faint);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.info-tip-btn:hover,
+.info-tip-btn[aria-expanded='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.info-tip-pop {
+  /* 定位（fixed + left/top）完全由组件内联计算：贴按钮右侧，右缘放不下翻左侧——
+     此处只留视觉样式，不写任何定位属性（2026-11-12 用户抓出位置漂移后的整改） */
+  z-index: 60;
+  width: 340px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-3) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  color: var(--ink-soft);
+  text-align: left;
+  white-space: normal;
+}
+.info-tip-pop a {
+  color: var(--accent);
+}
+
+/* ---------- 首访引导第 1 步：手机单卡横向滑动（2026-11-07 用户反馈）----------
+   桌面的 2×2 网格与「100vh-450px」高度公式为桌面预留设计，手机上只剩一条缝。
+   本块声明在文件末尾以覆盖上方全部基础样式（复盘 3.56：覆盖必须在基础之后）。 */
+@media (max-width: 768px) {
+  /* 手机形态：视频演示区放最上（首屏即演示），左栏说明移到下方滚动阅读——
+     左栏 clamp 最小 280px 在 390px 视口占 72%，视频区曾被挤成一条缝。
+     同时解除高度锁（stage/card/card-main 三层 flex 高度预算是为桌面双栏设计，
+     手机纵向堆叠后内容总高超预算，锁死会导致左栏溢出与 footer 文字重叠） */
+  .welcome-stage {
+    height: auto;
+    min-height: 100%;
+  }
+  .welcome-card {
+    flex: none;
+  }
+  .welcome-card-main {
+    flex-direction: column;
+    min-height: 0;
+  }
+  .welcome-right {
+    order: 1;
+    flex: none;
+  }
+  .welcome-left {
+    order: 2;
+    width: 100%;
+    overflow: visible; /* 解除栏内滚动：堆叠后自然撑开，不再与 footer 重叠 */
+  }
+  .welcome-right {
+    justify-content: flex-start; /* 堆叠后内容超高时直接展开，safe center 的回退逻辑不需要 */
+  }
+  .welcome-mods {
+    display: flex;
+    align-items: flex-start; /* 横排容器高度由卡片内容撑起——默认 stretch 会循环依赖塌成 2px */
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .welcome-mods::-webkit-scrollbar { display: none; }
+  .welcome-mod {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+  }
+}
+
+/* ── 应用内确认弹层（替代 window.confirm，2026-11-08 走查第三批）── */
+.confirm-mask {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(24, 20, 16, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.confirm-card {
+  background: var(--surface, #fff); border-radius: 14px;
+  border: 1px solid var(--line, #e6e4df);
+  box-shadow: 0 18px 60px rgba(24, 20, 16, 0.28);
+  padding: 22px 24px 18px;
+  max-width: 420px; width: 100%;
+}
+.confirm-title { display: block; font-size: 16px; line-height: 1.5; }
+.confirm-body { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-soft, #66625a); line-height: 1.7; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.confirm-actions .btn-ghost, .confirm-actions .btn-primary { padding: 8px 18px; font-size: 14px; }
+
+/* 设置页高级选项折叠（API Token 等降位入口，2026-11-09 走查二批④） */
+.adv-block { margin: 0; }
+.adv-block summary {
+  cursor: pointer; font-size: 13px; color: var(--ink-faint);
+  list-style: none; display: flex; align-items: center; gap: 6px;
+}
+.adv-block summary::-webkit-details-marker { display: none; }
+.adv-block summary::before { content: '▸'; font-size: 12px; }
+.adv-block[open] summary::before { content: '▾'; }
+.adv-block[open] summary { margin-bottom: var(--sp-3); }
+
+/* ---------- 循环待办完成热力条（1.5 批习惯追踪）：近 12 周逐日格子，按周排列 ---------- */
+.heat-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-4);
+  flex-wrap: wrap;
+}
+.heat-label {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+.heat-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 11px);
+  gap: 3px;
+}
+.heat-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.heat-cell.heat-1 { background: color-mix(in srgb, var(--accent) 35%, var(--surface)); border-color: transparent; }
+.heat-cell.heat-2 { background: color-mix(in srgb, var(--accent) 65%, var(--surface)); border-color: transparent; }
+.heat-cell.heat-3 { background: var(--accent); border-color: transparent; }
