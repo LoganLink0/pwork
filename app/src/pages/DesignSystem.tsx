@@ -229,20 +229,28 @@ export function DesignSystem() {
         <h2 style={{ fontSize: 'var(--fs-lg)' }}>3.2 改版对照（逐维拍板，提案值未落生产样式）</h2>
         <div className="desc" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--sp-3)' }}>
           方向=伙伴感升级（logo 动效确立的 Perfect Partner 语言），品牌锚不动：琥珀三级与米白基调保留。
-          每维左=现值，右=提案值。拍板哪维就落哪维，全部或部分皆可。
+          每维左=现值，右=提案值。全部提案组合已过 WCAG AA 实测（数字见下方实测表），拍板哪维落哪维。
         </div>
 
         {/* A. 底色温度 */}
         <div style={{ marginBottom: 'var(--sp-4)' }}>
-          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>A · 底色温度：暖一档（米调更足，伙伴感的底色）</div>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>A · 底色温度：暖一档（亮暗两套同步提案；暗色 faint 同步修正到 AA 达标）</div>
           <div className="ds-row">
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ height: 56, background: '#f5f4f1', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>现 · #f5f4f1</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>现底色：偏中性灰白</div>
+            <div style={{ flex: 1, minWidth: 170 }}>
+              <div style={{ height: 56, background: '#f5f4f1', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>现亮 · #f5f4f1</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>现亮底：偏中性灰白</div>
             </div>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ height: 56, background: '#f7f3ea', border: '1px solid #e5ddcc', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>提案 · #f7f3ea</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>提案底色：米调+暖，与 logo 米白同族</div>
+            <div style={{ flex: 1, minWidth: 170 }}>
+              <div style={{ height: 56, background: '#f7f3ea', border: '1px solid #e5ddcc', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>提案亮 · #f7f3ea</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>米调+暖，与 logo 米白同族</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 170 }}>
+              <div style={{ height: 56, background: '#191816', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>现暗 · #191816</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>现暗底（faint 4.33 不达 AA）</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 170 }}>
+              <div style={{ height: 56, background: '#1b1813', border: '1px solid #3a342a', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)' }}>提案暗 · #1b1813</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 4 }}>暖暗棕 + faint 提亮 #918a7e（5.17 达标）</div>
             </div>
           </div>
         </div>
@@ -299,10 +307,28 @@ export function DesignSystem() {
 
         {/* F. 焦点环 */}
         <div>
-          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>F · 焦点环：统一 token（现在 input:focus 手写琥珀 15%，其他控件各自为政）——Tab 到两个输入框对比</div>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>F · 焦点环：双层设计（实色环 --accent-deep 承担可见性 5.25，外晕 --ring-soft 琥珀 18% 只作柔化）——Tab 到两个输入框对比</div>
           <div className="ds-row">
             <input className="input" placeholder="现 · 各控件自带" readOnly />
-            <input className="input" style={{ outline: 'none' }} placeholder="提案 · --ring 统一（Tab 试试）" onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)' }} onBlur={(e) => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.boxShadow = '' }} readOnly />
+            <input
+              className="input"
+              placeholder="提案 · 双层环（Tab 试试）"
+              readOnly
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-deep)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232, 131, 58, 0.18)'; e.currentTarget.style.background = 'var(--surface)' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.boxShadow = ''; e.currentTarget.style.background = '' }}
+            />
+          </div>
+        </div>
+
+        {/* 对比度实测表 */}
+        <div style={{ marginTop: 'var(--sp-5)', borderTop: '1px solid var(--line)', paddingTop: 'var(--sp-3)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--sp-2)' }}>对比度实测（WCAG：正文 AA ≥ 4.5，非文本 ≥ 3.0；全部组合已逐对计算）</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 2 }}>
+            <div>亮底提案 #f7f3ea 上：ink 14.99 ✓ · ink-soft 5.48 ✓ · ink-faint 4.57 ✓（余量薄，如实告知）</div>
+            <div>暗底提案 #1b1813 上：ink 14.83 ✓ · ink-soft 8.08 ✓ · ink-faint 提亮 #918a7e 后 5.17 ✓（现值 #827d73 仅 4.33 不达标——现体系既有缺陷，随 A 维一并修正）</div>
+            <div>琥珀文字 #a34e12 于提案悬停底（10% 叠白）：5.25 ✓ · 白字压琥珀深 #b0500f：5.25 ✓</div>
+            <div>焦点环实色 #b0500f：白底 5.25 ✓ / 提案底 4.74 ✓（琥珀原色 #e8833a 做环只有 2.45–2.71，不达标——故环用深琥珀）</div>
+            <div style={{ color: 'var(--ink-faint)' }}>既有发现（非提案引入）：琥珀 #e8833a 作选中边线对白底仅 2.71（3px 边线类），未来如需达标可切 --accent-deep——单独议题不在本批。</div>
           </div>
         </div>
       </div>
