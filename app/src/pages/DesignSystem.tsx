@@ -226,10 +226,11 @@ export function DesignSystem() {
       </div>
 
       <div className="ds-section">
-        <h2 style={{ fontSize: 'var(--fs-lg)' }}>3.2 改版对照（逐维拍板，提案值未落生产样式）</h2>
+        <h2 style={{ fontSize: 'var(--fs-lg)' }}>3.2 改版对照（2026-11-12 用户六维全拍板，提案值已落 tokens.css）</h2>
         <div className="desc" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--sp-3)' }}>
           方向=伙伴感升级（logo 动效确立的 Perfect Partner 语言），品牌锚不动：琥珀三级与米白基调保留。
-          每维左=现值，右=提案值。全部提案组合已过 WCAG AA 实测（数字见下方实测表），拍板哪维落哪维。
+          本区块转为改版存档：左=落地前的现值，右=已落产的提案值；对比度实测表（全部组合 WCAG AA 过线）
+          是 3.2 批的验收依据。后续新维度提案继续追加在本区块。
         </div>
 
         {/* A. 底色温度 */}
