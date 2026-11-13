@@ -22,8 +22,8 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
  *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示） */
 const ANNOUNCES = [
   {
-    title: '0.1.19 更新',
-    desc: '问小 P 动效、整站视觉升级、侧栏更紧凑',
+    title: '0.1.20 更新',
+    desc: '安全加固：引擎升级、备份保留翻倍',
     to: 'https://loganlink0.github.io/pwork/#changelog',
     internal: false,
   },
