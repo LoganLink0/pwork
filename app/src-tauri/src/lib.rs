@@ -532,15 +532,18 @@ pub fn run() {
           Some(Shortcut::new(Some(cap_mods), Code::KeyV));
       }
       log::info!("全局热键已注册：{} / 置顶切换（Windows）", WHEEL_LABEL);
-      // 轮盘窗去 Windows 11 系统边框（3.2 视觉批用户抓出：透明轮盘窗被 DWM 画了一圈
-      // "正方形边界线"——DWMWA_BORDER_COLOR 设 NONE 后透明形态才完整）
+      // 透明小窗去系统装饰（3.2 视觉批用户两次抓出）：Win11 给所有窗口画系统边框、
+      // 圆角裁切与投影——三者叠加就是透明窗上看到的「正方形边界线/矩形框」。
+      // 轮盘窗与胶囊岛窗全部关闭三项，窗口只剩前端绘制的内容。
       #[cfg(windows)]
       {
         use windows::Win32::Foundation::COLORREF;
-        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR};
-        if let Some(w) = app.get_webview_window("wheel") {
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_WINDOW_CORNER_PREFERENCE};
+        fn strip_window_chrome(w: &tauri::WebviewWindow) {
+          let _ = w.set_shadow(false);
           if let Ok(hwnd) = w.hwnd() {
             let none_color = COLORREF(0xFFFF_FFFE); // DWMWA_COLOR_NONE：不绘制系统边框
+            let no_round: u32 = 1; // DWMWCP_DONOTROUND：不做圆角裁切
             unsafe {
               let _ = DwmSetWindowAttribute(
                 hwnd,
@@ -548,8 +551,20 @@ pub fn run() {
                 &none_color as *const COLORREF as *const core::ffi::c_void,
                 std::mem::size_of::<COLORREF>() as u32,
               );
+              let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_WINDOW_CORNER_PREFERENCE,
+                &no_round as *const u32 as *const core::ffi::c_void,
+                std::mem::size_of::<u32>() as u32,
+              );
             }
           }
+        }
+        if let Some(w) = app.get_webview_window("wheel") {
+          strip_window_chrome(&w);
+        }
+        if let Some(w) = app.get_webview_window("isle") {
+          strip_window_chrome(&w);
         }
       }
       Ok(())
