@@ -558,7 +558,6 @@ pub fn run() {
       db::db_destroy,
       db::db_migrate_batch,
       db::db_migrate_finish,
-      db::db_vacuum_into,
       db::db_columns,
       db::backup_file_io,
       mirror::mirror_write_file,

@@ -95,8 +95,10 @@ async function deliverBackup(fileName: string, content: string): Promise<{ locat
   return { location: 'download' }
 }
 
-/** 自动备份保留份数（桌面版轮换；手动导出文件不带 pwork-backup- 前缀，不受轮换影响） */
-export const KEEP_AUTO_BACKUPS = 5
+/** 自动备份保留份数（桌面版轮换；手动导出文件不带 pwork-backup- 前缀，不受轮换影响）。
+ *  10 份（2026-11-13 安全审查定值）：JSON 备份通常几百 KB 级，翻倍保留换更长回溯窗口，
+ *  覆盖「上周就坏了但一周后才发现」的场景——空间开销可忽略 */
+export const KEEP_AUTO_BACKUPS = 10
 
 /** 纯函数：从按字典序（=时间序）排好的名单里挑出该删除的旧份（超出保留数的最旧若干） */
 export function pickStaleBackups(sortedNames: string[], keep: number = KEEP_AUTO_BACKUPS): string[] {

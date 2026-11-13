@@ -39,19 +39,31 @@ describe('loadAutoBackup / saveAutoBackup', () => {
 })
 
 describe('pickStaleBackups（桌面版轮换，0.3e）', () => {
-  const names = ['pwork-backup-20261001-0900.json', 'pwork-backup-20261008-0900.json', 'pwork-backup-20261015-0900.json', 'pwork-backup-20261022-0900.json', 'pwork-backup-20261029-0900.json', 'pwork-backup-20261105-0900.json']
+  const names = [
+    'pwork-backup-20261001-0900.json', 'pwork-backup-20261008-0900.json', 'pwork-backup-20261015-0900.json',
+    'pwork-backup-20261022-0900.json', 'pwork-backup-20261029-0900.json', 'pwork-backup-20261105-0900.json',
+    'pwork-backup-20261112-0900.json', 'pwork-backup-20261113-0900.json', 'pwork-backup-20261114-0900.json',
+    'pwork-backup-20261115-0900.json', 'pwork-backup-20261116-0900.json',
+  ]
 
   it('超出保留数的最旧若干份被挑出（字典序=时间序）', () => {
-    expect(pickStaleBackups(names, 5)).toEqual(['pwork-backup-20261001-0900.json'])
+    expect(pickStaleBackups(names, 5)).toEqual([
+      'pwork-backup-20261001-0900.json',
+      'pwork-backup-20261008-0900.json',
+      'pwork-backup-20261015-0900.json',
+      'pwork-backup-20261022-0900.json',
+      'pwork-backup-20261029-0900.json',
+      'pwork-backup-20261105-0900.json',
+    ])
   })
 
   it('不超过保留数时一张不删', () => {
     expect(pickStaleBackups(names.slice(0, 3), 5)).toEqual([])
   })
 
-  it('默认保留 5 份', () => {
-    expect(KEEP_AUTO_BACKUPS).toBe(5)
-    expect(pickStaleBackups(names)).toHaveLength(1)
+  it('默认保留 10 份（2026-11-13 安全审查定值：空间可忽略，回溯窗口翻倍）', () => {
+    expect(KEEP_AUTO_BACKUPS).toBe(10)
+    expect(pickStaleBackups(names)).toEqual(['pwork-backup-20261001-0900.json'])
   })
 })
 

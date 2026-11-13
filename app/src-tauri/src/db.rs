@@ -307,7 +307,7 @@ pub fn db_open(app: AppHandle, state: State<DbState>) -> Result<Json, String> {
 pub fn db_select(state: State<DbState>, sql: String, params: Vec<Json>) -> Result<Vec<Json>, String> {
   with_conn(&state, |conn| {
     let mut stmt = conn.prepare(&sql).map_err(|e| format!("SQL 准备失败：{}", e))?;
-    let col_names: Vec<String> = stmt.column_names().iter().map(|c| c.to_string()).collect();
+    let col_names: Vec<String> = stmt.column_names().map(|c| c.to_string()).collect();
     let mut rows = stmt
       .query(rusqlite::params_from_iter(params.iter().map(json_to_sql)))
       .map_err(|e| format!("SQL 执行失败：{}", e))?;
@@ -478,18 +478,6 @@ pub fn db_migrate_finish(state: State<DbState>) -> Result<Json, String> {
     log::info!("migrate_finish 对账行数 {:?}", counts);
   }
   result
-}
-
-/// 一致性强快照（08 §R7）：备份管线在 SQLite 模式下的文件轨
-#[tauri::command]
-pub fn db_vacuum_into(state: State<DbState>, path: String) -> Result<(), String> {
-  with_conn(&state, |conn| {
-    let safe = path.replace('\'', "''");
-    conn
-      .execute_batch(&format!("VACUUM INTO '{}'", safe))
-      .map_err(|e| format!("快照生成失败：{}", e))?;
-    Ok(())
-  })
 }
 
 /// 表 → 索引列清单（JS 侧建表写入用；与 Rust DDL 单一事实同源）
