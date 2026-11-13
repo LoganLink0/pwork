@@ -696,6 +696,20 @@ html[data-isle] body {
   background: var(--accent);
   flex: none;
 }
+/* 伙伴眨眼（46 批构想·岛仔样本验证的生命感）：每 4 秒一次快速纵向压扁——
+   收缩态呼吸点兼做小 P 的「眼睛」，伙伴人格的最小实现 */
+@keyframes isle-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.75; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+@keyframes isle-blink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.15); }
+  97% { transform: scaleY(1); }
+}
+.isle-idle .isle-dot {
+  animation: isle-breathe 4s ease-in-out infinite, isle-blink 4s ease-in-out infinite;
+}
 .isle .isle-dot-live {
   animation: isle-livepulse 1.8s ease-in-out infinite;
 }

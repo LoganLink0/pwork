@@ -78,13 +78,21 @@ export function IsleWindow() {
     setMode(activities.length > 0 ? 'live' : 'idle')
   }, [activities])
 
-  // 窗体尺寸随内容自适应（展开面板高度随活动数变化）
+  // 窗体尺寸随模式与内容自适应。收缩态固定 110×110（圆点居中右下，四周透明区=悬浮
+  // 热区——热区太小会让"呼出"变得难点中，岛仔用边缘停靠解决，我们用热区放大解决）；
+  // 活动态/展开态随内容测量。下限 44×44 防 CSS 未就绪的 0×0 回调把窗体缩没。
   useEffect(() => {
     if (!ready || !contentRef.current) return
+    if (mode === 'idle') {
+      void invoke('isle_resize', { width: 110, height: 110 }).catch(() => {})
+      return
+    }
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const r = entry.contentRect
-        void invoke('isle_resize', { width: Math.ceil(r.width), height: Math.ceil(r.height) }).catch(() => {})
+        const width = Math.max(44, Math.ceil(r.width))
+        const height = Math.max(44, Math.ceil(r.height))
+        void invoke('isle_resize', { width, height }).catch(() => {})
       }
     })
     ro.observe(contentRef.current)

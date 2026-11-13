@@ -43,7 +43,7 @@ worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/RE
 3. 打离线版（约 224MiB）：把 `tauri.conf.json` 的 `webviewInstallMode.type` 临时改为 `offlineInstaller` 重打包，产物改名 `-offline`，配置改回 `embedBootstrapper` 再提交。
 3b. **安装 smoke（必过）**：联网版静默安装（`/S`）→ 注册表 `DisplayVersion` 核对 → 启动 → 网关 `/health` 通 → **关闭路径**：WM_CLOSE 优雅关闭后 `Get-Process` 确认进程归零（0.1.18 起修复的"关闭后进程残留"回归项）；数据守卫恢复演练（`local/verify-recovery-drill.py`，隔离数据目录跑四阶段：造数→基准与自动备份→清库触守卫→一键恢复）。
 3a. 刷新在线演示版：`cd app && npm run build:demo` → 产物覆盖 `docs/demo/` → 提交推送（GitHub Pages 一两分钟自动上线；重引擎 64MB 不入演示构建，横幅已引导桌面版）。
-4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。
+4. Release：`gh release create vX.Y.Z <online.exe> <offline.exe> --notes-file …`（notes 模板见 v0.1.9）。**随发 SHA256SUMS.txt**（backlog 47，岛仔实践）：`Get-FileHash` 生成四件安装包的哈希清单一并上传，下载者可比对校验。
 4a. **CHANGELOG 同步**：发布说明定稿时，把本版变化清单同步进 [CHANGELOG.md](../CHANGELOG.md)（最新在上；GitHub Release 说明直接复用同一段）。
 4b. **发版同步清单（唯一执行依据）**：介绍页数字/回执文件名/下载按钮直链、Release 双平台清单、COS 双写、文档引用等散在多文件的发版必刷内容，已全部清单化在 [发版同步清单.md](../发版同步清单.md)——逐项执行勾选。纯记忆必漏（2026-11-02 介绍页七处漏网教训）。
 5. Gitee 镜像同步（大陆下载通路，仓 gitee.com/LoganLink0/pwork，2026-10-27 由原 lsydy 空间改名）：`git push gitee master --tags` → Gitee API 建 Release（POST /repos/LoganLink0/pwork/releases，必填 target_commitish=master）→ 传附件（POST …/releases/{id}/attach_files，仅联网版，Gitee 附件上限 100MB 且匿名下载 403=平台规则需登录，入口文案已写明；仓库改路径会触发开源重新审核，期间匿名不可见属正常）。凭据已存 Windows 凭据管理器（gitee.com / LoganLink0）。

@@ -17,8 +17,10 @@ fn anchor_isle(app: &AppHandle, w: &tauri::WebviewWindow) -> Result<(), String> 
   };
   let pos = monitor.position();
   let msize = monitor.size();
+  // 右下角贴边但要避开任务栏（默认任务栏占底部 ~48px，贴 -12px 会把深色圆点藏进深色
+  // 任务栏里——真实用户实测「呼吸点在哪」）。底距取 64px：任务栏上方、视觉仍是右下角。
   let right = pos.x as f64 + msize.width as f64 - 12.0;
-  let bottom = pos.y as f64 + msize.height as f64 - 12.0;
+  let bottom = pos.y as f64 + msize.height as f64 - 64.0;
   let _ = w.set_position(tauri::PhysicalPosition::new(
     (right - size.width as f64) as i32,
     (bottom - size.height as f64) as i32,
@@ -26,10 +28,13 @@ fn anchor_isle(app: &AppHandle, w: &tauri::WebviewWindow) -> Result<(), String> 
   Ok(())
 }
 
-/// 胶囊岛：设置窗体尺寸并保持右下锚定（idle 44×44 / live ~280×44 / open 360×420 由前端决定）
+/// 胶囊岛：设置窗体尺寸并保持右下锚定（idle 44×44 / live ~280×44 / open 360×420 由前端决定）。
+/// 下限 44×44：CSS 未就绪的 0×0 回调会把窗体缩成不可见（真实用户实测）。
 #[tauri::command]
 pub fn isle_resize(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let width = width.max(44.0);
+  let height = height.max(44.0);
   let _ = w.set_size(tauri::LogicalSize::new(width, height));
   anchor_isle(&app, &w)
 }
@@ -48,6 +53,7 @@ pub fn isle_show(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   anchor_isle(&app, &w)?;
   let _ = w.show();
+  log::info!("[胶囊岛] 呼吸点已显示并锚定右下角");
   Ok(())
 }
 
