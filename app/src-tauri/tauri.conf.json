@@ -36,6 +36,21 @@
         "focus": false,
         "focusable": false,
         "url": "index.html#/wheel"
+      },
+      {
+        "label": "isle",
+        "title": "小 P",
+        "width": 360,
+        "height": 560,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "focus": false,
+        "focusable": false,
+        "url": "index.html#/isle"
       }
     ],
     "security": {

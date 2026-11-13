@@ -5,6 +5,7 @@ import { FAQ, GLOSSARY } from '../../content/help'
 import { Icon } from './icons'
 import { useNotes } from '../../store/notes'
 import { useUi } from '../../store/ui'
+import { useActivity } from '../../store/activity'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
 import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
@@ -61,13 +62,17 @@ function PaletteDialog() {
     if (!q) return
     setAsk({ phase: 'asking' })
     setAskBusy(true)
+    const activity = useActivity.getState()
+    activity.start('ask', '小 P 思考中')
     askLibrary(q)
       .then((r) => {
         setAsk({ phase: 'done', answer: r.answer, sources: r.sources })
+        activity.end('ask')
         setAskDone()
       })
       .catch((e: unknown) => {
         setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) })
+        activity.end('ask')
         setAskBusy(false)
       })
   }

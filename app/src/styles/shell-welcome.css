@@ -669,6 +669,123 @@
 html[data-wheel] body {
   background: transparent;
 }
+/* 胶囊岛窗（41+ 批）：同款透明豁免（body 底色不豁免的话透明窗渲染成一块实色） */
+html[data-isle] body {
+  background: transparent;
+}
+.isle {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  background: #101014;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(232, 131, 58, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  z-index: 50;
+}
+.isle .isle-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+.isle .isle-dot-live {
+  animation: isle-livepulse 1.8s ease-in-out infinite;
+}
+@keyframes isle-livepulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.isle .isle-txt {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.isle .isle-count {
+  font-size: 11px;
+  color: var(--accent-text);
+  background: rgba(232, 131, 58, 0.15);
+  border-radius: 999px;
+  padding: 0 7px;
+  line-height: 18px;
+  flex: none;
+}
+.isle .tip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  background: #101014;
+  border: 1px solid rgba(232, 131, 58, 0.4);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #ffd28a;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.isle:hover .tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+.isle:hover {
+  transform: scale(1.04);
+}
+/* 展开面板态 */
+.isle.isle-open {
+  border-radius: 18px;
+  padding: 14px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  cursor: default;
+}
+.isle.isle-open .tip { display: none; }
+.isle .isle-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.isle .isle-head .isle-dot {
+  width: 9px;
+  height: 9px;
+  animation: isle-livepulse 1.8s ease-in-out infinite;
+}
+.isle .isle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #cfd3d8;
+  padding: 4px 0;
+}
+.isle .isle-acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.isle .isle-pbtn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+}
+.isle .isle-pbtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 .wheel-window {
   width: 100vw;
   height: 100vh;

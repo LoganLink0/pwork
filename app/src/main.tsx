@@ -99,6 +99,16 @@ if (window.location.hash.startsWith('#/wheel') && isDesktopApp()) {
       </StrictMode>,
     )
   })
+} else if (window.location.hash.startsWith('#/isle') && isDesktopApp()) {
+  // 胶囊岛独立窗：同轮盘的透明窗分流（html 打 isle 标记，body 底色转透明）
+  document.documentElement.dataset.isle = '1'
+  void import('./components/shell/IsleWindow').then(({ IsleWindow }) => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <IsleWindow />
+      </StrictMode>,
+    )
+  })
 } else {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

@@ -21,6 +21,7 @@ import {
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../modules/input/engine/collect'
 import { summarizeDailyBackfill } from '../modules/input/engine/aiDigest'
+import { useActivity } from './activity'
 import { writeReferenceAfterPurge } from '../engine/dbGuard'
 import { backfillContentOnce, enqueueContent, onContentUpdate } from '../modules/input/engine/articleContent'
 import { fingerprintOf } from '../modules/input/engine/fingerprint'
@@ -160,8 +161,10 @@ export const useCollect = create<CollectState>((set, get) => ({
     const { sources, config } = get()
     const active = sources.filter((s) => s.active)
     set({ fetch: { running: true, summary: null, lastRunAt: get().fetch.lastRunAt, error: null } })
+    useActivity.getState().start('fetch', '正在抓取信息日报')
     try {
       const summary = await runCollect(active, config)
+      useActivity.getState().end('fetch')
       // 失败留痕（2026-10-27 用户明令：手动检查能发现的问题必须如实进错误日志）——
       // 横幅已有当轮反馈，这里静默入库供回查
       const failed = summary.results.filter((r) => !r.ok)
@@ -198,6 +201,7 @@ export const useCollect = create<CollectState>((set, get) => ({
       }
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
+      useActivity.getState().end('fetch')
       const message = err instanceof Error ? err.message : String(err)
       void recordError({
         where: '采集.立即抓取 runFetchAll',

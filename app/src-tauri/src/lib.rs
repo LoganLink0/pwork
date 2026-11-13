@@ -1,6 +1,7 @@
 mod attachments;
 mod db;
 mod gateway;
+mod isle;
 mod mirror;
 mod system;
 mod ytdlp;
@@ -565,6 +566,10 @@ pub fn run() {
       system::shell_bridge_install,
       wheel_dispatch_action,
       wheel_hide,
+      isle::isle_resize,
+      isle::isle_set_activity,
+      isle::isle_show,
+      isle::isle_open_main,
       ytdlp::ytdlp_probe,
       ytdlp::ytdlp_fetch_playlist,
       db::db_probe,
