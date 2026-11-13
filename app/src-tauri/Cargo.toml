@@ -47,4 +47,4 @@ tauri-plugin-clipboard-manager = "2"
 rusqlite = { version = "0.42", features = ["bundled"] }
 # 系统工具台（置顶窗口等，Windows 专用 Win32 调用）
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_UI_WindowsAndMessaging"] }

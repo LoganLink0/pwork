@@ -531,6 +531,26 @@ pub fn run() {
           Some(Shortcut::new(Some(cap_mods), Code::KeyV));
       }
       log::info!("全局热键已注册：{} / 置顶切换（Windows）", WHEEL_LABEL);
+      // 轮盘窗去 Windows 11 系统边框（3.2 视觉批用户抓出：透明轮盘窗被 DWM 画了一圈
+      // "正方形边界线"——DWMWA_BORDER_COLOR 设 NONE 后透明形态才完整）
+      #[cfg(windows)]
+      {
+        use windows::Win32::Foundation::COLORREF;
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR};
+        if let Some(w) = app.get_webview_window("wheel") {
+          if let Ok(hwnd) = w.hwnd() {
+            let none_color = COLORREF(0xFFFF_FFFE); // DWMWA_COLOR_NONE：不绘制系统边框
+            unsafe {
+              let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_BORDER_COLOR,
+                &none_color as *const COLORREF as *const core::ffi::c_void,
+                std::mem::size_of::<COLORREF>() as u32,
+              );
+            }
+          }
+        }
+      }
       Ok(())
     })
     .manage(db::DbState(std::sync::Mutex::new(None)))
