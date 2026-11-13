@@ -205,6 +205,11 @@ fn open_conn(path: &PathBuf) -> Result<Connection, String> {
   conn
     .pragma_update(None, "synchronous", "NORMAL")
     .map_err(|e| format!("设置 synchronous 失败：{}", e))?;
+  // 忙等 5 秒（3.2 安全批加固）：杀软实时扫描/备份软件短暂锁文件时写操作等待而非立即报
+  // BUSY——真实用户迁移失败（14 条小批过、286 条大批超 120 秒）的最可能环境因素
+  conn
+    .busy_timeout(std::time::Duration::from_secs(5))
+    .map_err(|e| format!("设置 busy_timeout 失败：{}", e))?;
   conn.execute_batch(DDL).map_err(|e| format!("初始化表结构失败：{}", e))?;
   Ok(conn)
 }

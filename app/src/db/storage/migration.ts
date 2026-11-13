@@ -35,7 +35,7 @@ function stamp(): string {
 /** 带超时的 invoke：正常批次毫秒级完成，超时意味着通道挂起（进程冻结/IPC 丢消息）——
  *  不加它的话界面会永远停在中间进度且没有任何反馈（2026-11-01 真机踩中）。
  *  超时即 reject → 走失败清理路径（db_destroy + 人话报错），挂起从永久死寂变成明确失败 */
-function invokeWatched<T>(cmd: string, args: Record<string, unknown>, timeoutMs = 120_000): Promise<T> {
+function invokeWatched<T>(cmd: string, args: Record<string, unknown>, timeoutMs = 600_000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
       () => reject(new Error(`迁移步骤「${cmd}」超过 ${Math.round(timeoutMs / 1000)} 秒没有响应，已中止——旧数据未受影响，可重试`)),
@@ -104,15 +104,17 @@ export async function runMigration(onProgress: (p: MigrationProgress) => void): 
           skippedKv++
         }
       }
-      await inBatches(serializable, 500, async (chunk) => {
-        await invokeWatched('db_migrate_batch', { table: name, rows: chunk })
-      })
+    await inBatches(serializable, 100, async (chunk) => {
+      await invokeWatched('db_migrate_batch', { table: name, rows: chunk })
+    })
       done = serializable.length
       overallDone += done
       onProgress({ table: name, done, total, overallDone, overallTotal })
       continue
     }
-    await inBatches(rows, 500, async (chunk) => {
+    // 批 100 行（3.2 安全批收紧：慢盘/杀软实时扫描下大批单次写盘可能超保护线——
+    // 真实用户 14 条小批过、286 条大批超 120 秒的教训；小批也让进度条真正走动）
+    await inBatches(rows, 100, async (chunk) => {
       await invokeWatched('db_migrate_batch', { table: name, rows: chunk })
       done = Math.min(done + chunk.length, total)
       overallDone = Math.min(overallDone + chunk.length, overallTotal)
