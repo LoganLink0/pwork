@@ -22,8 +22,8 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
  *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示） */
 const ANNOUNCES = [
   {
-    title: '0.1.21 更新',
-    desc: '修复旧数据迁移在慢盘/杀软环境超时',
+    title: '0.1.22 更新',
+    desc: '修复轮盘窗边界线、备份保留翻倍',
     to: 'https://loganlink0.github.io/pwork/#changelog',
     internal: false,
   },
