@@ -321,6 +321,10 @@ export interface Item {
   scoreReason: string
   /** 本条由谁处理（降级追溯）：C1 恒为 rules */
   aiBy: 'rules'
+  /** AI 一句话摘要（41 批）：「已经替你读好了」的实体化——抓取后/打开日报页时后台生成，
+   *  失败留空不重试打扰；仅用户配置 AI 时生成。存储进 payload（零迁移）。 */
+  aiSummary?: string
+  aiSummaryAt?: string
   tags: string[]
   /** 回路联动：进 O/T 候选池（W4 消费；C1 可手动标记） */
   otFlag: 'opportunity' | 'threat' | 'trend' | null

@@ -80,7 +80,14 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           )}
           <span className="ext" aria-hidden>↗</span>
         </div>
-        {item.summary && <div className="d-summary">{item.summary}</div>}
+        {item.aiSummary ? (
+          <div className="d-aisummary" title="小 P 读过原文后的一句话摘要">
+            <span className="d-aisummary-tag">小 P 读</span>
+            {item.aiSummary}
+          </div>
+        ) : (
+          item.summary && <div className="d-summary">{item.summary}</div>
+        )}
         <div className="d-meta">
           <span>{item.sourceName}</span>
           <span className="tnum" title={`入库：${fmtLocal(item.fetchedAt)}`}>入库 {fmtCompact(item.fetchedAt)}</span>

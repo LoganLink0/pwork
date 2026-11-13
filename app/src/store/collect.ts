@@ -20,6 +20,7 @@ import {
   type SourceInput,
 } from '../db/collect'
 import { runCollect, maintenance, type RunSummary } from '../modules/input/engine/collect'
+import { summarizeDailyBackfill } from '../modules/input/engine/aiDigest'
 import { writeReferenceAfterPurge } from '../engine/dbGuard'
 import { backfillContentOnce, enqueueContent, onContentUpdate } from '../modules/input/engine/articleContent'
 import { fingerprintOf } from '../modules/input/engine/fingerprint'
@@ -191,6 +192,9 @@ export const useCollect = create<CollectState>((set, get) => ({
         if (summary.newContentIds.length > 0) {
           toast('info', `新入库 ${summary.newContentIds.length} 篇，正文正在后台陆续抓取`)
         }
+        // AI 一句话摘要（41 批）：对当日 Top 条目后台生成。引擎内部自带 AI 配置预检与
+        // 限量，未配置/失败全部静默——摘要缺失只是没有这行小字，渐进增强
+        void summarizeDailyBackfill(todayLocal()).catch(() => {})
       }
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」

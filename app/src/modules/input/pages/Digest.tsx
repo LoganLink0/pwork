@@ -8,6 +8,7 @@ import { todayLocal, nextCalendarDay, localDateOf } from '../../../engine/dateti
 import { alignmentStats } from '../engine/itemTier'
 import { topicAnomalies } from '../engine/digestAnomaly'
 import { obsidianDaily } from '../engine/obsidian'
+import { summarizeDailyBackfill } from '../engine/aiDigest'
 import { downloadFile } from '../../../db/repo'
 import { cloudConfigured, syncFromCloud } from '../../../db/cloudSync'
 import { confirmDialog } from '../../../engine/confirm'
@@ -90,6 +91,14 @@ export function Digest() {
     lastAutoFreshAt = Date.now()
     void Promise.resolve().then(() => runAutoFresh())
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次；保鲜链路自身读 store 最新值
+  }, [])
+
+  // AI 摘要限量补挂（41 批）：打开日报页时对当日缺摘要的条目补生成（引擎内部自带
+  // AI 配置预检、限量与失败静默——未配 Key 时什么都不发生）
+  useEffect(() => {
+    if (!isToday) return
+    void summarizeDailyBackfill(todayLocal()).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
   return (
