@@ -116,9 +116,11 @@ export function IsleWindow() {
 
   // 按下=启动原生拖拽（Rust 立即返回，拖拽结束经 isle-drag-end 事件异步通知）。
   // 按下时先收起（拖拽视觉干净）。交互模型三件事各司其职：靠近=呼出、离开=收回、按住=拖走，
-  // 无单击切换（与悬停计时器赛跑产生状态混杂）
+  // 无单击切换（与悬停计时器赛跑产生状态混杂）。
+  // 绑定在画布层：整个横条+logo 都能拖（可视即可得），按钮豁免（点击语义优先于拖拽）
   const startDrag = (e: ReactMouseEvent) => {
     if (e.button !== 0) return
+    if ((e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     setDragging(true)
     setOpen(false)
@@ -188,6 +190,7 @@ export function IsleWindow() {
       className={[open ? 'open' : '', dockCls].filter(Boolean).join(' ')}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onMouseDown={startDrag}
     >
       <div className="isle-bar">
         <div className="isle-bar-content">
@@ -207,14 +210,13 @@ export function IsleWindow() {
       </div>
       {/* logo 是收起态唯一可见物，必须是 #isle-dock 的直接子元素——
           放进 .isle-bar 内会被收起态的 opacity:0 连带压成全透明（opacity 压平后代）。
-          单击与拖拽都在 mousedown 流程里判别（原生拖拽松手后 click 事件不可靠），无 onClick */}
+          拖拽在画布层统一处理（整条可拖），logo 无独立监听、无 title（悬停驱动的
+          UI 里原生提示框是噪音，出现在横条正下方被误认为渲染缺陷） */}
       <img
         src="favicon.svg"
         alt="小 P"
         className="isle-logo"
-        title="按住拖动 · 靠近呼出"
         draggable={false}
-        onMouseDown={startDrag}
       />
     </div>
   )

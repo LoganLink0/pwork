@@ -566,6 +566,9 @@ pub fn run() {
         if let Some(w) = app.get_webview_window("isle") {
           strip_window_chrome(&w);
         }
+        if let Some(w) = app.get_webview_window("palette") {
+          strip_window_chrome(&w);
+        }
       }
       Ok(())
     })

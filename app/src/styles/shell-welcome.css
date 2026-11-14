@@ -683,6 +683,11 @@ html[data-palette] .overlay {
   align-items: flex-start;
   padding-top: 8px;
 }
+/* 独立窗里面板卡去阴影：卡片阴影是主窗 overlay 语境的层次手段，
+   独立透明窗叠加 DWM 边框后会形成双重阴影线框（窗体装饰已在 Rust 侧剥离） */
+html[data-palette] .palette {
+  box-shadow: none;
+}
 /* 胶囊岛 · 横条模型（46 批三稿，用户定案 logo 方案）：
    固定 520×140 画布（Rust 按自由/顶部两模式放置）。收起态=logo 本体 64px 居中画布
    （把手=品牌资产本体，无外壳）；展开态=毛玻璃横条（520×64 圆角胶囊）显现，
