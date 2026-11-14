@@ -78,12 +78,12 @@ function PaletteDialog() {
     askLibrary(q)
       .then((r) => {
         setAsk({ phase: 'done', answer: r.answer, sources: r.sources })
-        activity.end('ask')
+        activity.end('ask', { ok: true, label: '问答完成' })
         setAskDone()
       })
       .catch((e: unknown) => {
         setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) })
-        activity.end('ask')
+        activity.end('ask', { ok: false, label: '问答失败' })
         setAskBusy(false)
       })
   }

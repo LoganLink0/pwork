@@ -19,6 +19,12 @@ interface ActivityItem {
   label: string
 }
 
+/** 活动结束瞬态（完成 ✓ / 失败 ✗）：展示数秒自动消失 */
+interface ActivityNotice {
+  ok: boolean
+  label: string
+}
+
 const POS_KEY = 'pwork-isle-pos'
 const SETTINGS_KEY = 'pwork-isle-settings'
 
@@ -64,15 +70,16 @@ function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string
 
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [notice, setNotice] = useState<ActivityNotice | null>(null)
   const [open, setOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
   /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
   const [mode, setMode] = useState<SavedPos['mode']>('top')
   /** 停靠模式下的半隐藏态（logo 探入屏幕边缘，靠近滑出） */
   const [peek, setPeek] = useState(true)
-  /** 按下时的展开态占位（保留给拖拽结束后的状态复位用） */
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
+  const noticeTimer = useRef<number | null>(null)
 
   const clearTimers = () => {
     if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
@@ -147,15 +154,24 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
-  // 主窗推送活动列表
+  // 主窗推送活动列表 + 结果瞬态（瞬态 3.5 秒后自动消失）
   useEffect(() => {
     let un: (() => void) | undefined
-    void listen<ActivityItem[]>('isle-activities', (e) => {
-      setActivities(e.payload)
+    void listen<{ activities: ActivityItem[]; notice: ActivityNotice | null }>('isle-activities', (e) => {
+      setActivities(e.payload.activities)
+      // notice 空值也清（无 done 的结束不该让上一次瞬态复现）
+      setNotice(e.payload.notice)
+      if (e.payload.notice) {
+        if (noticeTimer.current) clearTimeout(noticeTimer.current)
+        noticeTimer.current = window.setTimeout(() => setNotice(null), 3500)
+      }
     }).then((unlisten) => {
       un = unlisten
     })
-    return () => un?.()
+    return () => {
+      un?.()
+      if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    }
   }, [])
 
   // 靠近 0.6 秒直接展开（半隐藏态不解锁——先滑回再展开会让 logo 从静止的光标
@@ -181,6 +197,7 @@ export function IsleWindow() {
 
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
+  const idleNote = notice ? (notice.ok ? '✓ ' : '✗ ') + notice.label : '一切就绪'
   const dockCls = dockClass(mode, peek, open)
 
   return (
@@ -196,7 +213,7 @@ export function IsleWindow() {
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
           <span className="isle-title">{count > 0 ? `小 P · 进行中（${count}）` : '小 P 在'}</span>
-          <span className="isle-note">{count > 0 ? firstLabel : '一切就绪'}</span>
+          <span className="isle-note">{count > 0 ? firstLabel : idleNote}</span>
           <div className="isle-acts">
             <button type="button" className="isle-pbtn isle-brand" onClick={(e) => { e.stopPropagation(); void invoke('isle_open_palette').catch(() => {}) }}>
               问小 P

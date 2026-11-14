@@ -164,7 +164,7 @@ export const useCollect = create<CollectState>((set, get) => ({
     useActivity.getState().start('fetch', '正在抓取信息日报')
     try {
       const summary = await runCollect(active, config)
-      useActivity.getState().end('fetch')
+      useActivity.getState().end('fetch', { ok: true, label: `信息日报完成 · 新入库 ${summary.newContentIds.length} 条` })
       // 失败留痕（2026-10-27 用户明令：手动检查能发现的问题必须如实进错误日志）——
       // 横幅已有当轮反馈，这里静默入库供回查
       const failed = summary.results.filter((r) => !r.ok)
@@ -201,7 +201,7 @@ export const useCollect = create<CollectState>((set, get) => ({
       }
     } catch (err) {
       // 中途炸掉也必须复位 running 并留痕——2026-10 事故：拒绝穿透让按钮永久「抓取中」
-      useActivity.getState().end('fetch')
+      useActivity.getState().end('fetch', { ok: false, label: '信息日报抓取失败' })
       const message = err instanceof Error ? err.message : String(err)
       void recordError({
         where: '采集.立即抓取 runFetchAll',

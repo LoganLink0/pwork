@@ -210,11 +210,19 @@ pub fn isle_hide(app: AppHandle) -> Result<(), String> {
   Ok(())
 }
 
-/// 胶囊岛：主窗侧上报活动状态（JSON 数组），转发给 isle 窗渲染
+/// 胶囊岛：主窗侧上报活动状态（JSON 数组）+ 可选结果瞬态（完成 ✓ / 失败 ✗），
+/// 转发给 isle 窗渲染
 #[tauri::command]
-pub fn isle_set_activity(app: AppHandle, activities: Vec<serde_json::Value>) -> Result<(), String> {
+pub fn isle_set_activity(
+  app: AppHandle,
+  activities: Vec<serde_json::Value>,
+  notice: Option<serde_json::Value>,
+) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let _ = w.emit("isle-activities", activities);
+  let _ = w.emit(
+    "isle-activities",
+    serde_json::json!({ "activities": activities, "notice": notice }),
+  );
   Ok(())
 }
 
