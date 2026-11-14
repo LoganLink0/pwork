@@ -468,7 +468,20 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
         let port = state.lock().unwrap().port;
         let addr = format!("127.0.0.1:{port}");
         let Ok(server) = Server::http(&addr) else {
-            log::info!("[PWORK 网关] 端口 {port} 已被占用（可能是开发版网关在跑），内嵌网关不启动");
+            // 让位前探测占用者身份：同仓库开发版 Node 网关的 /health 带 dev:true（随 npm run dev 启动，
+            // 属可信同源），只留日志不弹安全告警；其余占用者（陌生进程=可能在冒名截获对话）照旧报警
+            let dev_gateway = ureq::get(&format!("http://127.0.0.1:{port}/health"))
+                .timeout(std::time::Duration::from_secs(2))
+                .call()
+                .ok()
+                .and_then(|r| r.into_json::<Value>().ok())
+                .and_then(|v| v.get("dev").and_then(|d| d.as_bool()))
+                .unwrap_or(false);
+            if dev_gateway {
+                log::info!("[PWORK 网关] 端口 {port} 由开发版 Node 网关（npm run dev 随启）提供服务，内嵌网关不启动");
+                return;
+            }
+            log::info!("[PWORK 网关] 端口 {port} 已被占用（占用者身份不明），内嵌网关不启动");
             let _ = app.emit("gateway-conflict", ());
             return;
         };

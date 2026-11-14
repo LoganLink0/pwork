@@ -159,6 +159,7 @@ const server = http.createServer(async (req, res) => {
   if (path === '/health') {
     json(res, 200, {
       ok: true,
+      dev: true, // 开发版标记：Rust 内嵌网关端口冲突时据此识别自家开发网关（只留日志不弹安全告警）
       chatConfigured: Boolean(CHAT_KEY),
       searchConfigured: Boolean(SEARCH_KEY),
       model: CHAT_MODEL || null,
