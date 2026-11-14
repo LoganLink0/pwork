@@ -51,6 +51,21 @@
         "focus": false,
         "focusable": false,
         "url": "index.html#/isle"
+      },
+      {
+        "label": "palette",
+        "title": "问小 P",
+        "width": 680,
+        "height": 480,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "focus": true,
+        "focusable": true,
+        "url": "index.html#/palette"
       }
     ],
     "security": {

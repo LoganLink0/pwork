@@ -3,13 +3,15 @@ import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
- * 胶囊岛窗（/isle 分流渲染）——自由拖拽 + 上缘吸附（用户拍板·可视即可得）：
- * 固定 520×140 画布。收起态=logo 本体（64px 品牌胶囊）居中画布；
- * 展开态=毛玻璃横条（logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
- * 按住 logo 原生拖拽（start_dragging 阻塞至松手），松手驻留并持久化位置；
- * 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。
- * 位置/形态持久化在本窗 localStorage（pwork-isle-pos）；启用开关在主窗设置页
- * （经 pwork-isle-settings 的 storage 事件实时响应显示/隐藏）。
+ * 胶囊岛窗（/isle 分流渲染）——三种驻留模式 + 停靠自动半隐藏：
+ * 固定 520×140 透明画布。收起态=logo 本体（64px 品牌胶囊）；展开态=毛玻璃横条
+ * （logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
+ * 模式（拖拽落点由 Rust 判定并落位，前端持久化）：
+ *   top  灵动岛：横条零间距贴屏幕上缘居中；鼠标离开后 logo 上滑半探入边缘，靠近滑出；
+ *   right 右缘停靠：画布右缘贴屏幕右缘，logo 停画布右侧；同样半隐藏贴边；
+ *   free 自由驻留：拖到哪驻留到哪（全向钳回屏内），不做半隐藏。
+ * 单击=展开/收回；按住=原生拖拽。位置/模式持久化在本窗 localStorage（pwork-isle-pos）；
+ * 启用开关在主窗设置页（经 pwork-isle-settings 的 storage 事件实时响应显隐）。
  */
 
 interface ActivityItem {
@@ -19,11 +21,9 @@ interface ActivityItem {
 
 const POS_KEY = 'pwork-isle-pos'
 const SETTINGS_KEY = 'pwork-isle-settings'
-/** 上缘吸附判定：拖拽驻留点进入屏顶此物理距离内即吸附居中 */
-const SNAP_TOP_PX = 120
 
 interface SavedPos {
-  mode: 'top' | 'free'
+  mode: 'top' | 'right' | 'free'
   x?: number
   y?: number
 }
@@ -33,6 +33,7 @@ function readPos(): SavedPos {
     const raw = localStorage.getItem(POS_KEY)
     if (!raw) return { mode: 'top' }
     const p = JSON.parse(raw) as SavedPos
+    if (p.mode === 'right' && typeof p.y === 'number') return { mode: 'right', y: p.y }
     if (p.mode === 'free' && typeof p.x === 'number' && typeof p.y === 'number') return { mode: 'free', x: p.x, y: p.y }
     return { mode: 'top' }
   } catch {
@@ -55,10 +56,20 @@ function readEnabled(): boolean {
   }
 }
 
+/** 停靠模式下的容器类名（free 为空）；peek=半隐藏探边态 */
+function dockClass(mode: SavedPos['mode'], peek: boolean): string {
+  const base = mode === 'top' ? 'dock-top' : mode === 'right' ? 'dock-right' : ''
+  return [base, peek && base ? 'peek' : '', ].filter(Boolean).join(' ')
+}
+
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [open, setOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
+  /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
+  const [mode, setMode] = useState<SavedPos['mode']>('top')
+  /** 停靠模式下的半隐藏态（logo 探入屏幕边缘，靠近滑出） */
+  const [peek, setPeek] = useState(true)
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
 
@@ -67,11 +78,15 @@ export function IsleWindow() {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
   }
 
-  // 首帧：恢复持久化位置（top 吸附 / free 驻留点，越界由 Rust 钳回屏内）→ 按启用开关决定显示
+  // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
+  // 停靠模式以半隐藏态出场（靠近即滑出）。
   useEffect(() => {
     const pos = readPos()
+    setMode(pos.mode)
     if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
       void invoke('isle_place', { x: pos.x, y: pos.y }).catch(() => {})
+    } else if (pos.mode === 'right') {
+      void invoke('isle_dock_right', { y: pos.y ?? 0 }).catch(() => {})
     } else {
       void invoke('isle_snap_top').catch(() => {})
     }
@@ -98,10 +113,9 @@ export function IsleWindow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
-  // 原生拖拽结束：Rust 已把落点钳回屏内并返回终位+是否真的移动过。
-  // 没移动=单击 → 按「按下前状态」取反（按下时先收起以保持拖拽视觉干净，
-  // 取反必须基于 wasOpen，否则单击关闭会在收起后被重新翻开）；
-  // 移动过=真拖拽 → 近上缘吸附居中，否则驻留并持久化。仅左键触发。
+  // 原生拖拽结束：Rust 判定停靠模式并已落位（top 贴顶居中 / right 右缘 / free 钳回屏内），
+  // 返回 {mode, x, y, moved}。没移动=单击 → 按「按下前状态」取反（取反必须基于 wasOpen，
+  // 否则单击关闭会在收起后被重新翻开）；移动过=真拖拽 → 持久化模式并进入半隐藏。
   const startDrag = (e: ReactMouseEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -109,18 +123,17 @@ export function IsleWindow() {
     setDragging(true)
     setOpen(false)
     clearTimers()
-    void invoke<{ x: number; y: number; moved: boolean }>('isle_start_drag')
+    void invoke<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle_start_drag')
       .then((pos) => {
         if (!pos.moved) {
           setOpen(!wasOpen)
           return
         }
-        if (pos.y <= SNAP_TOP_PX) {
-          void invoke('isle_snap_top').catch(() => {})
-          savePos({ mode: 'top' })
-        } else {
-          savePos({ mode: 'free', x: pos.x, y: pos.y })
-        }
+        setMode(pos.mode)
+        setPeek(pos.mode !== 'free')
+        if (pos.mode === 'top') savePos({ mode: 'top' })
+        else if (pos.mode === 'right') savePos({ mode: 'right', y: pos.y })
+        else savePos({ mode: 'free', x: pos.x, y: pos.y })
       })
       .finally(() => setDragging(false))
   }
@@ -136,26 +149,35 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
-  // 悬停画布 0.6 秒展开；移开 1 秒收回（拖拽中不触发）
+  // 靠近 0.6 秒直接展开（半隐藏态不解锁——先滑回再展开会让 logo 从静止的光标
+  // 底下移走，立刻触发 mouseleave 收回，形成"碰了没反应"的振荡）；移开 1 秒收回，
+  // 收回后停靠模式重新进入半隐藏（拖拽中不触发）
   const onEnter = () => {
     if (dragging) return
     clearTimers()
-    openTimer.current = window.setTimeout(() => setOpen(true), 600)
+    openTimer.current = window.setTimeout(() => {
+      setOpen(true)
+      setPeek(false)
+    }, 600)
   }
   const onLeave = () => {
     if (dragging) return
     clearTimers()
-    closeTimer.current = window.setTimeout(() => setOpen(false), 1000)
+    closeTimer.current = window.setTimeout(() => {
+      setOpen(false)
+      if (mode !== 'free') setPeek(true)
+    }, 1000)
   }
   useEffect(() => () => clearTimers(), [])
 
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
+  const dockCls = dockClass(mode, peek)
 
   return (
     <div
       id="isle-dock"
-      className={open ? 'open' : ''}
+      className={[open ? 'open' : '', dockCls].filter(Boolean).join(' ')}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     >

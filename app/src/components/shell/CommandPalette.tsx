@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PALETTE_PAGES } from '../../content/nav'
 import { FAQ, GLOSSARY } from '../../content/help'
@@ -23,6 +23,10 @@ interface PaletteItem {
 
 type AskPhase = 'idle' | 'asking' | 'done' | 'error'
 
+/** 导航桥：独立 palette 窗（问小 P）注入后，所有页面跳转转交主窗执行（palette_goto）；
+ *  主窗内使用（Ctrl+K）保持无桥、直接路由。 */
+export const PaletteNavBridge = createContext<((path: string) => void) | null>(null)
+
 /**
  * 命令面板（PRD §5.4）：⌘K 全局混合搜索——快速动作 + 页面 + 速记 + 全库检索。
  * 关闭时整体卸载、打开时重新挂载内部对话框，天然获得干净初始态。
@@ -42,7 +46,14 @@ function PaletteDialog() {
   const setAskDone = useUi((s) => s.setAskDone)
   const openQuick = useUi((s) => s.openQuick)
   const notes = useNotes((s) => s.notes)
-  const navigate = useNavigate()
+  const routerNavigate = useNavigate()
+  const navBridge = useContext(PaletteNavBridge)
+  // 独立窗内所有跳转（页面命中/速记/过滤器/问答来源）统一过桥交给主窗；
+  // 主窗内 navBridge 为 null，直接路由
+  const navigate = (p: string) => {
+    if (navBridge) navBridge(p)
+    else routerNavigate(p)
+  }
   const [query, setQuery] = useState('')
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)

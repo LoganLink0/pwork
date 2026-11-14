@@ -1,9 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "isle",
-  "description": "胶囊岛独立窗（常驻伙伴形态）：只给事件与调用基础——不继承主窗的文件/更新/通知/剪贴板权限，窗内是纯展示与跳转入口，无数据读写路径",
+  "description": "胶囊岛与 palette 独立窗（常驻伙伴形态）：只给事件与调用基础——不继承主窗的文件/更新/通知/剪贴板权限，窗内是纯展示与跳转入口，无数据读写路径",
   "windows": [
-    "isle"
+    "isle",
+    "palette"
   ],
   "permissions": [
     "core:default"

@@ -673,6 +673,16 @@ html[data-wheel] body {
 html[data-isle] body {
   background: transparent;
 }
+/* 问小 P 独立窗（Spotlight 形态）：透明窗承载面板卡——backdrop 免去压暗（窗外即桌面），
+   卡片顶置（窗 680×480，卡 640 居中，上缘下探出一点点的悬浮观感） */
+html[data-palette] body {
+  background: transparent;
+}
+html[data-palette] .overlay {
+  background: transparent;
+  align-items: flex-start;
+  padding-top: 8px;
+}
 /* 胶囊岛 · 横条模型（46 批三稿，用户定案 logo 方案）：
    固定 520×140 画布（Rust 按自由/顶部两模式放置）。收起态=logo 本体 64px 居中画布
    （把手=品牌资产本体，无外壳）；展开态=毛玻璃横条（520×64 圆角胶囊）显现，
@@ -747,6 +757,20 @@ html[data-isle] body {
   width: 44px;
   height: 44px;
   border-radius: 12px;
+  transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
+}
+
+/* ── 停靠模式（top 灵动岛 / right 右缘）──
+   半隐藏：logo 沿停靠轴平移，被窗体边界裁掉大半、留 ~24px 探边条，
+   鼠标靠近（mouseenter 在可见部分命中）即滑回全可见。free 模式无位移。 */
+#isle-dock.dock-right .isle-logo {
+  left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态由 open 规则接管滑至条内左侧 */
+}
+#isle-dock.dock-top.peek .isle-logo {
+  transform: translateY(-40px); /* 上探：logo 屏内留 24px 可命中 */
+}
+#isle-dock.dock-right.peek .isle-logo {
+  transform: translateX(56px); /* 右探：被窗体右缘裁切，屏内留 24px（右侧不可见边距 16px 在窗外） */
 }
 .isle-divider {
   width: 1px;

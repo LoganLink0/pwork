@@ -368,12 +368,14 @@ export default function App() {
     }
   }, [])
 
-  // 桌面版：胶囊岛面板「问小 P」（isle 窗发事件）——打开命令面板（littlep 来源）
+  // 桌面版：问小 P 独立窗的跳转桥（palette 窗发事件）——主窗为 HashRouter，
+  // 直接赋 hash 即路由（App 主体在 Router 上下文外，useNavigate 不可用）
   useEffect(() => {
     if (!isDesktopApp()) return
     const un = import('@tauri-apps/api/event')
-      .then(({ listen }) => listen('isle-open-palette', () => {
-        useUi.getState().openPalette('littlep')
+      .then(({ listen }) => listen<string>('isle-goto', (e) => {
+        const p = e.payload
+        window.location.hash = p.startsWith('#') ? p : '#' + p
       }))
       .catch(() => () => {})
     return () => {

@@ -109,6 +109,17 @@ if (window.location.hash.startsWith('#/wheel') && isDesktopApp()) {
       </StrictMode>,
     )
   })
+} else if (window.location.hash.startsWith('#/palette') && isDesktopApp()) {
+  // 问小 P 独立窗（Spotlight 形态）：胶囊岛「问小 P」/全局键呼出，不承载主窗壳与路由；
+  // 页面跳转经 palette_goto 桥接回主窗执行
+  document.documentElement.dataset.palette = '1'
+  void import('./components/shell/PaletteWindow').then(({ PaletteWindow }) => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <PaletteWindow />
+      </StrictMode>,
+    )
+  })
 } else {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
