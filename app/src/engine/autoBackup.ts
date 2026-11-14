@@ -7,6 +7,7 @@
 import { buildBackupBundle } from '../store/collect'
 import { downloadFile } from '../db/repo'
 import { isDesktopApp } from './platform'
+import { recordError } from './errorLog'
 
 export interface AutoBackupConfig {
   enabled: boolean
@@ -84,11 +85,17 @@ async function deliverBackup(fileName: string, content: string): Promise<{ locat
       const { writeBackupText, readBackupText } = await import('../db/storage/desktopFiles')
       await writeBackupText(fileName, content)
       const back = await readBackupText(fileName)
-      if (back !== content) throw new Error('备份写入校验失败：读回内容与写入内容不一致（磁盘可能不可靠），已改走下载兜底')
+      if (back !== content) throw new Error('备份写入校验失败：读回内容与写入内容不一致（磁盘可能不可靠）')
       const rotateError = await rotateDesktopBackups()
       return { location: 'disk', rotateError: rotateError ?? undefined }
-    } catch {
-      // 落到浏览器下载兜底
+    } catch (e) {
+      // 下载兜底保留，但失败必须留痕——静默兜底会让用户以为备份躺在数据目录
+      // （2026-11-14 复盘：备份目录长期为空无人察觉）
+      void recordError({
+        where: '自动备份.桌面写盘',
+        kind: 'app',
+        message: `备份写入数据目录失败，已改走下载文件夹：${e instanceof Error ? e.message : String(e)}`,
+      }, { silent: true })
     }
   }
   downloadFile(fileName, content, 'application/json')

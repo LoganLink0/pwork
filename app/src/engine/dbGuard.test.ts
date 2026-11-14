@@ -99,8 +99,10 @@ describe('detectMutation（纯判定）', () => {
     expect(detectMutation(baseCounts(), baseCounts({ notes: 6 }))).toEqual([])
   })
 
-  it(`基准低于 ${GUARD_MIN_BASE} 条不判（小库自然波动不惊扰）`, () => {
-    expect(detectMutation(baseCounts({ goals: 19 }), baseCounts({ goals: 0 }))).toEqual([])
+  it(`基准低于 ${GUARD_MIN_BASE} 条时按归零专线判（≥5 归零即触发，<5 不惊扰）`, () => {
+    expect(detectMutation(baseCounts({ goals: 19 }), baseCounts({ goals: 0 }))).toHaveLength(1)
+    expect(detectMutation(baseCounts({ goals: 5 }), baseCounts({ goals: 0 }))).toHaveLength(1)
+    expect(detectMutation(baseCounts({ goals: 4 }), baseCounts({ goals: 0 }))).toEqual([])
     expect(detectMutation(baseCounts({ goals: 20 }), baseCounts({ goals: 0 }))).toHaveLength(1)
   })
 

@@ -27,16 +27,18 @@ export interface GuardTrigger {
   cur: number
 }
 
-/** 纯判定：核心表逐表比对，命中突变的列出来 */
+/** 纯判定：核心表逐表比对，命中突变的列出来。
+ *  归零专线：基准 ≥5 条、现存 0 同样触发——小表整表清空不过 20 条起判线
+ *  （2026-11-14 真实事故：信源 12 条被物理清空，守卫全程静默） */
 export function detectMutation(prev: Record<string, number> | null | undefined, cur: Record<string, number>): GuardTrigger[] {
   if (!prev) return []
   const out: GuardTrigger[] = []
   for (const t of CORE_TABLES) {
     const p = prev[t]
     const c = cur[t]
-    if (typeof p === 'number' && typeof c === 'number' && p >= GUARD_MIN_BASE && c * 20 <= p) {
-      out.push({ table: t, prev: p, cur: c })
-    }
+    if (typeof p !== 'number' || typeof c !== 'number') continue
+    if (p >= GUARD_MIN_BASE && c * 20 <= p) out.push({ table: t, prev: p, cur: c })
+    else if (p >= 5 && c === 0) out.push({ table: t, prev: p, cur: c })
   }
   return out
 }
