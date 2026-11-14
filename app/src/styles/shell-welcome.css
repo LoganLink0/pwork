@@ -690,7 +690,7 @@ html[data-isle] body {
 #isle-dock .isle-slide {
   position: absolute;
   right: 0;
-  bottom: 50%;
+  bottom: 0; /* 面板底=画布底：面板在画布内向上生长，不再溢出画布顶部被裁 */
   transform: translateX(100%);
   transition: transform var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease);
   opacity: 0;
@@ -709,7 +709,6 @@ html[data-isle] body {
   flex-direction: column;
   gap: 6px;
   pointer-events: auto;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
 }
 .isle-panel-row {
   display: flex;
@@ -764,12 +763,13 @@ html[data-isle] body {
 .isle-pbtn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
-/* 收起态细条 tab：常驻右缘（活动时亮起+计数徽标），靠近即呼出 */
+/* 收起态细条 tab：常驻右缘（活动时亮起+计数徽标），靠近即呼出。
+   bottom:0 与面板同底对齐（画布 140 内 tab 96 不溢出——50% 居中会让 tab 顶部
+   溢出画布 26px 被裁，与面板同款裁切错误） */
 #isle-dock .isle-tab {
   position: absolute;
   right: 0;
-  bottom: 50%;
-  transform: translateY(50%);
+  bottom: 0;
   width: 12px;
   height: 96px;
   border-radius: 999px 0 0 999px;

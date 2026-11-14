@@ -8,8 +8,9 @@ use tauri::{AppHandle, Emitter, Manager};
 const CANVAS_W: f64 = 360.0;
 const CANVAS_H: f64 = 140.0;
 
-/// 锚定：贴屏幕右缘、垂直位置按 yPercent（0=顶 50=中 100=底）在可用高度内取点。
-/// 可用高度扣任务栏（底部 64px），避免贴进任务栏。
+/// 锚定：贴屏幕右缘、垂直位置按 yPercent（0=顶 50=中 100=底）。
+/// 全程物理像素计算（逻辑/物理混算是首次锚定偏移的根因）：画布物理宽=360×scale，
+/// 右缘留 8×scale 边距，垂直按 scale 换算上下安全边（各 64×scale，避开任务栏）。
 fn anchor_isle(app: &AppHandle, y_percent: f64) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let size = w.outer_size().map_err(|e| format!("读取窗口尺寸失败：{}", e))?;
@@ -21,16 +22,18 @@ fn anchor_isle(app: &AppHandle, y_percent: f64) -> Result<(), String> {
   let Some(monitor) = monitor else {
     return Err("找不到可用显示器".into());
   };
+  let scale = monitor.scale_factor();
   let pos = monitor.position();
   let msize = monitor.size();
-  let usable_h = (msize.height as f64 - 64.0 - CANVAS_H / 2.0).max(CANVAS_H / 2.0);
-  // yPercent 0..100 → 画布垂直中心在「顶 64px … 底(任务栏上)」区间内移动
-  let top = pos.y as f64 + 64.0;
-  let bottom = pos.y as f64 + msize.height as f64 - 64.0;
-  let center_y = top + (bottom - top) * (y_percent / 100.0);
-  let left = pos.x as f64 + msize.width as f64 - CANVAS_W - 8.0;
-  let y = (center_y - size.height as f64 / 2.0).clamp(top, bottom - size.height as f64);
-  let _ = w.set_position(tauri::PhysicalPosition::new(left as i32, y as i32));
+  let right_margin = (8.0 * scale) as i32;
+  let v_margin = (64.0 * scale) as i32;
+  let canvas_w_phys = (CANVAS_W * scale) as i32;
+  let left = pos.x + msize.width as i32 - right_margin - canvas_w_phys;
+  let top_band = pos.y as f64 + v_margin as f64;
+  let bottom_band = pos.y as f64 + msize.height as f64 - v_margin as f64;
+  let center_y = top_band + (bottom_band - top_band) * (y_percent / 100.0);
+  let y = (center_y - size.height as f64 / 2.0).clamp(top_band, bottom_band - size.height as f64);
+  let _ = w.set_position(tauri::PhysicalPosition::new(left, y as i32));
   Ok(())
 }
 
