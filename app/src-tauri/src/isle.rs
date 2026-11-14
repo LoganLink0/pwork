@@ -4,6 +4,7 @@
 //! 按住 logo 原生拖拽（start_dragging），松手驻留（位置持久化在前端 localStorage），
 //! 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。装饰（边框/圆角/投影）在 lib.rs 统一关闭。
 
+use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
 const CANVAS_W: f64 = 520.0;
@@ -91,22 +92,12 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用，窗口跟随鼠标直到松开）。
-/// Windows 上 start_dragging 阻塞至松手：返回前判定停靠模式并落位，
-/// 返回 {mode, x, y, moved} 供前端持久化。模式判定：
+/// 拖拽落点的停靠模式判定与落位（拖拽真正结束后调用）：
 /// 落点近屏顶（窗顶距屏顶 ≤120·缩放）→ top（灵动岛，零间距贴顶居中）；
 /// logo 中心近屏幕右缘（≤80·缩放）→ right（右缘停靠，纵向保持落点并钳进屏内）；
-/// 其余 → free（自由驻留，全向钳回屏内）。
-#[tauri::command]
-pub fn isle_start_drag(app: AppHandle) -> Result<serde_json::Value, String> {
-  let Some(w) = app.get_webview_window("isle") else {
-    return Ok(serde_json::json!({ "mode": "free", "x": 0, "y": 0, "moved": false }));
-  };
-  let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
-  w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
-  let after = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
-  let moved = before.x != after.x || before.y != after.y;
-
+/// 其余 → free（自由驻留，全向钳回屏内）。返回 (mode, 终位)。
+fn decide_and_place(app: &AppHandle, after: tauri::PhysicalPosition<i32>) -> (String, tauri::PhysicalPosition<i32>) {
+  let Some(w) = app.get_webview_window("isle") else { return ("free".into(), after) };
   let scale = w.scale_factor().unwrap_or(1.0);
   let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
   let monitor = app
@@ -118,30 +109,83 @@ pub fn isle_start_drag(app: AppHandle) -> Result<serde_json::Value, String> {
     .map(|m| (m.position().x, m.position().y, m.size().width as i32))
     .unwrap_or((0, 0, 0));
 
-  let mode: String;
-  let final_pos: tauri::PhysicalPosition<i32>;
   if after.y - my <= (120.0 * scale) as i32 {
-    mode = "top".into();
-    snap_top(&app)?;
-    final_pos = w.outer_position().unwrap_or(after);
-  } else if after.x + (260.0 * scale) as i32 >= mx + mw - (80.0 * scale) as i32 {
-    mode = "right".into();
-    dock_right(&app, after.y)?;
-    final_pos = w.outer_position().unwrap_or(after);
-  } else {
-    mode = "free".into();
-    let (cx, cy) = clamp_pos(&w, after.x, after.y);
-    if cx != after.x || cy != after.y {
-      let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
-    }
-    final_pos = tauri::PhysicalPosition::new(cx, cy);
+    let _ = snap_top(app);
+    let final_pos = w.outer_position().unwrap_or(after);
+    return ("top".into(), final_pos);
   }
-  Ok(serde_json::json!({
-    "mode": mode,
-    "x": final_pos.x,
-    "y": final_pos.y,
-    "moved": moved,
-  }))
+  if after.x + (260.0 * scale) as i32 >= mx + mw - (80.0 * scale) as i32 {
+    let _ = dock_right(app, after.y);
+    let final_pos = w.outer_position().unwrap_or(after);
+    return ("right".into(), final_pos);
+  }
+  let (cx, cy) = clamp_pos(&w, after.x, after.y);
+  if cx != after.x || cy != after.y {
+    let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
+  }
+  ("free".into(), tauri::PhysicalPosition::new(cx, cy))
+}
+
+/// Windows：左键当前是否已松开（GetAsyncKeyState 高位=按下）
+#[cfg(windows)]
+fn left_button_up() -> bool {
+  use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
+  unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) >= 0 }
+}
+
+#[cfg(not(windows))]
+fn left_button_up() -> bool {
+  true
+}
+
+/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用）。
+/// 关键事实：Windows 上 start_dragging 是异步发起——立即返回，模态移动循环在其后由
+/// 事件循环驱动（实测日志铁证：命令返回时窗口尚未动过）。因此拖拽结束检测放在
+/// 轮询线程：左键松开（GetAsyncKeyState）且位置连续两拍稳定 → 真正松手，
+/// 此时才做停靠判定/落位，并向 isle 窗发 isle-drag-end {mode,x,y,moved} 供前端持久化。
+#[tauri::command]
+pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
+  let app = app.clone();
+  thread::spawn(move || {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    let mut last = before;
+    let mut stable = 0u32;
+    loop {
+      if std::time::Instant::now() > deadline {
+        break;
+      }
+      thread::sleep(std::time::Duration::from_millis(50));
+      let now = app
+        .get_webview_window("isle")
+        .and_then(|w| w.outer_position().ok())
+        .unwrap_or(last);
+      let moved_now = now != last;
+      last = now;
+      let up = left_button_up();
+      if up && !moved_now {
+        stable += 1;
+      } else {
+        stable = 0;
+      }
+      if up && stable >= 2 {
+        break;
+      }
+    }
+    let final_pos = app
+      .get_webview_window("isle")
+      .and_then(|w| w.outer_position().ok())
+      .unwrap_or(before);
+    let moved = before != final_pos;
+    let (mode, pos) = decide_and_place(&app, final_pos);
+    let _ = app.emit(
+      "isle-drag-end",
+      serde_json::json!({ "mode": mode, "x": pos.x, "y": pos.y, "moved": moved }),
+    );
+  });
+  Ok(())
 }
 
 /// 胶囊岛：恢复右缘停靠（挂载时按持久化模式调用；纵向位置取持久化值）

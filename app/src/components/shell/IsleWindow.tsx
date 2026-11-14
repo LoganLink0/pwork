@@ -56,10 +56,10 @@ function readEnabled(): boolean {
   }
 }
 
-/** 停靠模式下的容器类名（free 为空）；peek=半隐藏探边态 */
-function dockClass(mode: SavedPos['mode'], peek: boolean): string {
+/** 停靠模式下的容器类名（free 为空）；peek=半隐藏探边态（展开态永不叠加） */
+function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
   const base = mode === 'top' ? 'dock-top' : mode === 'right' ? 'dock-right' : ''
-  return [base, peek && base ? 'peek' : '', ].filter(Boolean).join(' ')
+  return [base, peek && base && !open ? 'peek' : ''].filter(Boolean).join(' ')
 }
 
 export function IsleWindow() {
@@ -70,6 +70,7 @@ export function IsleWindow() {
   const [mode, setMode] = useState<SavedPos['mode']>('top')
   /** 停靠模式下的半隐藏态（logo 探入屏幕边缘，靠近滑出） */
   const [peek, setPeek] = useState(true)
+  /** 按下时的展开态占位（保留给拖拽结束后的状态复位用） */
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
 
@@ -113,30 +114,37 @@ export function IsleWindow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
-  // 原生拖拽结束：Rust 判定停靠模式并已落位（top 贴顶居中 / right 右缘 / free 钳回屏内），
-  // 返回 {mode, x, y, moved}。没移动=单击 → 按「按下前状态」取反（取反必须基于 wasOpen，
-  // 否则单击关闭会在收起后被重新翻开）；移动过=真拖拽 → 持久化模式并进入半隐藏。
+  // 按下=启动原生拖拽（Rust 立即返回，拖拽结束经 isle-drag-end 事件异步通知）。
+  // 按下时先收起（拖拽视觉干净）。交互模型三件事各司其职：靠近=呼出、离开=收回、按住=拖走，
+  // 无单击切换（与悬停计时器赛跑产生状态混杂）
   const startDrag = (e: ReactMouseEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
-    const wasOpen = open
     setDragging(true)
     setOpen(false)
     clearTimers()
-    void invoke<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle_start_drag')
-      .then((pos) => {
-        if (!pos.moved) {
-          setOpen(!wasOpen)
-          return
-        }
-        setMode(pos.mode)
-        setPeek(pos.mode !== 'free')
-        if (pos.mode === 'top') savePos({ mode: 'top' })
-        else if (pos.mode === 'right') savePos({ mode: 'right', y: pos.y })
-        else savePos({ mode: 'free', x: pos.x, y: pos.y })
-      })
-      .finally(() => setDragging(false))
+    void invoke('isle_start_drag').catch(() => setDragging(false))
   }
+
+  // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，
+  // 前端持久化模式；停靠模式回到半隐藏探边态
+  useEffect(() => {
+    let un: (() => void) | undefined
+    void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
+      const { mode: m, x, y, moved } = e.payload
+      if (moved) {
+        setMode(m)
+        setPeek(m !== 'free')
+        if (m === 'top') savePos({ mode: 'top' })
+        else if (m === 'right') savePos({ mode: 'right', y })
+        else savePos({ mode: 'free', x, y })
+      }
+      setDragging(false)
+    }).then((fn) => {
+      un = fn
+    })
+    return () => un?.()
+  }, [])
 
   // 主窗推送活动列表
   useEffect(() => {
@@ -172,7 +180,7 @@ export function IsleWindow() {
 
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
-  const dockCls = dockClass(mode, peek)
+  const dockCls = dockClass(mode, peek, open)
 
   return (
     <div
@@ -204,7 +212,7 @@ export function IsleWindow() {
         src="favicon.svg"
         alt="小 P"
         className="isle-logo"
-        title="按住拖动 · 单击展开/收回"
+        title="按住拖动 · 靠近呼出"
         draggable={false}
         onMouseDown={startDrag}
       />
