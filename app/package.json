@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "audit:classes": "node scripts/audit-classes.mjs"
+    "audit:classes": "node scripts/audit-classes.mjs",
+    "validate:design": "node scripts/validate-design-system.mjs"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

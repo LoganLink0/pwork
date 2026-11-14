@@ -689,6 +689,25 @@ html[data-isle] body {
   user-select: none;
   z-index: 50;
 }
+/* 内容包装层 flex 化：dot 是 inline span，无此规则则 width/height 无效、
+   fixed+shrink-to-fit 全链塌缩成 0×0（呼吸点隐形的真根因，CDP 实测） */
+.isle .isle-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* 收缩态显式 44×44 圆形：深色圆底 + 橙色呼吸/眨眼点，可见且热区即窗体 */
+.isle.isle-idle {
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  border-radius: 50%;
+}
+.isle.isle-idle .isle-content {
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
 .isle .isle-dot {
   width: 12px;
   height: 12px;

@@ -25,7 +25,6 @@ export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [mode, setMode] = useState<IsleMode>('idle')
   const [ready, setReady] = useState(false)
-  const contentRef = useRef<HTMLDivElement | null>(null)
   const hoverTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
   const modeRef = useRef<IsleMode>('idle')
@@ -78,25 +77,12 @@ export function IsleWindow() {
     setMode(activities.length > 0 ? 'live' : 'idle')
   }, [activities])
 
-  // 窗体尺寸随模式与内容自适应。收缩态固定 110×110（圆点居中右下，四周透明区=悬浮
-  // 热区——热区太小会让"呼出"变得难点中，岛仔用边缘停靠解决，我们用热区放大解决）；
-  // 活动态/展开态随内容测量。下限 44×44 防 CSS 未就绪的 0×0 回调把窗体缩没。
+  // 窗体尺寸随模式固定（内容测量会循环依赖：窗体缩→内容挤→测量值=挤压值）：
+  // idle 110×110（热区含透明边距）/ live 300×44 / open 360×240
   useEffect(() => {
-    if (!ready || !contentRef.current) return
-    if (mode === 'idle') {
-      void invoke('isle_resize', { width: 110, height: 110 }).catch(() => {})
-      return
-    }
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const r = entry.contentRect
-        const width = Math.max(44, Math.ceil(r.width))
-        const height = Math.max(44, Math.ceil(r.height))
-        void invoke('isle_resize', { width, height }).catch(() => {})
-      }
-    })
-    ro.observe(contentRef.current)
-    return () => ro.disconnect()
+    if (!ready) return
+    const size = mode === 'idle' ? { width: 110, height: 110 } : mode === 'live' ? { width: 300, height: 44 } : { width: 360, height: 240 }
+    void invoke('isle_resize', size).catch(() => {})
   }, [ready, mode])
 
   // 悬浮 1 秒自动展开；移开 1.5 秒自动收回（动态岛式）
@@ -129,7 +115,7 @@ export function IsleWindow() {
       role={open ? 'dialog' : 'button'}
       aria-label={open ? '小 P 面板' : '问小 P：AI 全库问答与进行中活动'}
     >
-      <div ref={contentRef} className="isle-content">
+      <div className="isle-content">
         {open ? (
           <>
             <div className="isle-head">

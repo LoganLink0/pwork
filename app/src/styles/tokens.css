@@ -1,56 +1,101 @@
 /**
- * 设计令牌 v3 —— 「冷静的工作台」（自 FUPAN/app 迁入，为全工作台设计系统的第一层）
+ * 设计令牌 v4 —— 「冷静的工作台」（自 FUPAN/app 迁入，为全工作台设计系统的第一层）
  * 纪律：①全局唯一字族（无衬线），层级只靠字号/字重/留白；②中性灰 + 唯一琥珀强调色；
  * ③类别色只作 3px 边线与 12px 标签，不作大面积填充；④字号 8 级阶梯，组件禁止自造数值。
  *
  * 工作台层新增（PRD §5.2）：四模块标记色 —— 全部复用既有令牌取值，零新增色。
  * 用途仅三种：侧边栏选中项 3px 左边线 / 模块卡片 12px 状态标签 / 面包屑标记点。
  * 禁止大面积填充、禁止按钮着色。
+ *
+ * v4 结构（对照开源设计系统包约定，调研见 docs/设计系统调研-高星项目对标.md）：
+ * ① primitive 原色层（--p-*）：色值唯一出处，语义层只引用不写字面量（P-013 同框对比的基准）；
+ * ② 语义层保持既有名字不变（组件零改动）；
+ * ③ 成对前景（--fg-*）：表面 + 其上内容成对声明（shadcn 约定）；
+ * ④ 圆角派生尺：--radius 唯一基准，--r-* 全部 calc 派生（改一处整把尺跟随）；
+ * ⑤ 状态键（opencode 约定）：hovered/pressed/disabled 是主题一等公民；
+ * ⑥ 双暗色块逐项一致（曾漂移：@media #181510 vs data-theme #1b1813，v4 归一并以校验器断言）。
+ * 机器校验：cd app && npm run validate:design
  */
 :root {
   color-scheme: light;
 
-  /* ------- 中性灰（微暖，3.2 批暖一档：底色与 logo 米白同族） ------- */
-  --bg: #f7f3ea;
-  --surface: #ffffff;
-  --surface-2: #fbf8f2;
-  --line: #e8e2d5;
-  --line-strong: #d2cbbd;
-  --ink: #211e1a;
-  --ink-soft: #66625a;
+  /* ======= primitive 原色层（亮色）—— 色值唯一出处，语义层禁止直接写字面量 ======= */
+  /* 纸色家族（微暖，3.2 批暖一档：底色与 logo 米白同族） */
+  --p-paper-100: #f7f3ea;
+  --p-paper-0: #ffffff;
+  --p-paper-75: #fbf8f2;
+  --p-paper-line-200: #e8e2d5;
+  --p-paper-line-400: #d2cbbd;
+  /* 墨色三级 */
+  --p-ink-900: #211e1a;
+  --p-ink-600: #66625a;
   /* 弱化文字也是正文（时间戳/提示 13px）：3.2 暖底上原 #736e66 仅 4.57 余量薄，加深到 5.14 */
-  --ink-faint: #6b665e;
-
-  /* ------- 唯一强调色：琥珀（三级 + 悬停底/焦点环配套，3.2 批令牌化） ------- */
-  --accent: #e8833a;
+  --p-ink-580: #6b665e;
+  /* 琥珀强调（唯一强调色） */
+  --p-amber-400: #e8833a;
   /* 实心按钮底色：白字压 #b0500f 实测 5.25:1（AA）。深浅主题共用，按主题调浅会跌破 4.5:1 */
-  --accent-deep: #b0500f;
-  --accent-text: #a34e12;
+  --p-amber-700: #b0500f;
+  --p-amber-650: #a34e12;
+  /* 类别标记四色（仅边线与 12px 标签；3.2 批暖底上 cat-need 原值 4.10 不达 AA，加深 4.97） */
+  --p-green-700: #2f7d52;
+  --p-rust-700: #a5512f;
+  --p-blue-700: #3d6e9e;
+  --p-red-700: #a05353;
+  /* 语义 */
+  --p-danger-600: #b8443a;
+  --p-white: #ffffff;
+
+  /* ======= 语义层（名字自 v3 保持不变，组件零改动） ======= */
+  --bg: var(--p-paper-100);
+  --surface: var(--p-paper-0);
+  --surface-2: var(--p-paper-75);
+  --line: var(--p-paper-line-200);
+  --line-strong: var(--p-paper-line-400);
+  --ink: var(--p-ink-900);
+  --ink-soft: var(--p-ink-600);
+  --ink-faint: var(--p-ink-580);
+
+  /* 唯一强调色：琥珀（三级配套） */
+  --accent: var(--p-amber-400);
+  --accent-deep: var(--p-amber-700);
+  --accent-text: var(--p-amber-650);
   --accent-soft: rgba(232, 131, 58, 0.10); /* 悬停底统一（原各处手写 color-mix 8% 值不统一） */
 
-  /* ------- 类别标记色（仅边线与 12px 标签；3.2 暖底上 cat-need 原值 4.10 不达 AA，加深 4.97） ------- */
-  --cat-good: #2f7d52;
-  --cat-need: #a5512f;
-  --cat-insight: #3d6e9e;
-  --cat-action: #a05353;
+  /* 类别标记色（仅边线与 12px 标签） */
+  --cat-good: var(--p-green-700);
+  --cat-need: var(--p-rust-700);
+  --cat-insight: var(--p-blue-700);
+  --cat-action: var(--p-red-700);
 
-  /* ------- 语义 ------- */
-  --danger: #b8443a;
-  --ok: #2f7d52;
+  /* 语义 */
+  --danger: var(--p-danger-600);
+  --ok: var(--p-green-700);
 
-  /* ------- 模块标记（PRD §5.2，复用取值） ------- */
+  /* 模块标记（PRD §5.2，复用取值） */
   --m-input: var(--cat-insight); /* 输入 = 蓝 */
   --m-process: var(--cat-good); /* 处理 = 绿 */
   --m-output: var(--cat-action); /* 输出 = 赭 */
   --m-review: var(--accent); /* 回路 = 琥珀（闭环枢纽与品牌同源） */
 
-  /* ------- 字体：全局唯一字族（--font-body-override 为偏好中心覆盖口，缺省走系统栈） ------- */
+  /* ======= 成对前景（表面 + 其上内容成对声明，新组件优先使用） ======= */
+  --fg-page: var(--ink);
+  --fg-card: var(--ink);
+  --fg-muted: var(--ink-soft);
+  --fg-faint: var(--ink-faint);
+  --fg-on-accent: var(--p-white); /* 实底强调按钮上的文字（配 --accent-deep 底，5.25:1） */
+
+  /* ======= 状态键（交互态是一等公民；组件逐步迁移，未迁移处行为不变） ======= */
+  --accent-hovered: var(--p-amber-650); /* 悬停：比 base 深一档 */
+  --accent-pressed: #8a4210; /* 按压：再深一档（白字对比更高，安全） */
+  --accent-disabled: #f2c49a; /* 禁用：降饱和降对比（WCAG 对禁用态豁免） */
+
+  /* ======= 字体：全局唯一字族（--font-body-override 为偏好中心覆盖口，缺省走系统栈） ======= */
   --font-body: var(--font-body-override, -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC',
     'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif);
   --font-display: var(--font-body);
   --font-hand: var(--font-body);
 
-  /* ------- 字号阶梯（8 级，唯一来源；--font-scale 由偏好中心字号缩放驱动） ------- */
+  /* ======= 字号阶梯（8 级，唯一来源；--font-scale 由偏好中心字号缩放驱动） ======= */
   --fs-xs: calc(13px * var(--font-scale, 1)); /* 标签、说明 */
   --fs-sm: calc(14px * var(--font-scale, 1)); /* 次要文本 */
   --fs-md: calc(17px * var(--font-scale, 1)); /* 正文 */
@@ -60,7 +105,7 @@
   --fs-hero: calc(33px * var(--font-scale, 1)); /* 仪表盘主标语 */
   --fs-num: calc(25px * var(--font-scale, 1)); /* 统计数字 */
 
-  /* ------- 间距（8px 基） ------- */
+  /* ======= 间距（8px 基） ======= */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -69,86 +114,137 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  /* ------- 圆角与阴影（3.2 批：阶梯 +2px 伙伴感；投影暖棕化与品牌同温；新增浮起档）：
-     10 控件 / 14 浮层与内嵌件 / 18 卡片容器 ------- */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
+  /* ======= 圆角派生尺（v4 新：--radius 唯一基准，改一处整把尺跟随）=======
+     10 控件 / 14 浮层与内嵌件 / 18 卡片容器（3.2 批：阶梯 +2px 伙伴感） */
+  --radius: 10px;
+  --r-sm: calc(var(--radius) * 1);
+  --r-md: calc(var(--radius) * 1.4);
+  --r-lg: calc(var(--radius) * 1.8);
+
+  /* ======= 阴影（投影暖棕化与品牌同温）======= */
   --shadow-1: 0 1px 2px rgba(90, 62, 32, 0.06);
   --shadow-2: 0 2px 4px rgba(90, 62, 32, 0.07), 0 8px 20px rgba(90, 62, 32, 0.10);
   --shadow-pop: 0 12px 32px rgba(90, 62, 32, 0.14);
   --shadow-hover: 0 4px 10px rgba(90, 62, 32, 0.10), 0 14px 32px rgba(90, 62, 32, 0.16);
+  /* 抬升分层语义别名（opencode raised 约定）：1 静置 / 2 悬停 / 3 弹层 */
+  --raised-1: var(--shadow-1);
+  --raised-2: var(--shadow-2);
+  --raised-3: var(--shadow-pop);
 
-  /* ------- 动效（时长三档 + 统一缓动，只动 transform/opacity） ------- */
+  /* ======= 动效（时长三档 + 统一缓动，只动 transform/opacity） ======= */
   --dur-1: 120ms; /* 微反馈：按压、hover 着色 */
   --dur-2: 200ms; /* 常规：卡片抬起、面板展开 */
   --dur-3: 320ms; /* 入场：路由切换、弹层 */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 完成态/成功反馈的回弹（3.1 圆钮弹跳同族） */
 
-  /* ------- 焦点环（双层：实色环承担可见性 5.25，外晕只作柔化；暗色用亮环） ------- */
+  /* ======= 焦点环（双层：实色环承担可见性 5.25，外晕只作柔化；暗色用亮环） ======= */
   --ring: var(--accent-deep);
   --ring-soft: rgba(232, 131, 58, 0.18);
 
-  /* ------- 布局 ------- */
+  /* ======= 布局 ======= */
   --content-w: 1200px;
   --nav-h: 60px;
   --sidebar-w: 240px;
   --topbar-h: 56px;
 }
 
-/* ------- 暗色 ------- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-    --bg: #181510;
-    --surface: #242019;
-    --surface-2: #2d2820;
-    --line: #3b362d;
-    --line-strong: #524b3f;
-    --ink: #ecebe7;
-    --ink-soft: #b6b2a8;
-    --ink-faint: #908a7d;
-    --accent: #e8833a;
-    --accent-text: #eda868;
-    --accent-soft: rgba(232, 131, 58, 0.12);
-    --cat-good: #5aab7f;
-    --cat-need: #d3805c;
-    --cat-insight: #6d9cc7;
-    --cat-action: #c47a7a;
-    --ok: #5aab7f;
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
-    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
-    --shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.50);
-    --ring: var(--accent);
-    --ring-soft: rgba(232, 131, 58, 0.25);
-  }
+/* ======= 暗色 primitive（唯一出处：data-theme 块与 @media 块共用同一组引用，杜绝再漂移） ======= */
+:root {
+  --p-d-paper-900: #1b1813;
+  --p-d-paper-800: #222019;
+  --p-d-paper-750: #2a2721;
+  --p-d-line-600: #38352e;
+  --p-d-line-400: #4c473d;
+  --p-d-ink-50: #ecebe7;
+  --p-d-ink-400: #b3afa5;
+  /* 提亮一档（原 #827d73 对暗底仅 4.33 不达 AA——3.2 批对比度实测修正，5.17） */
+  --p-d-ink-450: #918a7e;
+  --p-d-amber-400: #e8833a;
+  --p-d-amber-300: #eda868;
+  --p-d-green-400: #5aab7f;
+  --p-d-rust-400: #d3805c;
+  --p-d-blue-400: #6d9cc7;
+  --p-d-red-400: #c47a7a;
+  /* 暗色状态键（悬停提亮一档，按压压暗一档） */
+  --p-d-amber-350: #f09a5c;
+  --p-d-amber-500: #d97426;
 }
 
+/* ======= 暗色 · 显式选择（偏好中心 data-theme='dark'）======= */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #1b1813;
-  --surface: #222019;
-  --surface-2: #2a2721;
-  --line: #38352e;
-  --line-strong: #4c473d;
-  --ink: #ecebe7;
-  --ink-soft: #b3afa5;
-  /* 提亮一档（原 #827d73 对暗底仅 4.33 不达 AA——3.2 批对比度实测修正，5.17） */
-  --ink-faint: #918a7e;
-  --accent: #e8833a;
-  --accent-text: #eda868;
+  --bg: var(--p-d-paper-900);
+  --surface: var(--p-d-paper-800);
+  --surface-2: var(--p-d-paper-750);
+  --line: var(--p-d-line-600);
+  --line-strong: var(--p-d-line-400);
+  --ink: var(--p-d-ink-50);
+  --ink-soft: var(--p-d-ink-400);
+  --ink-faint: var(--p-d-ink-450);
+  --accent: var(--p-d-amber-400);
+  --accent-text: var(--p-d-amber-300);
   --accent-soft: rgba(232, 131, 58, 0.12);
-  --cat-good: #5aab7f;
-  --cat-need: #d3805c;
-  --cat-insight: #6d9cc7;
-  --cat-action: #c47a7a;
-  --ok: #5aab7f;
+  --accent-hovered: var(--p-d-amber-350);
+  --accent-pressed: var(--p-d-amber-500);
+  --accent-disabled: #6b5645; /* 禁用：暗底降对比（WCAG 对禁用态豁免） */
+  --cat-good: var(--p-d-green-400);
+  --cat-need: var(--p-d-rust-400);
+  --cat-insight: var(--p-d-blue-400);
+  --cat-action: var(--p-d-red-400);
+  --ok: var(--p-d-green-400);
+  --fg-page: var(--ink);
+  --fg-card: var(--ink);
+  --fg-muted: var(--ink-soft);
+  --fg-faint: var(--ink-faint);
+  --fg-on-accent: var(--p-white);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
   --shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.50);
+  --raised-1: var(--shadow-1);
+  --raised-2: var(--shadow-2);
+  --raised-3: var(--shadow-pop);
   --ring: var(--accent);
   --ring-soft: rgba(232, 131, 58, 0.25);
+}
+
+/* ======= 暗色 · 跟随系统（与 data-theme 块逐项一致；漂移由校验器断言） ======= */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: var(--p-d-paper-900);
+    --surface: var(--p-d-paper-800);
+    --surface-2: var(--p-d-paper-750);
+    --line: var(--p-d-line-600);
+    --line-strong: var(--p-d-line-400);
+    --ink: var(--p-d-ink-50);
+    --ink-soft: var(--p-d-ink-400);
+    --ink-faint: var(--p-d-ink-450);
+    --accent: var(--p-d-amber-400);
+    --accent-text: var(--p-d-amber-300);
+    --accent-soft: rgba(232, 131, 58, 0.12);
+    --accent-hovered: var(--p-d-amber-350);
+    --accent-pressed: var(--p-d-amber-500);
+    --accent-disabled: #6b5645; /* 禁用：暗底降对比（WCAG 对禁用态豁免） */
+    --cat-good: var(--p-d-green-400);
+    --cat-need: var(--p-d-rust-400);
+    --cat-insight: var(--p-d-blue-400);
+    --cat-action: var(--p-d-red-400);
+    --ok: var(--p-d-green-400);
+    --fg-page: var(--ink);
+    --fg-card: var(--ink);
+    --fg-muted: var(--ink-soft);
+    --fg-faint: var(--ink-faint);
+    --fg-on-accent: var(--p-white);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.45);
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 14px 32px rgba(0, 0, 0, 0.50);
+    --raised-1: var(--shadow-1);
+    --raised-2: var(--shadow-2);
+    --raised-3: var(--shadow-pop);
+    --ring: var(--accent);
+    --ring-soft: rgba(232, 131, 58, 0.25);
+  }
 }

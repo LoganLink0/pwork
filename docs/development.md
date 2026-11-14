@@ -11,9 +11,9 @@ Node ≥ 20（实测 24）· Rust 工具链 + VS2022（仅桌面版构建需要�
 | 命令 | 作用 |
 |---|---|
 | `npm run dev` | 开发服务器（端口 **5273**，专属端口勿改——启动器/书签依赖） |
-| `npm test` / `npx vitest run` | 全量测试（基线 **355** 全绿；压测单文件排除：`--exclude '**/perf.bench.test.ts'`） |
-| `npx tsc -b` | 类型检查（0 错；vitest 不查类型，提交前必跑——两次教训） |
-| `npm run lint` | oxlint（基线 **27 警告 0 错**，勿新增；2026-10-12 核对，旧记 26 为过时数） |
+| `npm test` / `npx vitest run` | 全量测试（基线见下「当前基线」节；压测单文件排除：`--exclude '**/perf.bench.test.ts'`） |
+| `npx tsc -b` | 类型检查（vitest 不查类型，提交前必跑——两次教训） |
+| `npm run lint` | oxlint（基线见下「当前基线」节，勿新增） |
 | `npm run gateway` | 开发版 AI 网关（127.0.0.1:8788；Key 读 app/.env.local，复制 tools/.env.example） |
 | `npm run build` | 生产构建（tsc -b + vite build + PWA 预缓存 → dist/） |
 | `npm run serve` | 零依赖静态服务 dist/（默认 5273，`--port N` 换） |
@@ -22,11 +22,21 @@ Node ≥ 20（实测 24）· Rust 工具链 + VS2022（仅桌面版构建需要�
 
 worker/ 目录：`npx vitest run`（19 绿）· 部署与 D1 配置见 worker/README.md。
 
+## 当前基线（唯一出处 · 2026-11-14 核对）
+
+**本节是全项目基线数字的唯一出处——AGENTS.md、README 等一律引用本节，禁止复制数字**（P-014 / 复盘 3.74：基线曾被五处四处各写一套，355/27/24、636/6、640/4 各跟各的验收走）。改完任何影响面，回来只更新本节。
+
+- 全量测试：**640** 全绿（98 个文件）
+- 类型检查 `npx tsc -b`：**0 错**
+- oxlint：**0 错 / 9 警告**（警告勿新增；IsleWindow×3、导入器×2、设置面板等既有件）
+- 设计系统 `npm run validate:design`：**6 项全过**（令牌漂移 / 对比度 25 对 / 色值基线 / 契约九节 / 零个人信息）
+
 ## 回归清单（每次收尾必过，按序）
 
-1. `npx vitest run` → 406 全绿
+1. `npx vitest run` → 当前基线全绿（数字见「当前基线」节）
 2. `npx tsc -b` → 0 错
-3. `npm run lint` → 24/0（基线不变）
+3. `npm run lint` → 0 错，警告数不超基线
+3b. `npm run validate:design` → 6 项全过（设计系统门，2026-11-14 起）
 4. 涉及桌面版：`npx tauri build` 成功 + 冒烟（启动 app.exe 看窗口标题 + `curl 127.0.0.1:8788/health` + taskkill 干净退出）
 5. 涉及抓取链：真实抓一轮看横幅（耗时/源成败/无卡死）
 6. 涉及 worker：worker 测试 19 绿

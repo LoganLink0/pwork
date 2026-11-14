@@ -51,9 +51,19 @@ Releases 里有 `…aarch64.dmg`（Apple Silicon，M 系列芯片）。双击 dm
 - [发布说明.md](./发布说明.md)——安装、首用三步、数据怎么搬（使用者从这里进）
 - [CHANGELOG.md](./CHANGELOG.md)——每个版本的更新说明（最新在上；已发布版本同步挂 GitHub Releases）
 - [project-overview.md](./docs/project-overview.md)——项目整体说明与全量文档索引（想深入了解从这里进）
-- [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md)——架构与数据流 / 视觉规则
+- [architecture.md](./docs/architecture.md) / [DESIGN.md](./docs/DESIGN.md)——架构与数据流 / 设计系统品牌契约（九节：氛围、色彩、字体、间距、组件、动效、图标影像、语气、边角）
 - [development.md](./docs/development.md)——开发方式、回归清单、发布打包
 - 应用内「帮助」页——功能清单与配置指南，装好后直接看
+
+## 设计系统
+
+PWORK 的界面视觉由一套成文的设计系统约束（「冷静的工作台」：暖中性灰 + 唯一琥珀强调色，层级只靠字号与留白）：
+
+- **[DESIGN.md](./docs/DESIGN.md)**——品牌契约，九节：视觉主题与氛围 / 色板与角色 / 字体排印 / 布局与间距 / 组件 / 动效与交互 / 图标与影像 / 语气与口吻 / 边角与变化
+- **设计令牌**（`app/src/styles/tokens.css`）——三层结构：原色层（`--p-*`，色值唯一出处）→ 语义层 → 组件消费；成对前景、圆角派生尺、交互状态键、明暗双主题
+- **机器校验**：`cd app && npm run validate:design`——令牌漂移断言、对比度全表自动计算（AA 预算）、色值字面量基线比对、契约九节结构检查、零个人信息检查
+- **应用内实时样例**：装好后打开「设计系统」页，所有令牌与组件状态可交互查看
+- **截图档案**：[.github/screenshots/](./.github/screenshots/README.md)——真实运行触点的捕获清单与规程
 
 ## 开发
 
@@ -71,7 +81,7 @@ npm run dev        # 端口 5273，AI 网关自动随启
 
 项目暂不接受捐赠；支持 PWORK 最有效的三个动作：给个 Star、推荐信源、把问题与想法发到 [Discussions](https://github.com/LoganLink0/pwork/discussions)。
 
-回归基线：636 项自动化测试全绿、tsc 零错误、lint 0 错误（4 条既有警告）。
+回归基线：自动化测试全绿、类型检查零错误、设计系统校验全过——具体数字以 [docs/development.md](./docs/development.md) 的「当前基线」节为唯一出处。
 
 ## 许可证
 
