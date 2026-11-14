@@ -685,6 +685,7 @@ html[data-isle] body {
   height: 140px;
   pointer-events: none;
   z-index: 60;
+  color: #f2efe9; /* 窗内文字显式浅色：全局是浅色主题（深色文字），深色玻璃上继承会成黑字 */
 }
 #isle-dock .isle-bar {
   position: absolute;
@@ -692,13 +693,12 @@ html[data-isle] body {
   top: 10px;
   width: 520px;
   height: 64px;
-  border-radius: 32px;
-  background: rgba(20, 18, 16, 0.55);
+  border-radius: 18px; /* 圆角矩形，与 logo 圆角一致（拉长的 logo，非胶囊椭圆） */
+  background: rgba(20, 18, 16, 0.72); /* 深玻璃：0.55 叠浅色桌面时等效底过浅，深色文字对比不达标 */
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-top: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   opacity: 0;
   transition: opacity 0.24s var(--ease);
   pointer-events: none;
@@ -730,9 +730,8 @@ html[data-isle] body {
   border-radius: 18px;
   pointer-events: auto;
   cursor: grab;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
   transition: left 0.24s var(--ease), width 0.24s var(--ease), height 0.24s var(--ease),
-    border-radius 0.24s var(--ease), transform 0.15s ease;
+    border-radius 0.24s var(--ease), top 0.24s var(--ease), transform 0.15s ease;
   position: absolute;
   left: 228px; /* 收起态：画布居中 ((520-64)/2)；展开态滑至 10（条内左侧） */
   top: 10px;
@@ -779,7 +778,7 @@ html[data-isle] body {
 }
 .isle-note {
   font-size: 12px;
-  color: #9aa0a8;
+  color: #b6bcc4; /* 深玻璃上的次级文字：#9aa0a8 对比不足 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
