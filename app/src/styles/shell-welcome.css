@@ -673,10 +673,10 @@ html[data-wheel] body {
 html[data-isle] body {
   background: transparent;
 }
-/* 胶囊岛 · 抽屉模型（46 批二稿，用户定案：把手跟着内容一起出来）：
-   单一 .isle-drawer 元素——收起时 translateX 只露右缘 16px 的圆角把手（小 P 点），
-   展开时整体滑出、把手贴在面板右缘垂直居中。不存在两个独立物件。
-   画布 360×160 贴右缘常驻；垂直位置由设置写入 localStorage 经 Rust 锚定。 */
+/* 胶囊岛 · 抽屉模型三稿（2026-11-14 用户反馈重做）：
+   画布=整面悬停热区（pointer-events auto——上一稿挂在 none 画布上的悬停永不触发），
+   抽屉收起时滑出画布外、只露 24px 把手帽（圆角+小 P 点），悬停 0.6s 滑入展开，
+   移开 1s 滑出收回。画布 overflow hidden 裁掉画布外部分。 */
 #isle-dock {
   position: fixed;
   right: 0;
@@ -684,26 +684,25 @@ html[data-isle] body {
   width: 360px;
   height: 160px;
   transform: translateY(-50%);
-  pointer-events: none;
+  overflow: hidden;
   z-index: 60;
 }
 #isle-dock .isle-drawer {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: 8px;
+  bottom: 8px;
   width: 336px;
   background: #101014;
   color: #fff;
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 12px 34px 12px 14px; /* 右侧 34px 留给把手帽 */
   display: flex;
   align-items: center;
   gap: 12px;
-  pointer-events: auto;
-  transform: translateX(calc(100% - 16px));
-  transition: transform 0.24s var(--ease);
+  transform: translateX(calc(100% - 16px)); /* 收起：露 24px 把手（左缘圆角+小 P 点，「小 P 在」文字从可见边界外开始） */
+  transition: transform 0.26s var(--ease);
 }
-#isle-dock .isle-drawer.out {
+#isle-dock.open .isle-drawer {
   transform: translateX(0);
 }
 .isle-body {
@@ -742,20 +741,6 @@ html[data-isle] body {
   font-size: 12px;
   color: #9aa0a8;
 }
-/* 把手：抽屉右缘的圆角帽（16px 宽条），收起时唯一露出部分 */
-.isle-cap {
-  flex: none;
-  width: 16px;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  margin: -12px -14px -12px 0;
-  padding: 12px 0;
-  border-radius: 0 14px 14px 0;
-  background: rgba(255, 255, 255, 0.04);
-}
 .isle-act-label {
   font-size: 12px;
   color: #cfd3d8;
@@ -767,6 +752,12 @@ html[data-isle] body {
   display: flex;
   gap: 8px;
   margin-top: 2px;
+  transition: opacity var(--dur-1) var(--ease);
+}
+/* 收起态隐藏按钮行：把手条只留圆角+小 P 点，不露按钮残边 */
+#isle-dock:not(.open) .isle-acts {
+  opacity: 0;
+  pointer-events: none;
 }
 .isle-pbtn {
   background: rgba(255, 255, 255, 0.12);

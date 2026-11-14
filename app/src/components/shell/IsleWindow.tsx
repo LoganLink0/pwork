@@ -3,11 +3,10 @@ import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
- * 胶囊岛窗（/isle 分流渲染）——真正的抽屉模型：
- * 一个元素（.isle-drawer），收起时 translateX 只露出右缘 16px 的「把手」（圆角帽+小 P 点），
- * 展开时整体滑出——把手跟着内容一起出来（用户拍板的抽屉语义），不存在两个独立物件。
- * 窗口是固定 360×160 透明画布贴右缘；垂直位置由设置（localStorage）经 Rust 锚定。
- * 悬停画布任意处 1 秒展开；移开 1.2 秒收回。
+ * 胶囊岛窗（/isle 分流渲染）——抽屉模型（岛仔验证）：
+ * 固定 360×160 画布贴右缘（整面=悬停热区），抽屉（.isle-drawer）收起时滑出画布外
+ * 只露 16px 把手帽，悬停 0.6 秒滑入展开，移开 1 秒滑出收回。
+ * 垂直位置由设置（localStorage）经 Rust 锚定；storage 事件实时响应。
  */
 
 interface ActivityItem {
@@ -22,6 +21,8 @@ export interface IsleSettings {
 
 const SETTINGS_KEY = 'pwork-isle-settings'
 const DEFAULT_SETTINGS: IsleSettings = { enabled: true, yPercent: 50 }
+const HOVER_OPEN_MS = 600
+const LEAVE_CLOSE_MS = 1000
 
 function readSettings(): IsleSettings {
   try {
@@ -57,7 +58,7 @@ export function IsleWindow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
-  // 设置变化（storage 事件跨窗同步）：启用/停用与位置实时生效
+  // 设置变化（storage 事件跨窗同步）
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === SETTINGS_KEY) {
@@ -87,14 +88,14 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
-  // 悬停画布 1 秒展开；移开 1.2 秒收回（挂在画布根：靠近即呼出，无需精确点中小把手）
+  // 悬停 0.6 秒展开；移开 1 秒收回（挂在画布根：靠近右缘即呼出，无需精确瞄准）
   const onEnter = () => {
     clearTimers()
-    enterTimer.current = window.setTimeout(() => setOpen(true), 1000)
+    enterTimer.current = window.setTimeout(() => setOpen(true), HOVER_OPEN_MS)
   }
   const onLeave = () => {
     clearTimers()
-    leaveTimer.current = window.setTimeout(() => setOpen(false), 1200)
+    leaveTimer.current = window.setTimeout(() => setOpen(false), LEAVE_CLOSE_MS)
   }
   useEffect(() => () => clearTimers(), [])
 
@@ -106,8 +107,12 @@ export function IsleWindow() {
       className={open ? 'open' : ''}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onClick={() => {
+        clearTimers()
+        setOpen((v) => !v)
+      }}
     >
-      <div className="isle-drawer" role="button" aria-label="小 P：伙伴入口与进行中活动">
+      <div className="isle-drawer" role="dialog" aria-label="小 P：伙伴入口与进行中活动">
         <div className="isle-body">
           <div className="isle-row">
             <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
@@ -120,18 +125,15 @@ export function IsleWindow() {
             </div>
           ))}
           <div className="isle-acts">
-            <button type="button" className="isle-pbtn" onClick={() => void invoke('isle_open_palette').catch(() => {})}>
+            <button type="button" className="isle-pbtn" onClick={(e) => { e.stopPropagation(); void invoke('isle_open_palette').catch(() => {}) }}>
               问小 P
             </button>
-            <button type="button" className="isle-pbtn" onClick={() => void invoke('isle_open_main').catch(() => {})}>
+            <button type="button" className="isle-pbtn" onClick={(e) => { e.stopPropagation(); void invoke('isle_open_main').catch(() => {}) }}>
               打开 PWORK
             </button>
           </div>
         </div>
-        {/* 把手：抽屉右缘的圆角帽，收起时唯一露出部分 */}
-        <div className="isle-cap">
-          <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
-        </div>
+        <span aria-hidden />
       </div>
     </div>
   )
