@@ -99,17 +99,20 @@ export function IsleWindow() {
   }, [])
 
   // 原生拖拽结束：Rust 已把落点钳回屏内并返回终位+是否真的移动过。
-  // 没移动=单击（原生拖拽松手后 Windows 仍会派发 click，不能用 onClick 判别）→ 切换展开；
-  // 移动过=真拖拽 → 近上缘吸附居中，否则驻留并持久化。
+  // 没移动=单击 → 按「按下前状态」取反（按下时先收起以保持拖拽视觉干净，
+  // 取反必须基于 wasOpen，否则单击关闭会在收起后被重新翻开）；
+  // 移动过=真拖拽 → 近上缘吸附居中，否则驻留并持久化。仅左键触发。
   const startDrag = (e: ReactMouseEvent) => {
+    if (e.button !== 0) return
     e.stopPropagation()
+    const wasOpen = open
     setDragging(true)
     setOpen(false)
     clearTimers()
     void invoke<{ x: number; y: number; moved: boolean }>('isle_start_drag')
       .then((pos) => {
         if (!pos.moved) {
-          setOpen((v) => !v)
+          setOpen(!wasOpen)
           return
         }
         if (pos.y <= SNAP_TOP_PX) {
@@ -180,6 +183,7 @@ export function IsleWindow() {
         alt="小 P"
         className="isle-logo"
         title="按住拖动 · 单击展开/收回"
+        draggable={false}
         onMouseDown={startDrag}
       />
     </div>

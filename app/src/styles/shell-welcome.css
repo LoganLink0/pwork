@@ -684,6 +684,7 @@ html[data-isle] body {
   width: 520px;
   height: 140px;
   pointer-events: none;
+  user-select: none; /* 常驻桌面小窗：拖拽与悬停交互中不允许选中文本 */
   z-index: 60;
   color: #f2efe9; /* 窗内文字显式浅色：全局是浅色主题（深色文字），深色玻璃上继承会成黑字 */
 }
