@@ -22,18 +22,40 @@ fn snap_top(app: &AppHandle) -> Result<(), String> {
   };
   let pos = monitor.position();
   let msize = monitor.size();
-  let canvas_w_phys = (CANVAS_W * scale) as i32;
-  let left = pos.x + ((msize.width as i32 - canvas_w_phys) / 2);
+  // 窗体实际物理宽（Windows 无边框窗会在配置值外多出不可见边距，实测 536>520，用实况值居中才准）
+  let win_w_phys = w.outer_size().map(|s| s.width as i32).unwrap_or((CANVAS_W * scale) as i32);
+  let left = pos.x + ((msize.width as i32 - win_w_phys) / 2);
   let top = pos.y + (8.0 * scale) as i32;
   let _ = w.set_position(tauri::PhysicalPosition::new(left, top));
   Ok(())
 }
 
-/// 胶囊岛：放置到指定物理坐标（自由拖拽驻留）
+/// 把窗口位置钳制进其中心所在显示器的可见范围（防拖出屏幕/旧位置数据落在屏外导致岛消失）。
+/// 用 min/max 链而非 clamp（窗大于屏时 clamp 的 min>max 会 panic）。
+fn clamp_pos(w: &tauri::WebviewWindow, x: i32, y: i32) -> (i32, i32) {
+  let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new(CANVAS_W as u32, 140));
+  let app = w.app_handle();
+  let center_x = x as f64 + size.width as f64 / 2.0;
+  let center_y = y as f64 + size.height as f64 / 2.0;
+  let monitor = app
+    .monitor_from_point(center_x, center_y)
+    .ok()
+    .flatten()
+    .or_else(|| app.primary_monitor().ok().flatten());
+  let Some(m) = monitor else { return (x, y) };
+  let mp = m.position();
+  let ms = m.size();
+  let max_x = mp.x + ms.width as i32 - size.width as i32;
+  let max_y = mp.y + ms.height as i32 - size.height as i32;
+  (x.min(max_x).max(mp.x), y.min(max_y).max(mp.y))
+}
+
+/// 胶囊岛：放置到指定物理坐标（自由拖拽驻留；越界坐标钳回屏内）
 #[tauri::command]
 pub fn isle_place(app: AppHandle, x: i32, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+  let (cx, cy) = clamp_pos(&w, x, y);
+  let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
   Ok(())
 }
 
@@ -43,19 +65,23 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 胶囊岛：读取当前物理位置（拖拽驻留持久化用）
+/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用，窗口跟随鼠标直到松开）。
+/// Windows 上 start_dragging 阻塞至松手：返回前读落点→钳回屏内→落位，
+/// 并把钳制后的终位返回给前端持久化（省一次 isle_get_pos 往返）。
 #[tauri::command]
-pub fn isle_get_pos(app: AppHandle) -> Result<serde_json::Value, String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(serde_json::json!({ "x": 0, "y": 0 })) };
-  let pos = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
-  Ok(serde_json::json!({ "x": pos.x, "y": pos.y }))
-}
-
-/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用，窗口跟随鼠标直到松开）
-#[tauri::command]
-pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))
+pub fn isle_start_drag(app: AppHandle) -> Result<serde_json::Value, String> {
+  let Some(w) = app.get_webview_window("isle") else {
+    return Ok(serde_json::json!({ "x": 0, "y": 0, "moved": false }));
+  };
+  let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
+  let after = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  let moved = before.x != after.x || before.y != after.y;
+  let (cx, cy) = clamp_pos(&w, after.x, after.y);
+  if cx != after.x || cy != after.y {
+    let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
+  }
+  Ok(serde_json::json!({ "x": cx, "y": cy, "moved": moved }))
 }
 
 /// 胶囊岛：显示

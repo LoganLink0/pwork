@@ -584,7 +584,6 @@ pub fn run() {
       isle::isle_show,
       isle::isle_place,
       isle::isle_snap_top,
-      isle::isle_get_pos,
       isle::isle_start_drag,
       isle::isle_hide,
       isle::isle_set_activity,

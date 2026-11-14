@@ -18,6 +18,7 @@ interface ActivityItem {
 }
 
 const POS_KEY = 'pwork-isle-pos'
+const SETTINGS_KEY = 'pwork-isle-settings'
 /** 上缘吸附判定：拖拽驻留点进入屏顶此物理距离内即吸附居中 */
 const SNAP_TOP_PX = 120
 
@@ -43,6 +44,17 @@ function savePos(pos: SavedPos) {
   localStorage.setItem(POS_KEY, JSON.stringify(pos))
 }
 
+function readEnabled(): boolean {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return true
+    const p = JSON.parse(raw) as { enabled?: boolean }
+    return p.enabled !== false
+  } catch {
+    return true
+  }
+}
+
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [open, setOpen] = useState(false)
@@ -55,7 +67,7 @@ export function IsleWindow() {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
   }
 
-  // 首帧：恢复持久化位置（top 吸附 / free 驻留点）→ 显示
+  // 首帧：恢复持久化位置（top 吸附 / free 驻留点，越界由 Rust 钳回屏内）→ 按启用开关决定显示
   useEffect(() => {
     const pos = readPos()
     if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
@@ -63,30 +75,50 @@ export function IsleWindow() {
     } else {
       void invoke('isle_snap_top').catch(() => {})
     }
-    void invoke('isle_show').catch(() => {})
+    if (readEnabled()) {
+      void invoke('isle_show').catch(() => {})
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
-  // 原生拖拽结束（start_dragging 阻塞至松手）→ 读落点：近上缘吸附居中，否则驻留并持久化
-  const persistAfterDrag = async () => {
-    const pos = await invoke<{ x: number; y: number }>('isle_get_pos').catch(() => null)
-    if (!pos) return
-    if (pos.y <= SNAP_TOP_PX) {
-      await invoke('isle_snap_top').catch(() => {})
-      savePos({ mode: 'top' })
-    } else {
-      savePos({ mode: 'free', x: pos.x, y: pos.y })
+  // 设置页启用开关实时生效（storage 事件在另一窗口触发；两窗同源共享 localStorage）
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== SETTINGS_KEY) return
+      if (readEnabled()) {
+        void invoke('isle_show').catch(() => {})
+      } else {
+        clearTimers()
+        setOpen(false)
+        void invoke('isle_hide').catch(() => {})
+      }
     }
-  }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
+  }, [])
 
-  // 按住 logo 原生拖拽：start_dragging 阻塞至松手（Windows 进模态移动循环），期间悬停抑制
+  // 原生拖拽结束：Rust 已把落点钳回屏内并返回终位+是否真的移动过。
+  // 没移动=单击（原生拖拽松手后 Windows 仍会派发 click，不能用 onClick 判别）→ 切换展开；
+  // 移动过=真拖拽 → 近上缘吸附居中，否则驻留并持久化。
   const startDrag = (e: ReactMouseEvent) => {
     e.stopPropagation()
     setDragging(true)
     setOpen(false)
     clearTimers()
-    void invoke('isle_start_drag')
-      .then(() => persistAfterDrag())
+    void invoke<{ x: number; y: number; moved: boolean }>('isle_start_drag')
+      .then((pos) => {
+        if (!pos.moved) {
+          setOpen((v) => !v)
+          return
+        }
+        if (pos.y <= SNAP_TOP_PX) {
+          void invoke('isle_snap_top').catch(() => {})
+          savePos({ mode: 'top' })
+        } else {
+          savePos({ mode: 'free', x: pos.x, y: pos.y })
+        }
+      })
       .finally(() => setDragging(false))
   }
 
@@ -141,14 +173,14 @@ export function IsleWindow() {
         </div>
       </div>
       {/* logo 是收起态唯一可见物，必须是 #isle-dock 的直接子元素——
-          放进 .isle-bar 内会被收起态的 opacity:0 连带压成全透明（opacity 压平后代） */}
+          放进 .isle-bar 内会被收起态的 opacity:0 连带压成全透明（opacity 压平后代）。
+          单击与拖拽都在 mousedown 流程里判别（原生拖拽松手后 click 事件不可靠），无 onClick */}
       <img
         src="favicon.svg"
         alt="小 P"
         className="isle-logo"
-        title="按住拖动 · 点击展开/收回"
+        title="按住拖动 · 单击展开/收回"
         onMouseDown={startDrag}
-        onClick={() => { if (!dragging) setOpen((v) => !v) }}
       />
     </div>
   )

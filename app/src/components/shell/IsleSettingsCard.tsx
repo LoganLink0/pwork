@@ -1,48 +1,47 @@
 import { useEffect, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 
 /**
- * 胶囊岛设置卡（46 批）：桌面版右缘常驻伙伴的开关与垂直位置。
- * 设置写 localStorage（pwork-isle-settings），isle 独立窗经 storage 事件实时响应——
- * 主窗与 isle 窗同源共享 localStorage，无需跨窗事件桥。
+ * 胶囊岛设置卡：桌面常驻小 P 的显示开关与位置重置。
+ * 开关写 localStorage（pwork-isle-settings），isle 独立窗经 storage 事件实时显隐——
+ * 两窗同源共享 localStorage，无需跨窗事件桥。位置=拖拽驻留，重置则清驻留点并吸回顶部居中。
  */
 
 const KEY = 'pwork-isle-settings'
+const POS_KEY = 'pwork-isle-pos'
 
 export function IsleSettingsCard({ active }: { active: boolean }) {
   const [enabled, setEnabled] = useState(true)
-  const [yPercent, setYPercent] = useState(50)
 
   useEffect(() => {
     if (!active) return
     try {
       const raw = localStorage.getItem(KEY)
       if (raw) {
-        const p = JSON.parse(raw) as { enabled?: boolean; yPercent?: number }
+        const p = JSON.parse(raw) as { enabled?: boolean }
         setEnabled(p.enabled !== false)
-        setYPercent(typeof p.yPercent === 'number' ? p.yPercent : 50)
       }
     } catch {
       // 坏值走默认
     }
   }, [active])
 
-  const save = (next: { enabled: boolean; yPercent: number }) => {
-    localStorage.setItem(KEY, JSON.stringify(next))
-  }
-
   const toggle = (on: boolean) => {
     setEnabled(on)
-    save({ enabled: on, yPercent })
+    localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
+    // isle 窗经 storage 事件实时响应；这里同步 invoke 兜底（事件丢失时也能立即显隐）
+    void invoke(on ? 'isle_show' : 'isle_hide').catch(() => {})
   }
-  const setY = (y: number) => {
-    setYPercent(y)
-    save({ enabled, yPercent: y })
+
+  const resetPos = () => {
+    localStorage.removeItem(POS_KEY)
+    void invoke('isle_snap_top').catch(() => {})
   }
 
   return (
     <div className="set-card" data-tab="isle" style={{ display: active ? undefined : 'none' }}>
       <h2>胶囊岛</h2>
-      <div className="desc">桌面右缘常驻的小 P 入口：靠近滑出面板，进行中的抓取、导出与 AI 问答都在这里可见</div>
+      <div className="desc">桌面上的常驻小 P：按住 logo 拖到哪驻留到哪，拖近屏幕上缘自动吸附居中；靠近展开状态条，进行中的抓取、导出与 AI 问答都在这里可见</div>
       <div className="set-body">
         <div className="set-row">
           <label>显示</label>
@@ -54,22 +53,14 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
               关
             </button>
           </div>
-          <span className="val">关闭后桌面右缘不显示，随时回这里重新打开</span>
+          <span className="val">关闭后桌面不显示，随时回这里重新打开</span>
         </div>
         <div className="set-row">
-          <label>垂直位置</label>
-          <div className="seg">
-            <button type="button" className={yPercent === 20 ? 'on' : ''} onClick={() => setY(20)}>
-              偏上
-            </button>
-            <button type="button" className={yPercent === 50 ? 'on' : ''} onClick={() => setY(50)}>
-              居中
-            </button>
-            <button type="button" className={yPercent === 80 ? 'on' : ''} onClick={() => setY(80)}>
-              偏下
-            </button>
-          </div>
-          <span className="val">细条贴在屏幕右缘的垂直位置</span>
+          <label>位置</label>
+          <button type="button" className="btn-ghost" onClick={resetPos}>
+            重置到屏幕顶部居中
+          </button>
+          <span className="val">平时按住 logo 拖动即可，找不到时用这里一键复位</span>
         </div>
       </div>
     </div>
