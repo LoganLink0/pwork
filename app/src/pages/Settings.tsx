@@ -35,6 +35,7 @@ import { refreshInterestProfile, PROFILE_MIN_WANTS } from '../modules/input/engi
 import type { ErrorLogEntry } from '../types/models'
 import { SettingsNav } from '../components/shell/SettingsNav'
 import { WheelSettingsCard } from '../components/shell/WheelSettingsCard'
+import { IsleSettingsCard } from '../components/shell/IsleSettingsCard'
 import { KeybindsCard } from '../components/shell/KeybindsCard'
 import { CloudSyncCards } from './CloudSync'
 
@@ -51,6 +52,7 @@ const SETTINGS_TABS = [
   { id: 'collect', label: '采集设置', icon: 'collect' },
   { id: 'keys', label: '键位设置', icon: 'key' },
   { id: 'wheel', label: '工具轮盘', icon: 'grid' },
+  { id: 'isle', label: '胶囊岛', icon: 'ai' },
   { id: 'notify', label: '通知设置', icon: 'volume' },
   { id: 'errors', label: '错误日志', icon: 'errors' },
   { id: 'cloud', label: '云端同步', icon: 'cloud' },
@@ -1347,6 +1349,7 @@ export function Settings() {
 
       <KeybindsCard active={tab === 'keys'} />
       <WheelSettingsCard active={tab === 'wheel'} />
+      <IsleSettingsCard active={tab === 'isle'} />
 
       <CloudSyncCards active={tab === 'cloud'} />
 

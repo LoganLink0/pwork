@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
- * 胶囊岛窗（/isle 分流渲染）：桌面右下角常驻伙伴形态——
- * 收缩态呼吸点 / 活动态胶囊（带队列计数）/ 展开面板（活动清单+入口）。
- * 交互（2026-11-14 用户拍板动态岛式）：悬浮 1 秒自动展开面板，移开 1.5 秒自动收回，
- * 点击立即开合——不需要点击小圆点也不需要找关闭按钮。
- * 窗体尺寸随内容自适应（ResizeObserver 上报 isle_resize，Rust 侧右下锚定）。
- * 本窗 focus:false 不夺焦点；点击「打开 PWORK」聚焦主窗。
+ * 胶囊岛窗（/isle 分流渲染）——边缘停靠式（岛仔验证的模型）：
+ * 贴屏幕右缘的细条 tab 常驻，鼠标靠近 tab 面板滑出，移开滑回。
+ * 窗口是固定 360×140 画布（Rust 锚定右缘），内容 translateX 滑入滑出——
+ * 不做逐状态窗体缩放（0.1.22 教训：内容测量与窗体尺寸循环依赖）。
+ * 位置（上/中/下）与启用开关来自 localStorage（主窗设置页写，storage 事件实时响应）。
  */
 
 interface ActivityItem {
@@ -16,36 +15,59 @@ interface ActivityItem {
   label: string
 }
 
-type IsleMode = 'idle' | 'live' | 'open'
+export interface IsleSettings {
+  enabled: boolean
+  /** 垂直位置：0=上 50=中 100=下（可用高度内的百分比） */
+  yPercent: number
+}
 
-const HOVER_EXPAND_MS = 1000
-const HOVER_COLLAPSE_MS = 1500
+const SETTINGS_KEY = 'pwork-isle-settings'
+const DEFAULT_SETTINGS: IsleSettings = { enabled: true, yPercent: 50 }
+
+function readSettings(): IsleSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return DEFAULT_SETTINGS
+    const p = JSON.parse(raw) as Partial<IsleSettings>
+    return {
+      enabled: p.enabled !== false,
+      yPercent: typeof p.yPercent === 'number' ? Math.min(100, Math.max(0, p.yPercent)) : 50,
+    }
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+}
 
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [mode, setMode] = useState<IsleMode>('idle')
+  const [settings, setSettings] = useState<IsleSettings>(readSettings())
+  const [open, setOpen] = useState(false)
   const [ready, setReady] = useState(false)
-  const hoverTimer = useRef<number | null>(null)
-  const closeTimer = useRef<number | null>(null)
-  const modeRef = useRef<IsleMode>('idle')
-  const activitiesRef = useRef<ActivityItem[]>([])
-  modeRef.current = mode
-  activitiesRef.current = activities
 
-  const clearTimers = () => {
-    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
-    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
-  }
-
-  const setModeSafe = (m: IsleMode) => {
-    clearTimers()
-    setMode(m)
-  }
-
-  // 首帧：上报显示（Rust 右下锚定后 show）
+  // 首帧：按设置显示并锚定
   useEffect(() => {
-    void invoke('isle_show').catch(() => {})
+    if (settings.enabled) {
+      void invoke('isle_show', { yPercent: settings.yPercent }).catch(() => {})
+    }
     setReady(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
+  }, [])
+
+  // 设置变化（storage 事件跨窗同步）：启用/停用与位置实时生效
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SETTINGS_KEY) {
+        const next = readSettings()
+        setSettings(next)
+        if (next.enabled) {
+          void invoke('isle_show', { yPercent: next.yPercent }).catch(() => {})
+        } else {
+          void invoke('isle_hide').catch(() => {})
+        }
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   // 主窗推送活动列表
@@ -59,110 +81,52 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
-  // 主窗「打开 PWORK」后收回面板
+  // 鼠标靠近 tab → 滑出面板；移开 → 滑回
   useEffect(() => {
-    let un: (() => void) | undefined
-    void listen('isle-close', () => {
-      clearTimers()
-      setMode('idle')
-    }).then((unlisten) => {
-      un = unlisten
-    })
-    return () => un?.()
-  }, [])
-
-  // 活动列表变化：idle 且有活动 → 自动亮起活动胶囊；展开态不动
-  useEffect(() => {
-    if (modeRef.current === 'open') return
-    setMode(activities.length > 0 ? 'live' : 'idle')
-  }, [activities])
-
-  // 窗体尺寸随模式固定（内容测量会循环依赖：窗体缩→内容挤→测量值=挤压值）：
-  // idle 110×110（热区含透明边距）/ live 300×44 / open 360×240
-  useEffect(() => {
-    if (!ready) return
-    const size = mode === 'idle' ? { width: 110, height: 110 } : mode === 'live' ? { width: 300, height: 44 } : { width: 360, height: 240 }
-    void invoke('isle_resize', size).catch(() => {})
-  }, [ready, mode])
-
-  // 悬浮 1 秒自动展开；移开 1.5 秒自动收回（动态岛式）
-  const onEnter = () => {
-    clearTimers()
-    if (modeRef.current !== 'open') {
-      hoverTimer.current = window.setTimeout(() => setMode('open'), HOVER_EXPAND_MS)
+    const dock = document.getElementById('isle-dock')
+    if (!dock) return
+    const enter = () => setOpen(true)
+    const leave = () => setOpen(false)
+    dock.addEventListener('mouseenter', enter)
+    dock.addEventListener('mouseleave', leave)
+    return () => {
+      dock.removeEventListener('mouseenter', enter)
+      dock.removeEventListener('mouseleave', leave)
     }
-  }
-  const onLeave = () => {
-    clearTimers()
-    if (modeRef.current === 'open') {
-      closeTimer.current = window.setTimeout(
-        () => setMode(activitiesRef.current.length > 0 ? 'live' : 'idle'),
-        HOVER_COLLAPSE_MS,
-      )
-    }
-  }
+  }, [ready])
 
-  const open = mode === 'open'
-  const live = mode === 'live'
   const count = activities.length
+  const activityLabel = activities[0]?.label ?? ''
 
   return (
-    <div
-      className={`isle isle-${mode}`}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
-      onClick={() => setModeSafe(open ? (activities.length > 0 ? 'live' : 'idle') : 'open')}
-      role={open ? 'dialog' : 'button'}
-      aria-label={open ? '小 P 面板' : '问小 P：AI 全库问答与进行中活动'}
-    >
-      <div className="isle-content">
-        {open ? (
-          <>
-            <div className="isle-head">
-              <span className="isle-dot isle-dot-live" />
-              小 P · 进行中
+    <div id="isle-dock" className={settings.enabled ? 'isle-dock on' : 'isle-dock'}>
+      {/* 滑出层：贴右缘，展开时向左滑出面板 */}
+      <div className={`isle-slide${open ? ' out' : ''}`}>
+        <div className="isle-panel" role="dialog" aria-label="小 P 面板">
+          <div className="isle-panel-row">
+            <span className="isle-dot isle-dot-live" aria-hidden />
+            <span className="isle-title">{count > 0 ? '小 P · 进行中' : '小 P 在'}</span>
+            <span className="isle-panel-note">{count > 0 ? `${count} 项活动` : '一切就绪'}</span>
+          </div>
+          {activities.slice(0, 2).map((a) => (
+            <div className="isle-panel-row isle-act" key={a.id}>
+              <span className="isle-act-label">{a.label}</span>
             </div>
-            {activities.map((a) => (
-              <div className="isle-item" key={a.id}>
-                {a.label}
-              </div>
-            ))}
-            {activities.length === 0 && <div className="isle-item">当前没有进行中的活动</div>}
-            <div className="isle-acts">
-              <button
-                type="button"
-                className="isle-pbtn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  void invoke('isle_open_main').catch(() => {})
-                }}
-              >
-                打开 PWORK
-              </button>
-              <button
-                type="button"
-                className="isle-pbtn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setModeSafe('idle')
-                }}
-              >
-                收起
-              </button>
-            </div>
-          </>
-        ) : live ? (
-          <>
-            <span className="isle-dot isle-dot-live" />
-            <span className="isle-txt">{activities[0]?.label ?? '小 P 思考中'}</span>
-            {count > 1 && <span className="isle-count">{count}</span>}
-          </>
-        ) : (
-          <>
-            <span className="tip">小 P 在 · 悬浮查看</span>
-            <span className="isle-dot" />
-          </>
-        )}
+          ))}
+          <div className="isle-acts">
+            <button type="button" className="isle-pbtn" onClick={() => void invoke('isle_open_palette').catch(() => {})}>
+              问小 P
+            </button>
+            <button type="button" className="isle-pbtn" onClick={() => void invoke('isle_open_main').catch(() => {})}>
+              打开 PWORK
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* 收起态细条 tab：常驻右缘 */}
+      <div className="isle-tab" aria-label="小 P">
+        <span className="isle-dot isle-dot-live" aria-hidden />
+        {count > 0 && <span className="isle-badge">{count}</span>}
       </div>
     </div>
   )

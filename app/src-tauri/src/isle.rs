@@ -1,11 +1,17 @@
-//! 胶囊岛窗（41 批之后的伙伴常驻形态）：桌面右下角的呼吸点/活动胶囊/展开面板。
-//! 窗口本体在 tauri.conf（label=isle，透明右下锚定），命令负责尺寸调整、活动转发与显示。
+//! 胶囊岛窗（伙伴常驻形态·边缘停靠式）：贴屏幕右缘的细条 tab，鼠标靠近滑出面板。
+//! 窗口固定 360×140 画布锚定右缘（垂直位置可调），内容在画布内滑入滑出——
+//! 不做逐状态窗体缩放（内容测量与窗体尺寸循环依赖，0.1.22 教训）。
 
-use tauri::{Emitter, AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
-/// 胶囊岛窗锚定到所在显示器工作区的右下角（保持右/下边距，随尺寸变化向左上扩展）。
-/// 首选跟随鼠标所在显示器（与轮盘同款判定），兜底主显示器。
-fn anchor_isle(app: &AppHandle, w: &tauri::WebviewWindow) -> Result<(), String> {
+/// 画布尺寸（逻辑点）：展开面板 336×64 + 右缘留白。
+const CANVAS_W: f64 = 360.0;
+const CANVAS_H: f64 = 140.0;
+
+/// 锚定：贴屏幕右缘、垂直位置按 yPercent（0=顶 50=中 100=底）在可用高度内取点。
+/// 可用高度扣任务栏（底部 64px），避免贴进任务栏。
+fn anchor_isle(app: &AppHandle, y_percent: f64) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let size = w.outer_size().map_err(|e| format!("读取窗口尺寸失败：{}", e))?;
   let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
   let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
@@ -17,26 +23,39 @@ fn anchor_isle(app: &AppHandle, w: &tauri::WebviewWindow) -> Result<(), String> 
   };
   let pos = monitor.position();
   let msize = monitor.size();
-  // 右下角贴边但要避开任务栏（默认任务栏占底部 ~48px，贴 -12px 会把深色圆点藏进深色
-  // 任务栏里——真实用户实测「呼吸点在哪」）。底距取 64px：任务栏上方、视觉仍是右下角。
-  let right = pos.x as f64 + msize.width as f64 - 12.0;
+  let usable_h = (msize.height as f64 - 64.0 - CANVAS_H / 2.0).max(CANVAS_H / 2.0);
+  // yPercent 0..100 → 画布垂直中心在「顶 64px … 底(任务栏上)」区间内移动
+  let top = pos.y as f64 + 64.0;
   let bottom = pos.y as f64 + msize.height as f64 - 64.0;
-  let _ = w.set_position(tauri::PhysicalPosition::new(
-    (right - size.width as f64) as i32,
-    (bottom - size.height as f64) as i32,
-  ));
+  let center_y = top + (bottom - top) * (y_percent / 100.0);
+  let left = pos.x as f64 + msize.width as f64 - CANVAS_W - 8.0;
+  let y = (center_y - size.height as f64 / 2.0).clamp(top, bottom - size.height as f64);
+  let _ = w.set_position(tauri::PhysicalPosition::new(left as i32, y as i32));
   Ok(())
 }
 
-/// 胶囊岛：设置窗体尺寸并保持右下锚定（idle 44×44 / live ~280×44 / open 360×420 由前端决定）。
-/// 下限 44×44：CSS 未就绪的 0×0 回调会把窗体缩成不可见（真实用户实测）。
+/// 胶囊岛：显示并按垂直位置锚定（应用启动时调用；yPercent 由前端从设置读出）
 #[tauri::command]
-pub fn isle_resize(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+pub fn isle_show(app: AppHandle, y_percent: f64) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let width = width.max(44.0);
-  let height = height.max(44.0);
-  let _ = w.set_size(tauri::LogicalSize::new(width, height));
-  anchor_isle(&app, &w)
+  let _ = w.set_size(tauri::LogicalSize::new(CANVAS_W, CANVAS_H));
+  anchor_isle(&app, y_percent)?;
+  let _ = w.show();
+  Ok(())
+}
+
+/// 胶囊岛：位置调整（设置页三档切换时调用）
+#[tauri::command]
+pub fn isle_set_y(app: AppHandle, y_percent: f64) -> Result<(), String> {
+  anchor_isle(&app, y_percent)
+}
+
+/// 胶囊岛：隐藏（设置关闭时调用）
+#[tauri::command]
+pub fn isle_hide(app: AppHandle) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let _ = w.hide();
+  Ok(())
 }
 
 /// 胶囊岛：主窗侧上报活动状态（JSON 数组），转发给 isle 窗渲染
@@ -47,17 +66,7 @@ pub fn isle_set_activity(app: AppHandle, activities: Vec<serde_json::Value>) -> 
   Ok(())
 }
 
-/// 胶囊岛：显示（应用启动时常驻呼吸点）
-#[tauri::command]
-pub fn isle_show(app: AppHandle) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  anchor_isle(&app, &w)?;
-  let _ = w.show();
-  log::info!("[胶囊岛] 呼吸点已显示并锚定右下角");
-  Ok(())
-}
-
-/// 胶囊岛面板「打开 PWORK」：唤醒/聚焦主窗（最小化则还原），并收回面板
+/// 胶囊岛面板「打开 PWORK」：唤醒/聚焦主窗
 #[tauri::command]
 pub fn isle_open_main(app: AppHandle) -> Result<(), String> {
   if let Some(main) = app.get_webview_window("main") {
@@ -65,8 +74,17 @@ pub fn isle_open_main(app: AppHandle) -> Result<(), String> {
     let _ = main.show();
     let _ = main.set_focus();
   }
-  if let Some(w) = app.get_webview_window("isle") {
-    let _ = w.emit("isle-close", ());
+  Ok(())
+}
+
+/// 胶囊岛面板「问小 P」：唤醒主窗并发事件，主窗打开命令面板（littlep 来源）
+#[tauri::command]
+pub fn isle_open_palette(app: AppHandle) -> Result<(), String> {
+  if let Some(main) = app.get_webview_window("main") {
+    let _ = main.unminimize();
+    let _ = main.show();
+    let _ = main.set_focus();
+    let _ = app.emit("isle-open-palette", ());
   }
   Ok(())
 }

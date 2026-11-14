@@ -673,144 +673,129 @@ html[data-wheel] body {
 html[data-isle] body {
   background: transparent;
 }
-.isle {
+/* 胶囊岛 · 边缘停靠式（46 批重做，岛仔验证的模型）：
+   360×140 透明画布贴右缘常驻，内容 translateX 滑入滑出——
+   收起态=右缘细条 tab（12×96），靠近滑出横向面板（单行不换行）。
+   位置（上/中/下）由设置写入 localStorage，isle 窗经 storage 事件实时响应。 */
+#isle-dock {
   position: fixed;
   right: 0;
-  bottom: 0;
+  top: 50%;
+  width: 360px;
+  height: 140px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 60;
+}
+#isle-dock .isle-slide {
+  position: absolute;
+  right: 0;
+  bottom: 50%;
+  transform: translateX(100%);
+  transition: transform var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease);
+  opacity: 0;
+}
+#isle-dock .isle-slide.out {
+  transform: translateX(0);
+  opacity: 1;
+}
+#isle-dock .isle-panel {
+  width: 336px;
   background: #101014;
   color: #fff;
-  border-radius: 999px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+.isle-panel-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
-  z-index: 50;
+  gap: 8px;
+  font-size: 13px;
+  white-space: nowrap;
 }
-/* 内容包装层 flex 化：dot 是 inline span，无此规则则 width/height 无效、
-   fixed+shrink-to-fit 全链塌缩成 0×0（呼吸点隐形的真根因，CDP 实测） */
-.isle .isle-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-/* 收缩态显式 44×44 圆形：深色圆底 + 橙色呼吸/眨眼点，可见且热区即窗体 */
-.isle.isle-idle {
-  width: 44px;
-  height: 44px;
-  justify-content: center;
-  border-radius: 50%;
-}
-.isle.isle-idle .isle-content {
-  width: 100%;
-  height: 100%;
-  justify-content: center;
-}
-.isle .isle-dot {
-  width: 12px;
-  height: 12px;
+.isle-dot {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--accent);
   flex: none;
 }
-/* 伙伴眨眼（46 批构想·岛仔样本验证的生命感）：每 4 秒一次快速纵向压扁——
-   收缩态呼吸点兼做小 P 的「眼睛」，伙伴人格的最小实现 */
-@keyframes isle-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.75; }
-  50% { transform: scale(1.12); opacity: 1; }
-}
-@keyframes isle-blink {
-  0%, 91%, 100% { transform: scaleY(1); }
-  94% { transform: scaleY(0.15); }
-  97% { transform: scaleY(1); }
-}
-.isle-idle .isle-dot {
-  animation: isle-breathe 4s ease-in-out infinite, isle-blink 4s ease-in-out infinite;
-}
-.isle .isle-dot-live {
+.isle-dot-live {
   animation: isle-livepulse 1.8s ease-in-out infinite;
 }
 @keyframes isle-livepulse {
-  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  0%, 100% { opacity: 0.45; transform: scale(0.85); }
   50% { opacity: 1; transform: scale(1.1); }
 }
-.isle .isle-txt {
-  font-size: 13px;
-  white-space: nowrap;
-}
-.isle .isle-count {
-  font-size: 11px;
-  color: var(--accent-text);
-  background: rgba(232, 131, 58, 0.15);
-  border-radius: 999px;
-  padding: 0 7px;
-  line-height: 18px;
-  flex: none;
-}
-.isle .tip {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 10px);
-  background: #101014;
-  border: 1px solid rgba(232, 131, 58, 0.4);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: #ffd28a;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  pointer-events: none;
-}
-.isle:hover .tip {
-  opacity: 1;
-  transform: translateY(0);
-}
-.isle:hover {
-  transform: scale(1.04);
-}
-/* 展开面板态 */
-.isle.isle-open {
-  border-radius: 18px;
-  padding: 14px 16px;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  cursor: default;
-}
-.isle.isle-open .tip { display: none; }
-.isle .isle-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
+.isle-title {
   font-weight: 600;
 }
-.isle .isle-head .isle-dot {
-  width: 9px;
-  height: 9px;
-  animation: isle-livepulse 1.8s ease-in-out infinite;
+.isle-panel-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9aa0a8;
 }
-.isle .isle-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.isle-act .isle-act-label {
   font-size: 12px;
   color: #cfd3d8;
-  padding: 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.isle .isle-acts {
+.isle-acts {
   display: flex;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 2px;
 }
-.isle .isle-pbtn {
+.isle-pbtn {
   background: rgba(255, 255, 255, 0.12);
   border: none;
   border-radius: 8px;
   padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.isle-pbtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+/* 收起态细条 tab：常驻右缘（活动时亮起+计数徽标），靠近即呼出 */
+#isle-dock .isle-tab {
+  position: absolute;
+  right: 0;
+  bottom: 50%;
+  transform: translateY(50%);
+  width: 12px;
+  height: 96px;
+  border-radius: 999px 0 0 999px;
+  background: #101014;
+  border: 1px solid rgba(232, 131, 58, 0.35);
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#isle-dock .isle-tab .isle-dot {
+  width: 7px;
+  height: 7px;
+}
+.isle-badge {
+  font-size: 10px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0 4px;
+  line-height: 14px;
+}
   font-size: 12px;
   color: #fff;
   cursor: pointer;

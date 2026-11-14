@@ -369,6 +369,19 @@ export default function App() {
     }
   }, [])
 
+  // 桌面版：胶囊岛面板「问小 P」（isle 窗发事件）——打开命令面板（littlep 来源）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    const un = import('@tauri-apps/api/event')
+      .then(({ listen }) => listen('isle-open-palette', () => {
+        useUi.getState().openPalette('littlep')
+      }))
+      .catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
+  }, [])
+
   // 桌面版：网关端口被占（Rust 侧让位并发出事件）——可能是开发版网关，也可能是
   // 冒名进程截获对话内容，必须让用户看见而不是静默降级（安全审计 F12）
   useEffect(() => {
@@ -507,7 +520,6 @@ export default function App() {
         <FirstRunRedirect />
         <ExternalLinks />
         <GlobalShortcuts />
-        <LittleP />
         <div className="app">
           <Sidebar />
           <div className="main">
