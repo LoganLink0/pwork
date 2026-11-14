@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
- * 胶囊岛窗（/isle 分流渲染）——边缘停靠式（岛仔验证的模型）：
- * 贴屏幕右缘的细条 tab 常驻，鼠标靠近 tab 面板滑出，移开滑回。
- * 窗口是固定 360×140 画布（Rust 锚定右缘），内容 translateX 滑入滑出——
- * 不做逐状态窗体缩放（0.1.22 教训：内容测量与窗体尺寸循环依赖）。
- * 位置（上/中/下）与启用开关来自 localStorage（主窗设置页写，storage 事件实时响应）。
+ * 胶囊岛窗（/isle 分流渲染）——真正的抽屉模型：
+ * 一个元素（.isle-drawer），收起时 translateX 只露出右缘 16px 的「把手」（圆角帽+小 P 点），
+ * 展开时整体滑出——把手跟着内容一起出来（用户拍板的抽屉语义），不存在两个独立物件。
+ * 窗口是固定 360×160 透明画布贴右缘；垂直位置由设置（localStorage）经 Rust 锚定。
+ * 悬停画布任意处 1 秒展开；移开 1.2 秒收回。
  */
 
 interface ActivityItem {
@@ -17,7 +17,6 @@ interface ActivityItem {
 
 export interface IsleSettings {
   enabled: boolean
-  /** 垂直位置：0=上 50=中 100=下（可用高度内的百分比） */
   yPercent: number
 }
 
@@ -42,14 +41,19 @@ export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [settings, setSettings] = useState<IsleSettings>(readSettings())
   const [open, setOpen] = useState(false)
-  const [ready, setReady] = useState(false)
+  const enterTimer = useRef<number | null>(null)
+  const leaveTimer = useRef<number | null>(null)
+
+  const clearTimers = () => {
+    if (enterTimer.current) { clearTimeout(enterTimer.current); enterTimer.current = null }
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
+  }
 
   // 首帧：按设置显示并锚定
   useEffect(() => {
     if (settings.enabled) {
       void invoke('isle_show', { yPercent: settings.yPercent }).catch(() => {})
     }
-    setReady(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
@@ -60,8 +64,10 @@ export function IsleWindow() {
         const next = readSettings()
         setSettings(next)
         if (next.enabled) {
+          setOpen(false)
           void invoke('isle_show', { yPercent: next.yPercent }).catch(() => {})
         } else {
+          setOpen(false)
           void invoke('isle_hide').catch(() => {})
         }
       }
@@ -81,35 +87,35 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
-  // 鼠标靠近 tab → 滑出面板；移开 → 滑回
-  useEffect(() => {
-    const dock = document.getElementById('isle-dock')
-    if (!dock) return
-    const enter = () => setOpen(true)
-    const leave = () => setOpen(false)
-    dock.addEventListener('mouseenter', enter)
-    dock.addEventListener('mouseleave', leave)
-    return () => {
-      dock.removeEventListener('mouseenter', enter)
-      dock.removeEventListener('mouseleave', leave)
-    }
-  }, [ready])
+  // 悬停画布 1 秒展开；移开 1.2 秒收回（挂在画布根：靠近即呼出，无需精确点中小把手）
+  const onEnter = () => {
+    clearTimers()
+    enterTimer.current = window.setTimeout(() => setOpen(true), 1000)
+  }
+  const onLeave = () => {
+    clearTimers()
+    leaveTimer.current = window.setTimeout(() => setOpen(false), 1200)
+  }
+  useEffect(() => () => clearTimers(), [])
 
   const count = activities.length
-  const activityLabel = activities[0]?.label ?? ''
 
   return (
-    <div id="isle-dock" className={settings.enabled ? 'isle-dock on' : 'isle-dock'}>
-      {/* 滑出层：贴右缘，展开时向左滑出面板 */}
-      <div className={`isle-slide${open ? ' out' : ''}`}>
-        <div className="isle-panel" role="dialog" aria-label="小 P 面板">
-          <div className="isle-panel-row">
-            <span className="isle-dot isle-dot-live" aria-hidden />
+    <div
+      id="isle-dock"
+      className={open ? 'open' : ''}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
+      <div className="isle-drawer" role="button" aria-label="小 P：伙伴入口与进行中活动">
+        <div className="isle-body">
+          <div className="isle-row">
+            <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
             <span className="isle-title">{count > 0 ? '小 P · 进行中' : '小 P 在'}</span>
-            <span className="isle-panel-note">{count > 0 ? `${count} 项活动` : '一切就绪'}</span>
+            <span className="isle-note">{count > 0 ? `${count} 项进行中` : '一切就绪'}</span>
           </div>
           {activities.slice(0, 2).map((a) => (
-            <div className="isle-panel-row isle-act" key={a.id}>
+            <div className="isle-row isle-act" key={a.id}>
               <span className="isle-act-label">{a.label}</span>
             </div>
           ))}
@@ -122,11 +128,10 @@ export function IsleWindow() {
             </button>
           </div>
         </div>
-      </div>
-      {/* 收起态细条 tab：常驻右缘 */}
-      <div className="isle-tab" aria-label="小 P">
-        <span className="isle-dot isle-dot-live" aria-hidden />
-        {count > 0 && <span className="isle-badge">{count}</span>}
+        {/* 把手：抽屉右缘的圆角帽，收起时唯一露出部分 */}
+        <div className="isle-cap">
+          <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
+        </div>
       </div>
     </div>
   )

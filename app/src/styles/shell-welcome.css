@@ -673,44 +673,47 @@ html[data-wheel] body {
 html[data-isle] body {
   background: transparent;
 }
-/* 胶囊岛 · 边缘停靠式（46 批重做，岛仔验证的模型）：
-   360×140 透明画布贴右缘常驻，内容 translateX 滑入滑出——
-   收起态=右缘细条 tab（12×96），靠近滑出横向面板（单行不换行）。
-   位置（上/中/下）由设置写入 localStorage，isle 窗经 storage 事件实时响应。 */
+/* 胶囊岛 · 抽屉模型（46 批二稿，用户定案：把手跟着内容一起出来）：
+   单一 .isle-drawer 元素——收起时 translateX 只露右缘 16px 的圆角把手（小 P 点），
+   展开时整体滑出、把手贴在面板右缘垂直居中。不存在两个独立物件。
+   画布 360×160 贴右缘常驻；垂直位置由设置写入 localStorage 经 Rust 锚定。 */
 #isle-dock {
   position: fixed;
   right: 0;
   top: 50%;
   width: 360px;
-  height: 140px;
+  height: 160px;
   transform: translateY(-50%);
   pointer-events: none;
   z-index: 60;
 }
-#isle-dock .isle-slide {
+#isle-dock .isle-drawer {
   position: absolute;
   right: 0;
-  bottom: 0; /* 面板底=画布底：面板在画布内向上生长，不再溢出画布顶部被裁 */
-  transform: translateX(100%);
-  transition: transform var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease);
-  opacity: 0;
-}
-#isle-dock .isle-slide.out {
-  transform: translateX(0);
-  opacity: 1;
-}
-#isle-dock .isle-panel {
+  bottom: 0;
   width: 336px;
   background: #101014;
   color: #fff;
   border-radius: 14px;
   padding: 12px 14px;
   display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  transform: translateX(calc(100% - 16px));
+  transition: transform 0.24s var(--ease);
+}
+#isle-dock .isle-drawer.out {
+  transform: translateX(0);
+}
+.isle-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
   gap: 6px;
-  pointer-events: auto;
 }
-.isle-panel-row {
+.isle-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -724,7 +727,7 @@ html[data-isle] body {
   background: var(--accent);
   flex: none;
 }
-.isle-dot-live {
+.isle-dot.live {
   animation: isle-livepulse 1.8s ease-in-out infinite;
 }
 @keyframes isle-livepulse {
@@ -734,16 +737,31 @@ html[data-isle] body {
 .isle-title {
   font-weight: 600;
 }
-.isle-panel-note {
+.isle-note {
   margin-left: auto;
   font-size: 12px;
   color: #9aa0a8;
 }
-.isle-act .isle-act-label {
+/* 把手：抽屉右缘的圆角帽（16px 宽条），收起时唯一露出部分 */
+.isle-cap {
+  flex: none;
+  width: 16px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  margin: -12px -14px -12px 0;
+  padding: 12px 0;
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+.isle-act-label {
   font-size: 12px;
   color: #cfd3d8;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .isle-acts {
   display: flex;
@@ -761,46 +779,6 @@ html[data-isle] body {
   white-space: nowrap;
 }
 .isle-pbtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-/* 收起态细条 tab：常驻右缘（活动时亮起+计数徽标），靠近即呼出。
-   bottom:0 与面板同底对齐（画布 140 内 tab 96 不溢出——50% 居中会让 tab 顶部
-   溢出画布 26px 被裁，与面板同款裁切错误） */
-#isle-dock .isle-tab {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 12px;
-  height: 96px;
-  border-radius: 999px 0 0 999px;
-  background: #101014;
-  border: 1px solid rgba(232, 131, 58, 0.35);
-  border-right: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  pointer-events: auto;
-  cursor: pointer;
-}
-#isle-dock .isle-tab .isle-dot {
-  width: 7px;
-  height: 7px;
-}
-.isle-badge {
-  font-size: 10px;
-  color: #fff;
-  background: var(--accent);
-  border-radius: 999px;
-  padding: 0 4px;
-  line-height: 14px;
-}
-  font-size: 12px;
-  color: #fff;
-  cursor: pointer;
-}
-.isle .isle-pbtn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 .wheel-window {
