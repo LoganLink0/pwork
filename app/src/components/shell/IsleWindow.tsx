@@ -126,14 +126,6 @@ export function IsleWindow() {
     >
       <div className="isle-bar">
         <div className="isle-bar-content">
-          <img
-            src="favicon.svg"
-            alt="小 P"
-            className="isle-logo"
-            title="按住拖动 · 点击展开/收回"
-            onMouseDown={startDrag}
-            onClick={() => { if (!dragging) setOpen((v) => !v) }}
-          />
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
           <span className="isle-title">{count > 0 ? `小 P · 进行中（${count}）` : '小 P 在'}</span>
@@ -148,6 +140,16 @@ export function IsleWindow() {
           </div>
         </div>
       </div>
+      {/* logo 是收起态唯一可见物，必须是 #isle-dock 的直接子元素——
+          放进 .isle-bar 内会被收起态的 opacity:0 连带压成全透明（opacity 压平后代） */}
+      <img
+        src="favicon.svg"
+        alt="小 P"
+        className="isle-logo"
+        title="按住拖动 · 点击展开/收回"
+        onMouseDown={startDrag}
+        onClick={() => { if (!dragging) setOpen((v) => !v) }}
+      />
     </div>
   )
 }

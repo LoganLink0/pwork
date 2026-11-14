@@ -743,6 +743,7 @@ html[data-isle] body {
 }
 #isle-dock.open .isle-logo {
   left: 10px;
+  top: 20px; /* 展开态：垂直居中于条内（条 top 10 高 64，logo 44 → (64-44)/2+10） */
   width: 44px;
   height: 44px;
   border-radius: 12px;
