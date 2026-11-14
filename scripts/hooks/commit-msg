@@ -1,0 +1,3 @@
+#!/bin/sh
+# 提交说明与验证证据一致性：声称截图验证必须真的有图片文件入库（防 CDP 内部帧假证）
+exec node "$(git rev-parse --show-toplevel)/tools/verify-discipline.cjs" --commit-msg "$1"

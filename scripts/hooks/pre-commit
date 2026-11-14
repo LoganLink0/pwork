@@ -1,0 +1,3 @@
+#!/bin/sh
+# 提交前机械门禁：暂存新增行的纪律检查（事故校准见 tools/verify-discipline.cjs 顶部）
+exec node "$(git rev-parse --show-toplevel)/tools/verify-discipline.cjs" --staged
