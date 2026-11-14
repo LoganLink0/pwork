@@ -31,8 +31,15 @@ export function PaletteWindow() {
         void invoke('palette_hide').catch(() => {})
       }
     })
+    // 失焦即关（Spotlight 惯例）：点击窗格外的任何地方都会让本窗失去焦点，
+    // 立即收起——用户不需要先把焦点移回窗格再按 Esc
+    const onBlur = () => {
+      void invoke('palette_hide').catch(() => {})
+    }
+    window.addEventListener('blur', onBlur)
     return () => {
       unsub()
+      window.removeEventListener('blur', onBlur)
       unlisten?.()
     }
   }, [])

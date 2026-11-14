@@ -715,9 +715,13 @@ html[data-palette] .palette {
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-top: 1px solid rgba(255, 255, 255, 0.22);
+  cursor: grab; /* 整条可拖：把手光标语义不只在 logo */
   opacity: 0;
   transition: opacity 0.24s var(--ease);
   pointer-events: none;
+}
+#isle-dock .isle-bar:active {
+  cursor: grabbing;
 }
 #isle-dock.open .isle-bar {
   opacity: 1;

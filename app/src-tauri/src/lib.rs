@@ -638,6 +638,15 @@ pub fn run() {
             let _ = app_handle.emit("isle-moved", serde_json::json!({ "x": phys.x, "y": phys.y }));
           }
         }
+        // 问小 P 独立窗失焦即收起（Spotlight 惯例）：点击窗格外的任何地方都会让它
+        // 失去激活，立即隐藏——用户不需要先把焦点移回窗格再按 Esc
+        tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Focused(false), .. } => {
+          if label == "palette" {
+            if let Some(p) = app_handle.get_webview_window("palette") {
+              let _ = p.hide();
+            }
+          }
+        }
         _ => {}
       }
     });

@@ -115,25 +115,24 @@ export function IsleWindow() {
   }, [])
 
   // 按下=启动原生拖拽（Rust 立即返回，拖拽结束经 isle-drag-end 事件异步通知）。
-  // 按下时先收起（拖拽视觉干净）。交互模型三件事各司其职：靠近=呼出、离开=收回、按住=拖走，
-  // 无单击切换（与悬停计时器赛跑产生状态混杂）。
-  // 绑定在画布层：整个横条+logo 都能拖（可视即可得），按钮豁免（点击语义优先于拖拽）
+  // 抓着什么拖什么：按下不收起，横条保持展开跟随拖动，松手后才按模式收起/探边。
+  // 按钮豁免（点击语义优先于拖拽）。
   const startDrag = (e: ReactMouseEvent) => {
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     setDragging(true)
-    setOpen(false)
     clearTimers()
     void invoke('isle_start_drag').catch(() => setDragging(false))
   }
 
   // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，
-  // 前端持久化模式；停靠模式回到半隐藏探边态
+  // 前端持久化模式；横条此时才收起，停靠模式回到半隐藏探边态
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
       const { mode: m, x, y, moved } = e.payload
+      setOpen(false)
       if (moved) {
         setMode(m)
         setPeek(m !== 'free')
