@@ -582,7 +582,10 @@ pub fn run() {
       wheel_dispatch_action,
       wheel_hide,
       isle::isle_show,
-      isle::isle_set_y,
+      isle::isle_place,
+      isle::isle_snap_top,
+      isle::isle_get_pos,
+      isle::isle_start_drag,
       isle::isle_hide,
       isle::isle_set_activity,
       isle::isle_open_main,
@@ -617,11 +620,20 @@ pub fn run() {
       // 常驻隐藏小窗（visible:false），此前主窗口关闭后它把进程留成"零窗口假活"——
       // 用户点主窗口 X 后进程残留、再点图标因单实例聚焦落空而毫无反应。
       // 用 Destroyed（窗口已销毁的终态事件）兜住所有关闭来源（点 X / WM_CLOSE / 系统关机）
-      if let tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } = event {
-        if label == "main" {
-          log::info!("主窗口已关闭，应用退出");
-          app_handle.exit(0);
+      // 胶囊岛原生拖拽过程持续上报 Moved（前端据此持久化驻留点与判定上缘吸附）
+      match event {
+        tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } => {
+          if label == "main" {
+            log::info!("主窗口已关闭，应用退出");
+            app_handle.exit(0);
+          }
         }
+        tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Moved(phys), .. } => {
+          if label == "isle" {
+            let _ = app_handle.emit("isle-moved", serde_json::json!({ "x": phys.x, "y": phys.y }));
+          }
+        }
+        _ => {}
       }
     });
 }

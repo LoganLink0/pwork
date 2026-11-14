@@ -40,8 +40,8 @@
       {
         "label": "isle",
         "title": "小 P",
-        "width": 360,
-        "height": 560,
+        "width": 520,
+        "height": 140,
         "resizable": false,
         "transparent": true,
         "decorations": false,

@@ -1,19 +1,17 @@
-//! 胶囊岛窗（伙伴常驻形态·边缘停靠式）：贴屏幕右缘的细条 tab，鼠标靠近滑出面板。
-//! 窗口固定 360×140 画布锚定右缘（垂直位置可调），内容在画布内滑入滑出——
-//! 不做逐状态窗体缩放（内容测量与窗体尺寸循环依赖，0.1.22 教训）。
+//! 胶囊岛窗（伙伴常驻形态·自由拖拽+顶部吸附式）：
+//! 固定 520×140 透明画布，收起态=logo 本体（64px 品牌胶囊）居中画布，
+//! 展开态=毛玻璃横条（logo 滑至条内左侧+状态单行）。
+//! 按住 logo 原生拖拽（start_dragging），松手驻留（位置持久化在前端 localStorage），
+//! 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。装饰（边框/圆角/投影）在 lib.rs 统一关闭。
 
 use tauri::{AppHandle, Emitter, Manager};
 
-/// 画布尺寸（逻辑点）：展开面板 336×64 + 右缘留白。
-const CANVAS_W: f64 = 360.0;
-const CANVAS_H: f64 = 140.0;
+const CANVAS_W: f64 = 520.0;
 
-/// 锚定：贴屏幕右缘、垂直位置按 yPercent（0=顶 50=中 100=底）。
-/// 全程物理像素计算（逻辑/物理混算是首次锚定偏移的根因）：画布物理宽=360×scale，
-/// 右缘留 8×scale 边距，垂直按 scale 换算上下安全边（各 64×scale，避开任务栏）。
-fn anchor_isle(app: &AppHandle, y_percent: f64) -> Result<(), String> {
+/// 锚定到屏幕上缘居中（灵动岛站位）：画布顶=屏顶+8（条内 y=10 → 条顶落在屏顶 18 逻辑位）。
+fn snap_top(app: &AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let size = w.outer_size().map_err(|e| format!("读取窗口尺寸失败：{}", e))?;
+  let scale = w.scale_factor().map_err(|e| format!("读取缩放失败：{}", e))?;
   let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
   let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
     Ok(Some(m)) => Some(m),
@@ -22,35 +20,50 @@ fn anchor_isle(app: &AppHandle, y_percent: f64) -> Result<(), String> {
   let Some(monitor) = monitor else {
     return Err("找不到可用显示器".into());
   };
-  let scale = monitor.scale_factor();
   let pos = monitor.position();
   let msize = monitor.size();
-  let right_margin = (8.0 * scale) as i32;
-  let v_margin = (64.0 * scale) as i32;
   let canvas_w_phys = (CANVAS_W * scale) as i32;
-  let left = pos.x + msize.width as i32 - right_margin - canvas_w_phys;
-  let top_band = pos.y as f64 + v_margin as f64;
-  let bottom_band = pos.y as f64 + msize.height as f64 - v_margin as f64;
-  let center_y = top_band + (bottom_band - top_band) * (y_percent / 100.0);
-  let y = (center_y - size.height as f64 / 2.0).clamp(top_band, bottom_band - size.height as f64);
-  let _ = w.set_position(tauri::PhysicalPosition::new(left, y as i32));
+  let left = pos.x + ((msize.width as i32 - canvas_w_phys) / 2);
+  let top = pos.y + (8.0 * scale) as i32;
+  let _ = w.set_position(tauri::PhysicalPosition::new(left, top));
   Ok(())
 }
 
-/// 胶囊岛：显示并按垂直位置锚定（应用启动时调用；yPercent 由前端从设置读出）
+/// 胶囊岛：放置到指定物理坐标（自由拖拽驻留）
 #[tauri::command]
-pub fn isle_show(app: AppHandle, y_percent: f64) -> Result<(), String> {
+pub fn isle_place(app: AppHandle, x: i32, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let _ = w.set_size(tauri::LogicalSize::new(CANVAS_W, CANVAS_H));
-  anchor_isle(&app, y_percent)?;
+  let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+  Ok(())
+}
+
+/// 胶囊岛：吸附到屏幕上缘居中（灵动岛站位）
+#[tauri::command]
+pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
+  snap_top(&app)
+}
+
+/// 胶囊岛：读取当前物理位置（拖拽驻留持久化用）
+#[tauri::command]
+pub fn isle_get_pos(app: AppHandle) -> Result<serde_json::Value, String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(serde_json::json!({ "x": 0, "y": 0 })) };
+  let pos = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  Ok(serde_json::json!({ "x": pos.x, "y": pos.y }))
+}
+
+/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用，窗口跟随鼠标直到松开）
+#[tauri::command]
+pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))
+}
+
+/// 胶囊岛：显示
+#[tauri::command]
+pub fn isle_show(app: AppHandle) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let _ = w.show();
   Ok(())
-}
-
-/// 胶囊岛：位置调整（设置页三档切换时调用）
-#[tauri::command]
-pub fn isle_set_y(app: AppHandle, y_percent: f64) -> Result<(), String> {
-  anchor_isle(&app, y_percent)
 }
 
 /// 胶囊岛：隐藏（设置关闭时调用）

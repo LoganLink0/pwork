@@ -673,51 +673,90 @@ html[data-wheel] body {
 html[data-isle] body {
   background: transparent;
 }
-/* 胶囊岛 · 抽屉模型三稿（2026-11-14 用户反馈重做）：
-   画布=整面悬停热区（pointer-events auto——上一稿挂在 none 画布上的悬停永不触发），
-   抽屉收起时滑出画布外、只露 24px 把手帽（圆角+小 P 点），悬停 0.6s 滑入展开，
-   移开 1s 滑出收回。画布 overflow hidden 裁掉画布外部分。 */
+/* 胶囊岛 · 横条模型（46 批三稿，用户定案 logo 方案）：
+   固定 520×140 画布（Rust 按自由/顶部两模式放置）。收起态=logo 本体 64px 居中画布
+   （把手=品牌资产本体，无外壳）；展开态=毛玻璃横条（520×64 圆角胶囊）显现，
+   logo 滑至条内左侧作身份锚点。拖拽=按住 logo 原生拖拽，松手驻留；近上缘吸附顶部居中。 */
 #isle-dock {
   position: fixed;
-  right: 0;
-  top: 50%;
-  width: 360px;
-  height: 160px;
-  transform: translateY(-50%);
-  overflow: hidden;
+  left: 0;
+  top: 0;
+  width: 520px;
+  height: 140px;
+  pointer-events: none;
   z-index: 60;
 }
-#isle-dock .isle-drawer {
+#isle-dock .isle-bar {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: 336px;
-  background: #101014;
-  color: #fff;
-  border-radius: 14px;
-  padding: 12px 34px 12px 14px; /* 右侧 34px 留给把手帽 */
+  left: 0;
+  top: 10px;
+  width: 520px;
+  height: 64px;
+  border-radius: 32px;
+  background: rgba(20, 18, 16, 0.55);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transition: opacity 0.24s var(--ease);
+  pointer-events: none;
+}
+#isle-dock.open .isle-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+.isle-bar-content {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  transform: translateX(calc(100% - 16px)); /* 收起：露 24px 把手（左缘圆角+小 P 点，「小 P 在」文字从可见边界外开始） */
-  transition: transform 0.26s var(--ease);
+  gap: 10px;
+  padding: 0 18px 0 64px; /* 左侧 64px 留给展开态条内 logo（10+44+10），内容不叠压 */
+  opacity: 0;
+  transition: opacity 0.18s var(--ease);
+  pointer-events: none;
 }
-#isle-dock.open .isle-drawer {
-  transform: translateX(0);
+#isle-dock.open .isle-bar-content {
+  opacity: 1;
+  pointer-events: auto;
 }
-.isle-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.isle-logo {
+  /* 收起态：logo 本体 64px 居中画布（设计稿 v2 定案的把手尺寸）；
+     展开态：缩至条内 44px 滑向左侧作身份锚点。整窗其余区域 pointer-events none，
+     logo 必须显式恢复 auto，否则收起态没有任何可命中目标（悬停/拖拽全失效）。 */
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  pointer-events: auto;
+  cursor: grab;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: left 0.24s var(--ease), width 0.24s var(--ease), height 0.24s var(--ease),
+    border-radius 0.24s var(--ease), transform 0.15s ease;
+  position: absolute;
+  left: 228px; /* 收起态：画布居中 ((520-64)/2)；展开态滑至 10（条内左侧） */
+  top: 10px;
 }
-.isle-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  white-space: nowrap;
+.isle-logo:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+#isle-dock.open .isle-logo {
+  left: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.isle-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.18s var(--ease);
+}
+#isle-dock.open .isle-divider {
+  opacity: 1;
 }
 .isle-dot {
   width: 9px;
@@ -735,42 +774,42 @@ html[data-isle] body {
 }
 .isle-title {
   font-weight: 600;
+  white-space: nowrap;
 }
 .isle-note {
-  margin-left: auto;
   font-size: 12px;
   color: #9aa0a8;
-}
-.isle-act-label {
-  font-size: 12px;
-  color: #cfd3d8;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
 }
 .isle-acts {
   display: flex;
   gap: 8px;
-  margin-top: 2px;
-  transition: opacity var(--dur-1) var(--ease);
-}
-/* 收起态隐藏按钮行：把手条只留圆角+小 P 点，不露按钮残边 */
-#isle-dock:not(.open) .isle-acts {
-  opacity: 0;
-  pointer-events: none;
+  flex: none;
 }
 .isle-pbtn {
   background: rgba(255, 255, 255, 0.12);
   border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
+  border-radius: 9px;
+  padding: 7px 14px;
   font-size: 12px;
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
 }
+.isle-pbtn.isle-brand {
+  background: rgba(232, 131, 58, 0.25);
+  border: 1px solid rgba(232, 131, 58, 0.4);
+}
 .isle-pbtn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+}
+.isle-pbtn.isle-brand:hover {
+  background: rgba(232, 131, 58, 0.35);
 }
 .wheel-window {
   width: 100vw;
