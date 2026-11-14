@@ -509,29 +509,45 @@ pub fn run() {
       // 工具轮盘：全局快捷键呼出（桌面版专属，网页版走命令面板）；macOS 默认 ⌘+Option，其余 Ctrl+Alt
       // 置顶窗口（系统工具台第一批，Windows）：默认 Ctrl+Alt+T，键位中心可改
       // 剪贴板速记（系统工具台第二批，全平台）：默认 Ctrl+Alt+V（macOS ⌘+Option+V），键位中心可改
+      // 注册失败（组合键被其他应用占用）不致命：降级为日志告警，应用照常启动，
+      // 键位中心改键后即可重注册——装机 smoke 抓出过热键冲突杀死整个应用启动的案例
       #[cfg(target_os = "macos")]
       let mods = Modifiers::META | Modifiers::ALT;
       #[cfg(not(target_os = "macos"))]
       let mods = Modifiers::CONTROL | Modifiers::ALT;
-      app.global_shortcut().register(Shortcut::new(Some(mods), WHEEL_KEY))?;
+      let mut hotkey_notes: Vec<&str> = Vec::new();
+      let wheel_ok = app.global_shortcut().register(Shortcut::new(Some(mods), WHEEL_KEY)).is_ok();
+      if !wheel_ok {
+        hotkey_notes.push("轮盘");
+      }
       #[cfg(windows)]
       {
         let topmost_mods = Modifiers::CONTROL | Modifiers::ALT;
-        app.global_shortcut().register(Shortcut::new(Some(topmost_mods), Code::KeyT))?;
+        let topmost_ok = app.global_shortcut().register(Shortcut::new(Some(topmost_mods), Code::KeyT)).is_ok();
+        if !topmost_ok {
+          hotkey_notes.push("置顶");
+        }
         if let Some(s) = app.try_state::<HotkeyState>() {
           *s.topmost.lock().map_err(|_| "热键状态锁不可用")? =
             Some(Shortcut::new(Some(topmost_mods), Code::KeyT));
         }
       }
       let cap_mods = Modifiers::CONTROL | Modifiers::ALT;
-      app.global_shortcut().register(Shortcut::new(Some(cap_mods), Code::KeyV))?;
+      let cap_ok = app.global_shortcut().register(Shortcut::new(Some(cap_mods), Code::KeyV)).is_ok();
+      if !cap_ok {
+        hotkey_notes.push("剪贴板");
+      }
       if let Some(s) = app.try_state::<HotkeyState>() {
         *s.wheel.lock().map_err(|_| "热键状态锁不可用")? =
           Some(Shortcut::new(Some(mods), WHEEL_KEY));
         *s.capture.lock().map_err(|_| "热键状态锁不可用")? =
           Some(Shortcut::new(Some(cap_mods), Code::KeyV));
       }
-      log::info!("全局热键已注册：{} / 置顶切换（Windows）", WHEEL_LABEL);
+      if hotkey_notes.is_empty() {
+        log::info!("全局热键已注册：{} / 置顶切换（Windows）/ 剪贴板速记", WHEEL_LABEL);
+      } else {
+        log::warn!("全局热键部分注册失败（被其他应用占用）：{}——应用继续，键位中心改键后可恢复", hotkey_notes.join("、"));
+      }
       // 透明小窗去系统装饰（3.2 视觉批用户两次抓出）：Win11 给所有窗口画系统边框、
       // 圆角裁切与投影——三者叠加就是透明窗上看到的「正方形边界线/矩形框」。
       // 轮盘窗与胶囊岛窗全部关闭三项，窗口只剩前端绘制的内容。
