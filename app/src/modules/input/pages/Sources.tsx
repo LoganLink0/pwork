@@ -288,8 +288,12 @@ export function Sources() {
             <div className="set-body">
               {leads.map((l) => (
                 <div className="set-row" key={l.domain}>
-                  <label>{l.domain}</label>
-                  <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+                  <label style={{ flex: 'none' }}>{l.domain}</label>
+                  <span
+                    className="val"
+                    style={{ fontSize: 'var(--fs-xs)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={`被引用 ${l.count} 次，如：${l.samples.map((s) => s.title).join('；')}`}
+                  >
                     被引用 {l.count} 次，如：{l.samples.map((s) => s.title).join('；')}
                   </span>
                   <button
