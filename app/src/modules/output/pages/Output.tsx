@@ -15,6 +15,7 @@ const TOOL_GROUPS: { id: string; icon: string; name: string; desc: string; tools
     name: '文 · 文档与演示',
     desc: '把库里的积累变成能发出去、交出去的成稿',
     tools: [
+      { to: '/output/produce', icon: 'zap', name: '一键成稿', desc: '一次点击：周报 + 演示 + 文章草稿同时长出来，逐格可见', status: 'MD · pptx · docx' },
       { to: '/output/report', icon: 'barChart', name: '周报导出', desc: '本周/本月素材 + 外部数据块自动成稿', status: 'HTML · PPT · MD' },
       { to: '/output/research', icon: 'search', name: '调研分析', desc: '输入目标 → 拿调研框架与逐节提示词 → 贴回发现 → 出稿', status: 'MD · Word' },
       { to: '/output/write', icon: 'grid', name: 'PPT 撰写', desc: '粘贴文字或上传 Word/PDF/MD → AI 大纲 → 可编辑 PPT', status: '.pptx' },

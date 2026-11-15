@@ -93,6 +93,8 @@ export const PAGE_REGISTRY: PageReg[] = [
 
   { path: '/output', label: '输出', mark: 'mark-output', meta: ['输出', '模块 · 交付与成稿'], nav: 'module:output', sidebar: true,
     loader: () => import('./modules/output/pages/Output').then((m) => ({ default: m.Output })) },
+  { path: '/output/produce', label: '一键成稿', mark: 'mark-output', meta: ['一键成稿 · 三产物并发', '输出 · 成稿'], nav: 'module:output',
+    loader: () => import('./modules/output/pages/ProducePage').then((m) => ({ default: m.ProducePage })) },
   { path: '/output/report', label: '周报导出', mark: 'mark-output', meta: ['周报导出为 HTML/PPT', '输出 · 成稿'], nav: 'module:output',
     loader: () => import('./modules/output/pages/ReportGenerator').then((m) => ({ default: m.ReportGenerator })) },
   { path: '/output/read', label: '朗读音频', mark: 'mark-output', meta: ['周报导出为朗读音频', '输出 · 成稿'], nav: 'module:output',
