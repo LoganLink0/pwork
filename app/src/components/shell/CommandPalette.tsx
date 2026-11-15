@@ -8,6 +8,7 @@ import { useUi } from '../../store/ui'
 import { useActivity } from '../../store/activity'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
+import { runLocalIntent } from '../../engine/intent'
 import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
 import { paletteActions, type ActionCtx } from '../../engine/actions'
 import { relTime } from '../../engine/datetime'
@@ -82,6 +83,21 @@ function PaletteDialog() {
         setAskDone()
       })
       .catch((e: unknown) => {
+        // 未配 AI 不再死在错误上：本地意图层兜底（查排期/本地检索，外部报告 §4.6 缺口）
+        if (e instanceof Error && e.message.includes('还没有配置 AI')) {
+          void runLocalIntent(q)
+            .then((r) => {
+              setAsk({ phase: 'done', answer: r.reply, sources: r.sources })
+              activity.end('ask', { ok: true, label: '本地回答' })
+              setAskDone()
+            })
+            .catch((e2: unknown) => {
+              setAsk({ phase: 'error', error: e2 instanceof Error ? e2.message : String(e2) })
+              activity.end('ask', { ok: false, label: '问答失败' })
+              setAskBusy(false)
+            })
+          return
+        }
         setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) })
         activity.end('ask', { ok: false, label: '问答失败' })
         setAskBusy(false)
