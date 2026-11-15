@@ -12,6 +12,8 @@ import {
 } from '../db/repo'
 import type { Note } from '../types/models'
 import { localDateOf, todayLocal } from '../engine/datetime'
+import { pushUndo } from '../db/undo'
+import { db } from '../db/schema'
 
 const PURGE_CHECK_KEY = 'pwork-notes-purge-at'
 const PURGE_AFTER_DAYS = 30
@@ -68,7 +70,17 @@ export const useNotes = create<NotesState>((set) => ({
   },
 
   softDelete: async (id) => {
+    // 删除入撤销栈（Ctrl+Z 可直接恢复，回收站之外的第二道保险）
+    const before = await db.notes.get(id)
     await softDeleteNote(id)
+    if (before) {
+      const iso = new Date().toISOString()
+      await pushUndo({
+        label: `删除速记「${before.title}」`,
+        ts: iso,
+        changes: [{ table: 'notes', id, before: { ...before }, after: { ...before, deletedAt: iso } }],
+      })
+    }
     const { notes, trash } = await reload()
     set({ notes, trash })
   },

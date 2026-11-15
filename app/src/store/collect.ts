@@ -39,6 +39,7 @@ import {
 import { exportBundle as exportNotesBundle } from '../db/repo'
 import { curatedItems } from '../db/collect'
 import { db } from '../db/schema'
+import { pushUndo } from '../db/undo'
 import { todayLocal } from '../engine/datetime'
 import type { CollectConfig, Item, Source } from '../types/models'
 
@@ -143,7 +144,24 @@ export const useCollect = create<CollectState>((set, get) => ({
   },
 
   deleteItem: async (itemId) => {
+    // 删除入撤销栈（Ctrl+Z 可直接恢复，回收站之外的第二道保险）
+    const before = await db.items.get(itemId)
     await softDeleteItem(itemId)
+    if (before) {
+      const iso = new Date().toISOString()
+      const beforeRow = before as unknown as { payload: string }
+      let itemTitle = itemId
+      try {
+        itemTitle = JSON.parse(beforeRow.payload).title ?? itemId
+      } catch {
+        /* payload 解析失败退回 id 展示 */
+      }
+      await pushUndo({
+        label: `删除条目「${itemTitle}」`,
+        ts: iso,
+        changes: [{ table: 'items', id: itemId, before: { ...before }, after: { ...before, deletedAt: iso } }],
+      })
+    }
     const [sources, items, items7d] = await Promise.all([listAllSources(), listRecentItems(), itemsPerSource7d()])
     set({ sources, items, items7d })
     set(await reloadDigest(get()))

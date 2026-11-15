@@ -76,7 +76,7 @@ function PaletteDialog() {
     setAskBusy(true)
     const activity = useActivity.getState()
     activity.start('ask', '小 P 思考中')
-    // 待办/排期类询问在 AI 之前先行本地路由：全库检索不含待办表，交给 AI 只会拿
+    // 排期类询问在 AI 之前先行本地路由：全库检索不含待办表，交给 AI 只会拿
     // 检索结果硬答（0.1.23 实机验证用户抓出「没去找待办反而开始搜索」）
     if (isScheduleIntent(q)) {
       void runLocalIntent(q)

@@ -122,4 +122,23 @@ describe('undo 栈（kv 持久化 + undoLast）', () => {
     const r = await undoLast(new Date())
     expect(r.skipped).toBe(1)
   })
+
+  it('软删除入栈链路：删除入栈 → undoLast 把 deletedAt 回滚为 null（行保留）', async () => {
+    const n: Note = {
+      id: 'n_del', title: '误删的速记', body: '正文', tags: [], links: { itemIds: [], reviewIds: [], taskIds: [] },
+      source: 'manual', createdAt: '2026-11-15T00:00:00Z', updatedAt: '2026-11-15T00:00:00Z', deletedAt: null, schemaVersion: 1,
+    }
+    await db.notes.put(n)
+    const iso = '2026-11-15T01:00:00.000Z'
+    // 模拟 store.softDelete 的入栈形态（before=未删，after=软删标记）
+    await pushUndo({
+      label: '删除速记「误删的速记」',
+      ts: iso,
+      changes: [{ table: 'notes', id: 'n_del', before: { ...n }, after: { ...n, deletedAt: iso } }],
+    })
+    const r = await undoLast(new Date('2026-11-15T12:00:00Z'))
+    expect(r.applied).toBe(1)
+    const back = (await db.notes.get('n_del')) as unknown as Record<string, unknown>
+    expect(back.deletedAt).toBe(null) // 撤销删除 = 标记清空，行保留
+  })
 })

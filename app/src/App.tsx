@@ -398,6 +398,28 @@ export default function App() {
     }
   }, [])
 
+  // Ctrl+Z 操作级撤销（用户拍板的通用形态）：输入框/编辑器聚焦时是文本级撤销不拦；
+  // 其余场景撤撤销栈顶（当前入栈范围：删除类操作——速记/条目软删除）。
+  // 栈空静默不提示（避免「按了没反应」的负反馈；面板「撤销上一步」同栈）。
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || e.shiftKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      void (async () => {
+        const undoMod = await import('./db/undo')
+        const toastMod = await import('./engine/toast')
+        const s = await undoMod.loadUndo()
+        if (s.entries.length === 0) return
+        const r = await undoMod.undoLast(new Date())
+        await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load()])
+        toastMod.toast('ok', `已撤销「${r.label}」（${r.applied} 处${r.skipped ? `，${r.skipped} 处跳过` : ''}）`)
+      })().catch(() => {})
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // 桌面版：网关端口被占（Rust 侧让位并发出事件）——可能是开发版网关，也可能是
   // 冒名进程截获对话内容，必须让用户看见而不是静默降级（安全审计 F12）
   useEffect(() => {
