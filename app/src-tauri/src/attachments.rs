@@ -4,6 +4,7 @@
 //! 拒绝路径分隔符与 ..（防目录穿越）；写入原子（临时文件 + 重命名）；单文件 20MB 上限。
 
 use base64::Engine as _;
+use serde_json::json;
 use std::path::PathBuf;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -78,6 +79,27 @@ pub fn attachment_delete(app: AppHandle, name: String) -> Result<(), String> {
     Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
     Err(e) => Err(format!("删除附件失败：{}", e)),
   }
+}
+
+/// 附件目录统计（守卫与备份对账用）：文件数与总字节。目录不存在按 0（全新安装）。
+/// 附件是 attachments/ 裸文件（不在数据库与 JSON 备份内），突变守卫的口径必须覆盖它——
+/// 否则附件目录整个丢失/被换时守卫静默（0.1.23 信源丢失事故同型盲区）。
+#[tauri::command]
+pub fn attachment_stats(app: AppHandle) -> Result<serde_json::Value, String> {
+  let dir = attachments_root(&app)?;
+  let mut count: u64 = 0;
+  let mut total_bytes: u64 = 0;
+  if let Ok(entries) = std::fs::read_dir(&dir) {
+    for e in entries.flatten() {
+      if e.path().is_file() {
+        count += 1;
+        if let Ok(meta) = e.metadata() {
+          total_bytes += meta.len();
+        }
+      }
+    }
+  }
+  Ok(json!({ "count": count, "totalBytes": total_bytes }))
 }
 
 #[cfg(test)]

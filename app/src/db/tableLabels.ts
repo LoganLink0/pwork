@@ -11,6 +11,7 @@ export const TABLE_LABEL: Record<string, string> = {
   reviews: '复盘',
   actions: '行动项',
   insights: '洞察',
+  attachments: '图片附件',
   snapshots: '周趋势',
   blocks: '数据块',
   profiles: '调研对象',

@@ -7,6 +7,7 @@
  * 网页版 最近下载的备份 JSON → 同一入口。配合持久化存储（第一道）与自动备份（第二道）。
  */
 import { db } from '../db/schema'
+import { attachmentStats } from './attachments'
 
 export interface DbHealthResult {
   ok: boolean
@@ -16,12 +17,18 @@ export interface DbHealthResult {
   counts?: Record<string, number>
 }
 
-export const CORE_TABLES = ['notes', 'sources', 'items', 'tasks', 'reviews', 'actions', 'insights', 'goals'] as const
+export const CORE_TABLES = ['notes', 'sources', 'items', 'tasks', 'reviews', 'actions', 'insights', 'goals', 'attachments'] as const
 
-/** 核心表逐一计数（健康检查与突变守卫共用同一口径） */
+/** 核心表逐一计数（健康检查与突变守卫共用同一口径）。
+ *  attachments 特判：不是数据库表——附件是 attachments/ 裸文件（字节不进库），
+ *  计数来自附件目录统计（突变守卫的口径必须覆盖它，0.1.23 信源丢失事故同型盲区）。 */
 export async function countCoreTables(): Promise<Record<string, number>> {
   const counts: Record<string, number> = {}
   for (const t of CORE_TABLES) {
+    if (t === 'attachments') {
+      counts[t] = (await attachmentStats()).count
+      continue
+    }
     counts[t] = await db.table<Record<string, unknown>>(t).count()
   }
   return counts

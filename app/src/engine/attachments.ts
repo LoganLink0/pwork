@@ -70,6 +70,16 @@ export async function deleteAttachmentFile(file: string): Promise<void> {
   await invoke('attachment_delete', { name: file })
 }
 
+/** 附件目录统计（突变守卫与备份对账用）；非桌面/命令不可用回 0——守卫口径不因此中断 */
+export async function attachmentStats(): Promise<{ count: number; totalBytes: number }> {
+  if (!isDesktopApp()) return { count: 0, totalBytes: 0 }
+  try {
+    return await invoke<{ count: number; totalBytes: number }>('attachment_stats')
+  } catch {
+    return { count: 0, totalBytes: 0 }
+  }
+}
+
 /** 附件缩略图 data: URL（画廊/预览用）；仅桌面版调用 */
 export async function attachmentDataUrl(att: NoteAttachment): Promise<string> {
   const b64 = await invoke<string>('attachment_read', { name: att.file })

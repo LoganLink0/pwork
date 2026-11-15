@@ -633,6 +633,7 @@ pub fn run() {
       attachments::attachment_write,
       attachments::attachment_read,
       attachments::attachment_delete,
+      attachments::attachment_stats,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

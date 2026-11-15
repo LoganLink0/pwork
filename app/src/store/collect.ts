@@ -19,6 +19,7 @@ import {
   updateSource,
   type SourceInput,
 } from '../db/collect'
+import { attachmentStats } from '../engine/attachments'
 import { runCollect, maintenance, type RunSummary } from '../modules/input/engine/collect'
 import { summarizeDailyBackfill } from '../modules/input/engine/aiDigest'
 import { useActivity } from './activity'
@@ -351,7 +352,7 @@ async function refreshItem(itemId: string, items: Item[]): Promise<Item[]> {
 /** 全量备份（统一包裹 v2：notes + 采集 + 回路 + 任务库 + 目标/快照/数据块/案例，02 §4） */
 export async function buildBackupBundle() {
   const bundle = await exportNotesBundle()
-  const [sources, items, config, reviews, actions, insights, tasks, goals, snapshots, blocks, profiles, caseFiles] = await Promise.all([
+  const [sources, items, config, reviews, actions, insights, tasks, goals, snapshots, blocks, profiles, caseFiles, attStats] = await Promise.all([
     listAllSources(),
     curatedItems(),
     Promise.resolve(useCollect.getState().config),
@@ -364,6 +365,9 @@ export async function buildBackupBundle() {
     db.blocks.toArray(),
     db.profiles.toArray(),
     db.caseFiles.toArray(),
+    // 附件对账清单（字节不进备份——裸文件的个数与总量入 manifest，恢复后可核对缺失；
+    // 2026-11-15 外部对照报告第二期五.4：备份内容覆盖对账扩展到图片附件）
+    attachmentStats().catch(() => ({ count: 0, totalBytes: 0 })),
   ])
   return {
     version: 2,
@@ -383,6 +387,8 @@ export async function buildBackupBundle() {
       profiles,
       caseFiles,
     },
+    /** 附件对账清单（attachments/ 裸文件的个数与总字节；二进制不进 JSON 备份） */
+    attachments: attStats,
   }
 }
 

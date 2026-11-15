@@ -36,6 +36,20 @@ const baseCounts = (over: Record<string, number> = {}): Record<string, number> =
   ...over,
 })
 
+/** 归零专线（attachments 口径）：附件不是数据库表而是裸文件目录，0.1.23 信源丢失事故
+ *  的同型盲区——≥5 归零必须触发，无需 20 条起判线 */
+describe('附件目录归零专线（attachments 计入守卫口径）', () => {
+  it('附件 12 → 0 触发突变（低于 20 条起判线也触发）', () => {
+    expect(detectMutation(baseCounts({ attachments: 12 }), baseCounts({ attachments: 0 }))).toHaveLength(1)
+  })
+  it('附件数量正常波动不触发', () => {
+    expect(detectMutation(baseCounts({ attachments: 12 }), baseCounts({ attachments: 9 }))).toEqual([])
+  })
+  it('附件少于 5 条的库归零不惊扰', () => {
+    expect(detectMutation(baseCounts({ attachments: 4 }), baseCounts({ attachments: 0 }))).toEqual([])
+  })
+})
+
 /** 注入 io：backups/ 目录用内存字典模拟，written 记录全部写盘动作供断言 */
 const fakeIo = (files: Record<string, string> = {}) => {
   const store = { ...files }
