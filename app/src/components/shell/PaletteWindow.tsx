@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { Toaster } from './Toast'
 import { useUi } from '../../store/ui'
 import { useConfirmStore } from '../../engine/confirm'
+import { syncThemeFromStore } from '../../engine/appearance'
 import { useNotes } from '../../store/notes'
 
 /**
@@ -22,6 +23,12 @@ import { useNotes } from '../../store/notes'
  */
 export function PaletteWindow() {
   useEffect(() => {
+    // 主题跟随主窗（独立窗此前不挂 data-theme，深浅令牌分支不生效）
+    syncThemeFromStore()
+    const onTheme = (e: StorageEvent) => {
+      if (e.key === 'pwork-theme') syncThemeFromStore()
+    }
+    window.addEventListener('storage', onTheme)
     // 面板要用的最近速记与全文检索数据（同源 IndexedDB，本窗独立连接）
     void useNotes.getState().load()
     // 每次呼出（Rust show 后发 palette-open）→ 打开面板；
@@ -50,6 +57,7 @@ export function PaletteWindow() {
     return () => {
       unsub()
       window.removeEventListener('blur', onBlur)
+      window.removeEventListener('storage', onTheme)
       unlisten?.()
     }
   }, [])

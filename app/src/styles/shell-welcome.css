@@ -701,7 +701,7 @@ html[data-palette] .palette {
   pointer-events: none;
   user-select: none; /* 常驻桌面小窗：拖拽与悬停交互中不允许选中文本 */
   z-index: 60;
-  color: #f2efe9; /* 窗内文字显式浅色：全局是浅色主题（深色文字），深色玻璃上继承会成黑字 */
+  color: var(--ink); /* 文字走主题令牌（独立窗已挂 data-theme 跟随主窗深浅） */
 }
 #isle-dock .isle-bar {
   position: absolute;
@@ -710,15 +710,29 @@ html[data-palette] .palette {
   width: 520px;
   height: 64px;
   border-radius: 18px; /* 圆角矩形，与 logo 圆角一致（拉长的 logo，非胶囊椭圆） */
-  background: rgba(20, 18, 16, 0.72); /* 深玻璃：0.55 叠浅色桌面时等效底过浅，深色文字对比不达标 */
+  /* 亮色=米白玻璃（设计稿 v2 变体 C 的浅色玻璃）；玻璃色为岛专属（tokens 无对应变量），
+     深浅三态在此显式覆盖：显式 light / 显式 dark / auto 跟系统 */
+  background: rgba(250, 248, 242, 0.82);
+  border: 1px solid rgba(33, 30, 26, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
   cursor: grab; /* 整条可拖：把手光标语义不只在 logo */
   opacity: 0;
   transition: opacity 0.24s var(--ease);
   pointer-events: none;
+}
+html[data-theme='dark'] #isle-dock .isle-bar {
+  background: rgba(20, 18, 16, 0.72); /* 深玻璃：0.55 叠浅色桌面时等效底过浅，深色文字对比不达标 */
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme='light']) #isle-dock .isle-bar {
+    background: rgba(20, 18, 16, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.22);
+  }
 }
 #isle-dock .isle-bar:active {
   cursor: grabbing;
@@ -852,7 +866,7 @@ html[data-palette] .palette {
 .isle-divider {
   width: 1px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--line);
   flex: none;
   opacity: 0;
   transition: opacity 0.18s var(--ease);
@@ -880,7 +894,7 @@ html[data-palette] .palette {
 }
 .isle-note {
   font-size: 12px;
-  color: #b6bcc4; /* 深玻璃上的次级文字：#9aa0a8 对比不足 */
+  color: var(--ink-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -894,24 +908,27 @@ html[data-palette] .palette {
   flex: none;
 }
 .isle-pbtn {
-  background: rgba(255, 255, 255, 0.12);
-  border: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
   border-radius: 9px;
   padding: 7px 14px;
   font-size: 12px;
-  color: #fff;
+  color: var(--ink);
   cursor: pointer;
   white-space: nowrap;
+  transition: transform 0.12s var(--ease); /* 悬停微动效（MiniDock 学习）：可交互元素的轻量抬升 */
 }
 .isle-pbtn.isle-brand {
-  background: rgba(232, 131, 58, 0.25);
+  background: rgba(232, 131, 58, 0.18);
   border: 1px solid rgba(232, 131, 58, 0.4);
+  color: var(--accent);
 }
 .isle-pbtn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--surface-2);
+  transform: translateY(-1px);
 }
 .isle-pbtn.isle-brand:hover {
-  background: rgba(232, 131, 58, 0.35);
+  background: rgba(232, 131, 58, 0.28);
 }
 .wheel-window {
   width: 100vw;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { syncThemeFromStore } from '../../engine/appearance'
 
 /**
  * 胶囊岛窗（/isle 分流渲染）——三种驻留模式 + 停靠自动半隐藏：
@@ -89,6 +90,16 @@ export function IsleWindow() {
 
   // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
   // 停靠模式直接以完全隐藏态（整条边缘热区条）出场——呼出即展开（靠近即滑出）。
+  // 主题跟随主窗（视觉·MiniDock 学习：融入系统深浅外观）
+  useEffect(() => {
+    syncThemeFromStore()
+    const onTheme = (e: StorageEvent) => {
+      if (e.key === 'pwork-theme') syncThemeFromStore()
+    }
+    window.addEventListener('storage', onTheme)
+    return () => window.removeEventListener('storage', onTheme)
+  }, [])
+
   useEffect(() => {
     const pos = readPos()
     setMode(pos.mode)

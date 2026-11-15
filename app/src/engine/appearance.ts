@@ -31,3 +31,17 @@ export function applyTheme(pref: ThemePref): void {
     document.documentElement.dataset.theme = pref
   }
 }
+
+/**
+ * 伴生窗（胶囊岛/问小 P 独立窗）主题跟随：读主窗偏好挂 data-theme（auto 时不挂，
+ * 交给 CSS prefers-color-scheme 分支）——与主窗 applyTheme 同一套令牌机制。
+ * 主窗切主题时伴生窗经 storage 事件实时跟随（调用方挂 storage 监听触发本函数）。
+ */
+export function syncThemeFromStore(): void {
+  const pref = loadTheme()
+  if (pref === 'auto') {
+    delete document.documentElement.dataset.theme
+  } else {
+    document.documentElement.dataset.theme = pref
+  }
+}
