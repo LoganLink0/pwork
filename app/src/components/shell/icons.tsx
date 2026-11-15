@@ -145,6 +145,12 @@ const SHAPES: Record<string, ReactNode> = {
       <path d="M21 13v2a4 4 0 0 1-4 4H3" />
     </>
   ),
+  undo: (
+    <>
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+    </>
+  ),
   pen: (
     <>
       <path d="M12 20h9" />

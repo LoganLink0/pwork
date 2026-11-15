@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../db/schema'
 import { runLocalIntent } from './intent'
+import { loadUndo } from '../db/undo'
 import type { Note, TaskItem } from '../types/models'
 
 function note(partial: Partial<Note>): Note {
@@ -80,5 +81,27 @@ describe('runLocalIntent（问小 P 本地降级）', () => {
   it('空输入：提示先输入', async () => {
     const r = await runLocalIntent('  ')
     expect(r.reply).toContain('先输入')
+  })
+
+  it('记一条：确认后建速记并入撤销栈；取消则不写', async () => {
+    // 确认闸门：两次调用分别模拟确认/取消
+    const confirm = vi.spyOn(await import('./confirm'), 'confirmDialog')
+    confirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+
+    const ok = await runLocalIntent('记一条：增长实验的结论是转化率提升', new Date('2026-11-15T10:00:00'))
+    expect(ok.via).toBe('note')
+    expect(ok.reply).toContain('已记下')
+    const stored = await db.notes.toArray()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]!.body).toContain('转化率提升')
+    // 用户显式操作 → 入撤销栈
+    const undo = await loadUndo()
+    expect(undo.entries).toHaveLength(1)
+    expect(undo.entries[0]!.label).toContain('记一条速记')
+
+    const cancel = await runLocalIntent('记一条：这条不该被记下', new Date('2026-11-15T10:01:00'))
+    expect(cancel.reply).toContain('已取消')
+    expect(await db.notes.toArray()).toHaveLength(1) // 未新增
+    confirm.mockRestore()
   })
 })

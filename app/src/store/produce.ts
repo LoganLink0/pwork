@@ -138,14 +138,15 @@ export const useProduce = create<ProduceState>((set, get) => ({
       }
     }
 
-    // ④ 收尾：kv 终态 + 活动桥 + 提示
+    // ④ 收尾：kv 终态 + 活动桥 + 提示。产物数按「完成的任务数」口径（一个文章任务
+    // 产 md+docx 两个文件是它的内部形态——按文件数报会 4≠3 对不上状态格）
     const s2 = await loadJobs()
     const done = finishJob(s2, job.id, files)
     await saveJobs(trimJobs(done))
-    const okCount = files.length
+    const okCount = done.jobs.find((j) => j.id === job.id)?.tasks.filter((t) => t.status === 'done').length ?? 0
     set({ running: false, notice: done.jobs.find((j) => j.id === job.id)?.notice ?? null, files })
     activity.end('produce', okCount > 0 ? { ok: true, label: `一键成稿完成 · ${okCount} 个产物` } : { ok: false, label: '一键成稿失败' })
-    if (okCount > 0) toast('ok', `一键成稿：${okCount} 个产物已生成（见下载文件夹）`)
+    if (okCount > 0) toast('ok', `一键成稿：${okCount} 个产物已生成，共 ${files.length} 个文件（见下载文件夹）`)
     else toast('error', `一键成稿失败：${firstError || '未知原因'}`)
     if (firstError) {
       void recordError({ where: '一键成稿', kind: 'app', message: firstError.slice(0, 280) }, { silent: true })

@@ -1,21 +1,26 @@
 /**
- * 本地意图层（2026-11-15 外部研读报告改动 2 只读部分）：问小 P 未配 AI 时的本地降级。
+ * 本地意图层（2026-11-15 外部研读报告改动 2）：问小 P 未配 AI 时的本地降级。
  * 外部对照报告第三期 §一/§四 判定「AI 可选」承诺在对话入口缺本地降级实现，此文件补上。
- * 两个规则意图（全部只读，零写库——写类意图等 undo 栈就位后接入）：
- *   ① 查排期：「待办/安排/日程 + 什么/哪些/看看」→ 汇总未完成任务（逾期/今天/明天/之后）
- *   ② 默认：本地检索（searchMulti 正文级）组装命中清单 + 来源（与 AI 问答同形状）
- * 日期用 datetime.ts 的 todayLocal/nextCalendarDay（本地时间纪律：注入 now，不裸读时钟）。
+ * 意图清单：
+ *   ① 记一条（写·带确认）：「记一条：内容」→ 确认闸门 → 建速记 → 入撤销栈（用户显式操作）
+ *   ② 查排期（只读）：「待办/安排/日程 + 什么/哪些/看看」→ 汇总未完成任务
+ *   ③ 默认：本地检索（searchMulti 正文级）组装命中清单 + 来源（与 AI 问答同形状）
+ * 写类意图的撤销：create 后 pushUndo（before:null/after:记录）——撤销栈只收用户显式操作，
+ * 这里经 confirmDialog 确认，属于用户显式动作（origin 约定的 'user' 侧）。
+ * 日期用 datetime.ts 的 todayLocal/localDateOf（本地时间纪律：注入 now，不裸读时钟）。
  */
 import { db } from '../db/schema'
 import { searchMulti, type SearchHit } from './searchAll'
 import { todayLocal, localDateOf } from './datetime'
+import { confirmDialog } from './confirm'
+import { pushUndo } from '../db/undo'
 import type { AskAiSource } from './askAi'
 
 export interface LocalIntentResult {
   reply: string
   sources: AskAiSource[]
   /** 走了哪个意图（调试与测试断言用） */
-  via: 'schedule' | 'search'
+  via: 'schedule' | 'search' | 'note'
 }
 
 async function scheduleReply(now: Date): Promise<LocalIntentResult> {
@@ -56,10 +61,48 @@ async function searchReply(q: string): Promise<LocalIntentResult> {
   }
 }
 
+/** 记一条（写·带确认闸门）：建速记并入撤销栈（用户显式操作） */
+async function noteReply(body: string, now: Date): Promise<LocalIntentResult> {
+  const ok = await confirmDialog({
+    title: '记下这条速记？',
+    body: body.slice(0, 200) + (body.length > 200 ? '…' : ''),
+    confirmLabel: '记下来',
+  })
+  if (!ok) return { reply: '已取消，没有记录。', sources: [], via: 'note' as const }
+  const iso = now.toISOString()
+  const created = {
+    id: `n_${now.getTime()}`,
+    title: body.split('\n')[0].slice(0, 24) || '速记',
+    body,
+    tags: [],
+    links: { itemIds: [], reviewIds: [], taskIds: [] },
+    source: 'quick' as const,
+    createdAt: iso,
+    updatedAt: iso,
+    deletedAt: null,
+    schemaVersion: 1,
+  }
+  await db.notes.put(created)
+  // 用户显式操作 → 入撤销栈（撤销=移除这条新速记）
+  await pushUndo({
+    label: '记一条速记（问小 P）',
+    ts: iso,
+    changes: [{ table: 'notes', id: created.id, before: null, after: created }],
+  })
+  return {
+    reply: `已记下（${created.title}）。可在速记页查看；说「撤销上一步」可以撤掉这条。`,
+    sources: [],
+    via: 'note' as const,
+  }
+}
+
 /** 问小 P 的本地降级入口：未配 AI 时由 CommandPalette 调用（AI 可用时走 askLibrary 不经此） */
 export async function runLocalIntent(message: string, now: Date = new Date()): Promise<LocalIntentResult> {
   const q = message.trim()
   if (!q) return { reply: '先输入要问的内容', sources: [], via: 'search' as const }
+  // 记一条（写·带确认）：「记一下/记一条/记个/记录」开头的祈使句
+  const noteM = q.match(/^(?:记一下|记一条|记个|记录|速记一下)[：:，, ]+([\s\S]+)$/)
+  if (noteM) return noteReply(noteM[1].trim(), now)
   // 查排期：出现待办/安排/日程类词，且是询问句式
   if (/待办|安排|日程|排期|事项/.test(q) && /什么|哪些|看看|列表|有没有|还有/.test(q)) {
     return scheduleReply(now)

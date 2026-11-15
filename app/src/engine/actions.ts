@@ -63,6 +63,30 @@ export const APP_ACTIONS: AppAction[] = [
     },
   },
   {
+    id: 'undo-last',
+    label: '撤销上一步',
+    icon: 'undo',
+    desc: '撤掉最近一次你做的改动（记速记/改标题/删条目）',
+    inPalette: true,
+    guardTyping: false,
+    run: () => {
+      // 依赖延迟引入：撤销栈挂在库层、toast 挂提示层——注册表保持零模块级依赖
+      void (async () => {
+        const [{ undoLast }, { toast }] = await Promise.all([import('../db/undo'), import('./toast')])
+        const r = await undoLast(new Date())
+        // 撤销可能动了速记/条目/待办——全部 store 重载让界面与库一致
+        const [{ useNotes }] = await Promise.all([import('../store/notes')])
+        const [{ useCollect }] = await Promise.all([import('../store/collect')])
+        const [{ useTasks }] = await Promise.all([import('../store/tasks')])
+        await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load()])
+        toast('ok', `已撤销「${r.label}」（${r.applied} 处${r.skipped ? `，${r.skipped} 处跳过` : ''}）`)
+      })().catch(async (e: unknown) => {
+        const { toast } = await import('./toast')
+        toast('error', e instanceof Error ? e.message : String(e))
+      })
+    },
+  },
+  {
     id: 'open-help',
     label: '帮助',
     icon: 'helpCircle',

@@ -43,7 +43,7 @@ describe('动作注册表完备性（契约）', () => {
 
   it('paletteActions 只含 inPalette 标记的动作；打开面板自身不进面板', () => {
     const list = paletteActions()
-    expect(list.map((a) => a.id)).toEqual(['quick-note', 'new-review', 'fetch-digest'])
+    expect(list.map((a) => a.id)).toEqual(['quick-note', 'new-review', 'fetch-digest', 'undo-last'])
     expect(actionById('open-palette')?.inPalette).toBe(false)
   })
 
