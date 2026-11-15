@@ -43,7 +43,7 @@ function HealthCell({ s }: { s: Source }) {
   )
 }
 
-const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5, kind: 'rss' }
+const EMPTY_FORM: SourceInput = { name: '', url: '', domain: 'ai', tier: 1.5, kind: 'rss', filterKeywords: [] }
 
 /** 信源管理页（PRD §4.4）：tier 徽章 / health 点 / JSON 导入导出 / 自动停用告警 */
 export function Sources() {
@@ -427,6 +427,16 @@ export function Sources() {
               </select>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>投票攒够 8 条后由你的投票自动调整</span>
             </label>
+            <label>屏蔽词
+              <input
+                className="input"
+                value={(form.filterKeywords ?? []).join('，')}
+                placeholder="逗号分隔，命中即丢弃（源内补充）"
+                onChange={(e) => setForm({ ...form, filterKeywords: e.target.value.split(/[，,]/).map((s) => s.trim()).filter(Boolean) })}
+                aria-label="该源的屏蔽词"
+              />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>只对本源生效；全局屏蔽词在采集设置里</span>
+            </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-1)', fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
               操作
               <span style={{ display: 'flex', gap: 'var(--sp-2)' }}>
@@ -500,7 +510,7 @@ export function Sources() {
                 </td>
                 <td>
                   <div className="src-actions">
-                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight, kind: s.kind }); setEditId(s.id); setKwMode(false); setKw('') }}>编辑</button>
+                    <button type="button" className="mini-btn" onClick={() => { setForm({ name: s.name, url: s.url, domain: s.domain, tier: s.tier, weight: s.weight, kind: s.kind, filterKeywords: s.filterKeywords ?? [] }); setEditId(s.id); setKwMode(false); setKw('') }}>编辑</button>
                     <button
                       type="button"
                       className="mini-btn"

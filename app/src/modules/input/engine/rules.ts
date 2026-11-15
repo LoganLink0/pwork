@@ -20,15 +20,19 @@ export interface PrefilterInput {
   title: string
   summary: string
   config: CollectConfig
+  /** 信源级屏蔽词（2026-11-15 采集规则表达力）：该源命中即拒，全局 dislikes 之外的源内补充 */
+  sourceFilterKeywords?: string[]
 }
 
 export type PrefilterVerdict = { pass: true } | { pass: false; reason: string }
 
-/** 预筛（04 §4 ③）：黑名单词（dislikes）、标题过短、无 URL 在流水线层拦截 */
+/** 预筛（04 §4 ③）：黑名单词（全局 dislikes + 信源级 filterKeywords）、标题过短、无 URL 在流水线层拦截 */
 export function prefilter(input: PrefilterInput): PrefilterVerdict {
   const text = `${input.title} ${input.summary}`.toLowerCase()
   const hit = input.config.dislikes.find((d) => d.trim() && text.includes(d.trim().toLowerCase()))
   if (hit) return { pass: false, reason: `命中屏蔽词「${hit}」` }
+  const sourceHit = input.sourceFilterKeywords?.find((d) => d.trim() && text.includes(d.trim().toLowerCase()))
+  if (sourceHit) return { pass: false, reason: `命中该源屏蔽词「${sourceHit}」` }
   if (input.title.replace(/\s+/g, '').length < 6) {
     return { pass: false, reason: '标题过短' }
   }

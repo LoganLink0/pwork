@@ -257,6 +257,8 @@ export interface Source {
   tier: 1 | 1.5 | 2
   /** 默认 = tier 映射(1.0/0.7/0.4)，可手工微调 */
   weight: number
+  /** 信源级屏蔽词（2026-11-15 采集规则表达力）：标题/摘要命中即预筛拒绝，全局屏蔽词之外的源内补充 */
+  filterKeywords?: string[]
   /** C1 无定时（手动抓取）；字段为 C2 Cron 预留 */
   checkEvery: '6h' | 'daily' | 'weekly'
   active: boolean

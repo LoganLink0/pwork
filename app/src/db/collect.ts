@@ -22,6 +22,8 @@ export interface SourceInput {
   domain: string
   tier: 1 | 1.5 | 2
   weight?: number
+  /** 信源级屏蔽词：标题/摘要命中即预筛拒绝（采集规则表达力，全局 dislikes 之外的源内补充） */
+  filterKeywords?: string[]
   checkEvery?: '6h' | 'daily' | 'weekly'
   kind?: 'rss' | 'ytdlp'
 }
@@ -36,6 +38,7 @@ export async function createSource(input: SourceInput): Promise<Source> {
     domain: input.domain,
     tier: input.tier,
     weight: input.weight ?? TIER_WEIGHT[input.tier] ?? 0.4,
+    filterKeywords: input.filterKeywords ?? [],
     checkEvery: input.checkEvery ?? 'daily',
     active: true,
     health: { failStreak: 0, lastOkAt: null, lastError: null },
@@ -78,6 +81,7 @@ export async function updateSource(id: string, patch: Partial<SourceInput> & { a
     domain: patch.domain ?? s.domain,
     tier: patch.tier ?? s.tier,
     weight: patch.weight ?? (patch.tier ? TIER_WEIGHT[patch.tier] : s.weight),
+    filterKeywords: patch.filterKeywords ?? s.filterKeywords ?? [],
     checkEvery: patch.checkEvery ?? s.checkEvery,
     active: patch.active ?? s.active,
     updatedAt: new Date().toISOString(),

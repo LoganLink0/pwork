@@ -50,13 +50,14 @@ async function merge<T extends { id: string; updatedAt?: string }>(
   return { added, updated, skipped }
 }
 
-/** 旧备份的信源可能缺 health/deletedAt 等后加字段（铁律 2 读取防御） */
+/** 旧备份的信源可能缺 health/deletedAt/filterKeywords 等后加字段（铁律 2 读取防御） */
 function normalizeSource(raw: Source): Source {
   return {
     ...raw,
     kind: raw.kind ?? 'rss',
     checkEvery: raw.checkEvery ?? 'daily',
     active: raw.active ?? true,
+    filterKeywords: Array.isArray(raw.filterKeywords) ? raw.filterKeywords.map(String) : [],
     health: raw.health ?? { failStreak: 0, lastOkAt: null, lastError: null },
     deletedAt: raw.deletedAt ?? null,
     schemaVersion: raw.schemaVersion ?? 1,

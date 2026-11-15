@@ -43,6 +43,16 @@ describe('prefilter（04 §4 ③）', () => {
   it('正常条目 → 通过', () => {
     expect(prefilter({ title: '新模型开源并商用可用', summary: '描述', config: CONFIG }).pass).toBe(true)
   })
+
+  it('信源级屏蔽词命中 → 拒绝（全局 dislikes 之外的源内补充）', () => {
+    const v = prefilter({ title: '某厂发布新品手机', summary: '硬件评测', config: CONFIG, sourceFilterKeywords: ['手机', '平板'] })
+    expect(v.pass).toBe(false)
+    if (!v.pass) expect(v.reason).toContain('该源屏蔽词')
+  })
+
+  it('信源级屏蔽词不误伤其他源（不传则不判）', () => {
+    expect(prefilter({ title: '某厂发布新品手机', summary: '', config: CONFIG }).pass).toBe(true)
+  })
 })
 
 describe('scoreByRules（04 §4.1 公式的规则近似）', () => {

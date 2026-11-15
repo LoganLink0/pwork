@@ -80,7 +80,7 @@ async function runSource(source: Source, config: CollectConfig, domainCount: Map
       base.duplicateCount++
       continue
     }
-    const verdict = prefilter({ title: raw.title, summary: raw.summary, config })
+    const verdict = prefilter({ title: raw.title, summary: raw.summary, config, sourceFilterKeywords: source.filterKeywords })
     const domainSeen = domainCount.get(source.domain) ?? 0
     const item: Item = verdict.pass
       ? buildScoredItem(source, raw, fp, domainSeen, config, now)
