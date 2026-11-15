@@ -74,7 +74,9 @@ export const PAGE_REGISTRY: PageReg[] = [
     loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.Notes })),
     children: [
       { path: '', index: true, loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.NotesEmptyPane })) },
-      { path: 'new', loader: () => import('./modules/input/pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
+      // /input/notes/new 由 :id 路由承接（NoteEditor 对 id==='new' 特判新建）——
+      // 2026-11-15 曾改成显式 new 子路由，导致新建流 replace 到 :id 时跨 Route 条目
+      // 重挂编辑器（光标丢失+整屏闪烁，集成与实机双重抓出），回退为单一 :id 承接
       { path: ':id', loader: () => import('./modules/input/pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
     ] },
   { path: '/input/digest', label: '信息日报', mark: 'mark-input', meta: ['信息日报', '输入 · 信息采集'], nav: 'module:input', sidebar: true,

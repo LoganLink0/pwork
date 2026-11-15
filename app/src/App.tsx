@@ -383,6 +383,21 @@ export default function App() {
     }
   }, [])
 
+  // 桌面版：独立窗写库广播（问小 P 记速记/撤销上一步）——主窗重载 store 保持界面与库一致
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    const un = import('@tauri-apps/api/event')
+      .then(({ listen }) => listen('pwork-library-changed', () => {
+        void useNotes.getState().load()
+        void useCollect.getState().load()
+        void useTasks.getState().load()
+      }))
+      .catch(() => () => {})
+    return () => {
+      void un.then((fn) => fn())
+    }
+  }, [])
+
   // 桌面版：网关端口被占（Rust 侧让位并发出事件）——可能是开发版网关，也可能是
   // 冒名进程截获对话内容，必须让用户看见而不是静默降级（安全审计 F12）
   useEffect(() => {

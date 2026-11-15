@@ -55,17 +55,22 @@ export function NoteEditor() {
   const noteIdInStore = note?.id ?? ''
   const storeAttachments = useNotes((s) => s.notes.find((n) => n.id === noteIdInStore)?.attachments)
   // 相关旧内容（词法关联·2026-11-15 外部研读报告改动 4）：编辑中防抖 300ms 计算，
-  // 正文太短不找（<30 字没有可靠信号）；纯只读展示，点击跳转
+  // 正文太短不找（<30 字没有可靠信号）；纯只读展示，点击跳转。
+  // 抖动与光标纪律（0.1.23 实机反馈）：文本没变不重算、结果相同不 setState——
+  // 每键入一次就全量扫描+重渲染会造成整屏闪烁
   const allNotes = useNotes((s) => s.notes)
   const [related, setRelated] = useState<Array<ReturnType<typeof relatedNotes>[number]>>([])
+  const relatedTextRef = useRef('')
   useEffect(() => {
     if (mode !== 'edit') return
     const text = `${title}\n${body}`
     if (text.trim().length < 30) {
-      setRelated([])
+      setRelated((prev) => (prev.length ? [] : prev))
       return
     }
     const t = setTimeout(() => {
+      if (text === relatedTextRef.current) return
+      relatedTextRef.current = text
       const draft = {
         id: noteIdInStore || 'draft',
         title,
@@ -77,7 +82,7 @@ export function NoteEditor() {
         updatedAt: '',
         deletedAt: null,
         schemaVersion: 1,
-      } as Note
+      } as unknown as Note
       setRelated(relatedNotes(draft, allNotes, 3))
     }, 300)
     return () => clearTimeout(t)

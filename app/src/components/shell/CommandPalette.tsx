@@ -8,7 +8,7 @@ import { useUi } from '../../store/ui'
 import { useActivity } from '../../store/activity'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
-import { runLocalIntent } from '../../engine/intent'
+import { runLocalIntent, isScheduleIntent } from '../../engine/intent'
 import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
 import { paletteActions, type ActionCtx } from '../../engine/actions'
 import { relTime } from '../../engine/datetime'
@@ -76,6 +76,22 @@ function PaletteDialog() {
     setAskBusy(true)
     const activity = useActivity.getState()
     activity.start('ask', '小 P 思考中')
+    // 待办/排期类询问在 AI 之前先行本地路由：全库检索不含待办表，交给 AI 只会拿
+    // 检索结果硬答（0.1.23 实机验证用户抓出「没去找待办反而开始搜索」）
+    if (isScheduleIntent(q)) {
+      void runLocalIntent(q)
+        .then((r) => {
+          setAsk({ phase: 'done', answer: r.reply, sources: r.sources })
+          activity.end('ask', { ok: true, label: '本地回答' })
+          setAskDone()
+        })
+        .catch((e2: unknown) => {
+          setAsk({ phase: 'error', error: e2 instanceof Error ? e2.message : String(e2) })
+          activity.end('ask', { ok: false, label: '问答失败' })
+          setAskBusy(false)
+        })
+      return
+    }
     askLibrary(q)
       .then((r) => {
         setAsk({ phase: 'done', answer: r.answer, sources: r.sources })

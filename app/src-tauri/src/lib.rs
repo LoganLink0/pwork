@@ -605,6 +605,7 @@ pub fn run() {
       isle::isle_snap_top,
       isle::isle_start_drag,
       isle::isle_dock_right,
+      isle::isle_dock_left,
       isle::isle_hide,
       isle::isle_set_activity,
       isle::isle_open_main,

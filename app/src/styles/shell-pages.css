@@ -251,19 +251,21 @@
   color: var(--ink);
 }
 
-/* 相关旧内容（词法关联·编辑态只读展示）：与正文同宽的低调链接行 */
+/* 相关旧内容（词法关联·编辑态只读展示）：设计令牌统一——单行、同字号、基线对齐，
+   条目间以「·」分隔（2026-11-15 用户反馈字体对齐不遵循规范，重写） */
 .related-old {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  font-size: var(--fs-sm);
-  color: var(--ink-3);
+  gap: 0;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base, 1.6);
+  color: var(--ink-faint);
   padding: var(--sp-1) 0;
+  border-top: 1px dashed var(--line);
 }
 .related-old .related-hint {
-  color: var(--ink-3);
   flex: none;
+  margin-right: var(--sp-2);
 }
 .related-old .related-item {
   color: var(--accent);
@@ -271,7 +273,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
+  max-width: 200px;
+  padding: 0 var(--sp-1);
+}
+.related-old .related-item + .related-item::before {
+  content: '·';
+  color: var(--ink-faint);
+  margin-right: var(--sp-2);
 }
 .related-old .related-item:hover {
   text-decoration: underline;

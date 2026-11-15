@@ -79,6 +79,10 @@ export const APP_ACTIONS: AppAction[] = [
         const [{ useCollect }] = await Promise.all([import('../store/collect')])
         const [{ useTasks }] = await Promise.all([import('../store/tasks')])
         await Promise.all([useNotes.getState().load(), useCollect.getState().load(), useTasks.getState().load()])
+        // 广播（独立窗发起的撤销也要让主窗刷新）：主窗监听 pwork-library-changed 重载
+        void import('@tauri-apps/api/event')
+          .then(({ emit }) => emit('pwork-library-changed'))
+          .catch(() => {})
         toast('ok', `已撤销「${r.label}」（${r.applied} 处${r.skipped ? `，${r.skipped} 处跳过` : ''}）`)
       })().catch(async (e: unknown) => {
         const { toast } = await import('./toast')

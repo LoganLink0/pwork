@@ -57,6 +57,28 @@ fn dock_right(app: &AppHandle, y: i32) -> Result<(), String> {
   Ok(())
 }
 
+/// 停靠屏幕左缘（2026-11-15 用户要求补左停靠）：画布左缘=屏幕左缘，
+/// logo 停画布左侧（CSS left 10），纵向位置由拖拽落点决定并钳进屏内。
+fn dock_left(app: &AppHandle, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
+    Ok(Some(m)) => Some(m),
+    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
+  };
+  let Some(monitor) = monitor else {
+    return Err("找不到可用显示器".into());
+  };
+  let mpos = monitor.position();
+  let msize = monitor.size();
+  let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new(CANVAS_W as u32, 140));
+  let max_y = mpos.y + msize.height as i32 - size.height as i32;
+  let cy = y.min(max_y).max(mpos.y);
+  // 画布左缘对齐屏幕左缘：左侧不可见边距条悬出屏外（透明+鼠标穿透，无副作用）
+  let _ = w.set_position(tauri::PhysicalPosition::new(mpos.x, cy));
+  Ok(())
+}
+
 /// 把窗口位置钳制进其中心所在显示器的可见范围（防拖出屏幕/旧位置数据落在屏外导致岛消失）。
 /// 用 min/max 链而非 clamp（窗大于屏时 clamp 的 min>max 会 panic）。
 fn clamp_pos(w: &tauri::WebviewWindow, x: i32, y: i32) -> (i32, i32) {
@@ -113,6 +135,12 @@ fn decide_and_place(app: &AppHandle, after: tauri::PhysicalPosition<i32>) -> (St
     let _ = snap_top(app);
     let final_pos = w.outer_position().unwrap_or(after);
     return ("top".into(), final_pos);
+  }
+  // 左缘判定在右缘之前（窗宽大于落点偏移时两个条件可同时近似成立，先近者赢）
+  if after.x - mx <= (80.0 * scale) as i32 {
+    let _ = dock_left(app, after.y);
+    let final_pos = w.outer_position().unwrap_or(after);
+    return ("left".into(), final_pos);
   }
   if after.x + (260.0 * scale) as i32 >= mx + mw - (80.0 * scale) as i32 {
     let _ = dock_right(app, after.y);
@@ -192,6 +220,12 @@ pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn isle_dock_right(app: AppHandle, y: i32) -> Result<(), String> {
   dock_right(&app, y)
+}
+
+/// 胶囊岛：恢复左缘停靠（同上，2026-11-15 用户要求补左停靠）
+#[tauri::command]
+pub fn isle_dock_left(app: AppHandle, y: i32) -> Result<(), String> {
+  dock_left(&app, y)
 }
 
 /// 胶囊岛：显示

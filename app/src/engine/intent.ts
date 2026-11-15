@@ -14,7 +14,19 @@ import { searchMulti, type SearchHit } from './searchAll'
 import { todayLocal, localDateOf } from './datetime'
 import { confirmDialog } from './confirm'
 import { pushUndo } from '../db/undo'
+import { isDesktopApp } from './platform'
 import type { AskAiSource } from './askAi'
+
+/** 写类意图完成后广播（桌面版）：主窗监听刷新 store，否则主窗界面看不到独立窗写入的数据 */
+async function notifyLibraryChanged(): Promise<void> {
+  if (!isDesktopApp()) return
+  try {
+    const { emit } = await import('@tauri-apps/api/event')
+    await emit('pwork-library-changed')
+  } catch {
+    // 广播失败不影响写入本身
+  }
+}
 
 export interface LocalIntentResult {
   reply: string
@@ -89,6 +101,7 @@ async function noteReply(body: string, now: Date): Promise<LocalIntentResult> {
     ts: iso,
     changes: [{ table: 'notes', id: created.id, before: null, after: created }],
   })
+  void notifyLibraryChanged()
   return {
     reply: `已记下（${created.title}）。可在速记页查看；说「撤销上一步」可以撤掉这条。`,
     sources: [],
@@ -104,8 +117,14 @@ export async function runLocalIntent(message: string, now: Date = new Date()): P
   const noteM = q.match(/^(?:记一下|记一条|记个|记录|速记一下)[：:，, ]+([\s\S]+)$/)
   if (noteM) return noteReply(noteM[1].trim(), now)
   // 查排期：出现待办/安排/日程类词，且是询问句式
-  if (/待办|安排|日程|排期|事项/.test(q) && /什么|哪些|看看|列表|有没有|还有/.test(q)) {
+  if (isScheduleIntent(q)) {
     return scheduleReply(now)
   }
   return searchReply(q)
+}
+
+/** 排期意图纯判定（供调用方在 AI 之前先行路由）：待办类词 + 询问句式。
+ *  全库检索不含待办表——「最近有什么待办」必须本地查 tasks，不能交给 AI 检索。 */
+export function isScheduleIntent(q: string): boolean {
+  return /待办|安排|日程|排期|事项/.test(q) && /什么|哪些|看看|列表|有没有|还有/.test(q)
 }

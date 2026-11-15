@@ -2,7 +2,10 @@ import { useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { MemoryRouter } from 'react-router-dom'
 import { CommandPalette, PaletteNavBridge } from './CommandPalette'
+import { ConfirmDialog } from './ConfirmDialog'
+import { Toaster } from './Toast'
 import { useUi } from '../../store/ui'
+import { useConfirmStore } from '../../engine/confirm'
 import { useNotes } from '../../store/notes'
 
 /**
@@ -11,6 +14,11 @@ import { useNotes } from '../../store/notes'
  * 窗内搜索/问答/速记走同源 IndexedDB 与本地网关；页面跳转经 palette_goto
  * 桥接回主窗（隐藏自己→唤醒主窗→发 isle-goto，App 侧路由）。
  * 面板关闭（Esc/点窗外/动作执行）= useUi.paletteOpen 翻假 → 调 palette_hide 藏窗。
+ * 必须挂 ConfirmDialog 与 Toaster 宿主（0.1.23 事故）：确认闸门与提示都是
+ * zustand store + 宿主组件渲染——独立窗不挂宿主，确认弹层永不出现（「记一条」
+ * 的 Promise 永等）、失败提示不可见（撤销失败用户看到的只是「没反应」）。
+ * 写类动作完成后发 pwork-library-changed 广播——主窗监听刷新 store，
+ * 否则主窗界面看不到独立窗写入的数据。
  */
 export function PaletteWindow() {
   useEffect(() => {
@@ -28,13 +36,15 @@ export function PaletteWindow() {
     })
     const unsub = useUi.subscribe((s, prev) => {
       if (prev.paletteOpen && !s.paletteOpen) {
-        void invoke('palette_hide').catch(() => {})
+        hideWithSettle()
       }
     })
     // 失焦即关（Spotlight 惯例）：点击窗格外的任何地方都会让本窗失去焦点，
-    // 立即收起——用户不需要先把焦点移回窗格再按 Esc
+    // 立即收起——用户不需要先把焦点移回窗格再按 Esc。
+    // 收起前若有未回答的确认弹层，先以「取消」结案——否则等待确认的 Promise 永挂
+    // （记一条的写入流程会永远停在 await 上）。
     const onBlur = () => {
-      void invoke('palette_hide').catch(() => {})
+      hideWithSettle()
     }
     window.addEventListener('blur', onBlur)
     return () => {
@@ -44,6 +54,12 @@ export function PaletteWindow() {
     }
   }, [])
 
+  function hideWithSettle() {
+    const confirmState = useConfirmStore.getState()
+    if (confirmState.spec) confirmState.settle(false)
+    void invoke('palette_hide').catch(() => {})
+  }
+
   return (
     <MemoryRouter initialEntries={['/']}>
       <PaletteNavBridge.Provider
@@ -52,6 +68,8 @@ export function PaletteWindow() {
         }}
       >
         <CommandPalette />
+        <Toaster />
+        <ConfirmDialog />
       </PaletteNavBridge.Provider>
     </MemoryRouter>
   )
