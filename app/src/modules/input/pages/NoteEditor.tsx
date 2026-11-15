@@ -28,7 +28,8 @@ const SAVE_DEBOUNCE_MS = 600
  */
 export function NoteEditor() {
   const { id = '' } = useParams()
-  const isNew = id === 'new'
+  // 新建判定：显式 /new 子路由（无 id 参数）或 :id 路由下的 'new' 约定值
+  const isNew = !id || id === 'new'
   const navigate = useNavigate()
   const updateNote = useNotes((s) => s.update)
   const createNote = useNotes((s) => s.create)

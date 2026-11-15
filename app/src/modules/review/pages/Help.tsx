@@ -215,7 +215,7 @@ export function Help() {
       <section className="detail-section help-cta-final" aria-label={HELP.ctaTitle}>
         <h2>{HELP.ctaTitle}</h2>
         <p className="coach-say">{HELP.ctaDesc}</p>
-        <button className="btn-primary" onClick={() => navigate('/new')}>
+        <button className="btn-primary" onClick={() => navigate('/review/new')}>
           新建你的第一份复盘 →
         </button>
       </section>

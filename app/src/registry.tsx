@@ -74,6 +74,7 @@ export const PAGE_REGISTRY: PageReg[] = [
     loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.Notes })),
     children: [
       { path: '', index: true, loader: () => import('./modules/input/pages/Notes').then((m) => ({ default: m.NotesEmptyPane })) },
+      { path: 'new', loader: () => import('./modules/input/pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
       { path: ':id', loader: () => import('./modules/input/pages/NoteEditor').then((m) => ({ default: m.NoteEditor })) },
     ] },
   { path: '/input/digest', label: '信息日报', mark: 'mark-input', meta: ['信息日报', '输入 · 信息采集'], nav: 'module:input', sidebar: true,
