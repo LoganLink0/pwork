@@ -7,12 +7,12 @@
   "quality": "showcase",
   "startedAt": "2026-11-06T04:24:45.743Z",
   "specification": {
-    "path": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+    "path": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
     "sha256": "187683cedc2f2512d4d7c60e7dc226b9b938e062d0e15fd483d31793a818adb6",
     "bytes": 5184
   },
   "artifact": {
-    "path": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+    "path": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
     "sha256": "f7574de5264f54f956b5bf159bacb3800797aeab32cf94478a0de51405142e42",
     "bytes": 841663
   },
@@ -24,11 +24,11 @@
       "execution": "embedded-in-deliver",
       "command": [
         "C:\\Program Files\\nodejs\\node.exe",
-        "C:\\Users\\Israe\\.zcode\\skills\\archify\\bin\\archify.mjs",
+        "<user-home>\\.zcode\\skills\\archify\\bin\\archify.mjs",
         "deliver",
         "dataflow",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "--quality",
         "showcase",
         "--json"
@@ -57,11 +57,11 @@
       "durationMs": 1260,
       "command": [
         "C:\\Program Files\\nodejs\\node.exe",
-        "C:\\Users\\Israe\\.zcode\\skills\\archify\\bin\\archify.mjs",
+        "<user-home>\\.zcode\\skills\\archify\\bin\\archify.mjs",
         "deliver",
         "dataflow",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "--quality",
         "showcase",
         "--json"
@@ -72,8 +72,8 @@
         "ok": true,
         "command": "deliver",
         "type": "dataflow",
-        "input": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
-        "output": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "input": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+        "output": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "specification": {
           "sha256": "187683cedc2f2512d4d7c60e7dc226b9b938e062d0e15fd483d31793a818adb6",
           "bytes": 5184
@@ -109,14 +109,14 @@
       "durationMs": 451,
       "command": [
         "C:\\Program Files\\nodejs\\node.exe",
-        "C:\\Users\\Israe\\.zcode\\skills\\archify\\bin\\archify.mjs",
+        "<user-home>\\.zcode\\skills\\archify\\bin\\archify.mjs",
         "check",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "--require-provenance"
       ],
       "receipt": {
         "ok": true,
-        "file": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "file": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "artifact": {
           "sha256": "f7574de5264f54f956b5bf159bacb3800797aeab32cf94478a0de51405142e42",
           "bytes": 841663
@@ -245,13 +245,13 @@
       "durationMs": 4124,
       "command": [
         "C:\\Program Files\\nodejs\\node.exe",
-        "C:\\Users\\Israe\\.zcode\\skills\\archify\\bin\\archify.mjs",
+        "<user-home>\\.zcode\\skills\\archify\\bin\\archify.mjs",
         "browser-check",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
         "--json",
         "--require-provenance",
         "--out-dir",
-        "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\review-2"
+        "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\review-2"
       ],
       "execution": "in-process",
       "receipt": {
@@ -264,7 +264,7 @@
         "provenance": "current",
         "deliveryReceiptId": "cae1be8d-49e9-4ed4-a3e1-7b3f2b52ba61",
         "artifact": {
-          "path": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+          "path": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
           "sha256": "f7574de5264f54f956b5bf159bacb3800797aeab32cf94478a0de51405142e42",
           "bytes": 841663
         },
@@ -947,7 +947,7 @@
           "contactSheet": null
         },
         "sidecars": {
-          "directory": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\review-2",
+          "directory": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\review-2",
           "receipt": "pwork-data-security.browser-check.json",
           "files": []
         }
@@ -960,9 +960,9 @@
   },
   "diagnostics": [],
   "evidence": {
-    "receipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.finalize.json",
-    "summaryReceipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.finalize-summary.json",
-    "browserCheckReceipt": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.browser-check.json"
+    "receipt": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.finalize.json",
+    "summaryReceipt": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.finalize-summary.json",
+    "browserCheckReceipt": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\review-2\\pwork-data-security.browser-check.json"
   },
   "visualReview": "not-requested",
   "finishedAt": "2026-11-06T04:24:54.173Z",

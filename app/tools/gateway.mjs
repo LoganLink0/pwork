@@ -272,6 +272,7 @@ const server = http.createServer(async (req, res) => {
           body: isDeepSeek
             ? JSON.stringify({ query: query.slice(0, 128), count: Math.min(Math.max(count || 6, 1), 50) })
             : JSON.stringify({ model: SEARCH_MODEL, messages: [{ role: 'user', content: query }], stream: false }),
+          signal: AbortSignal.timeout(45_000),
         })
         const text = await upstream.text()
         if (!upstream.ok) {
@@ -313,6 +314,7 @@ const server = http.createServer(async (req, res) => {
             method: 'POST',
             headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
             body: JSON.stringify({ sql, params: Array.isArray(params) ? params : [] }),
+            signal: AbortSignal.timeout(30_000),
           },
         )
         const text = await upstream.text()
@@ -353,6 +355,8 @@ const server = http.createServer(async (req, res) => {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${CHAT_KEY}` },
           body: outBody,
+          // chat 上游挂死防线：与 Rust 版同款（前端先行 20 秒放弃，网关侧不留悬挂连接）
+          signal: AbortSignal.timeout(90_000),
         })
         const text = await upstream.text()
         logUsage(outBody, text, purpose)

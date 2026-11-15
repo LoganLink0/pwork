@@ -6,6 +6,7 @@
  */
 import { db } from '../db/schema'
 import { searchMulti, type SearchHit } from './searchAll'
+import { UNTRUSTED_DATA_RULE } from './promptSafety'
 import { chatCompletion } from '../modules/review/engine/llm'
 import { llmConfigFrom, loadCoachConfig } from '../modules/review/engine/coach'
 
@@ -96,6 +97,7 @@ export async function askLibrary(question: string): Promise<AskAiResult> {
 
   const system = [
     '你是个人工作台的资料问答助手。只依据提供的资料回答问题，并标注引用编号（如 [1]）。',
+    UNTRUSTED_DATA_RULE,
     '资料没有覆盖的部分就直说"资料里没有"，不要编造。回答用简体中文，简洁直接。',
   ].join('\n')
   const user = `我的资料：\n\n${blocks.join('\n\n')}\n\n问题：${q}`

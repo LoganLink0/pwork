@@ -734,6 +734,8 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                             match ureq::post(&cfg.search_url)
                                 .set("content-type", "application/json")
                                 .set("authorization", &format!("Bearer {}", cfg.search_key))
+                                // 检索上游挂死防线：单线程网关一个卡住的调用会阻塞全部端点（对照 /rss 的 15 秒、/d1 的 30 秒）
+                                .timeout(std::time::Duration::from_secs(45))
                                 .send_string(&up_body)
                             {
                                 Ok(up) => {
@@ -885,6 +887,9 @@ pub fn start(data_dir: PathBuf, app: tauri::AppHandle) -> SharedConfig {
                         match ureq::post(&normalize_upstream(&cfg.chat_url))
                             .set("content-type", "application/json")
                             .set("authorization", &format!("Bearer {}", cfg.chat_key))
+                            // chat 上游挂死防线（前端 llm.ts 20 秒先行放弃，但网关线程会一直吊在
+                            // 无超时调用上，阻塞同线程的 /health /rss /search 全部端点）
+                            .timeout(std::time::Duration::from_secs(90))
                             .send_string(&out_body)
                         {
                             Ok(up) => {

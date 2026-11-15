@@ -4,8 +4,8 @@
   "status": "current",
   "command": "deliver",
   "type": "dataflow",
-  "input": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
-  "output": "E:\\AIPROJECT-GLM\\PWORK\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
+  "input": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\candidate.json",
+  "output": "<repo>\\.archify\\dataflow-pwork-security-20261106-104500\\pwork-data-security.html",
   "specification": {
     "sha256": "187683cedc2f2512d4d7c60e7dc226b9b938e062d0e15fd483d31793a818adb6",
     "bytes": 5184

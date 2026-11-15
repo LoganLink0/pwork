@@ -292,6 +292,29 @@ pub fn db_probe(app: AppHandle) -> Result<Json, String> {
 #[tauri::command]
 pub fn db_open(app: AppHandle, state: State<DbState>) -> Result<Json, String> {
   let path = db_path(&app)?;
+  // 幂等：连接已在（其他窗口先开）直接返回现状，不换连接——四个窗口启动各调一次
+  // db_open，无条件覆盖会让 db_begin/db_commit 跨命令期间 A 窗的连接被 B 窗换掉
+  // （事务丢失级竞态，2026-11-15 外部研读报告 §4.4）；db_destroy 置 None 后可正常重开
+  {
+    let guard = state.0.lock().map_err(|_| "数据库状态锁不可用")?;
+    if guard.is_some() {
+      let started: i64 = guard
+        .as_ref()
+        .unwrap()
+        .query_row("SELECT COUNT(*) FROM meta WHERE key = 'migration_started'", [], |r| r.get(0))
+        .unwrap_or(0);
+      let complete: i64 = guard
+        .as_ref()
+        .unwrap()
+        .query_row("SELECT COUNT(*) FROM meta WHERE key = 'migration_complete'", [], |r| r.get(0))
+        .unwrap_or(0);
+      return Ok(json!({
+        "fresh": false,
+        "incompleteMigration": started > 0 && complete == 0,
+        "path": path.to_string_lossy(),
+      }));
+    }
+  }
   let fresh = !path.exists();
   let conn = open_conn(&path)?;
   let started: i64 = conn
