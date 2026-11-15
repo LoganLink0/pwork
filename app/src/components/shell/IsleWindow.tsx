@@ -29,7 +29,7 @@ const POS_KEY = 'pwork-isle-pos'
 const SETTINGS_KEY = 'pwork-isle-settings'
 
 interface SavedPos {
-  mode: 'top' | 'right' | 'free'
+  mode: 'top' | 'left' | 'right' | 'free'
   x?: number
   y?: number
 }
@@ -40,6 +40,7 @@ function readPos(): SavedPos {
     if (!raw) return { mode: 'top' }
     const p = JSON.parse(raw) as SavedPos
     if (p.mode === 'right' && typeof p.y === 'number') return { mode: 'right', y: p.y }
+    if (p.mode === 'left' && typeof p.y === 'number') return { mode: 'left', y: p.y }
     if (p.mode === 'free' && typeof p.x === 'number' && typeof p.y === 'number') return { mode: 'free', x: p.x, y: p.y }
     return { mode: 'top' }
   } catch {
@@ -62,9 +63,9 @@ function readEnabled(): boolean {
   }
 }
 
-/** 停靠模式下的容器类名（free 为空）；peek=半隐藏探边态（展开态永不叠加） */
+/** 停靠模式下的容器类名（free 为空）；peek=完全隐藏态（展开态永不叠加） */
 function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
-  const base = mode === 'top' ? 'dock-top' : mode === 'right' ? 'dock-right' : ''
+  const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : ''
   return [base, peek && base && !open ? 'peek' : ''].filter(Boolean).join(' ')
 }
 
@@ -87,16 +88,18 @@ export function IsleWindow() {
   }
 
   // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
-  // 停靠模式以半隐藏态出场（靠近即滑出）。
+  // 停靠模式直接以完全隐藏态（整条边缘热区条）出场——呼出即展开（靠近即滑出）。
   useEffect(() => {
     const pos = readPos()
     setMode(pos.mode)
     if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
       void invoke('isle_place', { x: pos.x, y: pos.y }).catch(() => {})
     } else if (pos.mode === 'right') {
-      void invoke('isle_dock_right', { y: pos.y ?? 0 }).catch(() => {})
+      void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).catch(() => {})
+    } else if (pos.mode === 'left') {
+      void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).catch(() => {})
     } else {
-      void invoke('isle_snap_top').catch(() => {})
+      void invoke('isle_peek', { mode: 'top', y: 0 }).catch(() => {})
     }
     if (readEnabled()) {
       void invoke('isle_show').catch(() => {})
@@ -129,6 +132,8 @@ export function IsleWindow() {
     if ((e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     setDragging(true)
+    // 拖拽中解除完全隐藏与位移（否则从探边态抓起时 logo 带着缺损位跟随拖动，不美观）
+    setPeek(false)
     clearTimers()
     void invoke('isle_start_drag').catch(() => setDragging(false))
   }
@@ -145,6 +150,7 @@ export function IsleWindow() {
         setPeek(m !== 'free')
         if (m === 'top') savePos({ mode: 'top' })
         else if (m === 'right') savePos({ mode: 'right', y })
+        else if (m === 'left') savePos({ mode: 'left', y })
         else savePos({ mode: 'free', x, y })
       }
       setDragging(false)
@@ -174,23 +180,32 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 靠近 0.6 秒直接展开（半隐藏态不解锁——先滑回再展开会让 logo 从静止的光标
-  // 底下移走，立刻触发 mouseleave 收回，形成"碰了没反应"的振荡）；移开 1 秒收回，
-  // 收回后停靠模式重新进入半隐藏（拖拽中不触发）
+  // 呼出/收回（2026-11-15 学习 MiniDock 的成熟交互：完全隐藏=整条边缘热区）：
+  // 停靠模式收回时 Rust 把窗口变形为贴边热区条（整条边缘任意位置可命中，不再依赖
+  // 人眼找 2px 隐形点）；命中后先恢复画布尺寸与定位，再展开——次序不能反（展开的
+  // 内容渲染在 12px 细条窗里会被裁没）。
   const onEnter = () => {
     if (dragging) return
     clearTimers()
+    if (mode !== 'free' && peek) {
+      const pos = readPos()
+      void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch(() => {})
+    }
     openTimer.current = window.setTimeout(() => {
       setOpen(true)
       setPeek(false)
-    }, 600)
+    }, 200)
   }
   const onLeave = () => {
     if (dragging) return
     clearTimers()
     closeTimer.current = window.setTimeout(() => {
       setOpen(false)
-      if (mode !== 'free') setPeek(true)
+      if (mode !== 'free') {
+        const pos = readPos()
+        setPeek(true)
+        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch(() => {})
+      }
     }, 1000)
   }
   useEffect(() => () => clearTimers(), [])
@@ -208,6 +223,9 @@ export function IsleWindow() {
       onMouseLeave={onLeave}
       onMouseDown={startDrag}
     >
+      {/* 完全隐藏态（停靠模式）：热区条内的一条极淡细线——存在感提示，非点击目标
+          （热区=整条 12px 窗条，鼠标甩到该边缘任意位置即呼出） */}
+      <div className="isle-peek-line" aria-hidden />
       <div className="isle-bar">
         <div className="isle-bar-content">
           <span className="isle-divider" aria-hidden />
