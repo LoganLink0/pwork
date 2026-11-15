@@ -114,6 +114,67 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
+/// 完全隐藏（2026-11-15 学习 MiniDock 的成熟交互）：窗口变形为「整条边缘热区条」——
+/// top=屏宽×12px 贴顶缘，left/right=12px×屏高贴左右缘。视觉上只剩一条极淡细线
+/// （窗内 CSS 渲染），呼出不再依赖人眼精确命中一个隐形点：鼠标甩到该边缘任意位置
+/// 即触发（整条边缘都是热区），随后 isle_expand 恢复画布尺寸并按模式定位。
+const PEEK_STRIP_PX: f64 = 12.0;
+
+#[tauri::command]
+pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
+    Ok(Some(m)) => Some(m),
+    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
+  };
+  let Some(monitor) = monitor else {
+    return Err("找不到可用显示器".into());
+  };
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let strip = (PEEK_STRIP_PX * scale) as i32;
+  match mode.as_str() {
+    // 顶缘：全屏宽横条贴顶（画布上方的不可见边距悬出屏外，无副作用）
+    "top" => {
+      let _ = w.set_size(tauri::PhysicalSize::new(ms.width as u32, strip as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y - (10.0 * scale) as i32));
+    }
+    // 左缘：全屏高竖条贴左
+    "left" => {
+      let _ = w.set_size(tauri::PhysicalSize::new(strip as u32, ms.height as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y));
+    }
+    // 右缘：全屏高竖条贴右
+    "right" => {
+      let _ = w.set_size(tauri::PhysicalSize::new(strip as u32, ms.height as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - strip, mp.y));
+    }
+    // free 不参与完全隐藏（无固定边缘可贴）
+    _ => {}
+  }
+  let _ = y;
+  Ok(())
+}
+
+/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向）
+#[tauri::command]
+pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let _ = w.set_size(tauri::PhysicalSize::new(
+    (CANVAS_W * scale) as u32,
+    (140.0 * scale) as u32,
+  ));
+  match mode.as_str() {
+    "top" => snap_top(&app),
+    "left" => dock_left(&app, y),
+    "right" => dock_right(&app, y),
+    _ => Ok(()),
+  }
+}
+
 /// 拖拽落点的停靠模式判定与落位（拖拽真正结束后调用）：
 /// 落点近屏顶（窗顶距屏顶 ≤120·缩放）→ top（灵动岛，零间距贴顶居中）；
 /// logo 中心近屏幕右缘（≤80·缩放）→ right（右缘停靠，纵向保持落点并钳进屏内）；
