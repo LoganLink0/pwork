@@ -826,30 +826,35 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   right: 0;
   width: 12px;
 }
-/* 存在感细线：1.5px 令牌色，透明度 0.4——提示「这里有东西」，不构成视觉干扰 */
+/* 存在感细线：令牌色 64px 居中短段（透明度 0.4）——三边一致的克制存在提示；
+   不做全边长线（右缘全高细线被用户判为"占满整个边缘"） */
 #isle-dock.peek .isle-peek-line::after {
   content: '';
   position: absolute;
   background: var(--accent);
   opacity: 0.4;
+  border-radius: 1px;
 }
 #isle-dock.dock-top.peek .isle-peek-line::after {
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   top: 5px;
-  height: 1.5px;
+  width: 64px;
+  height: 2px;
 }
 #isle-dock.dock-left.peek .isle-peek-line::after {
-  top: 0;
-  bottom: 0;
+  top: 50%;
+  transform: translateY(-50%);
   left: 5px;
-  width: 1.5px;
+  height: 64px;
+  width: 2px;
 }
 #isle-dock.dock-right.peek .isle-peek-line::after {
-  top: 0;
-  bottom: 0;
+  top: 50%;
+  transform: translateY(-50%);
   right: 5px;
-  width: 1.5px;
+  height: 64px;
+  width: 2px;
 }
 #isle-dock.dock-right .isle-logo {
   left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */

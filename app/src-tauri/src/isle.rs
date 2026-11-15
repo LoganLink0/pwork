@@ -136,10 +136,10 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let ms = monitor.size();
   let strip = (PEEK_STRIP_PX * scale) as i32;
   match mode.as_str() {
-    // 顶缘：全屏宽横条贴顶（画布上方的不可见边距悬出屏外，无副作用）
+    // 顶缘：全屏宽横条贴顶（整条在屏内——曾带 -10 悬出偏移导致存在感细线在屏外不可见）
     "top" => {
       let _ = w.set_size(tauri::PhysicalSize::new(ms.width as u32, strip as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y - (10.0 * scale) as i32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y));
     }
     // 左缘：全屏高竖条贴左
     "left" => {

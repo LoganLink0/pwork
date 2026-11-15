@@ -70,14 +70,12 @@ export async function deleteAttachmentFile(file: string): Promise<void> {
   await invoke('attachment_delete', { name: file })
 }
 
-/** 附件目录统计（突变守卫与备份对账用）；非桌面/命令不可用回 0——守卫口径不因此中断 */
+/** 附件目录统计（突变守卫与备份对账用）。桌面版统计失败时上抛（fail-fast，用户明令
+ *  不遮掩）——调用方（守卫口径）据实跳过本轮并留痕，绝不把「统计失败」当成「0 个附件」
+ *  写进守卫判定；非桌面版无附件概念回 0。 */
 export async function attachmentStats(): Promise<{ count: number; totalBytes: number }> {
   if (!isDesktopApp()) return { count: 0, totalBytes: 0 }
-  try {
-    return await invoke<{ count: number; totalBytes: number }>('attachment_stats')
-  } catch {
-    return { count: 0, totalBytes: 0 }
-  }
+  return invoke<{ count: number; totalBytes: number }>('attachment_stats')
 }
 
 /** 附件缩略图 data: URL（画廊/预览用）；仅桌面版调用 */

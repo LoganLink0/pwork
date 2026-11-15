@@ -8,6 +8,7 @@
  */
 import { db } from '../db/schema'
 import { attachmentStats } from './attachments'
+import { recordError } from './errorLog'
 
 export interface DbHealthResult {
   ok: boolean
@@ -21,12 +22,21 @@ export const CORE_TABLES = ['notes', 'sources', 'items', 'tasks', 'reviews', 'ac
 
 /** 核心表逐一计数（健康检查与突变守卫共用同一口径）。
  *  attachments 特判：不是数据库表——附件是 attachments/ 裸文件（字节不进库），
- *  计数来自附件目录统计（突变守卫的口径必须覆盖它，0.1.23 信源丢失事故同型盲区）。 */
+ *  计数来自附件目录统计。统计失败时不设该键（守卫对缺失键跳过判定）并留痕——
+ *  绝不把「统计失败」当「0 个附件」参与归零判定（fail-fast，用户明令不遮掩）。 */
 export async function countCoreTables(): Promise<Record<string, number>> {
   const counts: Record<string, number> = {}
   for (const t of CORE_TABLES) {
     if (t === 'attachments') {
-      counts[t] = (await attachmentStats()).count
+      try {
+        counts[t] = (await attachmentStats()).count
+      } catch (e) {
+        void recordError({
+          where: '数据检查.附件统计',
+          kind: 'app',
+          message: `附件目录统计失败，本轮守卫跳过附件判定：${e instanceof Error ? e.message : String(e)}`,
+        }, { silent: true })
+      }
       continue
     }
     counts[t] = await db.table<Record<string, unknown>>(t).count()

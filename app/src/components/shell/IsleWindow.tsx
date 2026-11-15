@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { syncThemeFromStore } from '../../engine/appearance'
+import { recordError } from '../../engine/errorLog'
+
+/** 定位/变形失败的统一留痕（岛会从屏幕上消失，绝不能静默） */
+function reportIsleError(where: string, e: unknown): void {
+  void recordError({ where, kind: 'app', message: e instanceof Error ? e.message : String(e) }, { silent: true })
+}
 
 /**
  * 胶囊岛窗（/isle 分流渲染）——三种驻留模式 + 停靠自动半隐藏：
@@ -104,13 +110,13 @@ export function IsleWindow() {
     const pos = readPos()
     setMode(pos.mode)
     if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
-      void invoke('isle_place', { x: pos.x, y: pos.y }).catch(() => {})
+      void invoke('isle_place', { x: pos.x, y: pos.y }).catch((e) => reportIsleError('岛.驻留定位', e))
     } else if (pos.mode === 'right') {
-      void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).catch(() => {})
+      void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.右缘隐藏', e))
     } else if (pos.mode === 'left') {
-      void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).catch(() => {})
+      void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.左缘隐藏', e))
     } else {
-      void invoke('isle_peek', { mode: 'top', y: 0 }).catch(() => {})
+      void invoke('isle_peek', { mode: 'top', y: 0 }).catch((e) => reportIsleError('岛.顶缘隐藏', e))
     }
     if (readEnabled()) {
       void invoke('isle_show').catch(() => {})
@@ -200,7 +206,7 @@ export function IsleWindow() {
     clearTimers()
     if (mode !== 'free' && peek) {
       const pos = readPos()
-      void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch(() => {})
+      void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
     openTimer.current = window.setTimeout(() => {
       setOpen(true)
@@ -215,7 +221,7 @@ export function IsleWindow() {
       if (mode !== 'free') {
         const pos = readPos()
         setPeek(true)
-        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch(() => {})
+        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
       }
     }, 1000)
   }
