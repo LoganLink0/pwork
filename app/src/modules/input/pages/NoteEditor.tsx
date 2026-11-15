@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { getNote, noteToMarkdown, downloadFile, attachTaskToNote } from '../../../db/repo'
 import { useTasks } from '../../../store/tasks'
 import { useNotes } from '../../../store/notes'
-import { fmtLocal } from '../../../engine/datetime'
+import { fmtLocal, relTime } from '../../../engine/datetime'
+import { relatedNotes } from '../engine/related'
 import { toast } from '../../../engine/toast'
 import { recordError } from '../../../engine/errorLog'
 import { confirmDialog } from '../../../engine/confirm'
@@ -52,6 +53,34 @@ export function NoteEditor() {
   // 新建后跳转会与加载 effect 抢时序，本地状态被旧快照回写，e2e 实抓）
   const noteIdInStore = note?.id ?? ''
   const storeAttachments = useNotes((s) => s.notes.find((n) => n.id === noteIdInStore)?.attachments)
+  // 相关旧内容（词法关联·2026-11-15 外部研读报告改动 4）：编辑中防抖 300ms 计算，
+  // 正文太短不找（<30 字没有可靠信号）；纯只读展示，点击跳转
+  const allNotes = useNotes((s) => s.notes)
+  const [related, setRelated] = useState<Array<ReturnType<typeof relatedNotes>[number]>>([])
+  useEffect(() => {
+    if (mode !== 'edit') return
+    const text = `${title}\n${body}`
+    if (text.trim().length < 30) {
+      setRelated([])
+      return
+    }
+    const t = setTimeout(() => {
+      const draft = {
+        id: noteIdInStore || 'draft',
+        title,
+        body,
+        tags: tagsText.split(/[\s,，#]+/).filter(Boolean),
+        links: { itemIds: [], reviewIds: [], taskIds: [] },
+        source: 'manual',
+        createdAt: note?.createdAt ?? new Date().toISOString(),
+        updatedAt: '',
+        deletedAt: null,
+        schemaVersion: 1,
+      } as Note
+      setRelated(relatedNotes(draft, allNotes, 3))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [body, title, tagsText, allNotes, mode, noteIdInStore, note?.createdAt])
 
   // noteRef 供卸载时的 flush 使用（Hook 全部先于早退 return —— 开发复盘 1.1）
   // hydrated 记录"从库读回的值"：只有当前值 ≠ 读回值才算用户改动（只打开不改字不写库、不改 updatedAt）
@@ -330,6 +359,22 @@ export function NoteEditor() {
                 ✕
               </button>
             </span>
+          ))}
+        </div>
+      )}
+      {/* 相关旧内容（编辑态）：词法关联只读展示——命中词进 title 悬停可见 */}
+      {mode === 'edit' && related.length > 0 && (
+        <div className="related-old" data-testid="related-old">
+          <span className="related-hint">相关的旧内容：</span>
+          {related.map((r) => (
+            <Link
+              key={r.id}
+              to={`/input/notes/${r.id}`}
+              className="related-item"
+              title={`命中：${r.why.join('、')}`}
+            >
+              {r.note.title || r.note.body.slice(0, 24)} · {relTime(r.note.updatedAt || r.note.createdAt)}
+            </Link>
           ))}
         </div>
       )}
