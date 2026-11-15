@@ -103,13 +103,15 @@ export function loadCoachConfig(): CoachConfig {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULT_COACH_CONFIG }
-    const parsed = JSON.parse(raw) as Partial<CoachConfig>
-    const cfg: CoachConfig = { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && (parsed.apiKey || parsed.viaGateway) ? 'llm' : 'rule' }
-    // 桌面版没有浏览器直连模式（2026-10-27 边界定稿）：内嵌网关是唯一方式，
-    // 历史上存过直连配置的桌面用户在这里自动归一，Key 在网关里的照常可用
-    if (cfg.mode === 'llm' && !cfg.viaGateway && isDesktopRuntime()) {
-      return { ...cfg, viaGateway: true, gatewayUrl: cfg.gatewayUrl || DEFAULT_GATEWAY_URL }
+    let parsed = JSON.parse(raw) as Partial<CoachConfig>
+    // 桌面版归一必须放在 mode 判定之前：桌面只有网关模式（2026-10-27 边界定稿），
+    // 历史配置可能缺 viaGateway（如旧版设置页只写了 mode/provider/baseURL/model）——
+    // 不先补上的话 mode 会被下面的判定误降级成 'rule'，用户视角就是「AI 配置丢了」
+    // （0.1.23 真实事故：viaGateway 字段缺失 → 判定双空 → 降级；原归一分支在其后永不执行）
+    if (isDesktopRuntime() && parsed.mode === 'llm' && !parsed.viaGateway && !parsed.apiKey) {
+      parsed = { ...parsed, viaGateway: true, gatewayUrl: parsed.gatewayUrl || DEFAULT_GATEWAY_URL }
     }
+    const cfg: CoachConfig = { ...DEFAULT_COACH_CONFIG, ...parsed, mode: parsed.mode === 'llm' && (parsed.apiKey || parsed.viaGateway) ? 'llm' : 'rule' }
     return cfg
   } catch {
     return { ...DEFAULT_COACH_CONFIG }

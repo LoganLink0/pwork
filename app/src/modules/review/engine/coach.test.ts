@@ -122,3 +122,25 @@ describe('本地网关模式（Key 在网关进程，浏览器侧无 Key）', ()
     expect(d.baseURL).toBe('https://api.deepseek.com')
   })
 })
+
+describe('桌面版配置归一（0.1.23 事故：viaGateway 缺失被误降级 rule）', () => {
+  it('桌面 runtime 下缺 viaGateway 的 llm 配置自动补全（归一先于 mode 判定）', () => {
+    // 模拟桌面 runtime（isDesktopRuntime 判 __TAURI_INTERNALS__）
+    ;(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = { invoke: () => {} }
+    try {
+      localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', provider: 'deepseek', baseURL: 'https://api.deepseek.com', apiKey: '', model: 'deepseek-flash' }))
+      const cfg = loadCoachConfig()
+      expect(cfg.mode).toBe('llm')
+      expect(cfg.viaGateway).toBe(true)
+      expect(cfg.gatewayUrl).toBe('http://127.0.0.1:8788')
+      expect(llmConfigured()).toBe(true)
+    } finally {
+      delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+    }
+  })
+
+  it('网页版语境同样缺 viaGateway → 维持 rule（桌面归一不越界）', () => {
+    localStorage.setItem('fupan-coach', JSON.stringify({ mode: 'llm', apiKey: '' }))
+    expect(loadCoachConfig().mode).toBe('rule')
+  })
+})
