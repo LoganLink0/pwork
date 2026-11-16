@@ -97,6 +97,24 @@ describe('读写一致性', () => {
       expect(emitMock).toHaveBeenCalledWith('pwork-prefs-changed', { keys: ['pwork-theme'] })
     })
   })
+
+  it('并发写不丢更新：两个 writePref 同时发起，两键都落盘（写队列串行化）', async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === 'prefs_read') return Promise.resolve(null)
+      return Promise.resolve(undefined)
+    })
+    const m = await fresh()
+    // 不 await 前一个：模拟真实并发（各自基于同一旧态读改写）
+    m.writePref('pwork-theme', 'dark')
+    m.writePref('pwork-keybinds', { quickNote: 'q' })
+    await vi.waitFor(() => {
+      expect(invokeMock.mock.calls.filter((c) => c[0] === 'prefs_write')).toHaveLength(2)
+    })
+    // 第二次落盘内容必须同时含两键（串行队列保证第二次读到第一次的结果）
+    const lastWrite = JSON.parse(invokeMock.mock.calls.filter((c) => c[0] === 'prefs_write').at(-1)![1].content as string)
+    expect(lastWrite['pwork-theme']).toBe('dark')
+    expect(lastWrite['pwork-keybinds']).toEqual({ quickNote: 'q' })
+  })
 })
 
 describe('损坏回退', () => {

@@ -182,7 +182,7 @@ export function Settings() {
     setPrefsMsg(r.message)
   }
 
-  // AI · BYOK（全工作台一把钥匙：fupan-coach 配置复用，02 §4 凭据只存 localStorage）
+  // AI · BYOK（全工作台一把钥匙：fupan-coach 配置复用；桌面版 Key 只在 gateway.env 不进配置）
   const [ai, setAi] = useState<CoachConfig>(() => loadCoachConfig())
   const [aiTesting, setAiTesting] = useState(false)
   const [aiTestMsg, setAiTestMsg] = useState('')

@@ -56,6 +56,24 @@ function QuickNoteDialog() {
   // 粘贴图片即存附件（R2 桌面先行）：截图 → Win+Shift+S → N 唤起 → Ctrl+V → 存
   const [attBusy, setAttBusy] = useState(false)
 
+  const saveDraft = () => {
+    // 附件元数据一并进草稿：字节已在盘，Esc 关闭后重开浮层能恢复待挂列表（不丢图不产孤儿）
+    if (body.trim() || pendingAtts.length > 0) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ body, tags, attachments: pendingAtts } satisfies Draft))
+    } else {
+      localStorage.removeItem(DRAFT_KEY)
+    }
+  }
+
+  // 卸载即存草稿（批次二互斥修复补的闸）：closeQuick 的任何路径（通知面板互斥、未来新入口）
+  // 都不经 Esc/遮罩的 saveDraft——卸载钩子兜底，输入中的内容不因切换浮层丢失。
+  // ref 每轮渲染后指到当轮 saveDraft 闭包，卸载时调最后一次
+  const saveDraftRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    saveDraftRef.current = saveDraft
+  })
+  useEffect(() => () => saveDraftRef.current(), [])
+
   useEffect(() => {
     requestAnimationFrame(() => taRef.current?.focus())
   }, [])
@@ -92,15 +110,6 @@ function QuickNoteDialog() {
       await deleteAttachmentFile(att.file)
     } catch {
       /* 孤儿文件可重复清理，静默 */
-    }
-  }
-
-  const saveDraft = () => {
-    // 附件元数据一并进草稿：字节已在盘，Esc 关闭后重开浮层能恢复待挂列表（不丢图不产孤儿）
-    if (body.trim() || pendingAtts.length > 0) {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ body, tags, attachments: pendingAtts } satisfies Draft))
-    } else {
-      localStorage.removeItem(DRAFT_KEY)
     }
   }
 

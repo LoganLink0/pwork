@@ -48,26 +48,38 @@ export async function readPrefsFile(): Promise<PrefsFile> {
   return cache
 }
 
-export async function writePrefsFile(patch: PrefsFile): Promise<void> {
+/** 写队列：整文件读改写必须串行——两个并发写各自基于同一旧态展开合并，后落盘者会整文件
+ *  覆盖先落盘者（丢更新）。所有写排进单条 promise 链，读改写全程原子。
+ *  边界如实留档：本队列只串行化本 WebView 进程内的写；主窗与伴生窗是两个进程，跨进程
+ *  同时写（如拖岛落位与切主题同一瞬间）理论可相互覆盖单键——Rust 侧 tmp+rename 保证文件
+ *  不损坏，丢的是单次偏好写入且用户下一次操作即重写，频率与概率均趋零，不为此加跨进程锁 */
+let writeQueue: Promise<void> = Promise.resolve()
+
+export function writePrefsFile(patch: PrefsFile): Promise<void> {
   // 浏览器版没有 prefs.json：不缓存不落盘（读全走消费方的 localStorage 回落，两条存储不串）
-  if (!isDesktopApp()) return
-  const current = await readPrefsFile()
-  const next = { ...current, ...patch }
-  cache = next
-  try {
-    await invoke('prefs_write', { content: JSON.stringify(next, null, 2) })
-  } catch (e) {
-    recordError({ where: '配置文件.写入', kind: 'app', message: `prefs.json 写入失败：${e instanceof Error ? e.message : String(e)}` }, { silent: true })
-    return
-  }
-  // 跨窗广播：伴生窗（胶囊岛/问小 P）监听此事件实时跟随主题等偏好变化
-  //（localStorage 的 storage 事件只覆盖同 origin 窗口，独立窗场景以 Tauri 事件为准）
-  try {
-    const { emit } = await import('@tauri-apps/api/event')
-    void emit('pwork-prefs-changed', { keys: Object.keys(patch) })
-  } catch {
-    /* 广播失败不影响写入本身 */
-  }
+  if (!isDesktopApp()) return Promise.resolve()
+  const run = writeQueue.then(async () => {
+    const current = await readPrefsFile()
+    const next = { ...current, ...patch }
+    cache = next
+    try {
+      await invoke('prefs_write', { content: JSON.stringify(next, null, 2) })
+    } catch (e) {
+      recordError({ where: '配置文件.写入', kind: 'app', message: `prefs.json 写入失败：${e instanceof Error ? e.message : String(e)}` }, { silent: true })
+      return
+    }
+    // 跨窗广播：伴生窗（胶囊岛/问小 P）监听此事件实时跟随主题等偏好变化
+    //（localStorage 的 storage 事件只覆盖同 origin 窗口，独立窗场景以 Tauri 事件为准）
+    try {
+      const { emit } = await import('@tauri-apps/api/event')
+      void emit('pwork-prefs-changed', { keys: Object.keys(patch) })
+    } catch {
+      /* 广播失败不影响写入本身 */
+    }
+  })
+  // 队尾吞错（run 内部已 recordError，不 reject）：单次失败不断链，后续写照常排队
+  writeQueue = run.catch(() => {})
+  return run
 }
 
 /** 迁移：localStorage 旧键 → prefs.json。prefs.json 已有的键跳过（升级场景：

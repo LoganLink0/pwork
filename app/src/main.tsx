@@ -15,11 +15,11 @@ import './styles/collect.css'
 import './modules/review/styles/review.css'
 import App from './App.tsx'
 import { applyTheme, loadTheme } from './engine/appearance.ts'
-import { migrateLocalPrefs, readPrefsFile } from './engine/prefsFile.ts'
+import { migrateLocalPrefs, readPrefsFile, readPref, writePref } from './engine/prefsFile.ts'
 import { initPrefs } from './engine/prefs.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
 import { useUi } from './store/ui.ts'
-import { installErrorCapture, track } from './engine/errorLog.ts'
+import { installErrorCapture, recordError, track } from './engine/errorLog.ts'
 import { isDesktopApp } from './engine/platform.ts'
 
 // 错误捕获最先安装：之后任何未捕获错误都会记录 + 顶出错误条
@@ -33,18 +33,28 @@ applyTheme(loadTheme())
 // dev 壳与桌面版自此读同一数据目录文件。平移后各消费方读 prefs 命中、localStorage 只作回落。
 // 浏览器版不迁（无数据目录，继续走 localStorage）。
 if (isDesktopApp()) {
-  void readPrefsFile().then(() =>
-    migrateLocalPrefs([
-      'pwork-theme',
-      'fupan-coach',
-      'pwork-keybinds',
-      'pwork-autobackup',
-      'pwork-isle-pos',
-      'pwork-isle-settings',
-      'pwork-last-backup',
-      'pwork-backup-snooze',
-    ]),
-  )
+  void readPrefsFile()
+    .then(() =>
+      migrateLocalPrefs([
+        'pwork-theme',
+        'fupan-coach',
+        'pwork-keybinds',
+        'pwork-autobackup',
+        'pwork-isle-pos',
+        'pwork-isle-settings',
+        'pwork-last-backup',
+        'pwork-backup-snooze',
+      ]),
+    )
+    .then(() => {
+      // Key 边界手术（0.1.18 定稿：桌面版 Key 只在 gateway.env）：历史配置可能带直连
+      // apiKey 字段，平移进了明文文件——读出来清掉再写回（viaGateway 归一不受影响）
+      const coach = readPref<Record<string, unknown> | undefined>('fupan-coach', undefined)
+      if (coach && typeof coach.apiKey === 'string' && coach.apiKey) {
+        writePref('fupan-coach', { ...coach, apiKey: '' })
+        recordError({ where: '配置文件.迁移', kind: 'app', message: '历史直连 API Key 已按桌面边界清除（Key 只在 gateway.env）' }, { silent: true })
+      }
+    })
 }
 
 // 显示设置（字号缩放/阅读行宽/字体）同样渲染前应用——写 CSS 变量到根元素
