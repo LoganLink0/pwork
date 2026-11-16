@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>PWORK 宽幅布局设计稿 · 逐页规划（示意，非最终实现）</title>
+<title>PWORK 宽幅布局设计稿 v2 · 全页面覆盖（示意，非最终实现）</title>
 <style>
   /* 令牌值与 app/src/styles/tokens.css 亮色主题同源（复制快照 2026-11-17） */
   :root {
@@ -10,7 +10,7 @@
     --line: #e8e2d5; --line-strong: #d2cbbd;
     --ink: #211e1a; --ink-soft: #66625a; --ink-faint: #6b665e;
     --accent: #e8833a; --accent-deep: #b0500f; --accent-text: #a34e12;
-    --ok: #3d7a37;
+    --ok: #3d7a37; --danger: #b4452e;
     --r-sm: 10px; --r-md: 14px; --r-lg: 18px;
     --fs-xs: 13px; --fs-sm: 14px; --fs-md: 17px; --fs-lg: 19px; --fs-xl: 21px;
   }
@@ -18,32 +18,30 @@
   body { background: var(--bg); color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: var(--fs-md); }
   .deck-head { padding: 18px 28px 10px; }
   .deck-head h1 { font-size: 19px; }
-  .deck-head p { color: var(--ink-soft); font-size: var(--fs-sm); margin-top: 4px; }
-  .deck-tabs { display: flex; gap: 8px; padding: 12px 28px; flex-wrap: wrap; }
+  .deck-head p { color: var(--ink-soft); font-size: var(--fs-sm); margin-top: 4px; line-height: 1.7; }
+  .deck-tabs { display: flex; gap: 6px; padding: 12px 28px; flex-wrap: wrap; }
   .deck-tabs button {
     border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft);
-    padding: 7px 16px; border-radius: var(--r-sm); font-size: var(--fs-sm); cursor: pointer;
+    padding: 6px 14px; border-radius: var(--r-sm); font-size: 13px; cursor: pointer;
   }
   .deck-tabs button.on { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff; font-weight: 600; }
+  .deck-tabs .done { border-color: var(--ok); color: var(--ok); }
+  .deck-tabs button.on.done { background: var(--ok); color: #fff; }
   .page { display: none; padding: 8px 28px 40px; }
   .page.on { display: block; }
-  /* 1920 宽下的一屏等比示意：整体缩进容器 1560px */
   .frame { max-width: 1560px; margin: 0 auto; border: 1px solid var(--line-strong); border-radius: var(--r-md); overflow: hidden; background: var(--bg); }
   .frame-note { padding: 8px 16px; font-size: 12px; color: var(--ink-faint); border-bottom: 1px dashed var(--line-strong); background: var(--surface-2); }
-  /* 侧栏（每页相同简画） */
+  .frame-note b { color: var(--accent-text); }
   .layout { display: flex; min-height: 620px; }
   .sidenav { width: 200px; flex: none; border-right: 1px solid var(--line); padding: 14px 10px; background: var(--surface-2); }
   .sidenav .brand { font-weight: 700; font-size: 15px; padding: 2px 10px 12px; }
   .sidenav .nav-i { padding: 7px 10px; border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: 2px; }
   .sidenav .nav-i.on { background: var(--accent); color: #fff; font-weight: 600; }
-  .sidenav .nav-i:nth-child(odd) { letter-spacing: .2px; }
-  /* 内容区骨架 */
   .content { flex: 1; min-width: 0; padding: 18px 20px; }
   .page-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
   .page-head h2 { font-size: var(--fs-xl); }
   .page-head .sub { color: var(--ink-faint); font-size: var(--fs-xs); }
   .page-head .right { margin-left: auto; display: flex; gap: 8px; }
-  /* 宽幅双栏：主列 + 副列 300px（设计稿核心） */
   .wide { display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: start; }
   .aside { position: sticky; top: 0; display: flex; flex-direction: column; gap: 12px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; }
@@ -55,7 +53,6 @@
     content: '右栏 300px · sticky'; position: absolute; top: -10px; right: 0;
     font-size: 11px; color: var(--accent-text); background: var(--bg); padding: 0 6px;
   }
-  /* 通用小件 */
   .btn { display: inline-block; border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 4px 12px; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); }
   .btn.primary { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff; font-weight: 600; }
   .chip { display: inline-block; border: 1px solid var(--line-strong); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--ink-soft); margin: 0 4px 6px 0; }
@@ -64,16 +61,12 @@
   .tier { display: inline-block; border-radius: 4px; padding: 1px 8px; font-size: 12px; margin-right: 8px; }
   .tier.must { background: #fbe9d9; color: var(--accent-deep); font-weight: 600; }
   .tier.may { background: var(--surface-2); color: var(--ink-soft); }
-  .bar-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: var(--fs-xs); }
-  .bar-row .lbl { width: 52px; color: var(--ink-soft); flex: none; }
-  .bar { height: 10px; border-radius: 5px; background: var(--surface-2); flex: 1; position: relative; overflow: hidden; }
-  .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
-  .kv { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--ink-soft); padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-soft); padding: 5px 0; border-bottom: 1px dashed var(--line); }
   .kv:last-child { border-bottom: none; }
+  .kv b { color: var(--ink); font-weight: 600; }
   .heat { display: flex; gap: 3px; margin: 6px 0; }
   .heat i { width: 14px; height: 14px; border-radius: 3px; background: var(--surface-2); }
   .heat i.l1 { background: #f3d9bd; } .heat i.l2 { background: var(--accent); }
-  /* 日报卡 */
   .digest-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 16px; margin-bottom: 10px; }
   .digest-item .t { font-weight: 600; font-size: var(--fs-md); }
   .digest-item .s { color: var(--ink-soft); font-size: var(--fs-sm); margin: 5px 0 7px; }
@@ -83,47 +76,174 @@
   .vote span { padding: 2px 10px; font-size: 12px; color: var(--ink-soft); border-right: 1px solid var(--line-strong); }
   .vote span:last-child { border-right: none; }
   .vote span.on { background: var(--accent); color: #fff; }
-  /* 待办 lanes */
+  .dist { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .dist .lbl { width: 48px; color: var(--ink-soft); flex: none; }
+  .dist .bar { height: 10px; border-radius: 5px; background: var(--surface-2); flex: 1; position: relative; overflow: hidden; }
+  .dist .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
   .lanes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .lane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; min-height: 240px; }
+  .lane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; min-height: 210px; }
   .lane h4 { font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: 8px; }
   .task { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 7px 10px; font-size: var(--fs-sm); margin-bottom: 6px; background: var(--bg); }
   .task .due { color: var(--ink-faint); font-size: 12px; }
-  /* Bento */
   .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .bento .card { min-height: 130px; }
+  .bento .card { min-height: 120px; }
   .bento .card.w2 { grid-column: span 2; }
+  .list-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 12px; margin-bottom: 8px; font-size: var(--fs-sm); }
+  .list-row .grow { flex: 1; min-width: 0; }
+  .list-row .name { font-weight: 600; }
+  .list-row .meta { color: var(--ink-faint); font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--danger); } .dot.idle { background: var(--line-strong); }
   .foot-note { color: var(--ink-faint); font-size: 12px; margin-top: 10px; }
+  .badge { display: inline-block; border-radius: 4px; padding: 0 6px; font-size: 11px; margin-left: 6px; }
+  .badge.b1 { background: #e7f0e4; color: var(--ok); }
+  .badge.b2 { background: #fbe9d9; color: var(--accent-deep); }
+  .badge.b3 { background: var(--surface-2); color: var(--ink-soft); }
 </style>
 </head>
 <body>
 <div class="deck-head">
-  <h1>PWORK 宽幅布局设计稿 · 逐页规划</h1>
-  <p>示意稿（内容为示意数据，观感用项目真实令牌）· 核心规则：宽幅容器 1560px = 主列 1fr + 右栏 300px sticky；≥1440px 出右栏，1024–1439 隐藏，&lt;1024 单列现状。右栏只放实时概览/统计/筛选/高频操作，静态说明一律进帮助页。</p>
+  <h1>PWORK 宽幅布局设计稿 v2 · 全页面覆盖</h1>
+  <p>27 条路由全量决策（规范见 docs/design/宽屏空间规划.md）。五种形态：A 宽幅双栏（主列+右栏 300px sticky）· B 宽幅网格 Bento · C 表单+预览双栏 · D 双栏既有 · E 单栏阅读/全屏专注。宽度分级：≥1440 出右栏 / 1024–1439 隐藏 / &lt;1024 单列现状。右栏只放实时概览/统计/筛选/高频操作。<b style="color:var(--ok)">绿框=已实现</b>，其余为二/三批示意。</p>
 </div>
 <div class="deck-tabs" id="tabs">
-  <button data-p="digest" class="on">① 信息日报</button>
-  <button data-p="tasks">② 待办</button>
-  <button data-p="items">③ 条目库</button>
-  <button data-p="review">④ 回路仪表盘</button>
-  <button data-p="output">⑤ 输出主页</button>
-  <button data-p="home">⑥ 首页</button>
+  <button data-p="home" class="done">今日</button>
+  <button data-p="tasks" class="done">待办 ✅</button>
+  <button data-p="goals">目标</button>
+  <button data-p="digest" class="done">信息日报 ✅</button>
+  <button data-p="sources">信源 ★</button>
+  <button data-p="items">条目库</button>
+  <button data-p="blocks">外部数据</button>
+  <button data-p="notes">速记（不动）</button>
+  <button data-p="process">处理工具箱</button>
+  <button data-p="tool">工具子页 ★</button>
+  <button data-p="review">回路主页</button>
+  <button data-p="output">输出主页</button>
+  <button data-p="report">周报导出（三批）</button>
+  <button data-p="cloud">云端</button>
+  <button data-p="settings">设置 ★</button>
+  <button data-p="help">帮助 ★</button>
+  <button data-p="static">不动的页面</button>
 </div>
 
-<!-- ① 信息日报 -->
-<div class="page on" id="p-digest">
+<!-- 今日（B） -->
+<div class="page on" id="p-home">
   <div class="frame">
-    <div class="frame-note">右栏 = 「今日概览」：抓取状态 / 分层分布 / 快捷筛选 / 导出聚拢（页头的导出按钮移进栏内）</div>
+    <div class="frame-note"><b>B 宽幅网格 · 第二批</b> —— 瓦片区 2→3 列 auto-fill 铺满；四模块卡一行四张自然铺开</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i">首页</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
-        <div class="nav-i on">输入 · 日报</div><div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div>
-        <div class="nav-i">处理</div><div class="nav-i">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">今日</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
+        <div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div><div class="nav-i">处理</div><div class="nav-i">输出</div>
       </div>
       <div class="content">
-        <div class="page-head">
-          <h2>信息日报</h2><span class="sub">每天最多精选 10 条 · 约 2 分钟扫完</span>
+        <div class="page-head"><h2>晚上好</h2><span class="sub">周二 · 距离上次全量备份 2 天</span></div>
+        <div class="bento">
+          <div class="card"><h3>今日速记</h3><div class="desc">3 条 · 最后一条 21:40</div></div>
+          <div class="card"><h3>今日抓取</h3><div class="desc">12 信源 · 10 条入库 · 2 重试中</div></div>
+          <div class="card"><h3>今日待办</h3><div class="desc">3 条今天到期 · 1 条逾期</div></div>
+          <div class="card w2"><h3>回路提醒</h3><div class="desc">本周还没复盘——团队周会材料已就绪，可一键起草</div></div>
+          <div class="card"><h3>备份</h3><div class="desc">自动备份开启 · 每 7 天 · 上次 11-15</div></div>
+          <div class="card"><h3>目标</h3><div class="desc">2 个进行中 · 1 个本月到期</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
+          <div class="card"><h3>输入</h3><div class="desc">记下来：速记 · 信源 · 日报</div></div>
+          <div class="card"><h3>处理</h3><div class="desc">加工：工具箱 · 语音 · 图片</div></div>
+          <div class="card"><h3>输出</h3><div class="desc">成稿：周报 · PPT · 文章</div></div>
+          <div class="card"><h3>回路</h3><div class="desc">复盘：CLAP · 会议室</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 待办（A）✅已实现 -->
+<div class="page" id="p-tasks">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · ✅已实现（第一批）</b> —— 主列 lanes/时间视图 + 右栏「进行中目标 + 到期节奏」；窄屏右栏隐藏</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">今日</div><div class="nav-i on">待办</div><div class="nav-i">回路</div>
+        <div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div><div class="nav-i">处理</div><div class="nav-i">输出</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>待办</h2><span class="sub">3 条进行 · 1 条本周 · 1 条搁置</span>
+          <div class="right"><span class="chip on">按分诊</span><span class="chip">按日期</span></div>
+        </div>
+        <div class="wide">
+          <div class="main">
+            <div class="lanes">
+              <div class="lane"><h4>今天</h4>
+                <div class="task">给 SuperLink 上约的两位投资人发跟进<b class="due"> · 今天 18:00</b></div>
+                <div class="task">Qwen4 文章精读并写一条速记<b class="due"> · 今天</b></div>
+                <div class="task">每周循环：周报初稿<b class="due"> · 每周五 · 已完成 6 次</b></div>
+              </div>
+              <div class="lane"><h4>本周</h4><div class="task">机器人落地标准那条转深度调研<b class="due"> · 周四</b></div></div>
+              <div class="lane"><h4>搁置</h4><div class="task">旧信源批量迁移评估（等发版后）</div></div>
+            </div>
+            <div class="foot-note">12 周完成热力条保留在页内原位（宽条不宜挤进 300px 右栏）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>进行中目标</h3>
+              <div style="font-size:14px;font-weight:600">信源治理：刷掉低质源</div><div style="font-size:12px;color:var(--ink-soft)">已停用 3 个低质源</div><div style="font-size:12px;color:var(--ink-faint)">期限 11-30</div>
+              <div style="font-size:14px;font-weight:600;margin-top:8px">输出节奏：每周一篇成稿</div><div style="font-size:12px;color:var(--ink-soft)">11 月 2/4 篇</div>
+            </div>
+            <div class="card"><h3>到期节奏</h3>
+              <div class="kv"><span>今天到期</span><b>3</b></div>
+              <div class="kv"><span>本周内</span><b>1</b></div>
+              <div class="kv"><span>进行中</span><b>5</b></div>
+              <div class="kv"><span>已完成</span><b>18</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 目标（A） -->
+<div class="page" id="p-goals">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批</b> —— 主列目标卡列表 + 右栏「目标概览」；目标是文本型进度，不造百分比条</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">今日</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
+        <div class="nav-i on">目标</div><div class="nav-i">速记</div><div class="nav-i">处理</div><div class="nav-i">输出</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>目标</h2><span class="sub">2 个进行中 · 记录进度，复盘时回顾</span>
+          <div class="right"><button class="btn primary">＋ 新目标</button></div>
+        </div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>信源治理：刷掉低质源</h3><div class="desc">最近进度：已停用 3 个低质源，Q3 后备选还剩 2 个要评估</div><span class="btn">记录进度</span> <span class="btn">改期限</span></div>
+            <div class="card"><h3>输出节奏：每周一篇成稿</h3><div class="desc">最近进度：11 月第 2 篇成稿（Qwen4 拆解）</div><span class="btn">记录进度</span> <span class="btn">改期限</span></div>
+            <div class="foot-note">主列 = 目标卡（标题+最近进度快照+期限）· 已闭环目标折叠在底部</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>目标概览</h3>
+              <div class="kv"><span>进行中</span><b>2</b></div>
+              <div class="kv"><span>本月到期</span><b>1</b></div>
+              <div class="kv"><span>已闭环</span><b>4</b></div>
+            </div>
+            <div class="card"><h3>目标 × 待办</h3><div class="desc">挂着目标来源的待办（复盘行动项）会在待办页带「目标」溯源标</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 信息日报（A）✅已实现 -->
+<div class="page" id="p-digest">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · ✅已实现（第一批）</b> —— 右栏「今日抓取 / 分层分布 / 快捷筛选 / 导出」；窄屏右栏隐藏、导出回页头</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">今日</div><div class="nav-i">待办</div>
+        <div class="nav-i on">输入 · 日报</div><div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>信息日报</h2><span class="sub">每天最多精选 10 条 · 约 2 分钟扫完</span>
           <div class="right"><button class="btn">‹ 2026-11-17 ›</button><button class="btn primary">立即抓取</button></div>
         </div>
         <div class="wide">
@@ -135,42 +255,32 @@
             </div>
             <div class="digest-item">
               <div class="t"><span class="tier must">必看</span>SuperLink2026 开启创投行业超级链接时刻 ↗</div>
-              <div class="s">2026年12月2-3日，清科控股、投资界主办的 SuperLink2026 将在北京启幕……</div>
-              <div class="m"><span>投资界</span><span>入库 23:00</span><span class="tagchip">#pm</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
+              <div class="s">2026年12月2-3日，清科控股、投资界主办……</div>
+              <div class="m"><span>投资界</span><span>入库 23:00</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
             </div>
             <div class="digest-item">
               <div class="t"><span class="tier may">可看</span>没错过一天研发的他，50 岁以华为董事的身份退休了 ↗</div>
               <div class="s">在华为待了快 10000 天。</div>
               <div class="m"><span>量子位</span><span>入库 23:00</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span class="on">◦ 没想好</span><span>✗ 少推</span></span></div>
             </div>
-            <div class="digest-item">
-              <div class="t"><span class="tier may">可看</span>睿尔曼智能魏雁兵：质量、经济性、稳定性是机器人落地三大标准 ↗</div>
-              <div class="s">具身智能的真正价值是"把人的经验、技能复刻出来"</div>
-              <div class="m"><span>机器之心</span><span>入库 22:41</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
-            </div>
-            <div class="foot-note">主列 = 日报卡片列表（拉宽形态，摘要两行截断）· 分诊完即归档</div>
           </div>
           <div class="aside mark-aside">
-            <div class="card">
-              <h3>今日抓取</h3>
-              <div class="kv"><span>信源</span><b>12 个 · 2 个失败重试中</b></div>
-              <div class="kv"><span>本轮耗时</span><b>1 分 42 秒</b></div>
-              <div class="kv"><span>下次抓取</span><b>今晚 23:00</b></div>
+            <div class="card"><h3>今日抓取</h3>
+              <div class="kv"><span>启用信源</span><b>12 个</b></div>
+              <div class="kv"><span>上次抓取</span><b>1 分 42 秒</b></div>
+              <div class="kv"><span>源成功</span><b>10/12</b></div>
+              <div class="kv"><span>新入库 / 筛除</span><b>10 / 34</b></div>
+              <div class="kv"><span>失败</span><b>36氪、HN 招聘</b></div>
             </div>
-            <div class="card">
-              <h3>分层分布（10 条）</h3>
-              <div class="bar-row"><span class="lbl">必看</span><div class="bar"><i style="width:20%;background:var(--accent)"></i></div><b>2</b></div>
-              <div class="bar-row"><span class="lbl">可看</span><div class="bar"><i style="width:60%;background:var(--line-strong)"></i></div><b>6</b></div>
-              <div class="bar-row"><span class="lbl">可略</span><div class="bar"><i style="width:20%;background:var(--surface-2);outline:1px solid var(--line)"></i></div><b>2</b></div>
+            <div class="card"><h3>分层分布（10 条）</h3>
+              <div class="dist"><span class="lbl">必看</span><div class="bar"><i style="width:20%;background:var(--accent)"></i></div><b>2</b></div>
+              <div class="dist"><span class="lbl">可看</span><div class="bar"><i style="width:60%;background:var(--line-strong)"></i></div><b>6</b></div>
+              <div class="dist"><span class="lbl">可略</span><div class="bar"><i style="width:20%;background:var(--surface-2);outline:1px solid var(--line)"></i></div><b>2</b></div>
             </div>
-            <div class="card">
-              <h3>快捷筛选</h3>
-              <span class="chip on">只看必看</span><span class="chip">未处理</span><span class="chip">带音频</span><span class="chip">#ai</span>
+            <div class="card"><h3>快捷筛选</h3>
+              <span class="chip on">全部</span><span class="chip">只看必看</span><span class="chip">未处理</span><span class="chip">带音频</span>
             </div>
-            <div class="card">
-              <h3>导出</h3>
-              <span class="btn" style="margin:0 6px 6px 0">Obsidian 日报</span><span class="btn">数据卡片</span>
-            </div>
+            <div class="card"><h3>导出</h3><span class="btn" style="width:100%">Obsidian 日报（Markdown）</span></div>
           </div>
         </div>
       </div>
@@ -178,58 +288,46 @@
   </div>
 </div>
 
-<!-- ② 待办 -->
-<div class="page" id="p-tasks">
+<!-- 信源（A）★ v3：自检与发现进右栏 -->
+<div class="page" id="p-sources">
   <div class="frame">
-    <div class="frame-note">右栏 = 「目标与节奏」：目标进度 / 本周热力 / 到期分布 · lanes 三列在 ≥1440 与右栏共存</div>
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批 ★v3 修订</b> —— <b>信源自检与「可能值得订阅」从主列横条卡移入右栏</b>（概览诊断类信息，采纳用户判断）；主列只剩信源列表，不再被两张诊断卡下推。窄屏右栏隐藏时两卡自动回落主列（.only-narrow 兜底）</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i">首页</div><div class="nav-i on">待办</div><div class="nav-i">回路</div>
-        <div class="nav-i">输入</div><div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div>
-        <div class="nav-i">处理</div><div class="nav-i">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">今日</div><div class="nav-i">待办</div>
+        <div class="nav-i">速记</div><div class="nav-i on">信源</div><div class="nav-i">条目库</div>
       </div>
       <div class="content">
-        <div class="page-head">
-          <h2>待办</h2><span class="sub">3 条进行 · 1 条本周 · 1 条搁置</span>
-          <div class="right"><span class="chip on">按分诊</span><span class="chip">按日期</span></div>
+        <div class="page-head"><h2>信源</h2><span class="sub">12 个启用 · 每晚 23:00 自动抓取</span>
+          <div class="right"><button class="btn primary">＋ 添加信源</button><button class="btn">推荐目录</button></div>
         </div>
         <div class="wide">
           <div class="main">
-            <div class="lanes">
-              <div class="lane"><h4>今天</h4>
-                <div class="task">给 SuperLink 上面约的两位投资人发跟进<b class="due"> · 今天 18:00</b></div>
-                <div class="task">Qwen4 文章精读并写一条速记<b class="due"> · 今天</b></div>
-                <div class="task">每周循环：周报初稿<b class="due"> · 每周五 · 已完成 6 次</b></div>
-              </div>
-              <div class="lane"><h4>本周</h4>
-                <div class="task">机器人落地标准那条转深度调研<b class="due"> · 周四</b></div>
-              </div>
-              <div class="lane"><h4>搁置</h4>
-                <div class="task">旧信源批量迁移评估（等发版后）</div>
-              </div>
-            </div>
-            <div class="foot-note">主列 = 分诊 lanes（今天/本周/搁置）· 「按日期」视图主列同宽</div>
+            <div class="list-row"><span class="dot ok"></span><span class="grow"><span class="name">量子位</span> <span class="badge b2">播客</span><div class="meta">每晚 23:00 · 上次成功 · 今日 3 条</div></span><span class="btn">编辑</span></div>
+            <div class="list-row"><span class="dot ok"></span><span class="grow"><span class="name">机器之心</span><div class="meta">每晚 23:00 · 上次成功 · 今日 2 条</div></span><span class="btn">编辑</span></div>
+            <div class="list-row"><span class="dot ok"></span><span class="grow"><span class="name">投资界</span><div class="meta">每晚 23:00 · 上次成功 · 今日 1 条</div></span><span class="btn">编辑</span></div>
+            <div class="list-row"><span class="dot bad"></span><span class="grow"><span class="name">36氪</span><div class="meta">上次失败（源站结构变更）· 已连续 2 次</div></span><span class="btn">编辑</span></div>
+            <div class="list-row"><span class="dot idle"></span><span class="grow"><span class="name">HN 招聘</span><span class="badge b3">已停用</span><div class="meta">间歇可达 · 手动恢复</div></span><span class="btn">启用</span></div>
+            <div class="foot-note">主列 = 信源列表（健康点=上次抓取成败）· 屏蔽词/抓取时间在编辑弹层 · 推荐目录仍为主列弹层形态</div>
           </div>
           <div class="aside mark-aside">
-            <div class="card">
-              <h3>目标进度</h3>
-              <div class="kv"><span>信源治理：刷掉低质源</span><b>3/5</b></div>
-              <div class="bar-row"><div class="bar"><i style="width:60%;background:var(--accent)"></i></div></div>
-              <div class="kv"><span>输出节奏：每周一篇成稿</span><b>11 月 2/4</b></div>
-              <div class="bar-row"><div class="bar"><i style="width:50%;background:var(--accent)"></i></div></div>
+            <div class="card"><h3>信源概览</h3>
+              <div class="kv"><span>启用 / 全部</span><b>12 / 15</b></div>
+              <div class="kv"><span>上次全部成功</span><b>10 个</b></div>
+              <div class="kv"><span>连续失败（要处理）</span><b>2 个</b></div>
+              <div class="kv"><span>本月入库</span><b>286 条</b></div>
             </div>
-            <div class="card">
-              <h3>本周完成热力</h3>
-              <div class="heat"><i class="l2"></i><i class="l1"></i><i></i><i class="l2"></i><i class="l1"></i><i class="l2"></i><i></i></div>
-              <div class="kv"><span>本周已完成</span><b>9 条</b></div>
-              <div class="kv"><span>逾期未完</span><b>1 条</b></div>
+            <div class="card"><h3>信源自检（近 30 天）</h3>
+              <div class="kv"><span>产出健康</span><b>9 个</b></div>
+              <div class="kv"><span>噪声偏高</span><b>2 个</b></div>
+              <div class="kv"><span>零命中</span><b>1 个</b></div>
+              <div class="kv"><span>观察中</span><b>3 个</b></div>
+              <div class="foot-note">有问题的源在这里点名带建议（如「36氪：连续失败，考虑换路由或停用」）——降档与升档由投票信用自动做，自检只报告</div>
             </div>
-            <div class="card">
-              <h3>到期分布</h3>
-              <div class="kv"><span>今天</span><b>3</b></div>
-              <div class="kv"><span>本周内</span><b>1</b></div>
-              <div class="kv"><span>已搁置</span><b>1</b></div>
+            <div class="card"><h3>可能值得订阅</h3>
+              <div class="kv"><span>example.com</span><b>被引用 6 次</b></div>
+              <div class="kv"><span>another.org</span><b>被引用 4 次</b></div>
+              <div class="foot-note">近 30 天被你的信源反复转引的外部源头——「编辑后添加」预填名称与主站地址，补全 feed 入库</div>
             </div>
           </div>
         </div>
@@ -238,27 +336,21 @@
   </div>
 </div>
 
-<!-- ③ 条目库 -->
+<!-- 条目库（A） -->
 <div class="page" id="p-items">
   <div class="frame">
-    <div class="frame-note">右栏 = 「库概览」：当月入库 / 评分分布 / 筛选聚拢 · 卡内「详情」改右栏常驻面板是第三批（结构级）</div>
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批</b> —— 右栏「库概览」；卡内「详情」改右栏常驻面板是<b>第三批</b>（结构级，动前小稿过审）</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i">首页</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
-        <div class="nav-i">输入</div><div class="nav-i">速记</div><div class="nav-i on">条目库</div>
-        <div class="nav-i">处理</div><div class="nav-i">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i on">条目库</div>
       </div>
       <div class="content">
-        <div class="page-head">
-          <h2>条目库</h2><span class="sub">2026 年 11 月 · 24 条</span>
+        <div class="page-head"><h2>条目库</h2><span class="sub">2026 年 11 月 · 24 条</span>
           <div class="right"><button class="btn">‹ 11 月 ›</button></div>
         </div>
         <div class="wide">
           <div class="main">
-            <div style="margin-bottom:10px">
-              <span class="chip on">必看</span><span class="chip">评分入选</span><span class="chip">已筛除</span><span class="chip">机会/威胁/趋势</span>
-            </div>
+            <div style="margin-bottom:10px"><span class="chip on">必看</span><span class="chip">评分入选</span><span class="chip">已筛除</span><span class="chip">机会/威胁/趋势</span></div>
             <div class="digest-item">
               <div class="t"><span class="tier must">必看</span>Qwen4-Max 首发上线问 AI 平台 ↗</div>
               <div class="s">Token 消耗砍半、单任务成本降 58%……</div>
@@ -269,25 +361,22 @@
               <div class="s">细数 AI 的未竟之问。</div>
               <div class="m"><span>甲子光年</span><span>入库 21:10</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
             </div>
-            <div class="foot-note">主列 = 按月列表（筛选 chips 保留在主列顶部亦可，二批定）</div>
+            <div class="foot-note">主列 = 按月列表 · 点「详情」暂保持卡内展开（第三批改右栏面板）</div>
           </div>
           <div class="aside mark-aside">
-            <div class="card">
-              <h3>11 月库概览</h3>
+            <div class="card"><h3>11 月库概览</h3>
               <div class="kv"><span>入库</span><b>24 条</b></div>
               <div class="kv"><span>评分入选</span><b>8 条</b></div>
               <div class="kv"><span>已筛除（30 天后清理）</span><b>9 条</b></div>
             </div>
-            <div class="card">
-              <h3>我的评分</h3>
-              <div class="bar-row"><span class="lbl">多推</span><div class="bar"><i style="width:38%;background:var(--accent)"></i></div><b>5</b></div>
-              <div class="bar-row"><span class="lbl">没想好</span><div class="bar"><i style="width:46%;background:var(--line-strong)"></i></div><b>6</b></div>
-              <div class="bar-row"><span class="lbl">少推</span><div class="bar"><i style="width:15%;background:var(--surface-2);outline:1px solid var(--line)"></i></div><b>2</b></div>
+            <div class="card"><h3>我的评分</h3>
+              <div class="dist"><span class="lbl">多推</span><div class="bar"><i style="width:38%;background:var(--accent)"></i></div><b>5</b></div>
+              <div class="dist"><span class="lbl">没想好</span><div class="bar"><i style="width:46%;background:var(--line-strong)"></i></div><b>6</b></div>
+              <div class="dist"><span class="lbl">少推</span><div class="bar"><i style="width:15%;background:var(--surface-2);outline:1px solid var(--line)"></i></div><b>2</b></div>
               <div class="foot-note">少推多的信源会被降权——这里能看出哪些源在浪费你时间</div>
             </div>
-            <div class="card">
-              <h3>标记</h3>
-              <div class="kv"><span>机会 / 威胁 / 趋势标记</span><b>3 条</b></div>
+            <div class="card"><h3>标记</h3>
+              <div class="kv"><span>机会 / 威胁 / 趋势</span><b>3 条</b></div>
               <div class="kv"><span>永久保留</span><b>4 条</b></div>
             </div>
           </div>
@@ -297,84 +386,332 @@
   </div>
 </div>
 
-<!-- ④ 回路仪表盘 -->
-<div class="page" id="p-review">
+<!-- 外部数据（A） -->
+<div class="page" id="p-blocks">
   <div class="frame">
-    <div class="frame-note">Bento 网格：卡片 auto-fill 自适应 2→3 列铺满宽幅 · 无右栏（整页即概览）</div>
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批</b> —— 主列数据块列表 + 右栏「来源概览」（周报数据源管理页）</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i">首页</div><div class="nav-i">待办</div><div class="nav-i on">回路</div>
-        <div class="nav-i">输入</div><div class="nav-i">处理</div><div class="nav-i">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">速记</div><div class="nav-i on">外部数据</div>
       </div>
       <div class="content">
-        <div class="page-head"><h2>回路</h2><span class="sub">复盘仪表盘 · 本月 4 次复盘 · 闭环率 78%</span>
-          <div class="right"><button class="btn primary">开始新复盘</button></div>
+        <div class="page-head"><h2>外部数据</h2><span class="sub">周报的数据源：手工快照与外部导入的数字都从这里进出</span>
+          <div class="right"><button class="btn primary">＋ 添加数据块</button></div>
         </div>
-        <div class="bento">
-          <div class="card"><h3>复盘节奏</h3><div class="desc">本月 4 次 · 上次 11-15（团队周会）</div><div class="heat"><i class="l2"></i><i></i><i class="l1"></i><i class="l2"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l2"></i></div></div>
-          <div class="card"><h3>闭环率</h3><div class="desc">按全部未完成计入分母（搁置/放弃也算）</div><div style="font-size:34px;font-weight:700;color:var(--accent-text)">78%</div></div>
-          <div class="card"><h3>行动项</h3><div class="kv"><span>进行中</span><b>5</b></div><div class="kv"><span>已闭环</span><b>18</b></div></div>
-          <div class="card w2"><h3>最近复盘</h3><div class="desc">11-15 团队周会 · 3 个行动项 · 2 条洞察已挂速记</div><div class="desc">11-12 个人三问 · 1 个行动项</div></div>
-          <div class="card"><h3>洞察沉淀</h3><div class="kv"><span>本月新增</span><b>7 条</b></div><div class="kv"><span>累计</span><b>63 条</b></div></div>
+        <div class="wide">
+          <div class="main">
+            <div class="list-row"><span class="grow"><span class="name">本周工作时长</span><div class="meta">手工填 · 每周更新 · 最新 42h</div></span><span class="btn">填数</span></div>
+            <div class="list-row"><span class="grow"><span class="name">项目 A 迭代进度</span><div class="meta">外部导入 · 11-15 更新</div></span><span class="btn">查看</span></div>
+            <div class="foot-note">主列 = 数据块列表（按更新时间排）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>来源概览</h3>
+              <div class="kv"><span>数据块</span><b>6 个</b></div>
+              <div class="kv"><span>本周有更新</span><b>3 个</b></div>
+              <div class="kv"><span>供周报引用</span><b>全部</b></div>
+            </div>
+            <div class="card"><h3>说明</h3><div class="desc">周报导出时自动带上这里的数据块——缺更新的块会在导出预览里点名。</div></div>
+          </div>
         </div>
-        <div class="foot-note">Bento：卡片网格 auto-fill（≥1440 三列、1024–1439 两列、<768 单列）</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ⑤ 输出主页 -->
+<!-- 速记（D 不动） -->
+<div class="page" id="p-notes">
+  <div class="frame">
+    <div class="frame-note"><b>D 双栏既有 · 不动</b> —— 速记已是「列表 + 编辑器」双栏，达宽幅形态</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">速记</div><div class="nav-i">信源</div><div class="nav-i">条目库</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>速记</h2><span class="sub">128 条 · 捕获 ≤3 步</span>
+          <div class="right"><button class="btn primary">＋ 新速记</button></div>
+        </div>
+        <div class="wide" style="grid-template-columns:1fr 1fr">
+          <div class="main">
+            <div class="list-row"><span class="grow"><span class="name">测试撤销功能</span><div class="meta">今天 21:40 · 速记浮层</div></span></div>
+            <div class="list-row"><span class="grow"><span class="name">机器人三大标准摘录</span><div class="meta">今天 20:12</div></span></div>
+            <div class="foot-note">左列 = 按日分组时间线</div>
+          </div>
+          <div class="aside"><div class="card" style="min-height:300px"><h3>右侧 = 编辑器（选中即载入）</h3><div class="desc">现状已达标——双栏各占一半，宽屏不需要再改</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 处理工具箱（B） -->
+<div class="page" id="p-process">
+  <div class="frame">
+    <div class="frame-note"><b>B 宽幅网格 · 第二批</b> —— 工具卡 auto-fill 铺满宽幅（≥1440 三列、中屏两列）</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">处理</div><div class="nav-i">输出</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>处理</h2><span class="sub">工具箱：文字 / 音频 / 图片 / 外部工具</span></div>
+        <div class="bento">
+          <div class="card"><h3>朗读合成</h3><div class="desc">选中文本或速记 → mp3</div></div>
+          <div class="card"><h3>录音转文字</h3><div class="desc">录一段 → 转写入库</div></div>
+          <div class="card"><h3>卡片图</h3><div class="desc">速记/金句 → 分享卡片图</div></div>
+          <div class="card"><h3>外部工具</h3><div class="desc">Obsidian / 必应快查 / 自定义</div></div>
+          <div class="card"><h3>轻量转换</h3><div class="desc">音视频转换推荐 HandBrake / 剪映</div></div>
+          <div class="card"><h3>图片处理</h3><div class="desc">压缩 / 裁剪 / 格式转换</div></div>
+        </div>
+        <div class="foot-note">工具子页保持单栏表单（1200）——工具操作本身不需要宽幅</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 回路主页（A） -->
+<div class="page" id="p-review">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批</b> —— 主列复盘档案清单 + 右栏「回路概览」（v1 画的 Bento 是仪表盘想象，实际主页主体是档案清单——按真实内容定形态）</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">今日</div><div class="nav-i">待办</div><div class="nav-i on">回路</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>复盘档案</h2><span class="sub">本月 4 次复盘 · 全部 23 份档案</span>
+          <div class="right"><button class="btn primary">开始新复盘</button><button class="btn">团队会议室</button></div>
+        </div>
+        <div class="wide">
+          <div class="main">
+            <div class="list-row"><span class="grow"><span class="name">11-15 团队周会</span> <span class="badge b1">3 行动项</span><div class="meta">2 条洞察已挂速记 · CLD 已归档</div></span><span class="btn">打开</span></div>
+            <div class="list-row"><span class="grow"><span class="name">11-12 个人三问</span> <span class="badge b1">1 行动项</span><div class="meta">本轮「为什么总在赶期限」</div></span><span class="btn">打开</span></div>
+            <div class="list-row"><span class="grow"><span class="name">11-08 快答</span><div class="meta">3 问 3 答 · 8 分钟</div></span><span class="btn">打开</span></div>
+            <div class="foot-note">主列 = 档案清单（时间倒序）· 向导/会议室是全屏工作流不动</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>回路概览</h3>
+              <div class="kv"><span>本月复盘</span><b>4 次</b></div>
+              <div class="kv"><span>待办闭环率</span><b>78%</b></div>
+              <div class="kv"><span>行动项进行中</span><b>5</b></div>
+              <div class="kv"><span>洞察累计</span><b>63 条</b></div>
+            </div>
+            <div class="card"><h3>节奏提醒</h3><div class="desc">上次复盘 11-15——按你的节奏本周该来一次了；材料就绪，点「开始新复盘」直接起草。</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 输出主页（B） -->
 <div class="page" id="p-output">
   <div class="frame">
-    <div class="frame-note">Bento 入口卡网格 · 子页（周报/PPT/文章/调研）第三批做「左表单+右实时预览」双栏</div>
+    <div class="frame-note"><b>B 宽幅网格 · 第二批</b> —— 入口卡 auto-fill 三列；子页 C 形态第三批</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i">首页</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
-        <div class="nav-i">输入</div><div class="nav-i">处理</div><div class="nav-i on">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">输出</div>
       </div>
       <div class="content">
         <div class="page-head"><h2>输出</h2><span class="sub">把库里的内容变成拿得走的东西</span></div>
         <div class="bento">
-          <div class="card"><h3>一键成稿</h3><div class="desc">近 7 天速记与洞察 → 日报 + 演示 + 文章，页内预览再导出</div><span class="btn primary">开始</span></div>
+          <div class="card"><h3>一键成稿</h3><div class="desc">近 7 天速记与洞察 → 三产物，页内预览再导出</div><span class="btn primary">开始</span></div>
           <div class="card"><h3>周报 / 月报导出</h3><div class="desc">复盘数据 → HTML 演示 · 上次 11-15</div><span class="btn">进入</span></div>
-          <div class="card"><h3>数据卡片</h3><div class="desc">周报月报 → PNG 数据卡 · 可直接发朋友圈</div><span class="btn">进入</span></div>
+          <div class="card"><h3>数据卡片</h3><div class="desc">周报月报 → PNG 数据卡</div><span class="btn">进入</span></div>
           <div class="card"><h3>文章草稿</h3><div class="desc">选档案成文 · docx 与 Markdown</div><span class="btn">进入</span></div>
           <div class="card"><h3>朗读音频</h3><div class="desc">日报或档案 → mp3 朗读</div><span class="btn">进入</span></div>
-          <div class="card"><h3>调研分析</h3><div class="desc">上传 Word/PDF/CSV 整份材料做深度调研</div><span class="btn">进入</span></div>
+          <div class="card"><h3>调研分析</h3><div class="desc">上传整份材料做深度调研</div><span class="btn">进入</span></div>
         </div>
-        <div class="foot-note">入口卡 auto-fill 三列铺满；子页第三批改造后右侧为实时预览栏</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ⑥ 首页 -->
-<div class="page" id="p-home">
+<!-- 周报导出（C 三批） -->
+<div class="page" id="p-report">
   <div class="frame">
-    <div class="frame-note">瓦片区宽屏 2→3 列 · 四模块卡保持一行四张（宽屏自然铺开）</div>
+    <div class="frame-note"><b>C 表单+预览双栏 · 第三批</b>（结构级，动前单独过审）—— 左表单选参数，右栏实时预览/最近产出；六个输出子页同形态逐个设计</div>
     <div class="layout">
-      <div class="sidenav">
-        <div class="brand">PWORK</div>
-        <div class="nav-i on">首页</div><div class="nav-i">待办</div><div class="nav-i">回路</div>
-        <div class="nav-i">输入</div><div class="nav-i">速记</div><div class="nav-i">处理</div><div class="nav-i">输出</div>
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">输出 · 周报导出</div>
       </div>
       <div class="content">
-        <div class="page-head"><h2>晚上好</h2><span class="sub">周六 · 距离上次全量备份 2 天</span></div>
-        <div class="bento">
-          <div class="card"><h3>今日速记</h3><div class="desc">3 条 · 最后一条 21:40</div></div>
-          <div class="card"><h3>今日抓取</h3><div class="desc">12 信源 · 10 条入库 · 2 重试中</div></div>
-          <div class="card"><h3>今日待办</h3><div class="desc">3 条今天到期 · 1 条逾期</div></div>
-          <div class="card w2"><h3>回路提醒</h3><div class="desc">本周还没复盘——团队周会材料已就绪，可一键起草</div></div>
-          <div class="card"><h3>备份</h3><div class="desc">自动备份开启 · 每 7 天 · 上次 11-15</div></div>
+        <div class="page-head"><h2>周报导出</h2><span class="sub">复盘数据 → HTML 演示 / PPT</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>参数</h3>
+              <div class="kv"><span>周期</span><b>2026-11-10 ~ 11-16</b></div>
+              <div class="kv"><span>模板</span><b>标准周报</b></div>
+              <div style="margin-top:10px"><span class="btn primary">生成演示</span> <span class="btn">导出 PPTX</span></div>
+            </div>
+            <div class="foot-note">左栏 = 参数表单（保持表单控件的行宽可读）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>实时预览</h3><div class="desc">生成后在这里看渲染效果——改参数立即刷新，不用反复下载打开</div><div style="border:1px dashed var(--line-strong);border-radius:var(--r-sm);height:180px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px">预览区</div></div>
+            <div class="card"><h3>最近产出</h3>
+              <div class="kv"><span>11-15 周报</span><b>HTML · PPTX</b></div>
+              <div class="kv"><span>11-08 周报</span><b>HTML</b></div>
+            </div>
+          </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
-          <div class="card"><h3>输入</h3><div class="desc">记下来：速记 · 信源 · 日报</div></div>
-          <div class="card"><h3>处理</h3><div class="desc">加工：工具箱 · 语音 · 图片</div></div>
-          <div class="card"><h3>输出</h3><div class="desc">成稿：周报 · PPT · 文章</div></div>
-          <div class="card"><h3>回路</h3><div class="desc">复盘：CLAP · 会议室</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 云端（A） -->
+<div class="page" id="p-cloud">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批</b> —— 主列同步操作卡 + 右栏「同步概览」</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">云端</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>云端同步</h2><span class="sub">已连接 · 数据在你自己的 Cloudflare 里</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>推送与拉取</h3><div class="desc">推送=把本机新数据传云端；拉取=把云端新数据拿回来。双向都只增不删。</div>
+              <span class="btn primary">推送到云端</span> <span class="btn">拉取推送数据</span></div>
+            <div class="card"><h3>换机 / 备份</h3><div class="desc">新设备装好应用后，在这里一键拉全量数据；或者用数据页的全量导出文件导入。</div>
+              <span class="btn">从云端全量拉取</span></div>
+            <div class="foot-note">主列 = 同步操作卡（高频动作）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>同步概览</h3>
+              <div class="kv"><span>连接</span><b>正常</b></div>
+              <div class="kv"><span>上次推送</span><b>今天 09:12 · 6 条</b></div>
+              <div class="kv"><span>上次拉取</span><b>昨天 23:05</b></div>
+              <div class="kv"><span>云端条目</span><b>2,184 条</b></div>
+            </div>
+            <div class="card"><h3>设备</h3>
+              <div class="kv"><span>桌面（本机）</span><b>11-13 活跃</b></div>
+              <div class="kv"><span>手机 PWA</span><b>11-10 活跃</b></div>
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 工具子页（C）★v3 纳入改造 -->
+<div class="page" id="p-tool">
+  <div class="frame">
+    <div class="frame-note"><b>C 表单+说明双栏 · 第二批 ★v3 纳入</b> —— 左工具表单（控件行宽不变）+ 右栏「工具说明+同类工具直达」；窄屏右栏隐藏说明回落表单下方</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">处理 · 录音转文字</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>录音转文字</h2><span class="sub">录一段话 → 转写进速记库</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>操作区</h3>
+              <div class="kv"><span>录音设备</span><b>默认麦克风</b></div>
+              <div class="kv"><span>时长上限</span><b>30 分钟</b></div>
+              <div style="margin-top:12px;display:flex;gap:8px"><span class="btn primary">● 开始录音</span><span class="btn">导入音频文件</span></div>
+              <div style="margin-top:10px;border:1px dashed var(--line-strong);border-radius:var(--r-sm);height:120px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px">录音波形 / 转写结果区</div>
+            </div>
+            <div class="foot-note">左栏 = 工具表单本体（保持现状行宽，只换容器）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>工具说明</h3><div class="desc">录音直接在应用内完成，转写文本自动存为一条速记（带时长标签）；长录音建议分段，单段 30 分钟内转写质量最好。</div></div>
+            <div class="card"><h3>同类工具</h3>
+              <div class="kv"><span>朗读合成（文字→mp3）</span><b>直达 →</b></div>
+              <div class="kv"><span>卡片图（速记→分享图）</span><b>直达 →</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 设置（A）★v3 纳入改造 -->
+<div class="page" id="p-settings">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批 ★v3 纳入</b> —— 主列左导航+当前分类卡不变；右栏「状态速览」（备份/网关/错误日志/版本实时状态，点击跳对应设置卡）；窄屏右栏隐藏</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">数据管理</div><div class="nav-i">AI 接入</div><div class="nav-i">键位</div><div class="nav-i">外观</div><div class="nav-i">关于</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>设置</h2><span class="sub">数据管理 · 备份与导出</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>自动备份</h3>
+              <div class="kv"><span>开关</span><b>开 · 每 7 天</b></div>
+              <div class="kv"><span>上次自动备份</span><b>11-15 17:32</b></div>
+              <div class="kv"><span>备份位置</span><b>应用数据目录 backups 文件夹</b></div>
+            </div>
+            <div class="card"><h3>全量导出</h3><div class="desc">全部数据打成一个 JSON 文件带走（含附件清单）</div><span class="btn primary">导出</span> <span class="btn">导出可读档案（zip）</span></div>
+            <div class="card"><h3>从文件导入</h3><div class="desc">用导出文件在新设备恢复全部数据</div><span class="btn">选择文件导入</span></div>
+            <div class="foot-note">主列 = 当前分类的设置卡（左导航切换，交互不变）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>状态速览</h3>
+              <div class="kv"><span>自动备份</span><b style="color:var(--ok)">正常 · 上次 11-15</b></div>
+              <div class="kv"><span>AI 网关</span><b style="color:var(--ok)">在线</b></div>
+              <div class="kv"><span>错误日志</span><b>2 条（本周）</b></div>
+              <div class="kv"><span>版本</span><b>v0.1.24（内测）</b></div>
+              <div class="foot-note">每项点击跳到对应设置卡——改动有没生效，回来一眼就能确认</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 帮助（A）★v3 纳入改造 -->
+<div class="page" id="p-help">
+  <div class="frame">
+    <div class="frame-note"><b>A 宽幅双栏 · 第二批 ★v3 纳入</b> —— 主列左导航+当前分类文档不变；右栏「本节目录（锚点 sticky）+ 快捷键速查 + 反馈入口」；窄屏右栏隐藏</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">快速上手</div><div class="nav-i">快捷键</div><div class="nav-i">数据安全</div><div class="nav-i">配置指南</div><div class="nav-i">常见问题</div><div class="nav-i">术语表</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>帮助</h2><span class="sub">四模块系统怎么用 · 数据在哪、怎么丢不了</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>快速上手</h3><div class="desc">四个模块各管一段：输入记下来 → 处理加工 → 输出成稿 → 回路复盘——视频为应用真实操作录制</div>
+              <div class="kv"><span>输入 · 捕获</span><b>看演示 →</b></div>
+              <div class="kv"><span>处理 · 加工</span><b>看演示 →</b></div>
+              <div class="kv"><span>输出 · 产出</span><b>看演示 →</b></div>
+              <div class="kv"><span>回路 · 复盘</span><b>看演示 →</b></div>
+            </div>
+            <div class="foot-note">主列 = 当前分类的完整内容（tab 切换不变）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card"><h3>快捷键速查</h3>
+              <div class="kv"><span>N 唤起速记</span><b>随时</b></div>
+              <div class="kv"><span>Ctrl+K 命令面板</span><b>检索/跳转/提问</b></div>
+              <div class="kv"><span>? 本帮助页</span><b>全局</b></div>
+              <div class="kv"><span>Ctrl+Z 撤销删除</span><b>误删即回</b></div>
+            </div>
+            <div class="card"><h3>反馈</h3><div class="desc">没找到答案？Discussions 发帖或微信群直接说（错误日志可导出附上）。</div><span class="btn">去 Discussions</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 不动的页面（E 汇总板） -->
+<div class="page" id="p-static">
+  <div class="frame">
+    <div class="frame-note"><b>E 单栏阅读 / 全屏专注 · 不动</b> —— 这三类拉宽反而更难用，维持现状</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">设置</div><div class="nav-i">帮助</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>不动的页面与理由</h2></div>
+        <div class="card" style="max-width:1100px">
+          <div class="kv"><span>速记</span><b>已是列表+编辑器双栏（形态 D，不重复改造）</b></div>
+          <div class="kv"><span>复盘向导 / 团队会议室 / 欢迎引导</span><b>全屏专注工作流——向导要的就是无干扰</b></div>
+          <div class="kv"><span>档案详情</span><b>复盘方法论文档排版，1200 阅读宽度</b></div>
+        </div>
+        <div class="foot-note">3 页不动（E）+ 2 页已实现（A）+ 14 页二批 + 7 页三批 = 26 页覆盖（速记 D 不改造）· 27 路由含重定向与占位</div>
       </div>
     </div>
   </div>
