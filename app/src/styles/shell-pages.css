@@ -406,6 +406,95 @@
   flex-direction: column;
   gap: var(--sp-4);
 }
+
+/* ============ 宽幅双栏（2026-11-17 页面利用率第一批，设计稿 docs/design/宽屏空间规划.md） ============
+   大屏策略与成熟实现同款：不拉长正文行宽，把宽度花在并列栏位——主列列表 + 右栏 300px
+   实时概览（sticky 跟随）。右栏内容纪律：只放与列表状态相关的实时信息（概览数字/统计
+   分布/快捷筛选/高频操作），静态说明一律进帮助页。宽度分级：≥1440 出右栏；
+   1024–1439 右栏隐藏（.only-wide 元素一并隐藏、.only-narrow 兜底元素显示）；<1024 单列现状。 */
+.content-inner:has(> .content-wide) {
+  max-width: 1560px;
+}
+.content-wide .wide-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.content-wide .wide-aside {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.aside-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+}
+.aside-card h3 {
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-2);
+}
+.aside-card .kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  padding: var(--sp-1) 0;
+}
+.aside-card .kv + .kv {
+  border-top: 1px dashed var(--line);
+}
+.aside-card .kv b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.dist-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) 0;
+}
+.dist-bar .lbl {
+  width: 44px;
+  flex: none;
+  color: var(--ink-soft);
+}
+.dist-bar .bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.dist-bar .bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+}
+@media (max-width: 1439.98px) {
+  .content-wide .wide-grid {
+    grid-template-columns: 1fr;
+  }
+  .content-wide .wide-aside {
+    display: none;
+  }
+  .only-wide {
+    display: none !important;
+  }
+}
+@media (min-width: 1440px) {
+  .only-narrow {
+    display: none !important;
+  }
+}
 /* 偏好中心/数据/帮助共用本布局：标题下间距统一由 gap 提供，页头自带 margin 会造成两页不一致 */
 .settings-page .page-head {
   margin-bottom: 0;

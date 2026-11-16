@@ -165,9 +165,11 @@ export function Tasks() {
     }
   }
 
-  // 进入任务页即重载：归档/导入发生在其他模块，进场拿最新（跨模块无推送的兜底）
+  // 进入任务页即重载：归档/导入发生在其他模块，进场拿最新（跨模块无推送的兜底）；
+  // 右栏「目标与节奏」需要目标列表，一并拉取
   useEffect(() => {
     void load()
+    void useGoals.getState().load()
   }, [load])
 
   const laneLists = useMemo(() => {
@@ -459,8 +461,12 @@ export function Tasks() {
 
   const groups = useMemo(() => scheduleGroups(tasks, goals), [tasks, goals])
 
+  // 右栏「目标与节奏」：进行中目标（title+最近进度快照+期限）——目标是文本型进度，
+  // 不造百分比条；到期节奏用 store 的 DueStats（今天/本周/进行中/已完成）
+  const activeGoals = useMemo(() => goals.filter((g) => g.status === 'active'), [goals])
+
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>待办</h1>
         <span className="sub">勾选＝闭环，再点＝恢复 · 分类在行内下拉里改 · 不做了点「搁置」留底，彻底清除在已结束区</span>
@@ -522,6 +528,9 @@ export function Tasks() {
         )}
       </div>
 
+      {/* 宽幅双栏：主列 lanes/时间视图 + 右栏目标与节奏（≥1440；窄屏右栏整体隐藏） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       {view === 'lanes' ? (
         <>
           <div className="lanes-grid">
@@ -568,6 +577,33 @@ export function Tasks() {
           )}
         </div>
       )}
+        </div>
+
+        <aside className="wide-aside" aria-label="目标与节奏">
+          <div className="aside-card">
+            <h3>进行中目标</h3>
+            {activeGoals.length === 0 ? (
+              <div className="kv"><span>还没有进行中的目标</span><Link to="/goals">去立一个 →</Link></div>
+            ) : (
+              activeGoals.map((g) => (
+                <div key={g.id} style={{ padding: 'var(--sp-1) 0', borderBottom: '1px dashed var(--line)' }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600 }}>{g.title}</div>
+                  {g.progressNote && <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', marginTop: 2 }}>{g.progressNote}</div>}
+                  {g.due && <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 2 }}>期限 {g.due}</div>}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="aside-card">
+            <h3>到期节奏</h3>
+            <div className="kv"><span>今天到期</span><b>{stats.today}</b></div>
+            <div className="kv"><span>本周内</span><b>{stats.week}</b></div>
+            <div className="kv"><span>进行中</span><b>{stats.open}</b></div>
+            <div className="kv"><span>已完成</span><b>{stats.done}</b></div>
+          </div>
+        </aside>
+      </div>
 
       <div className="stats-line">
         总闭环率 <b>{closedRate}%</b>（{stats.done}/{stats.total}）

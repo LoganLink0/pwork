@@ -18,7 +18,9 @@ import { recordError } from '../../../engine/errorLog'
 // 条目（打开应用自动同步只覆盖"刚打开"的场景）。5 分钟内不重复拉，往返切换不成反复请求。
 let lastAutoFreshAt = 0
 
-/** 信息日报页（04 §4 ⑤ 分发的 UI；Top N 硬顶、两分钟扫完、无未读数） */
+/** 信息日报页（04 §4 ⑤ 分发的 UI；Top N 硬顶、两分钟扫完、无未读数）。
+ *  宽幅双栏（2026-11-17 页面利用率第一批）：主列日报列表 + 右栏「今日概览」
+ *  （抓取状态/分层分布/快捷筛选/导出）——≥1440 显示，窄屏右栏隐藏、导出回页头。 */
 export function Digest() {
   const {
     digest,
@@ -26,6 +28,7 @@ export function Digest() {
     digestDateOptions,
     config,
     items,
+    sources,
     fetch: fetchState,
     setDigestDate,
     runFetchAll,
@@ -38,9 +41,41 @@ export function Digest() {
   const createTask = useTasks((s) => s.create)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [converted, setConverted] = useState<Set<string>>(new Set())
+  // 快捷筛选（右栏）：单选维度——全部 / 只看必看 / 未处理（还没投票的）/ 带音频
+  const [quickFilter, setQuickFilter] = useState<'all' | 'must' | 'unprocessed' | 'audio'>('all')
 
   // 对齐可见性：你标「多推」的条目当时被分层的情况——可略占比越低，分层越贴近你的标准
   const align = useMemo(() => alignmentStats(items), [items])
+
+  // 分层分布（右栏概览）：与列表徽章同一套推导（当日 Top2 必看、3–8 可看、其余可略）
+  const tierDist = useMemo(() => {
+    const dist = { must: 0, may: 0, skip: 0 }
+    for (let idx = 0; idx < digest.length; idx++) {
+      if (idx < 2) dist.must++
+      else if (idx < 8) dist.may++
+      else dist.skip++
+    }
+    return dist
+  }, [digest])
+
+  const activeSources = useMemo(() => sources.filter((s) => s.active).length, [sources])
+  const failedSources = useMemo(
+    () => (fetchState.summary ? fetchState.summary.results.filter((r) => !r.ok).map((r) => r.sourceName) : []),
+    [fetchState.summary],
+  )
+
+  // 过滤后的渲染列表：分层徽章按当日排名（原始 idx）算，筛选不改变分层事实
+  const visibleDigest = useMemo(() => {
+    const withMeta = digest.map((item, idx) => ({
+      item,
+      idx,
+      tier: (idx < 2 ? 'must' : idx < 8 ? 'may' : 'skip') as 'must' | 'may' | 'skip',
+    }))
+    if (quickFilter === 'must') return withMeta.filter((x) => x.tier === 'must')
+    if (quickFilter === 'unprocessed') return withMeta.filter((x) => !x.item.annotation?.vote)
+    if (quickFilter === 'audio') return withMeta.filter((x) => x.item.hasAudio)
+    return withMeta
+  }, [digest, quickFilter])
 
   const convert = (id: string, title: string) => {
     void createTask({ title, origin: { kind: 'item', refId: id } })
@@ -102,7 +137,7 @@ export function Digest() {
   }, [])
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>信息日报</h1>
         <div className="right">
@@ -120,9 +155,10 @@ export function Digest() {
           >
             {fetchState.running ? '抓取中…' : '立即抓取'}
           </button>
+          {/* 导出双落点：宽屏在右栏（唯一），窄屏右栏隐藏时这里兜底显示——同一时刻只看到一个 */}
           <button
             type="button"
-            className="btn-ghost"
+            className="btn-ghost only-narrow"
             disabled={digest.length === 0}
             onClick={() =>
               downloadFile(`信息日报-${digestDate}.md`, obsidianDaily(digest, digestDate), 'text/markdown')
@@ -168,46 +204,106 @@ export function Digest() {
         )
       })()}
 
-      {digest.length === 0 ? (
-        <div className="empty">
-          <div className="e-ico" aria-hidden><Icon name="fileText" size={32} /></div>
-          <p>
-            {isToday ? '今日还没有条目——点上方「立即抓取」，或等云端定时抓取后自动出现。' : `${digestDate} 没有条目。`}
-          </p>
-          <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
-            <Link to="/input/sources?catalog=1" className="btn-ghost">去推荐信源目录挑几个 →</Link>
-          </div>
+      {/* 宽幅双栏：主列列表 + 右栏今日概览（≥1440；窄屏右栏整体隐藏） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+          {digest.length === 0 ? (
+            <div className="empty">
+              <div className="e-ico" aria-hidden><Icon name="fileText" size={32} /></div>
+              <p>
+                {isToday ? '今日还没有条目——点上方「立即抓取」，或等云端定时抓取后自动出现。' : `${digestDate} 没有条目。`}
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'center' }}>
+                <Link to="/input/sources?catalog=1" className="btn-ghost">去推荐信源目录挑几个 →</Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {visibleDigest.length === 0 && (
+                <div className="notice" data-testid="filter-empty">这个筛选下没有条目——换一个维度看看。</div>
+              )}
+              {visibleDigest.map(({ item, tier }) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  expanded={expandedId === item.id}
+                  onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                  onVote={(v) => void setVote(item.id, v)}
+                  tier={tier}
+                  onNotes={(t) => void setNotes(item.id, t)}
+                  onKeep={() => void toggleKeep(item.id)}
+                  onCycleOt={() => void cycleOt(item.id)}
+                  onConvert={() => convert(item.id, item.title)}
+                  converted={converted.has(item.id)}
+                  onDelete={() => {
+                    void confirmDialog({ title: `删除「${item.title.slice(0, 24)}」？`, body: '软删除：从日报/条目库移除，备份中 14 天内可找回。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void deleteItem(item.id) })
+                  }}
+                />
+              ))}
+              {align && (
+                <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
+                  徽章准不准，看这行：最近 30 天你标「多推」的 {align.want} 条，当时分层为 必看 {align.must} · 可看 {align.may} · 可略 {align.skip}——落在「可略」里的就是系统还没学会的主题，你的投票会让它们越来越少。
+                </div>
+              )}
+              <div style={{ textAlign: 'center', marginTop: 'var(--sp-4)' }}>
+                <Link to="/input/items" className="btn-ghost">查看条目库（全部状态）→</Link>
+              </div>
+            </>
+          )}
         </div>
-      ) : (
-        <>
-          {digest.map((item, idx) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              expanded={expandedId === item.id}
-              onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
-              onVote={(v) => void setVote(item.id, v)}
-              tier={idx < 2 ? 'must' : idx < 8 ? 'may' : 'skip'}
-              onNotes={(t) => void setNotes(item.id, t)}
-              onKeep={() => void toggleKeep(item.id)}
-              onCycleOt={() => void cycleOt(item.id)}
-              onConvert={() => convert(item.id, item.title)}
-              converted={converted.has(item.id)}
-              onDelete={() => {
-                void confirmDialog({ title: `删除「${item.title.slice(0, 24)}」？`, body: '软删除：从日报/条目库移除，备份中 14 天内可找回。', danger: true, confirmLabel: '删除' }).then((ok) => { if (ok) void deleteItem(item.id) })
-              }}
-            />
-          ))}
-          {align && (
-            <div className="notice" style={{ marginTop: 'var(--sp-2)' }}>
-              徽章准不准，看这行：最近 30 天你标「多推」的 {align.want} 条，当时分层为 必看 {align.must} · 可看 {align.may} · 可略 {align.skip}——落在「可略」里的就是系统还没学会的主题，你的投票会让它们越来越少。
+
+        <aside className="wide-aside" aria-label="今日概览">
+          <div className="aside-card">
+            <h3>今日抓取</h3>
+            <div className="kv"><span>启用信源</span><b>{activeSources} 个</b></div>
+            {fetchState.running && <div className="kv"><span>状态</span><b>抓取中…</b></div>}
+            {fetchState.summary && !fetchState.running && (
+              <>
+                <div className="kv"><span>上次抓取</span><b>{(fetchState.summary.elapsedMs / 1000).toFixed(1)} 秒</b></div>
+                <div className="kv"><span>源成功</span><b>{fetchState.summary.results.filter((r) => r.ok).length}/{fetchState.summary.results.length}</b></div>
+                <div className="kv"><span>新入库 / 筛除</span><b>{fetchState.summary.totalNew} / {fetchState.summary.totalDiscarded}</b></div>
+                {failedSources.length > 0 && <div className="kv"><span>失败</span><b>{failedSources.join('、')}</b></div>}
+              </>
+            )}
+            {!fetchState.running && !fetchState.summary && <div className="kv"><span>状态</span><b>本轮还没抓——点「立即抓取」</b></div>}
+          </div>
+
+          <div className="aside-card">
+            <h3>分层分布（{digest.length} 条）</h3>
+            <div className="dist-bar"><span className="lbl">必看</span><div className="bar"><i style={{ width: `${digest.length ? (tierDist.must / digest.length) * 100 : 0}%`, background: 'var(--accent)' }} /></div><b>{tierDist.must}</b></div>
+            <div className="dist-bar"><span className="lbl">可看</span><div className="bar"><i style={{ width: `${digest.length ? (tierDist.may / digest.length) * 100 : 0}%`, background: 'var(--line-strong)' }} /></div><b>{tierDist.may}</b></div>
+            <div className="dist-bar"><span className="lbl">可略</span><div className="bar"><i style={{ width: `${digest.length ? (tierDist.skip / digest.length) * 100 : 0}%`, background: 'var(--surface-2)', outline: '1px solid var(--line)' }} /></div><b>{tierDist.skip}</b></div>
+          </div>
+
+          {digest.length > 0 && (
+            <div className="aside-card">
+              <h3>快捷筛选</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <button type="button" className={`chip${quickFilter === 'all' ? ' on' : ''}`} onClick={() => setQuickFilter('all')}>全部</button>
+                <button type="button" className={`chip${quickFilter === 'must' ? ' on' : ''}`} onClick={() => setQuickFilter('must')}>只看必看</button>
+                <button type="button" className={`chip${quickFilter === 'unprocessed' ? ' on' : ''}`} onClick={() => setQuickFilter('unprocessed')}>未处理</button>
+                <button type="button" className={`chip${quickFilter === 'audio' ? ' on' : ''}`} onClick={() => setQuickFilter('audio')}>带音频</button>
+              </div>
             </div>
           )}
-          <div style={{ textAlign: 'center', marginTop: 'var(--sp-4)' }}>
-            <Link to="/input/items" className="btn-ghost">查看条目库（全部状态）→</Link>
+
+          <div className="aside-card only-wide">
+            <h3>导出</h3>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ width: '100%' }}
+              disabled={digest.length === 0}
+              onClick={() =>
+                downloadFile(`信息日报-${digestDate}.md`, obsidianDaily(digest, digestDate), 'text/markdown')
+              }
+              title="导出为 Obsidian 日报文件"
+            >
+              Obsidian 日报（Markdown）
+            </button>
           </div>
-        </>
-      )}
+        </aside>
+      </div>
     </section>
   )
 }
