@@ -22,8 +22,8 @@ export function ProducePage() {
   }, [])
 
   return (
-    <div style={{ maxWidth: 780 }}>
-      <div className="set-card">
+    <section className="content-wide">
+      <div className="set-card" style={{ maxWidth: 780 }}>
         <h2>一键成稿</h2>
         <div className="desc">
           把近 7 天的速记与洞察统一整理成三种产物：本周信息日报、演示大纲、文章草稿——先在页内预览，
@@ -56,8 +56,10 @@ export function ProducePage() {
       </div>
 
       {assets && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', marginTop: 'var(--sp-3)' }} data-testid="produce-assets">
-          <h2 style={{ fontSize: 'var(--fs-lg)' }}>{title || '成稿产物'}</h2>
+        <div style={{ marginTop: 'var(--sp-3)' }} data-testid="produce-assets">
+          <h2 style={{ fontSize: 'var(--fs-lg)', marginBottom: 'var(--sp-3)' }}>{title || '成稿产物'}</h2>
+          {/* 宽幅排布（第二批）：三产物卡并排铺满（≥1024 三列，窄屏回落纵排） */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 'var(--sp-3)', alignItems: 'start' }}>
 
           <AssetCard
             testid="asset-weekly"
@@ -98,9 +100,10 @@ export function ProducePage() {
             }}
             html={renderPpt(assets.ppt)}
           />
+          </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }
 

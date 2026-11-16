@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { Icon } from '../../../components/shell/icons'
-import { CATEGORY_META, ENGINE_LABEL, getTool } from '../content/processTools'
+import { CATEGORY_META, ENGINE_LABEL, getTool, PROCESS_TOOLS, toolRoute } from '../content/processTools'
 import { TtsTool } from '../components/TtsTool'
 import { AsrTool } from '../components/AsrTool'
 import { CardTool } from '../components/CardTool'
@@ -65,7 +65,7 @@ export function ProcessToolPage() {
   }
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>{tool.name}</h1>
         <span className="sub">{cat.name}类 · {ENGINE_LABEL[tool.engine]}</span>
@@ -73,27 +73,54 @@ export function ProcessToolPage() {
           <Link to="/process" className="btn-ghost">← 工具箱</Link>
         </div>
       </div>
-      {tool.engine !== 'external' && (
-        <div className="set-card">
-          <div className="set-body">
-            <ToolBody id={tool.id} />
-          </div>
-        </div>
-      )}
-      <ExternalCallPanel tool={tool} />
-      {!tool.callUrl && (
-        <div style={{ display: 'flex', gap: 'var(--sp-3)', marginTop: 'var(--sp-4)' }}>
-          {tool.externalUrl && (
-            <a href={tool.externalUrl} target="_blank" rel="noreferrer noopener" className="btn-primary">打开 {tool.name} 官网 ↗</a>
+
+      {/* 宽幅双栏（第二批 C 形态）：左工具表单（行宽不变）+ 右栏说明与同类直达；窄屏右栏隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+          {tool.engine !== 'external' && (
+            <div className="set-card">
+              <div className="set-body">
+                <ToolBody id={tool.id} />
+              </div>
+            </div>
           )}
-          <Link to="/process" className="btn-ghost">← 回工具箱</Link>
+          <ExternalCallPanel tool={tool} />
+          {!tool.callUrl && (
+            <div style={{ display: 'flex', gap: 'var(--sp-3)', marginTop: 'var(--sp-4)' }}>
+              {tool.externalUrl && (
+                <a href={tool.externalUrl} target="_blank" rel="noreferrer noopener" className="btn-primary">打开 {tool.name} 官网 ↗</a>
+              )}
+              <Link to="/process" className="btn-ghost">← 回工具箱</Link>
+            </div>
+          )}
+          {tool.note && !tool.callUrl && (
+            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 'var(--sp-3)' }}>
+              ℹ {tool.note}
+            </p>
+          )}
         </div>
-      )}
-      {tool.note && !tool.callUrl && (
-        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 'var(--sp-3)' }}>
-          ℹ {tool.note}
-        </p>
-      )}
+
+        <aside className="wide-aside" aria-label="工具说明">
+          <div className="aside-card">
+            <h3>这个工具做什么</h3>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 1.8 }}>{tool.desc}</div>
+            {tool.requires && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginTop: 'var(--sp-2)', lineHeight: 1.8 }}>
+                前提：{tool.requires}
+              </div>
+            )}
+          </div>
+          <div className="aside-card">
+            <h3>同类工具</h3>
+            {PROCESS_TOOLS.filter((t) => t.category === tool.category && t.id !== tool.id).map((t) => (
+              <div className="kv" key={t.id}><span>{t.name}</span><Link to={toolRoute(t.id)} style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>直达 →</Link></div>
+            ))}
+            <div style={{ marginTop: 'var(--sp-1)' }}>
+              <Link to="/process" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>← 回工具箱看全部</Link>
+            </div>
+          </div>
+        </aside>
+      </div>
     </section>
   )
 }

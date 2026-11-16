@@ -461,7 +461,7 @@ export function Settings() {
   }
 
   return (
-    <section className="settings-page">
+    <section className="settings-page content-wide">
       <div className="page-head">
         <h1>设置</h1>
         <span className="sub">凭据只存本机，永不进备份</span>
@@ -1497,6 +1497,29 @@ export function Settings() {
         </div>
       </div>
         </div>
+
+        {/* 宽幅双栏右栏（第二批）：状态速览——实时状态点击跳对应设置卡；窄屏整体隐藏 */}
+        <aside className="wide-aside" aria-label="状态速览">
+          <div className="aside-card">
+            <h3>状态速览</h3>
+            <div className="kv">
+              <span>自动备份</span>
+              <b style={{ color: autoBk.enabled ? 'var(--ok)' : undefined }}>{autoBk.enabled ? `开 · 每 ${autoBk.everyDays} 天` : '已关闭'}</b>
+            </div>
+            <div className="kv">
+              <span>AI 接入</span>
+              <b style={{ color: ai.mode === 'llm' ? 'var(--ok)' : undefined }}>{ai.mode === 'llm' ? '已接入' : '规则模式（未接 AI）'}</b>
+            </div>
+            <div className="kv"><span>上次全量备份</span><b>{lastBackup ? `${lastBackup.slice(5, 10)} ${lastBackup.slice(11, 16)}` : '从未'}</b></div>
+            <div className="kv"><span>版本</span><b>v{__APP_VERSION__}（内测）</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>常用入口</h3>
+            <div className="kv"><span>错误日志</span><button type="button" className="mini-btn" onClick={() => setSearchParams({ tab: 'errors' }, { replace: true })}>错误日志 →</button></div>
+            <div className="kv"><span>AI 接入</span><button type="button" className="mini-btn" onClick={() => setSearchParams({ tab: 'ai' }, { replace: true })}>AI 设置 →</button></div>
+            <div className="kv"><span>外观与字号</span><button type="button" className="mini-btn" onClick={() => setSearchParams({ tab: 'prefs' }, { replace: true })}>显示设置 →</button></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

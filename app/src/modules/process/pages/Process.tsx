@@ -65,7 +65,7 @@ export function Process() {
   }
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>处理</h1>
         <span className="sub">工具箱（文字/音频/图片/视频）· 快速启动；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>

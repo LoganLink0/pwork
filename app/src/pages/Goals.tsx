@@ -265,7 +265,7 @@ export function Goals() {
   }
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>目标</h1>
         <span className="sub">定期限 · 记进度 · 周复盘时只读引用 · 勾选＝达成，再点＝恢复</span>
@@ -292,44 +292,68 @@ export function Goals() {
         <span className="qa-hint"><kbd>↵</kbd> 添加</span>
       </div>
 
-      {active.length === 0 && closed.length === 0 ? (
-        <div className="empty">
-          <div className="e-ico" aria-hidden>◎</div>
-          <p>还没有目标。定一个，周复盘时会以进展的形式被带出来。</p>
+      {/* 宽幅双栏：主列目标列表 + 右栏目标概览（≥1440；窄屏右栏整体隐藏） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+          {active.length === 0 && closed.length === 0 ? (
+            <div className="empty">
+              <div className="e-ico" aria-hidden>◎</div>
+              <p>还没有目标。定一个，周复盘时会以进展的形式被带出来。</p>
+            </div>
+          ) : (
+            <>
+              {active.length > 0 && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
+                    <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
+                      进行中
+                      <span className="lane-count">{active.length}</span>
+                    </h3>
+                  </div>
+                  <div className="task-card">
+                    {active.map((g) => renderRow(g))}
+                  </div>
+                </>
+              )}
+              {closed.length > 0 && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
+                    <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
+                      已关闭
+                      <span className="lane-count">
+                        {doneClosed} 达成 · {droppedClosed} 搁置
+                      </span>
+                    </h3>
+                    <span className="sub">点复选框可恢复为进行中</span>
+                  </div>
+                  <div className="task-card">
+                    {closed.map((g) => renderRow(g))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
-      ) : (
-        <>
-          {active.length > 0 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
-                <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
-                  进行中
-                  <span className="lane-count">{active.length}</span>
-                </h3>
-              </div>
-              <div className="task-card">
-                {active.map((g) => renderRow(g))}
-              </div>
-            </>
-          )}
-          {closed.length > 0 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', margin: 'var(--sp-4) 0 var(--sp-2)' }}>
-                <h3 style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
-                  已关闭
-                  <span className="lane-count">
-                    {doneClosed} 达成 · {droppedClosed} 搁置
-                  </span>
-                </h3>
-                <span className="sub">点复选框可恢复为进行中</span>
-              </div>
-              <div className="task-card">
-                {closed.map((g) => renderRow(g))}
-              </div>
-            </>
-          )}
-        </>
-      )}
+
+        <aside className="wide-aside" aria-label="目标概览">
+          <div className="aside-card">
+            <h3>目标概览</h3>
+            <div className="kv"><span>进行中</span><b>{active.length}</b></div>
+            <div className="kv"><span>已达成</span><b>{doneClosed}</b></div>
+            <div className="kv"><span>已搁置</span><b>{droppedClosed}</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>本月到期</h3>
+            {active.filter((g) => g.due?.startsWith(today.slice(0, 7))).length === 0 ? (
+              <div className="kv"><span>本月没有到期的目标</span><b>—</b></div>
+            ) : (
+              active.filter((g) => g.due?.startsWith(today.slice(0, 7))).map((g) => (
+                <div className="kv" key={g.id}><span title={g.title}>进行中的目标</span><b>{g.due?.slice(5)} 到期</b></div>
+              ))
+            )}
+          </div>
+        </aside>
+      </div>
     </section>
   )
 }

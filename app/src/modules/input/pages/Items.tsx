@@ -162,8 +162,20 @@ export function Items() {
   // 哪类原因最多、哪个屏蔽词杀得最狠、哪个源独占垃圾产量，调源/调词有依据
   const rejects = useMemo(() => rejectionStats(monthItems), [monthItems])
 
+  // 右栏「我的评分」分布（宽幅双栏第二批）：本月各档投票计数
+  const voteDist = useMemo(() => {
+    const dist = { want: 0, meh: 0, no: 0 }
+    for (const i of monthItems) {
+      const v = i.annotation?.vote
+      if (v === 'want') dist.want++
+      else if (v === 'meh') dist.meh++
+      else if (v === 'no') dist.no++
+    }
+    return dist
+  }, [monthItems])
+
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>条目库</h1>
         <span className="sub">全库 {items.length} 条 · 已筛除的条目保留 14 天后自动清除（有标注的除外）</span>
@@ -263,6 +275,9 @@ export function Items() {
         </div>
       )}
 
+      {/* 宽幅双栏（第二批）：主列列表 + 右栏库概览（≥1440；窄屏右栏整体隐藏） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       {trashMode && (
         trash.length === 0 ? (
           <div className="empty">
@@ -335,6 +350,31 @@ export function Items() {
           </div>
         ))
       ))}
+        </div>
+
+        <aside className="wide-aside" aria-label="库概览">
+          <div className="aside-card">
+            <h3>{curMonth || '本月'}库概览</h3>
+            <div className="kv"><span>入库</span><b>{counts.all} 条</b></div>
+            <div className="kv"><span>评分入选</span><b>{counts.kept} 条</b></div>
+            <div className="kv"><span>已筛除（14 天后清理）</span><b>{counts.discarded} 条</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>我的评分</h3>
+            <div className="dist-bar"><span className="lbl">多推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.want / monthItems.length) * 100 : 0}%`, background: 'var(--accent)' }} /></div><b>{voteDist.want}</b></div>
+            <div className="dist-bar"><span className="lbl">没想好</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.meh / monthItems.length) * 100 : 0}%`, background: 'var(--line-strong)' }} /></div><b>{voteDist.meh}</b></div>
+            <div className="dist-bar"><span className="lbl">少推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.no / monthItems.length) * 100 : 0}%`, background: 'var(--surface-2)', outline: '1px solid var(--line)' }} /></div><b>{voteDist.no}</b></div>
+          </div>
+          {rejects && rejects.total > 0 && (
+            <div className="aside-card">
+              <h3>本月筛除 {rejects.total} 条</h3>
+              {rejects.byReason.slice(0, 3).map((b) => (
+                <div className="kv" key={b.reason}><span>{b.reason}</span><b>{b.count} 条</b></div>
+              ))}
+            </div>
+          )}
+        </aside>
+      </div>
     </section>
   )
 }

@@ -33,7 +33,7 @@ export function InputBlocks() {
   const visible = blocks.filter((b) => !b.profileId)
 
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>外部数据</h1>
         <span className="sub">周报的数据源——这里的数据块自动并入「周报导出」</span>
@@ -44,6 +44,10 @@ export function InputBlocks() {
         <Link to="/output/report">周报导出</Link>会自动把它们并进报告。调研任务的发现在
         <Link to="/output/research"> 输出 → 调研分析</Link> 里管理，不占这里的列表。
       </div>
+
+      {/* 宽幅双栏（第二批）：主列数据块维护 + 右栏来源概览；窄屏右栏整体隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
 
       <div className="set-card">
         <h2>数据块</h2>
@@ -163,6 +167,23 @@ export function InputBlocks() {
             </div>
           )}
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="来源概览">
+          <div className="aside-card">
+            <h3>来源概览</h3>
+            <div className="kv"><span>数据块</span><b>{visible.length} 个</b></div>
+            <div className="kv"><span>给客户的块</span><b>{visible.filter((b) => b.usage === 'client').length} 个</b></div>
+            <div className="kv"><span>供周报引用</span><b>自动并入</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>怎么用</h3>
+            <div className="kv"><span>手工添加</span><b>＋ 新数据块</b></div>
+            <div className="kv"><span>文件导入</span><b>CSV / JSON</b></div>
+            <div className="kv"><span>外部推送</span><b>接入接口落这里</b></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

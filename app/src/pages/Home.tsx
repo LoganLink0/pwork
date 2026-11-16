@@ -107,7 +107,7 @@ export function Home() {
   const review = MODULE_NAV.find((m) => m.key === 'review')!
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="greet-row">
         <div className="greet">
           <div className="date">

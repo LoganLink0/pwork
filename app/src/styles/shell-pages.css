@@ -495,6 +495,25 @@
     display: none !important;
   }
 }
+/* flex 布局页（settings-page / help）的右栏：settings-layout 是 flex（nav+content），
+   aside 作为第三元素参与——宽 300 固定不参与伸缩，窄屏由上面的通用规则隐藏 */
+.content-wide .settings-layout .wide-aside {
+  flex: none;
+  width: 300px;
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
+}
+/* flex 版右栏卡片间距（aside-card 的 gap 由 flex column 提供） */
+.content-wide .settings-layout .wide-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+/* 设置/帮助页放宽（content-inner 经 :has 跟随放宽，settings-page 自身解除 1280 上限） */
+.settings-page.content-wide {
+  max-width: 1560px;
+}
 /* 偏好中心/数据/帮助共用本布局：标题下间距统一由 gap 提供，页头自带 margin 会造成两页不一致 */
 .settings-page .page-head {
   margin-bottom: 0;

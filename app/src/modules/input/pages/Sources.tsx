@@ -59,6 +59,75 @@ export function Sources() {
   // 引用发现卡的 feed 自动探测（融合批）：点「编辑后添加」先探测该域名的主页声明与惯例路径
   const [probingDomain, setProbingDomain] = useState<string | null>(null)
   const [probingForm, setProbingForm] = useState(false)
+
+  // 宽幅双栏数据（2026-11-17 第二批）：自检与发现从主列横条卡移右栏——概览诊断类信息
+  // 按右栏纪律收编，主列只剩信源列表不再被下推；窄屏右栏隐藏时两卡回落主列（双渲染）
+  const audits = useMemo(() => auditSources(items, sources), [items, sources])
+  const auditIssues = audits.filter((a) => a.verdict === 'noisy' || a.verdict === 'idle')
+  const auditGoods = audits.filter((a) => a.verdict === 'good')
+  const leads = useMemo(() => discoverLeads(items, sources), [items, sources])
+
+  const auditBlock = audits.length === 0 || sources.length === 0 ? null : (
+    <div className="set-card" data-testid="source-audit">
+      <h2>信源自检（近 30 天）</h2>
+      <div className="set-body">
+        <div className="set-row">
+          <label>总体</label>
+          <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+            产出健康 {auditGoods.length} 个 ｜ 噪声偏高 {audits.filter((a) => a.verdict === 'noisy').length} 个 ｜ 零命中 {audits.filter((a) => a.verdict === 'idle').length} 个 ｜ 观察中 {audits.filter((a) => a.verdict === 'young').length} 个
+          </span>
+        </div>
+        {auditIssues.map((a) => (
+          <div className="set-row" key={a.sourceId}>
+            <label style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : 'var(--ink-soft)' }}>
+              {verdictLabel(a.verdict)}
+            </label>
+            <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
+              <b>{a.name}</b>：{a.advice}
+            </span>
+          </div>
+        ))}
+        {auditIssues.length === 0 && (
+          <div className="set-row">
+            <label></label>
+            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+              没有需要处理的信源——降档与升档由投票信用自动完成，这里只报告健康状态。
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const leadsBlock = leads.length === 0 ? null : (
+    <div className="set-card" data-testid="source-leads">
+      <h2>可能值得订阅的源头（近 30 天被你的信源反复转引）</h2>
+      <div className="set-body">
+        {leads.map((l) => (
+          <div className="set-row" key={l.domain}>
+            <label style={{ flex: 'none' }}>{l.domain}</label>
+            <span
+              className="val"
+              style={{ fontSize: 'var(--fs-xs)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              title={`被引用 ${l.count} 次，如：${l.samples.map((s) => s.title).join('；')}`}
+            >
+              被引用 {l.count} 次，如：{l.samples.map((s) => s.title).join('；')}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ flex: 'none' }}
+              disabled={probingDomain === l.domain}
+              onClick={() => void addLead(l.domain)}
+            >
+              {probingDomain === l.domain ? '探测 feed 中…' : '编辑后添加'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
   const addLead = async (domain: string) => {
     setProbingDomain(domain)
     const r = await probeFeedUrl(`https://${domain}`)
@@ -154,7 +223,7 @@ export function Sources() {
   }
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>信源</h1>
         <span className="sub">{sources.filter((s) => s.active).length} 个活跃 / 共 {sources.length} · 信息日报页进页自动抓；这里可随时手动抓</span>
@@ -238,79 +307,15 @@ export function Sources() {
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
 
-      {/* 信源自检（主动识别·第一层）：30 天产出四指标 → 健康画像；只提示不动档位（升降由信用引擎自动做） */}
-      {(() => {
-        const audits = auditSources(items, sources)
-        const issues = audits.filter((a) => a.verdict === 'noisy' || a.verdict === 'idle')
-        const goods = audits.filter((a) => a.verdict === 'good')
-        if (audits.length === 0 || sources.length === 0) return null
-        return (
-          <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }} data-testid="source-audit">
-            <h2>信源自检（近 30 天）</h2>
-            <div className="set-body">
-              <div className="set-row">
-                <label>总体</label>
-                <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                  产出健康 {goods.length} 个 ｜ 噪声偏高 {audits.filter((a) => a.verdict === 'noisy').length} 个 ｜ 零命中 {audits.filter((a) => a.verdict === 'idle').length} 个 ｜ 观察中 {audits.filter((a) => a.verdict === 'young').length} 个
-                </span>
-              </div>
-              {issues.map((a) => (
-                <div className="set-row" key={a.sourceId}>
-                  <label style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : 'var(--ink-soft)' }}>
-                    {verdictLabel(a.verdict)}
-                  </label>
-                  <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-                    <b>{a.name}</b>：{a.advice}
-                  </span>
-                </div>
-              ))}
-              {issues.length === 0 && (
-                <div className="set-row">
-                  <label></label>
-                  <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-                    没有需要处理的信源——降档与升档由投票信用自动完成，这里只报告健康状态。
-                  </span>
-                </div>
-              )}
-            </div>
+      {/* 宽幅双栏（第二批）：主列=信源列表；右栏=概览+自检+发现（自检/发现原是主列顶部
+          横条卡，把整个列表下推——概览诊断类信息按右栏纪律收编，用户 2026-11-17 拍板）。
+          窄屏右栏隐藏时两卡回落主列顶部（.only-narrow 双渲染，信息不丢） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+          <div className="only-narrow">
+            {auditBlock}
+            {leadsBlock}
           </div>
-        )
-      })()}
-
-      {/* 引用发现（主动识别·第二层）：非订阅域名近 30 天被反复转引 → 值得直接订阅的源头。
-          只发现不添加——feed 地址猜不出来，「编辑后添加」预填名称与主站地址，补全 feed 后入库 */}
-      {(() => {
-        const leads = discoverLeads(items, sources)
-        if (leads.length === 0) return null
-        return (
-          <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }} data-testid="source-leads">
-            <h2>可能值得订阅的源头（近 30 天被你的信源反复转引）</h2>
-            <div className="set-body">
-              {leads.map((l) => (
-                <div className="set-row" key={l.domain}>
-                  <label style={{ flex: 'none' }}>{l.domain}</label>
-                  <span
-                    className="val"
-                    style={{ fontSize: 'var(--fs-xs)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    title={`被引用 ${l.count} 次，如：${l.samples.map((s) => s.title).join('；')}`}
-                  >
-                    被引用 {l.count} 次，如：{l.samples.map((s) => s.title).join('；')}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    style={{ flex: 'none' }}
-                    disabled={probingDomain === l.domain}
-                    onClick={() => void addLead(l.domain)}
-                  >
-                    {probingDomain === l.domain ? '探测 feed 中…' : '编辑后添加'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
 
       {catalogOpen && sources.length > 0 && (
         <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -527,6 +532,23 @@ export function Sources() {
           </tbody>
         </table>
       )}
+        </div>
+
+        <aside className="wide-aside" aria-label="信源概览">
+          <div className="aside-card">
+            <h3>信源概览</h3>
+            <div className="kv"><span>启用 / 全部</span><b>{sources.filter((s) => s.active).length} / {sources.length}</b></div>
+            {audits.length > 0 && (
+              <div className="kv"><span>产出健康</span><b>{auditGoods.length} 个</b></div>
+            )}
+            {inactiveFail.length > 0 && (
+              <div className="kv"><span>连续失败 ≥3 次已自动停用</span><b>{inactiveFail.length} 个</b></div>
+            )}
+          </div>
+          {auditBlock}
+          {leadsBlock}
+        </aside>
+      </div>
     </section>
   )
 }

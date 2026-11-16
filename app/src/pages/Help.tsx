@@ -40,7 +40,7 @@ export function Help() {
     return () => window.removeEventListener('keydown', onKey)
   }, [zoomImg])
   return (
-    <section className="settings-page">
+    <section className="settings-page content-wide">
       <div className="page-head">
         <h1>帮助</h1>
         <span className="sub">四模块系统怎么用 · 数据在哪、怎么丢不了 · 出了问题看常见问题</span>
@@ -224,6 +224,24 @@ export function Help() {
         </div>
       </div>
         </div>
+
+        {/* 宽幅双栏右栏（第二批）：快捷键速查 + 反馈入口——实时导航信息；窄屏整体隐藏 */}
+        <aside className="wide-aside" aria-label="帮助速查">
+          <div className="aside-card">
+            <h3>快捷键速查</h3>
+            <div className="kv"><span><kbd>N</kbd> 唤起速记</span><b>随时</b></div>
+            <div className="kv"><span><kbd>Ctrl K</kbd> 命令面板</span><b>检索/跳转/提问</b></div>
+            <div className="kv"><span><kbd>?</kbd> 本帮助页</span><b>全局</b></div>
+            <div className="kv"><span><kbd>Ctrl Z</kbd> 撤销删除</span><b>误删即回</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>反馈</h3>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 1.8, marginBottom: 'var(--sp-2)' }}>
+              没找到答案？去 Discussions 发帖（错误日志可导出附上），或微信群直接说。
+            </div>
+            <a href="https://github.com/LoganLink0/pwork/discussions" target="_blank" rel="noreferrer noopener" className="btn-ghost">去 Discussions ↗</a>
+          </div>
+        </aside>
       </div>
       {zoomImg && (
         <div

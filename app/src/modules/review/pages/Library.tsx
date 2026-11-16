@@ -103,11 +103,16 @@ export function Library() {
   const reviewTitle = (id: string) => reviews.find((r) => r.id === id)?.title
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">认知资产库</div>
         <h1>你的大脑是一台预测机器。</h1>
         <p className="coach-say">这里是它的校准记录——每一条认知更新，都是一次贝叶斯升级。</p>
+        <div className="right" style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--sp-3)', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', alignItems: 'baseline' }}>
+          <span>洞察 <b className="tnum">{insights?.length ?? '…'}</b> 条</span>
+          <span>标签 <b className="tnum">{allTags.length}</b> 个</span>
+          <span>模式警示 <b className="tnum">{patternWarnings.length}</b> 组</span>
+        </div>
       </header>
 
       {patternWarnings.length > 0 && (

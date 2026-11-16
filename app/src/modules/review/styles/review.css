@@ -1344,6 +1344,10 @@
   max-width: var(--content-w);
   margin: 0 auto;
 }
+/* 回路仪表盘宽幅形态（2026-11-17 第二批 B）：统计卡阵与双栏 panel 铺满宽幅 */
+.review-root .container.content-wide {
+  max-width: 1560px;
+}
 /* 打印时隐藏交互面板（归档详情页的双检面板） */
 @media print {
   .review-root .DoubleCheck-hide-on-print {
