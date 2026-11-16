@@ -60,36 +60,12 @@ export function Sources() {
   const [probingDomain, setProbingDomain] = useState<string | null>(null)
   const [probingForm, setProbingForm] = useState(false)
 
-  // 信源自检（2026-11-17 用户拍板：放回列表顶部、且只在有要处理的问题时出现——
-  // 常驻健康面板造成滚动负担与焦虑；一切正常时零噪音，升降档由投票信用自动做）
+  // 信源自检（2026-11-17 用户二次拍板：不单独成卡，以「自检」列并入表格——
+  // 常驻卡片无论放主列还是右栏都是滚动负担与焦虑；列内逐源显示结论，建议悬停可见）
   const audits = useMemo(() => auditSources(items, sources), [items, sources])
-  const auditIssues = audits.filter((a) => a.verdict === 'noisy' || a.verdict === 'idle')
+  const auditBySource = useMemo(() => new Map(audits.map((a) => [a.sourceId, a])), [audits])
   const auditGoods = audits.filter((a) => a.verdict === 'good')
   const leads = useMemo(() => discoverLeads(items, sources), [items, sources])
-
-  const auditBlock = auditIssues.length === 0 || sources.length === 0 ? null : (
-    <div className="set-card" data-testid="source-audit">
-      <h2>信源自检（近 30 天）——有 {auditIssues.length} 个信源需要留意</h2>
-      <div className="set-body">
-        {auditIssues.map((a) => (
-          <div className="set-row" key={a.sourceId}>
-            <label style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : 'var(--ink-soft)' }}>
-              {verdictLabel(a.verdict)}
-            </label>
-            <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-              <b>{a.name}</b>：{a.advice}
-            </span>
-          </div>
-        ))}
-        <div className="set-row">
-          <label></label>
-          <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-            其余 {auditGoods.length} 个产出健康；降档与升档由投票信用自动完成，这里只报需要处理的。
-          </span>
-        </div>
-      </div>
-    </div>
-  )
 
   const leadsBlock = leads.length === 0 ? null : (
     <div className="set-card" data-testid="source-leads">
@@ -299,8 +275,7 @@ export function Sources() {
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
 
-      {/* 自检横条：只在有需要处理的信源时出现（常驻会造成滚动负担与焦虑，2026-11-17 用户拍板） */}
-      {auditBlock}
+      {/* 订阅发现横条：有线索才出现（近 30 天被你的信源反复转引的外部源头） */}
       {leadsBlock}
 
       {/* 宽幅双栏：主列=信源列表；右栏=信源概览 */}
@@ -463,7 +438,7 @@ export function Sources() {
         <table className="src-table" data-testid="src-table">
           <thead>
             <tr>
-              <th>名称</th><th>分级</th><th>多推率</th><th>主题域</th><th>地址</th><th>健康</th><th>近7天</th><th>启用</th><th></th>
+              <th>名称</th><th>分级</th><th>多推率</th><th>主题域</th><th>地址</th><th>健康</th><th>自检</th><th>近7天</th><th>启用</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -492,6 +467,20 @@ export function Sources() {
                 <td>{DOMAINS.find((d) => d.key === s.domain)?.label ?? s.domain}</td>
                 <td><span className="src-url" title={s.url}>{s.url}</span></td>
                 <td><HealthCell s={s} /></td>
+                <td>
+                  {(() => {
+                    const a = auditBySource.get(s.id)
+                    if (!a) return <span style={{ color: 'var(--ink-faint)', fontSize: 12 }}>—</span>
+                    return (
+                      <span
+                        style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : a.verdict === 'idle' ? 'var(--ink-soft)' : 'var(--ink-faint)', fontSize: 12 }}
+                        title={a.advice}
+                      >
+                        {verdictLabel(a.verdict)}
+                      </span>
+                    )
+                  })()}
+                </td>
                 <td className="tnum">{items7d[s.id] ?? 0}</td>
                 <td>
                   <button

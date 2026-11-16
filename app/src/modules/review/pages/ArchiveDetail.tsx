@@ -111,6 +111,10 @@ export function ArchiveDetail() {
         {rec.noteIds?.length ? <AttachedNotes ids={rec.noteIds} /> : null}
       </header>
 
+      {/* 宽幅双栏（2026-11-17 回路反馈）：主列档案正文 + 右栏档案信息与行动项速览 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+
       <section className="detail-section">
         <h2>小结</h2>
         {rec.summary.length ? (
@@ -257,6 +261,33 @@ export function ArchiveDetail() {
       <p style={{ marginTop: 'var(--sp-5)' }}>
         <Link to="/">{DETAIL.back}</Link>
       </p>
+        </div>
+
+        <aside className="wide-aside" aria-label="档案信息">
+          <div className="aside-card">
+            <h3>档案信息</h3>
+            <div className="kv"><span>场景</span><b>{SCENARIO_LABEL[rec.scenario]}</b></div>
+            <div className="kv"><span>形态</span><b>{rec.quick ? '3 分钟快答' : '完整版'}</b></div>
+            <div className="kv"><span>状态</span><b>{rec.status === 'archived' ? '已归档' : '进行中'}</b></div>
+            <div className="kv"><span>创建</span><b>{fmtLocal(rec.createdAt)}</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>行动项去向</h3>
+            {actions.length === 0 ? (
+              <div className="kv"><span>这份档案没有产出行动项</span><b>—</b></div>
+            ) : (
+              actions.map((a) => (
+                <div className="kv" key={a.id}>
+                  <span title={a.text}>{a.text.length > 10 ? `${a.text.slice(0, 10)}…` : a.text}</span>
+                  <b style={{ color: a.status === 'done' ? 'var(--ok)' : undefined }}>
+                    {a.status === 'done' ? '已闭环' : a.status === 'dropped' ? '已搁置' : a.due ? `${a.due.slice(5)} 到期` : '进行中'}
+                  </b>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }
