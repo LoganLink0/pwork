@@ -219,6 +219,7 @@ export function Goals() {
                 aria-label={`进度内容：${g.title}`}
                 onChange={(e) => setProgressDraft(e.target.value)}
                 onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return // 中文输入法选词回车不触发（MWG ime-safe-enter-submit）
                   if (e.key === 'Enter' && progressDraft.trim()) {
                     // 阻断冒泡：卡容器监听 Enter 进编辑态，提交进度后不应顺带打开编辑
                     e.stopPropagation()

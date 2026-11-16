@@ -62,6 +62,7 @@
 - 状态徽章 / 边线遵循模块标记三用途；空态卡用 quiet（虚线 + 降底 + 无阴影），让有数据的卡主导第一眼。
 - 演示视频卡（首访引导与帮助 - 快速上手共用模式）：`<video autoplay loop muted playsinline>`，`object-fit:cover` 封顶高（卡式 190px / 行式 150px）+ 底描边，说明句 fs-sm 次要色、卡名加粗主色；引导用 2×2 网格（≤700px 单列），帮助用左视频右文行式。
 - 鼠标语义：真 `button` 与 `[role=button/checkbox/radio/tab]` 一律手型；div/span 扮演交互元素必须带 role + tabIndex + 键盘事件。
+- 文本输入的 Enter 提交必须带输入法守卫：`if (e.nativeEvent.isComposing) return`——中文选词回车不是提交（复盘 3.75，Modern Web Guidance ime-safe-enter-submit）。
 - 每个新页面上线前对照本文件 + `/design` 样例页核一遍（复盘 7.2 预防条）。
 
 ## 六、动效与交互
