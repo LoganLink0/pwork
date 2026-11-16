@@ -398,17 +398,6 @@
   max-width: var(--content-w);
 }
 
-/* 帮助页单页文档形态（2026-11-16 整改）：左侧目录沿用 settings-nav 既有 sticky，
-   右侧六节连续排布填满长页；锚点滚动留出顶栏呼吸空间 */
-.help-doc {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-5);
-}
-.help-doc .set-card {
-  scroll-margin-top: 16px;
-}
-
 /* 左导航设置页布局（2026-10-22 改为 VS Code / GitHub 同款：
    左侧分类竖排导航 + 右侧当前分类全宽内容，一次只看一个分类） */
 .settings-page {

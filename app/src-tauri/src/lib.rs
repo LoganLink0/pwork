@@ -237,6 +237,17 @@ fn open_deploy_wizard(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+/// 显示主窗（2026-11-16 白屏修复）：主窗以 visible:false 创建（WebView 加载期不露
+/// 白底空窗），前端首帧渲染完成后调本命令——用户看到的直接是带内容的界面。
+/// 单实例二次启动与托盘路径的既有 show 调用不受影响（它们各自显式 show）。
+#[tauri::command]
+fn show_main_window(app: tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
 /// 打开外部网页（桌面版）：WebView 不处理 target=_blank 的外链，
 /// 统一由这里交给系统默认浏览器。只放行 http/https，其余一律拒绝。
 #[tauri::command]
@@ -591,6 +602,7 @@ pub fn run() {
     })
     .manage(db::DbState(std::sync::Mutex::new(None)))
     .invoke_handler(tauri::generate_handler![
+      show_main_window,
       save_gateway_key,
       get_library_token,
       open_deploy_wizard,

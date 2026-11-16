@@ -302,13 +302,17 @@ h2 .info-tip {
   top: -10px;
 }
 .info-tip-btn {
-  width: 24px; /* 最小点击目标（外部审查 P1：14×14 与 9.5px 字号低于令牌下限） */
-  height: 24px;
-  border: 1.2px solid var(--ink-faint);
+  /* 视觉与命中区分离（2026-11-16 用户反馈「问号怎么变这么大」）：圆圈视觉回到 14px
+     （与标题文字相称的小问号），24px 最小点击目标经透明伪元素扩大——审查报告要的
+     是可点的面积，此前直接放大视觉是修过头 */
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ink-faint);
   border-radius: 50%;
   background: none;
   color: var(--ink-faint);
-  font-size: var(--fs-xs);
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
   display: flex;
@@ -317,6 +321,11 @@ h2 .info-tip {
   cursor: pointer;
   padding: 0;
   transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.info-tip-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px; /* 14px 视觉 + 四周各 5px 透明命中 = 24px 点击目标（审查 P1 要求保持） */
 }
 .info-tip-btn:hover,
 .info-tip-btn[aria-expanded='true'] {

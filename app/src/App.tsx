@@ -368,6 +368,14 @@ export default function App() {
     }
   }, [])
 
+  // 桌面版：首帧已渲染，此刻显示主窗（2026-11-16 白屏修复）——主窗 visible:false 创建，
+  // 此前 WebView 加载期露出的是系统白底窗（用户看到「白屏一下再填充全屏」）；
+  // effect 即挂载后首帧渲染完成时点，show 后用户看到的就是带内容的界面
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    tauriInvoke('show_main_window').catch(() => {})
+  }, [])
+
   // 桌面版：问小 P 独立窗的跳转桥（palette 窗发事件）——主窗为 HashRouter，
   // 直接赋 hash 即路由（App 主体在 Router 上下文外，useNavigate 不可用）
   useEffect(() => {

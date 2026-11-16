@@ -20,7 +20,9 @@
         "resizable": true,
         "fullscreen": false,
         "maximized": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "visible": false,
+        "backgroundColor": "#f7f3ea"
       },
       {
         "label": "wheel",
