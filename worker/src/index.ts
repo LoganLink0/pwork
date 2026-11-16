@@ -29,14 +29,17 @@ function json(data: unknown, status = 200): Response {
 }
 
 /**
- * D1 转发端点构造（校验与拼装内聚的纯函数）：账户 ID（32 位十六进制）与数据库 ID
- * （UUID）严格字符集校验通过才返回官方端点 URL，否则 null——未校验的值不存在
- * 离开本函数的路径（污点在函数内被正则终止，调用点拿到的 URL 已经过字符集收敛）。
+ * D1 转发参数校验（validate→construct 标准安全模式）：账户 ID（32 位十六进制）与
+ * 数据库 ID（UUID）逐项字符集校验，全部通过才返回清洁值供下游拼接官方端点；
+ * 任一非法返回 null——未校验的值不存在离开本函数的路径。
  */
-function d1UpstreamUrl(accountId: string, databaseId: string): string | null {
+function validateD1Ids(
+  accountId: string,
+  databaseId: string,
+): { accountId: string; databaseId: string } | null {
   if (!/^[0-9a-f]{32}$/i.test(accountId)) return null
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId)) return null
-  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`
+  return { accountId, databaseId }
 }
 
 /** ingest_blocks 建表只需每个 isolate 做一次（D1 无迁移机制，端点内幂等确保） */
@@ -155,11 +158,13 @@ export default {
       // 未通过校验的值不存在离开该函数的路径（调用点拿到的 URL 已经过字符集收敛）
       const accountId = typeof body?.accountId === 'string' ? body.accountId : ''
       const databaseId = typeof body?.databaseId === 'string' ? body.databaseId : ''
-      const upstreamUrl = d1UpstreamUrl(accountId, databaseId)
-      if (upstreamUrl === null) {
+      const ids = validateD1Ids(accountId, databaseId)
+      if (ids === null) {
         return json({ error: 'bad request' }, 400)
       }
       // 与采集管线同一外联纪律：guardedFetch 内部先 assertPublicHttpUrl 再发起，重定向逐跳重校验
+      const upstreamUrl = `https://api.cloudflare.com/client/v4/accounts/${ids.accountId}/d1/database/${ids.databaseId}/query`
+      assertPublicHttpUrl(upstreamUrl)
       const upstream = await guardedFetch(upstreamUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: auth },
