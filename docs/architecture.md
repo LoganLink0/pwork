@@ -54,7 +54,7 @@ index.html 内联钩子（应用加载前单槽记录）→ `installErrorCapture
 
 ## 数据库（桌面版 SQLite `pwork.db` / 网页版 Dexie IndexedDB）
 
-08 设计（主库文件化 S1–S3，2026-10-30）后的存储分层：业务代码经 `db/delegate.ts` 访问，实际后端可切换——桌面版默认 **SQLite**（`pwork.db` 落应用数据目录，Rust rusqlite 经命令层执行，事务跨命令共享连接），网页版维持 **Dexie/IndexedDB**（`pwork-workbench`，schema v13），测试跑内存后端。表清单两态一致（15 张：notes/sources/items/reviews/actions/insights/tasks/goals/snapshots/blocks/profiles/caseFiles/aiCache/errorLog/kv + meta）。约束不变：字段只增不删、读取侧防御缺字段（铁律 2）；实体必备 id/createdAt/updatedAt/schemaVersion（铁律 1）；日志/缓存类属 Raw 暂存层（上限清理，不进备份）。桌面版另有 `vault/` 只读镜像（每条数据一个 Markdown 文件，recordMarkdown 与可读档案同源，投影失败重试三次后暂停并静默入错误日志）与 `attachments/` 速记附件目录（R2 批，2026-11-04：图片字节落盘、数据库只带元数据；att_ 前缀白名单 + 20MB 上限 + 原子写，经 attachments.rs 三命令；字节不进备份包裹，可读档案导出时随 zip 带走）。
+08 设计（主库文件化 S1–S3，2026-10-30）后的存储分层：业务代码经 `db/delegate.ts` 访问，实际后端可切换——桌面版默认 **SQLite**（`pwork.db` 落应用数据目录，Rust rusqlite 经命令层执行，事务跨命令共享连接），网页版维持 **Dexie/IndexedDB**（`pwork-workbench`，schema v13），测试跑内存后端。表清单两态一致（15 张：notes/sources/items/reviews/actions/insights/tasks/goals/snapshots/blocks/profiles/caseFiles/aiCache/errorLog/kv + meta）。约束不变：字段只增不删、读取侧防御缺字段（铁律 2）；实体必备 id/createdAt/updatedAt/schemaVersion（铁律 1）；日志/缓存类属 Raw 暂存层（上限清理，不进备份）。桌面版另有 `vault/` 只读镜像（每条数据一个 Markdown 文件，recordMarkdown 与可读档案同源，投影失败重试三次后暂停并静默入错误日志）、`attachments/` 速记附件目录（R2 批，2026-11-04：图片字节落盘、数据库只带元数据；att_ 前缀白名单 + 20MB 上限 + 原子写，经 attachments.rs 三命令；字节不进备份包裹，可读档案导出时随 zip 带走）与 **`prefs.json` 用户偏好文件（配置文件化，2026-11-16）**——主题/AI 接入/键位/自动备份偏好/胶囊岛位置等八键从 WebView localStorage（origin 隔离 + leveldb 强杀丢写）迁入，经 prefs.rs `prefs_read`/`prefs_write` 原子写（tmp+rename），前端 `engine/prefsFile.ts` 进程内写队列串行化 + 写盘成功广播 `pwork-prefs-changed` 跨窗跟随；localStorage 双写为兼容期回落（启动迁移平移、文件已有键跳过不覆盖），浏览器版不落文件读全走回落；AI Key 不在此文件（gateway.env 既有边界）。
 
 ## 桌面壳（src-tauri）
 

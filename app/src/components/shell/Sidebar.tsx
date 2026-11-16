@@ -19,11 +19,14 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
 ]
 
 /** 公告轮播（WorkBuddy 学习批）：内测期的版本亮点 / 引导 / 交流入口常驻出口，
- *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示） */
+ *  左下角固定不抢注意力；关闭按钮按版本记忆（发新版自动恢复显示）。
+ *  版本更新卡：标题版本号取构建版本 __APP_VERSION__（与 package.json 同源，0.1.24 起
+ *  动态注入——手写曾三次漏改 0.1.16/0.1.23/0.1.24，机制消灭）；亮点一句话仍随版手写
+ *  （发版同步清单 B 段唯一人工项），desc 内容取 CHANGELOG 本版段 */
 const ANNOUNCES = [
   {
-    title: '0.1.22 更新',
-    desc: '修复轮盘窗边界线、备份保留翻倍',
+    title: `${__APP_VERSION__} 更新`,
+    desc: '配置不再丢、中文输入不再误触发',
     to: 'https://loganlink0.github.io/pwork/#changelog',
     internal: false,
   },
