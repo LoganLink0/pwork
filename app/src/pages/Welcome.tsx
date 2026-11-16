@@ -252,6 +252,15 @@ export function Welcome() {
   }
 
   const saveAndSync = async () => {
+    // 必填校验（外部审查 P0：空表单曾直接落库成 pwork-cloud-mode=d1 + 空 endpoint/token）
+    const missing =
+      cloud.mode === 'd1'
+        ? [cloud.endpoint, cloud.token, cloud.accountId, cloud.databaseId].filter((v) => !v.trim())
+        : [cloud.endpoint, cloud.token].filter((v) => !v.trim())
+    if (missing.length > 0) {
+      setMsg('连接信息没填全——四个字段都需要从部署向导复制过来，空配置无法保存')
+      return
+    }
     try {
       saveCloudConfig(cloud)
     } catch (e) {

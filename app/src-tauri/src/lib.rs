@@ -1,4 +1,5 @@
 mod attachments;
+mod prefs;
 mod db;
 mod gateway;
 mod isle;
@@ -637,6 +638,8 @@ pub fn run() {
       attachments::attachment_read,
       attachments::attachment_delete,
       attachments::attachment_stats,
+      prefs::prefs_read,
+      prefs::prefs_write,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

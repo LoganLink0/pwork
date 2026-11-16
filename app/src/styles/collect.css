@@ -631,6 +631,14 @@
   gap: var(--sp-2);
   min-width: 0;
 }
+/* 行内编辑态允许换行：窄列（三列分诊每列 ~380px）塞标题+日期+重复会把标题挤到
+   30px 无法编辑（外部审查报告一 #4，截图 40-task-edit.png）——控件自然换行保可用 */
+.task-row[data-testid="task-edit"] .task-row-top {
+  flex-wrap: wrap;
+}
+.task-row[data-testid="task-edit"] .task-row-top .input[aria-label="任务标题"] {
+  flex: 1 1 200px;
+}
 .task-row-top .t-name {
   flex: 1;
   min-width: 0;

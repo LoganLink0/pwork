@@ -158,8 +158,12 @@
   --p-d-line-400: #4c473d;
   --p-d-ink-50: #ecebe7;
   --p-d-ink-400: #b3afa5;
-  /* 提亮一档（原 #827d73 对暗底仅 4.33 不达 AA——3.2 批对比度实测修正，5.17） */
-  --p-d-ink-450: #918a7e;
+  /* 提亮一档（原 #827d73 对暗底仅 4.33 不达 AA——3.2 批对比度实测修正，5.17）；
+     2026-11-16 再提 #a8a19a（对 surface-2 4.35→5.83，外部审查 P1：faint on 次层卡片不达标） */
+  --p-d-ink-450: #a8a19a;
+  /* 暗色语义红（外部审查 P1：原沿用亮色 #b8443a 对暗底仅 3.05–3.31 不达 AA——
+     2026-11-16 实测修正，#ef9a90 对暗底 8.17） */
+  --p-d-danger-500: #ef9a90;
   --p-d-amber-400: #e8833a;
   --p-d-amber-300: #eda868;
   --p-d-green-400: #5aab7f;
@@ -193,6 +197,9 @@
   --cat-insight: var(--p-d-blue-400);
   --cat-action: var(--p-d-red-400);
   --ok: var(--p-d-green-400);
+  /* 暗色语义红（外部审查 P1：原沿用亮色 #b8443a 对暗底仅 3.05–3.31 不达 AA——
+     2026-11-16 实测修正，#ef9a90 对暗底 8.17） */
+  --danger: var(--p-d-danger-500);
   --fg-page: var(--ink);
   --fg-card: var(--ink);
   --fg-muted: var(--ink-soft);
@@ -232,6 +239,7 @@
     --cat-insight: var(--p-d-blue-400);
     --cat-action: var(--p-d-red-400);
     --ok: var(--p-d-green-400);
+    --danger: var(--p-d-danger-500);
     --fg-page: var(--ink);
     --fg-card: var(--ink);
     --fg-muted: var(--ink-soft);
