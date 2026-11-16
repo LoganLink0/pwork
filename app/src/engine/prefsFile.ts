@@ -49,22 +49,34 @@ export async function readPrefsFile(): Promise<PrefsFile> {
 }
 
 export async function writePrefsFile(patch: PrefsFile): Promise<void> {
+  // 浏览器版没有 prefs.json：不缓存不落盘（读全走消费方的 localStorage 回落，两条存储不串）
+  if (!isDesktopApp()) return
   const current = await readPrefsFile()
   const next = { ...current, ...patch }
   cache = next
-  if (!isDesktopApp()) return
   try {
     await invoke('prefs_write', { content: JSON.stringify(next, null, 2) })
   } catch (e) {
     recordError({ where: '配置文件.写入', kind: 'app', message: `prefs.json 写入失败：${e instanceof Error ? e.message : String(e)}` }, { silent: true })
+    return
+  }
+  // 跨窗广播：伴生窗（胶囊岛/问小 P）监听此事件实时跟随主题等偏好变化
+  //（localStorage 的 storage 事件只覆盖同 origin 窗口，独立窗场景以 Tauri 事件为准）
+  try {
+    const { emit } = await import('@tauri-apps/api/event')
+    void emit('pwork-prefs-changed', { keys: Object.keys(patch) })
+  } catch {
+    /* 广播失败不影响写入本身 */
   }
 }
 
-/** 迁移：localStorage 旧键 → prefs.json（保留旧键 30 天防回退；本函数只平移不删除） */
+/** 迁移：localStorage 旧键 → prefs.json。prefs.json 已有的键跳过（升级场景：
+ *  文件里的值比 localStorage 旧键新——平移若覆盖会回退用户在旧版本的改动）；本函数只平移不删除 */
 export async function migrateLocalPrefs(keys: string[]): Promise<void> {
   const file = await readPrefsFile()
   const patch: PrefsFile = {}
   for (const k of keys) {
+    if (file[k] !== undefined) continue
     const raw = localStorage.getItem(k)
     if (raw === null) continue
     try {
@@ -73,7 +85,7 @@ export async function migrateLocalPrefs(keys: string[]): Promise<void> {
       patch[k] = raw // 非 JSON 原文平移
     }
   }
-  if (Object.keys(patch).length > 0) await writePrefsFile({ ...file, ...patch })
+  if (Object.keys(patch).length > 0) await writePrefsFile(patch)
 }
 
 /** 读某键（prefs.json 缓存；未迁移键由消费方自行回落 localStorage 旧键） */
@@ -83,5 +95,5 @@ export function readPref<T>(key: string, fallback: T): T {
 }
 
 export function writePref(key: string, value: unknown): void {
-  void writePrefsFile({ ...(cache ?? emptyFile()), [key]: value })
+  void writePrefsFile({ [key]: value }) // writePrefsFile 内部读合并，传增量即可
 }

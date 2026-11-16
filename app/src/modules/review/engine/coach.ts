@@ -2,13 +2,16 @@
  * AI 教练适配器（PRD 7.4）。
  * 两级实现：RuleBasedCoach（离线默认，确定性规则）/ LlmCoach（用户自带 Key 的 OpenAI 兼容端点）。
  * 约定：LLM 失败时必须回落规则引擎——AI 是润滑剂，拔掉它产品完整可用。
- * API Key 只存 localStorage，不进 IndexedDB，因此永远不会被"导出备份"带走。
+ * 配置存数据目录 prefs.json（配置文件化 2026-11-16；localStorage 双写为兼容期回落），
+ * 不进 IndexedDB，永远不会被「导出备份」带走。Key 边界不变：桌面版只有网关模式，
+ * Key 在 gateway.env（同目录、不经前端）；浏览器版直连 Key 在 localStorage 的配置对象里。
  */
 import { REFRAME } from '../content/copy'
 import type { DebiasKind } from './debias'
 import { chatCompletion, type LlmConfig } from './llm'
 import { parseAiJson } from '../../../engine/aiJson'
 import { isDesktopApp as isDesktopRuntime } from '../../../engine/platform'
+import { readPref, writePref } from '../../../engine/prefsFile'
 
 export interface CoachContext {
   scenario: string
@@ -100,8 +103,21 @@ export const DEFAULT_COACH_CONFIG: CoachConfig = {
 }
 
 export function loadCoachConfig(): CoachConfig {
+  // 配置文件化：prefs.json 优先，兼容期回落 localStorage 旧键（浏览器版始终走旧键）
+  let raw: string | null = null
+  const stored = readPref<unknown>(KEY, undefined)
+  if (typeof stored === 'string') {
+    raw = stored
+  } else if (stored != null) {
+    try { raw = JSON.stringify(stored) } catch { raw = null }
+  } else {
+    try {
+      raw = localStorage.getItem(KEY)
+    } catch {
+      raw = null
+    }
+  }
   try {
-    const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULT_COACH_CONFIG }
     let parsed = JSON.parse(raw) as Partial<CoachConfig>
     // 桌面版归一必须放在 mode 判定之前：桌面只有网关模式（2026-10-27 边界定稿），
@@ -129,6 +145,7 @@ export function saveCoachConfig(cfg: CoachConfig): void {
   } catch {
     /* ignore */
   }
+  writePref(KEY, cfg)
 }
 
 export const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8788'

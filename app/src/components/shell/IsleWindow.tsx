@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { syncThemeFromStore } from '../../engine/appearance'
+import { readPref, writePref } from '../../engine/prefsFile'
 import { recordError } from '../../engine/errorLog'
 
 /** 定位/变形失败的统一留痕（岛会从屏幕上消失，绝不能静默） */
@@ -17,8 +18,9 @@ function reportIsleError(where: string, e: unknown): void {
  *   top  灵动岛：横条零间距贴屏幕上缘居中；鼠标离开后 logo 上滑半探入边缘，靠近滑出；
  *   right 右缘停靠：画布右缘贴屏幕右缘，logo 停画布右侧；同样半隐藏贴边；
  *   free 自由驻留：拖到哪驻留到哪（全向钳回屏内），不做半隐藏。
- * 单击=展开/收回；按住=原生拖拽。位置/模式持久化在本窗 localStorage（pwork-isle-pos）；
- * 启用开关在主窗设置页（经 pwork-isle-settings 的 storage 事件实时响应显隐）。
+ * 单击=展开/收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
+ * 配置文件化 2026-11-16；localStorage 双写为兼容期回落）；
+ * 启用开关在主窗设置页（经 pwork-prefs-changed 事件实时响应显隐）。
  */
 
 interface ActivityItem {
@@ -41,11 +43,21 @@ interface SavedPos {
   y?: number
 }
 
+/** localStorage 兼容期回落（读取失败返回 null） */
+function readLocal(key: string): unknown {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
 function readPos(): SavedPos {
   try {
-    const raw = localStorage.getItem(POS_KEY)
-    if (!raw) return { mode: 'top' }
-    const p = JSON.parse(raw) as SavedPos
+    // 配置文件化：prefs.json 优先（null=已重置），兼容期回落 localStorage 旧键
+    const raw = readPref<unknown>(POS_KEY, undefined) ?? readLocal(POS_KEY)
+    if (raw == null || raw === 'null' || raw === '') return { mode: 'top' }
+    const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as SavedPos
     if (p.mode === 'right' && typeof p.y === 'number') return { mode: 'right', y: p.y }
     if (p.mode === 'left' && typeof p.y === 'number') return { mode: 'left', y: p.y }
     if (p.mode === 'free' && typeof p.x === 'number' && typeof p.y === 'number') return { mode: 'free', x: p.x, y: p.y }
@@ -57,13 +69,14 @@ function readPos(): SavedPos {
 
 function savePos(pos: SavedPos) {
   localStorage.setItem(POS_KEY, JSON.stringify(pos))
+  writePref(POS_KEY, pos)
 }
 
 function readEnabled(): boolean {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    if (!raw) return true
-    const p = JSON.parse(raw) as { enabled?: boolean }
+    const raw = readPref<unknown>(SETTINGS_KEY, undefined) ?? readLocal(SETTINGS_KEY)
+    if (raw == null) return true
+    const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { enabled?: boolean }
     return p.enabled !== false
   } catch {
     return true
@@ -96,14 +109,25 @@ export function IsleWindow() {
 
   // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
   // 停靠模式直接以完全隐藏态（整条边缘热区条）出场——呼出即展开（靠近即滑出）。
-  // 主题跟随主窗（视觉·MiniDock 学习：融入系统深浅外观）
+  // 主题跟随主窗（视觉·MiniDock 学习：融入系统深浅外观）；偏好变化经 pwork-prefs-changed
+  // 事件实时跟随（伴生窗只在桌面存在，Tauri 事件是唯一跨窗通道，主窗写 prefs.json 后广播）
   useEffect(() => {
     syncThemeFromStore()
-    const onTheme = (e: StorageEvent) => {
-      if (e.key === 'pwork-theme') syncThemeFromStore()
+    // prefs.json 缓存预热（main.tsx 只在主窗跑；伴生窗独立进程视图，读偏好前自行预热）
+    void import('../../engine/prefsFile').then((m) => m.readPrefsFile())
+    let unlisten: (() => void) | undefined
+    let disposed = false
+    void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
+      const keys = e.payload?.keys
+      if (!keys || keys.includes('pwork-theme')) syncThemeFromStore()
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlisten = fn
+    })
+    return () => {
+      disposed = true
+      unlisten?.()
     }
-    window.addEventListener('storage', onTheme)
-    return () => window.removeEventListener('storage', onTheme)
   }, [])
 
   useEffect(() => {
@@ -124,10 +148,12 @@ export function IsleWindow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 
-  // 设置页启用开关实时生效（storage 事件在另一窗口触发；两窗同源共享 localStorage）
+  // 设置页启用开关实时生效（主窗写 prefs.json 后广播 pwork-prefs-changed）
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== SETTINGS_KEY) return
+    let unlisten: (() => void) | undefined
+    let disposed = false
+    void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
+      if (!e.payload?.keys?.includes(SETTINGS_KEY)) return
       if (readEnabled()) {
         void invoke('isle_show').catch(() => {})
       } else {
@@ -135,9 +161,14 @@ export function IsleWindow() {
         setOpen(false)
         void invoke('isle_hide').catch(() => {})
       }
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlisten = fn
+    })
+    return () => {
+      disposed = true
+      unlisten?.()
     }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
 

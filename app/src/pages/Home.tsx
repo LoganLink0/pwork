@@ -12,6 +12,7 @@ import { greetWord, relTime, weekdayLocal } from '../engine/datetime'
 import { gatherSignals, type Signal } from '../engine/signals'
 import { db } from '../db/schema'
 import { shouldRemindBackup, snoozeBackupReminder, getSnoozeDate } from '../engine/backupReminder'
+import { readLastBackupAt } from '../engine/autoBackup'
 import { healthNotice, healthDismissedToday, dismissHealthToday, type HealthNotice } from '../engine/healthNotice'
 
 /** 输入模块卡的直达行（速记 = 我想到的；信源 = 网上来的） */
@@ -85,7 +86,7 @@ export function Home() {
       ])
       setReviewInfo({ count, lastAt: last[0]?.createdAt ?? null })
       setSignals(sig)
-      const lastBackupIso = localStorage.getItem('pwork-last-backup')
+      const lastBackupIso = readLastBackupAt()
       setBackupWarn(shouldRemindBackup(lastBackupIso, getSnoozeDate(), now))
       setNeverBackedUp(lastBackupIso === null || lastBackupIso === '')
       // 健康提示（错误堆积）：已有提醒在先（备份条）就不叠第二条

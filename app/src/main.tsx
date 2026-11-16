@@ -15,6 +15,7 @@ import './styles/collect.css'
 import './modules/review/styles/review.css'
 import App from './App.tsx'
 import { applyTheme, loadTheme } from './engine/appearance.ts'
+import { migrateLocalPrefs, readPrefsFile } from './engine/prefsFile.ts'
 import { initPrefs } from './engine/prefs.ts'
 import { initStorage, usingMemoryFallback } from './db/schema.ts'
 import { useUi } from './store/ui.ts'
@@ -26,6 +27,25 @@ installErrorCapture()
 
 // 主题偏好在任何渲染前应用，避免闪屏
 applyTheme(loadTheme())
+
+// 配置文件化迁移（2026-11-16，桌面版）：预热 prefs.json 缓存后把 localStorage 旧键一次性
+// 平移进文件（文件已有键跳过不覆盖——升级时文件里的值比旧键新）。治 origin 隔离与强杀丢配置：
+// dev 壳与桌面版自此读同一数据目录文件。平移后各消费方读 prefs 命中、localStorage 只作回落。
+// 浏览器版不迁（无数据目录，继续走 localStorage）。
+if (isDesktopApp()) {
+  void readPrefsFile().then(() =>
+    migrateLocalPrefs([
+      'pwork-theme',
+      'fupan-coach',
+      'pwork-keybinds',
+      'pwork-autobackup',
+      'pwork-isle-pos',
+      'pwork-isle-settings',
+      'pwork-last-backup',
+      'pwork-backup-snooze',
+    ]),
+  )
+}
 
 // 显示设置（字号缩放/阅读行宽/字体）同样渲染前应用——写 CSS 变量到根元素
 initPrefs()

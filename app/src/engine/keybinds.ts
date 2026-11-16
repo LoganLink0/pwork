@@ -10,6 +10,7 @@ import type { KeybindAction } from '../types/keybinds'
 export type { KeybindAction }
 
 import { isMac } from './platform'
+import { readPref, writePref } from './prefsFile'
 
 export interface Keybinds {
   quickNote: string
@@ -58,10 +59,12 @@ const KEY = 'pwork-keybinds'
 
 export function loadKeybinds(): Keybinds {
   const defaults = defaultKeybinds()
+  // 配置文件化：prefs.json 优先，兼容期回落 localStorage 旧键
+  const raw = readPref<string | undefined>(KEY, undefined)
+    ?? (() => { try { return localStorage.getItem(KEY) } catch { return null } })()
   try {
-    const raw = localStorage.getItem(KEY)
     if (!raw) return defaults
-    const p = JSON.parse(raw) as Partial<Keybinds>
+    const p = typeof raw === 'string' ? (JSON.parse(raw) as Partial<Keybinds>) : (raw as Partial<Keybinds>)
     const out = { ...defaults }
     for (const k of Object.keys(defaults) as KeybindAction[]) {
       const v = p[k]
@@ -75,6 +78,7 @@ export function loadKeybinds(): Keybinds {
 
 export function saveKeybinds(cfg: Keybinds): void {
   localStorage.setItem(KEY, JSON.stringify(cfg))
+  writePref(KEY, cfg)
 }
 
 /** 归一化：修饰键定序 ctrl+shift+alt+meta + 小写主键；空串/纯修饰键/超长返回 null（无效） */

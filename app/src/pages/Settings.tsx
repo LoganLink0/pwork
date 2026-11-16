@@ -18,7 +18,7 @@ import { chatCompletion } from '../modules/review/engine/llm'
 import { saveGatewayKeyAndTest } from '../engine/gatewayKey'
 import { fmtLocal, monthLocal } from '../engine/datetime'
 import { listErrors, clearErrors, formatErrorLog, recordError, type ErrorKind } from '../engine/errorLog'
-import { loadAutoBackup, saveAutoBackup, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
+import { loadAutoBackup, saveAutoBackup, readLastBackupAt, writeLastBackupAt, customBackupDirSupported, pickBackupDir, clearBackupDir, getBackupDirName } from '../engine/autoBackup'
 import { isDesktopApp } from '../engine/platform'
 import { invoke } from '@tauri-apps/api/core'
 import { checkForUpdate, downloadAndInstall, restartToUpdate, humanSize, type UpdateState } from '../engine/updater'
@@ -82,9 +82,7 @@ export function Settings() {
   // 显示设置（R15）：字号缩放 / 阅读行宽 / 界面字体——即时生效并持久化
   const prefs = useUi((st) => st.prefs)
   const setPrefs = useUi((st) => st.setPrefs)
-  const [lastBackup, setLastBackup] = useState<string | null>(
-    () => localStorage.getItem('pwork-last-backup'),
-  )
+  const [lastBackup, setLastBackup] = useState<string | null>(() => readLastBackupAt())
   const [autoBk, setAutoBk] = useState(() => loadAutoBackup())
   // 自定义备份目录（FS Access）：文件夹句柄存 IndexedDB，这里只持有名字做展示
   const [backupDirName, setBackupDirName] = useState<string | null>(null)
@@ -447,7 +445,7 @@ export function Settings() {
     const stamp = `${monthLocal(now).replace('-', '')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
     downloadFile(`pwork-backup-${stamp}.json`, JSON.stringify(bundle, null, 2), 'application/json')
     const at = now.toISOString()
-    localStorage.setItem('pwork-last-backup', at)
+    writeLastBackupAt(at)
     setLastBackup(at)
   }
 

@@ -8,6 +8,7 @@ import { buildBackupBundle } from '../store/collect'
 import { downloadFile } from '../db/repo'
 import { isDesktopApp } from './platform'
 import { recordError } from './errorLog'
+import { readPref, writePref } from './prefsFile'
 
 export interface AutoBackupConfig {
   enabled: boolean
@@ -18,19 +19,16 @@ export interface AutoBackupConfig {
 }
 
 const KEY = 'pwork-autobackup'
+const LAST_AT_KEY = 'pwork-last-backup'
 
 export const DEFAULT_AUTO_BACKUP: AutoBackupConfig = { enabled: false, everyDays: 7, lastAt: null }
 
-/**
- * desktop 参数可注入（测试用）。桌面版无配置时默认开启：备份写进自己的应用数据目录，
- * 不打扰用户；浏览器版默认关闭（往下载文件夹写文件需用户同意），由首访引导末尾的
- * 开关（默认勾选）代为开启。已存储的配置一律尊重，不被默认值覆盖。
- */
-export function loadAutoBackup(desktop: boolean = isDesktopApp()): AutoBackupConfig {
+/** 从存档对象解析配置（形状防御：非法值回落默认）；无存档返回 null 由调用方决定桌面/浏览器默认 */
+function parseAutoBackup(raw: unknown): AutoBackupConfig | null {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return { ...DEFAULT_AUTO_BACKUP, enabled: desktop ? true : DEFAULT_AUTO_BACKUP.enabled }
-    const p = JSON.parse(raw) as Partial<AutoBackupConfig>
+    if (raw == null) return null
+    const p = typeof raw === 'string' ? (JSON.parse(raw) as Partial<AutoBackupConfig>) : (raw as Partial<AutoBackupConfig>)
+    if (typeof p !== 'object' || p === null) return null
     const everyDays = [7, 14, 30].includes(p.everyDays ?? 0) ? p.everyDays! : 7
     return {
       enabled: p.enabled === true,
@@ -38,12 +36,44 @@ export function loadAutoBackup(desktop: boolean = isDesktopApp()): AutoBackupCon
       lastAt: typeof p.lastAt === 'string' ? p.lastAt : null,
     }
   } catch {
-    return { ...DEFAULT_AUTO_BACKUP, enabled: desktop ? true : DEFAULT_AUTO_BACKUP.enabled }
+    return null
+  }
+}
+
+/**
+ * desktop 参数可注入（测试用）。桌面版无配置时默认开启：备份写进自己的应用数据目录，
+ * 不打扰用户；浏览器版默认关闭（往下载文件夹写文件需用户同意），由首访引导末尾的
+ * 开关（默认勾选）代为开启。已存储的配置一律尊重，不被默认值覆盖。
+ * 配置文件化：prefs.json 优先，兼容期回落 localStorage 旧键。
+ */
+export function loadAutoBackup(desktop: boolean = isDesktopApp()): AutoBackupConfig {
+  const stored = parseAutoBackup(readPref<unknown>(KEY, undefined) ?? readLocalRaw(KEY))
+  if (stored) return stored
+  return { ...DEFAULT_AUTO_BACKUP, enabled: desktop ? true : DEFAULT_AUTO_BACKUP.enabled }
+}
+
+/** localStorage 兼容期回落（读取失败返回 null） */
+function readLocalRaw(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
   }
 }
 
 export function saveAutoBackup(cfg: AutoBackupConfig): void {
   localStorage.setItem(KEY, JSON.stringify(cfg))
+  writePref(KEY, cfg)
+}
+
+/** 上次备份时间（ISO 或 null）：prefs.json 优先，兼容期回落 localStorage（Home/设置页展示共用） */
+export function readLastBackupAt(): string | null {
+  return readPref<string | undefined>(LAST_AT_KEY, undefined) ?? readLocalRaw(LAST_AT_KEY) ?? null
+}
+
+export function writeLastBackupAt(iso: string): void {
+  localStorage.setItem(LAST_AT_KEY, iso)
+  writePref(LAST_AT_KEY, iso)
 }
 
 /** 是否到期（纯函数，注入 now 便于测试——复盘 2.7：注入参数体内禁读系统时钟） */
@@ -225,7 +255,7 @@ export async function runAutoBackupIfDue(
   } catch (e) {
     return { downloaded: false, error: `备份落盘失败：${e instanceof Error ? e.message : String(e)}` }
   }
-  localStorage.setItem('pwork-last-backup', now.toISOString())
+  writeLastBackupAt(now.toISOString())
   saveAutoBackup({ ...cfg, lastAt: now.toISOString() })
   return { downloaded: true, fileName, location, rotateError }
 }

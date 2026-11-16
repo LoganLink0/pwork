@@ -3,9 +3,12 @@
  * 超过 30 天未全量备份就在首页提醒；可暂缓 7 天（不打扰，但不遗忘）。
  */
 import { todayLocal } from './datetime'
+import { readPref, writePref } from './prefsFile'
 
 export const BACKUP_INTERVAL_DAYS = 30
 export const SNOOZE_DAYS = 7
+
+const SNOOZE_KEY = 'pwork-backup-snooze'
 
 /** 纯函数：是否应该提醒。lastBackup=null 表示从未备份 → 立即提醒 */
 export function shouldRemindBackup(lastBackupIso: string | null, snoozeDate: string | null, now = new Date()): boolean {
@@ -21,9 +24,17 @@ export function shouldRemindBackup(lastBackupIso: string | null, snoozeDate: str
 export function snoozeBackupReminder(now = new Date()): void {
   const d = new Date(now)
   d.setDate(d.getDate() + SNOOZE_DAYS)
-  localStorage.setItem('pwork-backup-snooze', todayLocal(d))
+  localStorage.setItem(SNOOZE_KEY, todayLocal(d))
+  writePref(SNOOZE_KEY, todayLocal(d))
 }
 
 export function getSnoozeDate(): string | null {
-  return localStorage.getItem('pwork-backup-snooze')
+  // 配置文件化：prefs.json 优先，兼容期回落 localStorage 旧键
+  const v = readPref<string | undefined>(SNOOZE_KEY, undefined)
+  if (typeof v === 'string') return v
+  try {
+    return localStorage.getItem(SNOOZE_KEY)
+  } catch {
+    return null
+  }
 }

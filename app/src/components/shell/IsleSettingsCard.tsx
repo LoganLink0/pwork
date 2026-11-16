@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { readPref, writePref } from '../../engine/prefsFile'
 
 /**
  * 胶囊岛设置卡：桌面常驻小 P 的显示开关与位置重置。
- * 开关写 localStorage（pwork-isle-settings），isle 独立窗经 storage 事件实时显隐——
- * 两窗同源共享 localStorage，无需跨窗事件桥。位置=拖拽驻留，重置则清驻留点并吸回顶部居中。
+ * 开关写数据目录 prefs.json（pwork-isle-settings，配置文件化 2026-11-16；localStorage
+ * 双写为兼容期回落），isle 独立窗经 pwork-prefs-changed 事件实时显隐。
+ * 位置=拖拽驻留，重置则清驻留点并吸回顶部居中。
  */
 
 const KEY = 'pwork-isle-settings'
 const POS_KEY = 'pwork-isle-pos'
+
+/** localStorage 兼容期回落（读取失败返回 null） */
+function readLocal(key: string): unknown {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
 
 export function IsleSettingsCard({ active }: { active: boolean }) {
   const [enabled, setEnabled] = useState(true)
@@ -16,9 +27,9 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
   useEffect(() => {
     if (!active) return
     try {
-      const raw = localStorage.getItem(KEY)
-      if (raw) {
-        const p = JSON.parse(raw) as { enabled?: boolean }
+      const raw = readPref<unknown>(KEY, undefined) ?? readLocal(KEY)
+      if (raw != null) {
+        const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { enabled?: boolean }
         setEnabled(p.enabled !== false)
       }
     } catch {
@@ -29,12 +40,14 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
   const toggle = (on: boolean) => {
     setEnabled(on)
     localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
-    // isle 窗经 storage 事件实时响应；这里同步 invoke 兜底（事件丢失时也能立即显隐）
+    writePref(KEY, { enabled: on })
+    // isle 窗经 pwork-prefs-changed 事件实时响应；这里同步 invoke 兜底（事件丢失时也能立即显隐）
     void invoke(on ? 'isle_show' : 'isle_hide').catch(() => {})
   }
 
   const resetPos = () => {
     localStorage.removeItem(POS_KEY)
+    writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部居中）
     void invoke('isle_snap_top').catch(() => {})
   }
 

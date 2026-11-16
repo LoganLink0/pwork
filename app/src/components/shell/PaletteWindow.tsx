@@ -30,12 +30,22 @@ export function PaletteWindow() {
   }
 
   useEffect(() => {
-    // 主题跟随主窗（独立窗此前不挂 data-theme，深浅令牌分支不生效）
+    // 主题跟随主窗（独立窗此前不挂 data-theme，深浅令牌分支不生效）；
+    // 偏好变化经 pwork-prefs-changed 事件实时跟随（伴生窗桌面专属，Tauri 事件是唯一跨窗通道）
     syncThemeFromStore()
-    const onTheme = (e: StorageEvent) => {
-      if (e.key === 'pwork-theme') syncThemeFromStore()
-    }
-    window.addEventListener('storage', onTheme)
+    // prefs.json 缓存预热（main.tsx 只在主窗跑；伴生窗独立进程视图，读偏好前自行预热）
+    void import('../../engine/prefsFile').then((m) => m.readPrefsFile())
+    let unlistenTheme: (() => void) | undefined
+    let themeDisposed = false
+    void import('@tauri-apps/api/event').then(({ listen }) => {
+      void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
+        const keys = e.payload?.keys
+        if (!keys || keys.includes('pwork-theme')) syncThemeFromStore()
+      }).then((fn) => {
+        if (themeDisposed) fn()
+        else unlistenTheme = fn
+      })
+    })
     // 面板要用的最近速记与全文检索数据（同源 IndexedDB，本窗独立连接）
     void useNotes.getState().load()
     // 每次呼出（Rust show 后发 palette-open）→ 打开面板；
@@ -63,8 +73,9 @@ export function PaletteWindow() {
     window.addEventListener('blur', onBlur)
     return () => {
       unsub()
+      themeDisposed = true
+      unlistenTheme?.()
       window.removeEventListener('blur', onBlur)
-      window.removeEventListener('storage', onTheme)
       unlisten?.()
     }
   }, [])
