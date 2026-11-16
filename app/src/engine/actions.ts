@@ -66,7 +66,7 @@ export const APP_ACTIONS: AppAction[] = [
     id: 'undo-last',
     label: '撤销上一步',
     icon: 'undo',
-    desc: '撤掉最近一次你做的改动（记速记/改标题/删条目）',
+    desc: '撤掉最近一次你做的改动（Ctrl+Z，输入框内为文本撤销）',
     inPalette: true,
     guardTyping: false,
     run: () => {
