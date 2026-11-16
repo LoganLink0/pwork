@@ -114,14 +114,13 @@ export function StepProject({ quick }: { quick: boolean }) {
           )}
         </div>
       ))}
-      {!quick && (
-        <button
-          className="btn-small"
-          onClick={() => setActions((l) => [...l, emptyAction()])}
-        >
-          {WIZARD.addAction}
-        </button>
-      )}
+      {/* 快答模式也要能加下一张（外部审查 P1：快答模式曾无法添加第二张行动卡） */}
+      <button
+        className="btn-small"
+        onClick={() => setActions((l) => [...l, emptyAction()])}
+      >
+        {WIZARD.addAction}
+      </button>
     </div>
   )
 }

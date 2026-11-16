@@ -464,10 +464,17 @@ export function NoteEditor() {
               type="button"
               className="btn-ghost"
               onClick={() => {
-                void flush().then(() => {
-                  void softDelete(note.id)
-                  navigate('/input/notes')
-                })
+                void flush()
+                  .then(() => confirmDialog({
+                    title: `删除速记「${note.title || '未命名'}」？`,
+                    body: '软删除：可在速记页回收站恢复，也可用 Ctrl+Z 撤销。',
+                    danger: true,
+                    confirmLabel: '删除',
+                  }))
+                  .then((ok) => {
+                    if (!ok) return
+                    return softDelete(note.id).then(() => navigate('/input/notes'))
+                  })
               }}
             >
               删除

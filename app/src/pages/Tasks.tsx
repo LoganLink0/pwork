@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTasks } from '../store/tasks'
 import { useGoals } from '../store/goals'
 import { todayLocal } from '../engine/datetime'
+import { computeClosureRate } from '../engine/taskMetrics'
 import { resolveLane } from '../engine/taskLane'
 import { scheduleGroups, type ScheduleEntry } from '../engine/taskSchedule'
 import { RECURRENCE_DAYS, RECURRENCE_LABEL, type RecurrenceInterval } from '../db/tasksRepo'
@@ -196,7 +197,7 @@ export function Tasks() {
     setDraftRecurrence('')
   }
 
-  const closedRate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
+  const closedRate = computeClosureRate(stats.done, stats.total - stats.done)
 
   /**
    * 状态流转矩阵（待办/目标同一套规则）：

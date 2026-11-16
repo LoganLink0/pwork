@@ -68,6 +68,7 @@ export function Home() {
   const [reviewInfo, setReviewInfo] = useState<{ count: number; lastAt: string | null } | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
   const [backupWarn, setBackupWarn] = useState(false)
+  const [neverBackedUp, setNeverBackedUp] = useState(false)
   const [health, setHealth] = useState<HealthNotice | null>(null)
   const now = new Date()
   const today = todayNoteCount(notes, now)
@@ -84,7 +85,9 @@ export function Home() {
       ])
       setReviewInfo({ count, lastAt: last[0]?.createdAt ?? null })
       setSignals(sig)
-      setBackupWarn(shouldRemindBackup(localStorage.getItem('pwork-last-backup'), getSnoozeDate(), now))
+      const lastBackupIso = localStorage.getItem('pwork-last-backup')
+      setBackupWarn(shouldRemindBackup(lastBackupIso, getSnoozeDate(), now))
+      setNeverBackedUp(lastBackupIso === null || lastBackupIso === '')
       // 健康提示（错误堆积）：已有提醒在先（备份条）就不叠第二条
       const hn = await healthNotice(now)
       if (hn && !healthDismissedToday('errors')) setHealth(hn)
@@ -142,7 +145,8 @@ export function Home() {
       )}
       {backupWarn && (
         <div className="run-banner" style={{ marginBottom: 'var(--sp-4)' }} role="status" data-testid="backup-reminder">
-          距上次全量备份已超过 30 天——本地优先应用，备份是唯一的安全网。
+          {/* 从未备份与超期两种场景文案分开（外部审查 P1：空库说「超过 30 天」是误导） */}
+          {neverBackedUp ? '还没做过全量备份' : '距上次全量备份已超过 30 天'}——本地优先应用，备份是唯一的安全网。
           <Link to="/settings" style={{ marginLeft: 'var(--sp-2)', fontWeight: 600 }}>去导出 →</Link>
           <button
             type="button"

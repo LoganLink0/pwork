@@ -170,7 +170,19 @@ function QuickNoteDialog() {
   }
 
   return (
-    <div className="overlay qn-overlay" onClick={(e) => e.target === e.currentTarget && (saveDraft(), close())}>
+    <div
+      className="overlay qn-overlay"
+      onClick={(e) => e.target === e.currentTarget && (saveDraft(), close())}
+      onKeyDown={(e) => {
+        // Esc 收工提到浮层根节点：任意焦点（正文/标签/按钮）都能收——
+        // 此前只绑在正文 textarea，焦点在标签输入时 Esc 失效（外部审查 P1-3）
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          saveDraft()
+          close()
+        }
+      }}
+    >
       <div className="qn-modal" role="dialog" aria-label="速记">
         <textarea
           ref={taRef}
@@ -179,12 +191,7 @@ function QuickNoteDialog() {
           onChange={(e) => setBody(e.target.value)}
           onPaste={(e) => void onPasteImage(e)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault()
-              saveDraft()
-              close()
-            }
-            // Ctrl/Cmd + Enter：存了继续（连记场景每条省一次唤起）；Esc 任何时候收工
+            // Ctrl/Cmd + Enter：存了继续（连记场景每条省一次唤起）；Esc 由浮层根节点统一处理
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
               e.preventDefault()
               void save(true)

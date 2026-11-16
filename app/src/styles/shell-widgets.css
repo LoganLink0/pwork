@@ -302,13 +302,13 @@ h2 .info-tip {
   top: -10px;
 }
 .info-tip-btn {
-  width: 14px;
-  height: 14px;
+  width: 24px; /* 最小点击目标（外部审查 P1：14×14 与 9.5px 字号低于令牌下限） */
+  height: 24px;
   border: 1.2px solid var(--ink-faint);
   border-radius: 50%;
   background: none;
   color: var(--ink-faint);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 1;
   display: flex;

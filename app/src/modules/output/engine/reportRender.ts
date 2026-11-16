@@ -18,7 +18,7 @@ export function reportToMarkdown(d: ReportData): string {
   L.push('')
   L.push('## 一、任务')
   L.push('')
-  L.push(`- 已闭环 **${d.tasks.closed.length}** 项 · 闭环率 **${d.tasks.closureRate}%** · 未闭环 ${d.tasks.openCount} 项（逾期 ${d.tasks.overdueCount}）${d.tasks.droppedCount > 0 ? ` · 放弃 ${d.tasks.droppedCount} 项（不计入闭环率）` : ''}`)
+  L.push(`- 已闭环 **${d.tasks.closed.length}** 项 · 闭环率 **${d.tasks.closureRate}%** · 未闭环 ${d.tasks.openCount} 项（逾期 ${d.tasks.overdueCount}）${d.tasks.droppedCount > 0 ? ` · 放弃 ${d.tasks.droppedCount} 项（计入分母）` : ''}`)
   const closedShown = d.tasks.closed.slice(0, 5)
   for (const t of closedShown) L.push(`  - ✅ ${t.title}`)
   if (d.tasks.closed.length > closedShown.length) L.push(`  - （其余 ${d.tasks.closed.length - closedShown.length} 项已闭环任务略）`)

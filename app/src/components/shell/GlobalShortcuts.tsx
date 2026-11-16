@@ -34,8 +34,13 @@ export function GlobalShortcuts() {
         e.preventDefault()
         a.run(ctx)
       }
-      // 命令面板：配置键 + 固定别名 / + 默认 Ctrl+K / ⌘K（写进肌肉记忆的键位恒可用），输入态也可唤出
-      if (combo === kb.palette || combo === 'ctrl+k' || combo === 'meta+k' || e.key === '/') {
+      // 命令面板：配置键 + 固定别名 + 默认 Ctrl+K / ⌘K（组合键写进肌肉记忆，输入态也可唤出）。
+      // 单键 `/` 在输入态放行（外部审查 P1：路径/分数/日期里打 `/` 会丢字符+被面板夺焦）
+      if (combo === kb.palette || combo === 'ctrl+k' || combo === 'meta+k') {
+        fire('open-palette')
+        return
+      }
+      if (e.key === '/' && !typing) {
         fire('open-palette')
         return
       }

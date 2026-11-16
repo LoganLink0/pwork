@@ -68,9 +68,10 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
       if (d >= sinceLocal && d <= todayLocal(now)) recurringClosures.push({ title: t.title, closedAt: `${d}T12:00:00` })
     }
   }
-  // 闭环率分母剔除已放弃任务（盲审 P2）。循环待办的口径（1.5 批，可解释数字红线）：
-  // 一次性任务按「完成数/任务数」；循环任务「本期完成过至少一次」即算闭环（本期完成多次
-  // 也只计 1——循环没有「攒闭环」的概念，只回答这个周期有没有兑现）。分母为 0 时回 0（既有约定）。
+  // 闭环率（口径 2026-11-16 用户拍板：放弃/搁置计入分母，不再剔除；公式唯一实现
+  // 见 engine/taskMetrics.ts）。循环待办保持 1.5 批既有红线：本期完成过即计入分子、
+  // 循环本体不计分母（防永久 todo 拖垮窗口数字）。分母为 0 时回 0（既有约定）。
+  const droppedCountAll = live.filter((t) => t.status === 'dropped').length
   const rated = live.filter((t) => t.status !== 'dropped' && !t.recurrenceDays)
   const recFulfilled = recurring.filter((t) => (t.doneDates ?? []).some((d) => d >= sinceLocal && d <= todayLocal(now))).length
   const closed = [
@@ -82,7 +83,7 @@ export async function gatherReportData(mode: ReportMode, now = new Date()): Prom
   const open = live.filter((t) => t.status === 'todo')
   const today = todayLocal(now)
   const overdueCount = open.filter((t) => (t.due ?? '9999') < today).length
-  const rateDenominator = rated.length + recurring.length
+  const rateDenominator = rated.length + recurring.length + droppedCountAll
   const closureRate =
     rateDenominator === 0
       ? 0

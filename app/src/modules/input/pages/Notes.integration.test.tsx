@@ -89,7 +89,9 @@ describe('速记模块（W1）', () => {
 
     await user.click(list().getByText('将被软删除'))
     await screen.findByTestId('note-editor')
+    // 删除带确认闸门（2026-11-15）：先点行内「删除」，再点确认层的确认按钮（data-testid 稳定）
     await user.click(screen.getByRole('button', { name: '删除' }))
+    await user.click(await screen.findByTestId('confirm-confirm'))
 
     await waitFor(() => expect(useNotes.getState().trash).toHaveLength(1))
     // 导航卸载编辑器是异步渲染——等待文本消失而非直接断言

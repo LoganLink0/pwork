@@ -60,7 +60,7 @@ function buildContentSlides(d: ReportData): SlideSpec[] {
         ...d.tasks.closed.slice(0, 6).map((t) => `✅ ${t.title}`),
         d.tasks.closed.length > 6 ? `（其余 ${d.tasks.closed.length - 6} 项已闭环任务略）` : '',
         d.tasks.openCount > 0 ? `□ 未闭环 ${d.tasks.openCount} 项（逾期 ${d.tasks.overdueCount}）` : '',
-        d.tasks.droppedCount > 0 ? `× 放弃 ${d.tasks.droppedCount} 项（不计入闭环率）` : '',
+        d.tasks.droppedCount > 0 ? `× 放弃 ${d.tasks.droppedCount} 项（计入分母）` : '',
       ].filter(Boolean),
       stats: [],
       footer,
