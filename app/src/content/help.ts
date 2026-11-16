@@ -66,7 +66,7 @@ export interface Shortcut {
 
 export const SHORTCUTS: Shortcut[] = [
   { keys: 'N', desc: '速记浮层', bind: 'quickNote' },
-  { keys: 'Ctrl K 或 /', desc: '命令面板（Ctrl+K 可在设置里改，/ 永远可用）', bind: 'palette' },
+  { keys: 'Ctrl K 或 /', desc: '命令面板（Ctrl+K 可在设置里改；/ 在输入框内不触发）', bind: 'palette' },
   { keys: '?', desc: '帮助页', bind: 'help' },
   { keys: '← →', desc: '复盘向导切步' },
   { keys: 'Esc', desc: '关闭浮层与面板' },

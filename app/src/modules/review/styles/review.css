@@ -288,7 +288,7 @@
   line-height: 1;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
 .review-root .app-header {
     display: none;
   }
@@ -769,7 +769,7 @@
   gap: var(--sp-4);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
 .review-root .wall {
     grid-template-columns: 1fr;
   }

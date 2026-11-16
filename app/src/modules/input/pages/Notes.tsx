@@ -61,7 +61,7 @@ export function Notes() {
       <div className="page-head">
         <h1>速记</h1>
         <span className="sub">
-          {notes.length} 条 · 捕获 ≤3 次交互
+          {notes.length} 条 · 捕获 ≤3 步
         </span>
         <div className="right">
           <Link to="/input/notes/new" className="btn-primary">＋ 新速记</Link>

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { applyTheme, loadTheme, saveTheme, type ThemePref } from '../engine/appearance'
 import { applyAndSavePrefs, loadPrefs, type Prefs } from '../engine/prefs'
+import { useNotifyHub } from '../engine/notifyCenter'
 
 /** 壳级 UI 状态：命令面板 / 速记浮层开闭 + 主题偏好 + 显示设置（顶栏与设置页共享）。
  *  轮盘不在此管理：它是独立无焦点小窗（label=wheel），开关由 Rust 热键直控 */
@@ -42,7 +43,12 @@ export const useUi = create<UiState>((set) => ({
   closePalette: () => set({ paletteOpen: false }),
   setAskBusy: (busy) => set({ askBusy: busy }),
   setAskDone: () => set({ askBusy: false, askDoneAt: Date.now() }),
-  openQuick: () => set({ quickOpen: true }),
+  // 速记浮层与通知面板互斥（外部审查 P1：两个浮层同屏互相遮挡、Esc 语义混乱）：
+  // 打开速记先收起通知面板；反向（开面板收速记）在 NotifyBell 的开关处做
+  openQuick: () => {
+    useNotifyHub.getState().setOpen(false)
+    set({ quickOpen: true })
+  },
   closeQuick: () => set({ quickOpen: false }),
   setTheme: (pref) => {
     applyTheme(pref)

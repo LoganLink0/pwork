@@ -154,7 +154,7 @@ export function Items() {
   const stageChips: { key: StageFilter; label: string }[] = [
     { key: 'all', label: `全部 ${counts.all}` },
     { key: 'must', label: `必看 ${counts.must}` },
-    { key: 'kept', label: `我标注的 ${counts.kept}` },
+    { key: 'kept', label: `评分入选 ${counts.kept}` },
     { key: 'discarded', label: `已筛除 ${counts.discarded}` },
   ]
 
@@ -220,6 +220,7 @@ export function Items() {
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return // 中文输入法选词回车不触发（MWG ime-safe-enter-submit）
               if (e.key === 'Enter') doSaveFilter()
               if (e.key === 'Escape') setSaveOpen(false)
             }}

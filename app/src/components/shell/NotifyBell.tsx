@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifyHub, unreadCount, type NotifyItem } from '../../engine/notifyCenter'
+import { useUi } from '../../store/ui'
 import { Icon } from './icons'
 
 /** 相对时间：刚刚 / N 分钟前 / N 小时前 / N 天前 / 日期 */
@@ -58,6 +59,7 @@ export function NotifyBell({ topbar = false }: { topbar?: boolean }) {
         onClick={() => {
           if (!panelOpen) markAllRead() // 打开即已读
           setOpen(!panelOpen)
+          if (!panelOpen) useUi.getState().closeQuick() // 打开通知面板时收起速记浮层（与 openQuick 的互斥对偶）
         }}
       >
         <Icon name="bell" size={17} />

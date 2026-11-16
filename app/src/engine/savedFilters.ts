@@ -91,7 +91,7 @@ export async function deleteSavedFilter(id: string): Promise<void> {
 export function describeFilterState(s: ItemsFilterState): string {
   const parts: string[] = []
   if (s.stage === 'must') parts.push('必看')
-  else if (s.stage === 'kept') parts.push('我标注的')
+  else if (s.stage === 'kept') parts.push('评分入选')
   else if (s.stage === 'discarded') parts.push('已筛除')
   if (s.otOnly) parts.push('机会/威胁/趋势')
   if (s.query.trim()) parts.push(`搜索「${s.query.trim()}」`)

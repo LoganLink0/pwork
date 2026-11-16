@@ -22,6 +22,13 @@ import { useNotes } from '../../store/notes'
  * 否则主窗界面看不到独立窗写入的数据。
  */
 export function PaletteWindow() {
+  // 收起独立窗：未回答的确认先以「取消」结案（否则等待确认的 Promise 永挂），再藏窗
+  function hideWithSettle() {
+    const confirmState = useConfirmStore.getState()
+    if (confirmState.spec) confirmState.settle(false)
+    void invoke('palette_hide').catch(() => {})
+  }
+
   useEffect(() => {
     // 主题跟随主窗（独立窗此前不挂 data-theme，深浅令牌分支不生效）
     syncThemeFromStore()
@@ -61,12 +68,6 @@ export function PaletteWindow() {
       unlisten?.()
     }
   }, [])
-
-  function hideWithSettle() {
-    const confirmState = useConfirmStore.getState()
-    if (confirmState.spec) confirmState.settle(false)
-    void invoke('palette_hide').catch(() => {})
-  }
 
   return (
     <MemoryRouter initialEntries={['/']}>

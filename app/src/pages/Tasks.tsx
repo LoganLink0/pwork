@@ -507,7 +507,8 @@ export function Tasks() {
         <span className="qa-hint"><kbd>↵</kbd> 添加</span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)' }}>
+      {/* 允许折行：窄屏（≤768px）下「按日期」的说明文字折到分段控件下一行，不再横向挤压 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', rowGap: 'var(--sp-1)', flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
         <div className="radio" role="radiogroup" aria-label="查看方式">
           <button type="button" className={view === 'lanes' ? 'on' : ''} onClick={() => switchView('lanes')} aria-pressed={view === 'lanes'}>
             按分诊

@@ -106,7 +106,7 @@ export function ItemCard({ item, expanded, onToggle, onVote, onNotes, onKeep, on
           )}
           {showStage && (
             <span className={`stage-badge stage-${item.stage}`}>
-              {item.stage === 'discarded' ? '已筛除' : item.stage === 'kept' ? '我标注的' : '上过日报'}
+              {item.stage === 'discarded' ? '已筛除' : item.stage === 'kept' ? '评分入选' : '上过日报'}
             </span>
           )}
           {showStage && item.stage === 'discarded' && item.expiresAt && (

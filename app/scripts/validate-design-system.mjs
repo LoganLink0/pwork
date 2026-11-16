@@ -97,6 +97,8 @@ const PAIRS = {
   dark: [
     ["--ink", "--bg"], ["--ink", "--surface"], ["--ink-soft", "--bg"], ["--ink-faint", "--bg"],
     ["--ink-soft", "--surface"], ["--accent-text", "--bg"],
+    ["--ink-faint", "--surface-2"], /* 外部审查 P1：4.35 不达 AA——faint 提值后纳入常测 */
+    ["--danger", "--bg"], ["--danger", "--surface"], ["--danger", "--surface-2"], /* 同上：暗色 danger 曾沿用亮色值 3.05–3.31 */
     ["--cat-good", "--surface"], ["--cat-need", "--surface"], ["--cat-insight", "--surface"], ["--cat-action", "--surface"],
     ["--ok", "--bg"],
   ],

@@ -822,9 +822,10 @@ export function Settings() {
                 关
               </button>
             </div>
-            <div className="radio" role="radiogroup" aria-label="自动备份周期">
+            {/* 自动备份已关闭时周期不可调（开关没开，调周期没有意义），视觉同步降级 */}
+            <div className="radio" role="radiogroup" aria-label="自动备份周期" style={autoBk.enabled ? undefined : { opacity: 0.45 }}>
               {[7, 14, 30].map((d) => (
-                <button key={d} type="button" className={autoBk.everyDays === d ? 'on' : ''} onClick={() => setAutoBackup({ everyDays: d })} aria-pressed={autoBk.everyDays === d}>
+                <button key={d} type="button" disabled={!autoBk.enabled} className={autoBk.everyDays === d ? 'on' : ''} onClick={() => setAutoBackup({ everyDays: d })} aria-pressed={autoBk.everyDays === d}>
                   {d === 30 ? '每月' : d === 14 ? '每两周' : '每周'}
                 </button>
               ))}
