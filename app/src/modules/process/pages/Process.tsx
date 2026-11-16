@@ -71,6 +71,9 @@ export function Process() {
         <span className="sub">工具箱（文字/音频/图片/视频）· 快速启动；跨模块检索在 <kbd>Ctrl K</kbd> 命令面板</span>
       </div>
 
+      {/* 宽幅双栏（2026-11-17 反馈：右栏不空着）：主列工具箱与快速启动 + 右栏速览 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <div className="set-card">
         <h2>工具箱</h2>
         <div className="desc">按信息形态分类：文字 → 音频 → 图片 → 视频；本地引擎离线可用，生成类为自带 Key 占位</div>
@@ -188,6 +191,33 @@ export function Process() {
             </span>
           </div>
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="处理速览">
+          <div className="aside-card">
+            <h3>工具分类</h3>
+            {CATEGORY_ORDER.map((cat) => (
+              <div className="kv" key={cat}>
+                <span>{CATEGORY_META[cat].name}</span>
+                <b>{PROCESS_TOOLS.filter((t) => t.category === cat).length} 个</b>
+              </div>
+            ))}
+          </div>
+          <div className="aside-card">
+            <h3>最近用过的站点</h3>
+            {byRecentUse(sites).filter((s) => s.lastUsedAt).slice(0, 5).length === 0 ? (
+              <div className="kv"><span>还没用过——点上面的入口即记录</span><b>—</b></div>
+            ) : (
+              byRecentUse(sites).filter((s) => s.lastUsedAt).slice(0, 5).map((s) => (
+                <div className="kv" key={s.id}>
+                  <span>{s.name}</span>
+                  <b>{s.lastUsedAt ? new Date(s.lastUsedAt).toLocaleDateString('zh-CN') : ''}</b>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
       </div>
     </section>
   )

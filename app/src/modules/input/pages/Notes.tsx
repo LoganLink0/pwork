@@ -57,7 +57,7 @@ export function Notes() {
   }, [list, showTrash])
 
   return (
-    <section>
+    <section className="content-wide">
       <div className="page-head">
         <h1>速记</h1>
         <span className="sub">

@@ -60,23 +60,17 @@ export function Sources() {
   const [probingDomain, setProbingDomain] = useState<string | null>(null)
   const [probingForm, setProbingForm] = useState(false)
 
-  // 宽幅双栏数据（2026-11-17 第二批）：自检与发现从主列横条卡移右栏——概览诊断类信息
-  // 按右栏纪律收编，主列只剩信源列表不再被下推；窄屏右栏隐藏时两卡回落主列（双渲染）
+  // 信源自检（2026-11-17 用户拍板：放回列表顶部、且只在有要处理的问题时出现——
+  // 常驻健康面板造成滚动负担与焦虑；一切正常时零噪音，升降档由投票信用自动做）
   const audits = useMemo(() => auditSources(items, sources), [items, sources])
   const auditIssues = audits.filter((a) => a.verdict === 'noisy' || a.verdict === 'idle')
   const auditGoods = audits.filter((a) => a.verdict === 'good')
   const leads = useMemo(() => discoverLeads(items, sources), [items, sources])
 
-  const auditBlock = audits.length === 0 || sources.length === 0 ? null : (
+  const auditBlock = auditIssues.length === 0 || sources.length === 0 ? null : (
     <div className="set-card" data-testid="source-audit">
-      <h2>信源自检（近 30 天）</h2>
+      <h2>信源自检（近 30 天）——有 {auditIssues.length} 个信源需要留意</h2>
       <div className="set-body">
-        <div className="set-row">
-          <label>总体</label>
-          <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>
-            产出健康 {auditGoods.length} 个 ｜ 噪声偏高 {audits.filter((a) => a.verdict === 'noisy').length} 个 ｜ 零命中 {audits.filter((a) => a.verdict === 'idle').length} 个 ｜ 观察中 {audits.filter((a) => a.verdict === 'young').length} 个
-          </span>
-        </div>
         {auditIssues.map((a) => (
           <div className="set-row" key={a.sourceId}>
             <label style={{ color: a.verdict === 'noisy' ? 'var(--warn, var(--accent))' : 'var(--ink-soft)' }}>
@@ -87,14 +81,12 @@ export function Sources() {
             </span>
           </div>
         ))}
-        {auditIssues.length === 0 && (
-          <div className="set-row">
-            <label></label>
-            <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
-              没有需要处理的信源——降档与升档由投票信用自动完成，这里只报告健康状态。
-            </span>
-          </div>
-        )}
+        <div className="set-row">
+          <label></label>
+          <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+            其余 {auditGoods.length} 个产出健康；降档与升档由投票信用自动完成，这里只报需要处理的。
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -307,15 +299,13 @@ export function Sources() {
       )}
       {msg && <div className="run-banner" data-testid="src-msg">{msg}</div>}
 
-      {/* 宽幅双栏（第二批）：主列=信源列表；右栏=概览+自检+发现（自检/发现原是主列顶部
-          横条卡，把整个列表下推——概览诊断类信息按右栏纪律收编，用户 2026-11-17 拍板）。
-          窄屏右栏隐藏时两卡回落主列顶部（.only-narrow 双渲染，信息不丢） */}
+      {/* 自检横条：只在有需要处理的信源时出现（常驻会造成滚动负担与焦虑，2026-11-17 用户拍板） */}
+      {auditBlock}
+      {leadsBlock}
+
+      {/* 宽幅双栏：主列=信源列表；右栏=信源概览 */}
       <div className="wide-grid">
         <div className="main-col" style={{ minWidth: 0 }}>
-          <div className="only-narrow">
-            {auditBlock}
-            {leadsBlock}
-          </div>
 
       {catalogOpen && sources.length > 0 && (
         <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -545,8 +535,6 @@ export function Sources() {
               <div className="kv"><span>连续失败 ≥3 次已自动停用</span><b>{inactiveFail.length} 个</b></div>
             )}
           </div>
-          {auditBlock}
-          {leadsBlock}
         </aside>
       </div>
     </section>

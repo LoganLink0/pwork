@@ -177,7 +177,7 @@ export function MeetingRoom() {
   }
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">复盘会议室 · 单设备投屏模式</div>
         <h1>{template?.name ?? '复盘会'}</h1>

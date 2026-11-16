@@ -100,7 +100,7 @@ export function ArchiveDetail() {
   const summaryColors = ['good', 'need', 'insight'] as const
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">
           复盘档案 · {SCENARIO_LABEL[rec.scenario]} · {fmtLocal(rec.createdAt)} ·{' '}

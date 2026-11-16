@@ -241,7 +241,7 @@ export function Wizard() {
   }
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">
           复盘工作台 · {template ? MODE_LABEL[quick ? 'quick' : 'full'] : ''} {quick && <QuickTimer />}
