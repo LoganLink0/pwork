@@ -103,8 +103,14 @@ pub fn toggle_topmost() -> Result<String, String> {
 #[tauri::command]
 pub fn shell_bridge_install() -> Result<String, String> {
   use std::io::Write;
-  let out = std::process::Command::new("powershell")
-    .args(["-NoProfile", "-Command", "$PROFILE"])
+  let mut cmd = std::process::Command::new("powershell");
+  cmd.args(["-NoProfile", "-Command", "$PROFILE"]);
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW：应用内配置不出终端窗（主程序无 console 时 spawn console 程序会新建窗闪现）
+  }
+  let out = cmd
     .output()
     .map_err(|e| format!("启动 PowerShell 失败：{e}"))?;
   if !out.status.success() {

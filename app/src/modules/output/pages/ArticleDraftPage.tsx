@@ -106,7 +106,7 @@ export function ArticleDraftPage() {
 
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>文章草稿</h1>
         <span className="sub">速记与洞察按周期聚合成素材 → AI 整理骨架（你逐节修改）→ 导出 Markdown</span>

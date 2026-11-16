@@ -58,7 +58,7 @@ export function ReadOutLoud() {
   }
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>{MODE_LABEL[mode]}导出为朗读音频</h1>
         <span className="sub">报告正文 → 浏览器本地语音（通勤场景"听你的{MODE_LABEL[mode]}"）</span>

@@ -79,7 +79,7 @@ export function DataCard() {
   }
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>{mode === 'weekly' ? '周报' : '月报'}导出为数据卡片</h1>
         <span className="sub">本期关键数字 → 分享卡片图（Canvas 本地渲染）</span>

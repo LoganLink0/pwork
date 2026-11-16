@@ -61,7 +61,7 @@ export function Output() {
   const materialReady = stats.total > 0 || goals.filter((g) => g.status === 'active').length > 0 || items.length > 0 || notes.length > 0
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>输出</h1>
         <span className="sub">把库里的积累变成能发出去、交出去、存出去的交付物 · 模板 × 数据 × 渲染</span>

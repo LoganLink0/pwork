@@ -12,12 +12,19 @@ const MAX_ENTRIES: usize = 30;
 const MAX_STDOUT: usize = 8 * 1024 * 1024;
 
 /// 带看门狗地运行 yt-dlp 并收集 stdout。Command 以参数数组构建（调用方保证），
-/// 超时即 kill 子进程并返回人话错误。
+/// 超时即 kill 子进程并返回人话错误。Windows 下带 CREATE_NO_WINDOW：后台抓取是
+/// 无交互子进程，主程序本身无 console（windows_subsystem=windows），spawn console
+/// 程序会新建终端窗闪现在用户桌面（2026-11-15 用户反馈「点开速记时弹 CMD」的根因
+/// ——抓取循环恰好与用户操作同时发生，窗闪归属难以自察）
 fn run_ytdlp(args: &[&str], timeout: Duration) -> Result<String, String> {
-  let mut child = Command::new("yt-dlp")
-    .args(args)
-    .stdout(Stdio::piped())
-    .stderr(Stdio::null())
+  let mut cmd = Command::new("yt-dlp");
+  cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::null());
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+  }
+  let mut child = cmd
     .spawn()
     .map_err(|e| format!("启动 yt-dlp 失败：{e}——确认已安装（pip install yt-dlp）并在 PATH 中"))?;
   let started = Instant::now();

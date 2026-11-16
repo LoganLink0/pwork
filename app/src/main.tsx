@@ -60,15 +60,33 @@ if (isDesktopApp()) {
 // 显示设置（字号缩放/阅读行宽/字体）同样渲染前应用——写 CSS 变量到根元素
 initPrefs()
 
-// 常用页面 chunk 空闲预载：消除「首屏懒组件未加载完时快速点击导航 → 目标页白屏」的竞态窗口
-// （点击本身没问题，问题在目标 chunk 尚未就绪；预载后首次点击即命中已就绪的组件）
+// 常用页面 chunk 空闲预载：消除「首屏懒组件未加载完时快速点击导航 → 目标页白屏」的竞态窗口，
+// 同时治「首次点击各模块页加载缓慢」（2026-11-15 用户反馈：此前只预载 4 页，其余模块页
+// 首次点击现拉 chunk+现挂 store）。高频主干一次 idle 拉齐；低频工具页第二波错峰（避免启动
+// 瞬间并发抢资源）。两波都不 await——预载失败静默（点击时 loader 自然重试）
 const IDLE = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback
 const preloadIdle = (cb: () => void) => (IDLE ? IDLE(cb) : setTimeout(cb, 1200))
 preloadIdle(() => {
   void import('./pages/Settings')
+  void import('./pages/Help')
+  void import('./pages/Tasks')
+  void import('./pages/Goals')
   void import('./modules/input/pages/Notes')
   void import('./modules/input/pages/Digest')
-  void import('./pages/Help')
+  void import('./modules/input/pages/Items')
+  void import('./modules/input/pages/Sources')
+  void import('./modules/process/pages/Process')
+  void import('./modules/output/pages/Output')
+  void import('./modules/review/pages/Dashboard')
+})
+preloadIdle(() => {
+  void import('./modules/output/pages/ProducePage')
+  void import('./modules/output/pages/ReportGenerator')
+  void import('./modules/output/pages/ReadOutLoud')
+  void import('./modules/output/pages/DataCard')
+  void import('./modules/output/pages/PptWriter')
+  void import('./modules/output/pages/ArticleDraftPage')
+  void import('./modules/output/pages/ResearchPage')
 })
 
 // PWA Service Worker：网页版离线可用、安装到主屏。

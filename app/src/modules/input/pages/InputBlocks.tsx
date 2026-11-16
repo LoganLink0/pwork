@@ -33,7 +33,7 @@ export function InputBlocks() {
   const visible = blocks.filter((b) => !b.profileId)
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>外部数据</h1>
         <span className="sub">周报的数据源——这里的数据块自动并入「周报导出」</span>

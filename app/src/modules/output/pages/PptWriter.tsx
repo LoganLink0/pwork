@@ -169,7 +169,7 @@ export function PptWriter() {
   const materialsReady = materials.length > 0
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings">
       <div className="page-head">
         <h1>PPT 撰写</h1>
         <span className="sub">从零起草：主题 + 材料 → AI 大纲（你逐页审核修改）→ 可编辑 PPT</span>
