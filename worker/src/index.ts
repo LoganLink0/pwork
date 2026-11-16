@@ -28,6 +28,17 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } })
 }
 
+/**
+ * D1 转发端点构造（校验与拼装内聚的纯函数）：账户 ID（32 位十六进制）与数据库 ID
+ * （UUID）严格字符集校验通过才返回官方端点 URL，否则 null——未校验的值不存在
+ * 离开本函数的路径（污点在函数内被正则终止，调用点拿到的 URL 已经过字符集收敛）。
+ */
+function d1UpstreamUrl(accountId: string, databaseId: string): string | null {
+  if (!/^[0-9a-f]{32}$/i.test(accountId)) return null
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId)) return null
+  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`
+}
+
 /** ingest_blocks 建表只需每个 isolate 做一次（D1 无迁移机制，端点内幂等确保） */
 let ingestEnsured = false
 
@@ -140,15 +151,15 @@ export default {
         }
       }
 
-      // 转发分支：账户 ID 为 32 位十六进制、数据库 ID 为 UUID——拼进上游 URL 前严格校验
+      // 转发分支：账户 ID 与数据库 ID 的格式校验与端点拼装内聚在同一纯函数——
+      // 未通过校验的值不存在离开该函数的路径（调用点拿到的 URL 已经过字符集收敛）
       const accountId = typeof body?.accountId === 'string' ? body.accountId : ''
       const databaseId = typeof body?.databaseId === 'string' ? body.databaseId : ''
-      if (!/^[0-9a-f]{32}$/i.test(accountId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId)) {
+      const upstreamUrl = d1UpstreamUrl(accountId, databaseId)
+      if (upstreamUrl === null) {
         return json({ error: 'bad request' }, 400)
       }
       // 与采集管线同一外联纪律：guardedFetch 内部先 assertPublicHttpUrl 再发起，重定向逐跳重校验
-      const upstreamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`
-      assertPublicHttpUrl(upstreamUrl)
       const upstream = await guardedFetch(upstreamUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: auth },
