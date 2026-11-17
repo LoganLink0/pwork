@@ -1348,9 +1348,17 @@
 .review-root .container.content-wide {
   max-width: 1560px;
 }
-/* 打印时隐藏交互面板（归档详情页的双检面板） */
+/* 打印时隐藏交互面板（归档详情页的双检面板）与宽幅右栏（2026-11-17 自审补：
+   右栏「档案信息/行动项去向」是界面导航信息，打印/存 PDF 只应带正文） */
 @media print {
   .review-root .DoubleCheck-hide-on-print {
     display: none !important;
+  }
+  .review-root .wide-aside,
+  .content-wide .wide-aside {
+    display: none !important;
+  }
+  .content-wide .wide-grid {
+    display: block !important;
   }
 }

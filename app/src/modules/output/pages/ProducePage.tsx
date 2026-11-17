@@ -58,8 +58,8 @@ export function ProducePage() {
       {assets && (
         <div style={{ marginTop: 'var(--sp-3)' }} data-testid="produce-assets">
           <h2 style={{ fontSize: 'var(--fs-lg)', marginBottom: 'var(--sp-3)' }}>{title || '成稿产物'}</h2>
-          {/* 宽幅排布（第二批）：三产物卡并排铺满（≥1024 三列，窄屏回落纵排） */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 'var(--sp-3)', alignItems: 'start' }}>
+          {/* 宽幅排布（第二批）：三产物卡并排铺满；min(420px,100%) 防手机宽度撑破轨道 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(420px, 100%), 1fr))', gap: 'var(--sp-3)', alignItems: 'start' }}>
 
           <AssetCard
             testid="asset-weekly"

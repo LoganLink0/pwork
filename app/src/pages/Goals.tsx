@@ -269,6 +269,10 @@ export function Goals() {
       <div className="page-head">
         <h1>目标</h1>
         <span className="sub">定期限 · 记进度 · 周复盘时只读引用 · 勾选＝达成，再点＝恢复</span>
+        {/* 窄屏右栏隐藏时的信息兜底（宽屏在右栏「目标概览」卡） */}
+        <span className="sub only-narrow" style={{ color: 'var(--ink-faint)' }}>
+          进行中 {active.length} · 已达成 {doneClosed} · 已搁置 {droppedClosed}
+        </span>
       </div>
 
       <div className="quick-add" data-testid="goal-quick-add">
