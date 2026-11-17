@@ -100,7 +100,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       {/* Hero */}
       <section className="hero">
         <div>
