@@ -41,8 +41,19 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
     setEnabled(on)
     localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
     writePref(KEY, { enabled: on })
-    // isle 窗经 pwork-prefs-changed 事件实时响应；这里同步 invoke 兜底（事件丢失时也能立即显隐）
-    void invoke(on ? 'isle_show' : 'isle_hide').catch(() => {})
+    if (on) {
+      // 打开=直接展开完整横条（2026-11-18 用户反馈：只 show 会停在 logo 小窗并被 1 秒
+      // 自动收回计时器收走——「闪现一下就消失」根因）；mode/y 从共享 localStorage 读
+      try {
+        const pos = JSON.parse(localStorage.getItem('pwork-isle-pos') || '{}') as { mode?: string; y?: number }
+        void invoke('isle_expand', { mode: pos.mode ?? 'top', y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
+        return
+      } catch {
+        void invoke('isle_show').catch(() => {})
+        return
+      }
+    }
+    invoke('isle_hide').catch(() => {})
   }
 
   const resetPos = () => {

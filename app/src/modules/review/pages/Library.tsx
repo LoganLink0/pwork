@@ -130,6 +130,9 @@ export function Library() {
         </section>
       )}
 
+      {/* 宽幅双栏（回路覆盖）：主列资产池与时间线 + 右栏资产概览；窄屏右栏隐藏回落单列 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <section className="detail-section">
         <h2>
           {LIBRARY.poolTitle} <KnowledgeCapsule id="insight-card" />
@@ -272,6 +275,23 @@ export function Library() {
           </ul>
         )}
       </section>
+        </div>
+
+        <aside className="wide-aside" aria-label="资产概览">
+          <div className="aside-card">
+            <h3>资产概览</h3>
+            <div className="kv"><span>洞察卡累计</span><b>{insights?.length ?? 0} 条</b></div>
+            <div className="kv"><span>复盘档案</span><b>{reviews?.length ?? 0} 份</b></div>
+            <div className="kv"><span>标签</span><b>{allTags.length} 个</b></div>
+            <div className="kv"><span>模式警示</span><b>{patternWarnings.length} 组</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>回路入口</h3>
+            <div className="kv"><span>复盘档案</span><Link to="/review" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>全部档案 →</Link></div>
+            <div className="kv"><span>聚合分析</span><Link to="/review/analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

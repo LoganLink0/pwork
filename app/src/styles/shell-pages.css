@@ -497,11 +497,17 @@
   border-radius: 5px;
 }
 @media (max-width: 1439.98px) {
+  /* 窄窗自适应（2026-11-18 用户反馈「无法自适应」）：右栏不再隐藏（信息丢失），
+     改为折行到主列下方全宽排布——grid 单列时 aside 自然第二行 */
   .content-wide .wide-grid {
     grid-template-columns: 1fr;
   }
   .content-wide .wide-aside {
-    display: none;
+    position: static;
+    width: 100%;
+  }
+  .content-wide .settings-layout .wide-aside {
+    width: 100%;
   }
   .only-wide {
     display: none !important;
@@ -513,7 +519,7 @@
   }
 }
 /* flex 布局页（settings-page / help）的右栏：settings-layout 是 flex（nav+content），
-   aside 作为第三元素参与——宽 300 固定不参与伸缩，窄屏由上面的通用规则隐藏 */
+   aside 作为第三元素参与——宽 300 固定不参与伸缩；窄屏折行到下方（上面的通用规则） */
 .content-wide .settings-layout .wide-aside {
   flex: none;
   width: 300px;
@@ -527,7 +533,7 @@
   flex-direction: column;
   gap: var(--sp-3);
 }
-/* 设置/帮助页放宽（content-inner 经 :has 跟随放宽，settings-page 自身解除 1280 上限） */
+/* 设置/帮助页放宽（content-inner 经 wide-host 路由类放宽，settings-page 自身解除 1280 上限） */
 .settings-page.content-wide {
   max-width: 1560px;
 }

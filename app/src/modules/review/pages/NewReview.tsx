@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { TEMPLATES } from '../content/templates'
 import { StickyCard } from '../components/ui/StickyCard'
 import { listReviews } from '../db/repo'
@@ -80,7 +80,7 @@ export function NewReview() {
     (a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0),
   )
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">新建复盘</div>
         <h1>从哪一个场景开始？</h1>
@@ -90,6 +90,10 @@ export function NewReview() {
       </header>
 
       <MaterialCard />
+
+      {/* 宽幅双栏（回路覆盖）：主列场景引子与模板网格 + 右栏回路概览与流程 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
 
       {/* 场景故事引子（2026-11-10 用户反馈：缺场景与故事感，用户不知道什么时候用）——
           真实生活里的三个高频时刻，点了直达对应复盘 */}
@@ -150,6 +154,24 @@ export function NewReview() {
             }}
           />
         ))}
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="回路概览">
+          <div className="aside-card">
+            <h3>怎么选</h3>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 1.8 }}>
+              日复盘/周复盘适合个人随手记；团队复盘适合有议程的回顾会；
+              AAR/决策/目标复盘对应专项场景。不确定就从「日复盘」开始。
+            </div>
+          </div>
+          <div className="aside-card">
+            <h3>回路入口</h3>
+            <div className="kv"><span>复盘档案</span><Link to="/review" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>全部档案 →</Link></div>
+            <div className="kv"><span>认知资产</span><Link to="/review/assets" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+            <div className="kv"><span>聚合分析</span><Link to="/review/analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+          </div>
+        </aside>
       </div>
     </div>
   )

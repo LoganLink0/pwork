@@ -150,16 +150,16 @@ fn clear_region(w: &tauri::WebviewWindow) {
 }
 
 #[cfg(windows)]
-fn logo_origin(mode: &str, win_w: i32) -> (i32, i32) {
-  let scale_stub = 1.0;
-  let _ = scale_stub;
+fn logo_origin(mode: &str, win_w: i32, scale: f64) -> (i32, i32) {
+  let logo = (PEEK_LOGO * scale) as i32; // 物理 px——窗口宽与 logo 同域，杜绝 DPI 混算偏移
+  let top_y = (24.0 * scale) as i32;
   match mode {
     // 顶缘：logo 水平居中、贴窗顶
-    "top" => ((win_w - (PEEK_LOGO as i32)) / 2, 0),
+    "top" => ((win_w - logo) / 2, 0),
     // 左缘：logo 贴窗左、纵向 24px（窗内 top:24 与前端一致）
-    "left" => (0, 24),
+    "left" => (0, top_y),
     // 右缘：logo 贴窗右
-    _ => ((win_w - (PEEK_LOGO as i32)), 24),
+    _ => (win_w - logo, top_y),
   }
 }
 
@@ -216,7 +216,7 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   #[cfg(windows)]
   {
     let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or(0);
-    let (lx, ly) = logo_origin(&mode, win_w);
+    let (lx, ly) = logo_origin(&mode, win_w, scale);
     clip_region_to_logo(&w, lx, ly);
   }
   Ok(())

@@ -89,9 +89,11 @@
   --accent-pressed: #8a4210; /* 按压：再深一档（白字对比更高，安全） */
   --accent-disabled: #f2c49a; /* 禁用：降饱和降对比（WCAG 对禁用态豁免） */
 
-  /* ======= 字体：全局唯一字族（--font-body-override 为偏好中心覆盖口，缺省走系统栈） ======= */
-  --font-body: var(--font-body-override, -apple-system, 'PingFang SC', 'MiSans', 'HarmonyOS Sans SC',
-    'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif);
+  /* ======= 字体：全局唯一字族（--font-body-override 为偏好中心覆盖口，缺省走系统栈） =======
+     2026-11-18 统一：栈中移除 MiSans / HarmonyOS Sans SC / -apple-system / Segoe UI——这些是
+     「机器上装没装不定」的第三方/异端字体，装了哪个就回退到哪个，全站出现多种字体搭配
+     （用户实测）。现栈各项均为目标平台系统必有：macOS=PingFang，Windows=微软雅黑。 */
+  --font-body: var(--font-body-override, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif);
   --font-display: var(--font-body);
   --font-hand: var(--font-body);
 

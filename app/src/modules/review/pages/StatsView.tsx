@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { STATS_VIEW } from '../content/copy'
 import { insightTimeline, monthlyTrend, scenarioDistribution, topPatterns } from '../engine/stats'
 import { actionStats, listAllActions, listInsights, listReviews, type ActionStats } from '../db/repo'
@@ -140,12 +141,16 @@ export function StatsView() {
   }
 
   return (
-    <div className="container">
+    <div className="container content-wide">
       <header className="page-head">
         <div className="kicker">{STATS_VIEW.kicker}</div>
         <h1>{STATS_VIEW.title}</h1>
         <p className="coach-say">{STATS_VIEW.sub}</p>
       </header>
+
+      {/* 宽幅双栏（回路覆盖）：主列统计与趋势 + 右栏分析概览与入口；窄屏右栏折行到下方 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
 
       <section className="stats-grid" aria-label="总览">
         <div className="stat-card">
@@ -284,6 +289,25 @@ export function StatsView() {
           ))}
         </div>
       </section>
+        </div>
+
+        <aside className="wide-aside" aria-label="分析概览">
+          <div className="aside-card">
+            <h3>分析概览</h3>
+            <div className="kv"><span>复盘档案</span><b>{total} 份</b></div>
+            <div className="kv"><span>认知卡</span><b>{insights.length} 条</b></div>
+            <div className="kv"><span>行动项</span><b>{actions.length} 个</b></div>
+            <div className="kv"><span>行动闭环率</span><b>{actStats ? `${Math.round(actStats.closureRate * 100)}%` : '—'}</b></div>
+            <div className="kv"><span>分析窗口</span><b>近 {windowMonths} 个月</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>回路入口</h3>
+            <div className="kv"><span>复盘档案</span><Link to="/review" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>全部档案 →</Link></div>
+            <div className="kv"><span>认知资产</span><Link to="/review/assets" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+            <div className="kv"><span>新建复盘</span><Link to="/review/new" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>开始 →</Link></div>
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

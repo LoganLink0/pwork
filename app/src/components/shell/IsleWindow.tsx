@@ -155,7 +155,11 @@ export function IsleWindow() {
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
       if (!e.payload?.keys?.includes(SETTINGS_KEY)) return
       if (readEnabled()) {
-        void invoke('isle_show').catch(() => {})
+        // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
+        const pos = readPos()
+        setOpen(true)
+        setPeek(false)
+        void invoke('isle_expand', { mode: pos.mode, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
       } else {
         clearTimers()
         setOpen(false)
