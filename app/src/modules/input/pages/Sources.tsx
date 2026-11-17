@@ -68,7 +68,7 @@ export function Sources() {
   const leads = useMemo(() => discoverLeads(items, sources), [items, sources])
 
   const leadsBlock = leads.length === 0 ? null : (
-    <div className="set-card" data-testid="source-leads">
+    <div className="set-card" style={{ marginBottom: 'var(--sp-3)' }} data-testid="source-leads">
       <h2>可能值得订阅的源头（近 30 天被你的信源反复转引）</h2>
       <div className="set-body">
         {leads.map((l) => (

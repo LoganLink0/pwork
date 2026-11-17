@@ -73,9 +73,9 @@ export function Output() {
         </div>
       )}
 
-      <div style={{ textAlign: 'right', fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--sp-3)' }}>
-        素材：速记 {notes.length} · 条目 {items.length} · 待办闭环 {stats.done}/{stats.total} · 目标 {goals.filter((g) => g.status === 'active').length}
-      </div>
+      {/* 宽幅双栏（2026-11-17 修正：右栏保留，主列网格 auto-fill 自适应不压扁） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <div className="set-card">
         <h2>输出工具箱</h2>
         <div className="desc">按产出形态分类：文档与演示 → 音频 → 图片 → 视频</div>
@@ -124,6 +124,28 @@ export function Output() {
             ))}
           </div>
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="素材与场景">
+          <div className="aside-card">
+            <h3>素材状态</h3>
+            <div className="kv"><span>速记</span><b>{notes.length} 条</b></div>
+            <div className="kv"><span>条目</span><b>{items.length} 条</b></div>
+            <div className="kv"><span>待办闭环</span><b>{stats.done}/{stats.total}</b></div>
+            <div className="kv"><span>进行中目标</span><b>{goals.filter((g) => g.status === 'active').length} 个</b></div>
+            {!materialReady && <div className="kv"><span>素材不足</span><b style={{ color: 'var(--accent-text)' }}>先去输入积累</b></div>}
+          </div>
+          <div className="aside-card">
+            <h3>按场景选工具</h3>
+            <div className="kv"><span>写周报 / 做汇报</span><Link to="/output/report" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>周报导出 →</Link></div>
+            <div className="kv"><span>一次出三份成稿</span><Link to="/output/produce" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>一键成稿 →</Link></div>
+            <div className="kv"><span>发朋友圈数据图</span><Link to="/output/card" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>数据卡片 →</Link></div>
+            <div className="kv"><span>把复盘写成文章</span><Link to="/output/article" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>文章草稿 →</Link></div>
+            <div className="kv"><span>听稿 / 做播客素材</span><Link to="/output/read" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>朗读音频 →</Link></div>
+            <div className="kv"><span>带材料做深度调研</span><Link to="/output/research" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>调研分析 →</Link></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

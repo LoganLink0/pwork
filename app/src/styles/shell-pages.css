@@ -412,7 +412,9 @@
    实时概览（sticky 跟随）。右栏内容纪律：只放与列表状态相关的实时信息（概览数字/统计
    分布/快捷筛选/高频操作），静态说明一律进帮助页。宽度分级：≥1440 出右栏；
    1024–1439 右栏隐藏（.only-wide 元素一并隐藏、.only-narrow 兜底元素显示）；<1024 单列现状。 */
-.content-inner:has(> .content-wide) {
+/* :has 后代匹配（不带 >）：回路四页的 content-wide 在 review-root 布局层内（隔一层），
+   直接子选择器曾使回路页放宽失效（2026-11-17 实机反馈「回路四页没变化」根因） */
+.content-inner:has(.content-wide) {
   max-width: 1560px;
 }
 .content-wide .wide-grid {

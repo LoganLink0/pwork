@@ -348,7 +348,8 @@
 
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* auto-fill 自适应：宽幅主列变窄时自动减列，卡片保持可读宽度不压扁（2026-11-17 实机反馈） */
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: var(--sp-4);
 }
 

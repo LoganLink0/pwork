@@ -784,77 +784,43 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 }
 
 /* ── 停靠模式（top 灵动岛 / left 左缘 / right 右缘）──
-   完全隐藏（2026-11-15 学习 MiniDock 成熟交互·重做）：隐藏时窗口变形为整条边缘
-   热区条（Rust isle_peek：top=屏宽×12px，left/right=12px×屏高），屏幕上只剩一条
-   极淡细线提示存在；呼出=鼠标甩到该边缘任意位置（热区是整条边缘，不靠人眼找点），
-   Rust isle_expand 恢复画布尺寸与定位后滑出展开。 */
+   完全隐藏（2026-11-17 重做占位）：窗口=logo 露出区（Rust isle_peek：露出 36px+24px
+   命中余量），logo 半露可见（比旧细线更显眼），其余屏幕边缘完全让给下层应用——
+   旧整条边缘热区条会拦截下层点击（用户实测：点到屏缘无法点下层）。呼出=鼠标靠近
+   logo（84px 窗口内任意位置），Rust isle_expand 恢复画布后滑出展开。 */
 #isle-dock.peek .isle-bar,
-#isle-dock.peek .isle-logo,
 #isle-dock.peek .isle-bar-content {
   visibility: hidden;
 }
-/* peek 态窗口已被 Rust 变形为整条边缘热区条（top=屏宽×12，left/right=12×屏高）——
-   容器必须铺满窗体（100vw/vh），否则热区只覆盖画布的 520px 而非整条边缘 */
+/* peek 态窗口已被 Rust 缩为 logo 露出区（84×60 / 60×84）——容器铺满小窗并裁掉
+   logo 露出外的部分（「半探入边缘」视觉） */
 #isle-dock.peek {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* 整个小窗（logo 露出+24px 余量）都可命中呼出；窗外区域完全穿透给下层应用 */
+  pointer-events: auto;
 }
-#isle-dock .isle-peek-line {
-  display: none;
+/* peek 态 logo 半露（2026-11-17 重做占位）：细线提示退役，logo 本体半探入边缘——
+   呼出目标更大更直观；logo 按模式定位在露出侧，露出外的部分被窗口裁掉 */
+#isle-dock.peek .isle-logo {
+  visibility: visible;
+  pointer-events: auto;
+  transition: none; /* peek 定位即时生效（不与画布态的滑动动画纠缠） */
 }
-#isle-dock.peek .isle-peek-line {
-  display: block;
-  position: absolute;
-  pointer-events: auto; /* 热区本体：整条边缘任意位置可命中（容器 pe:none 的例外） */
-  background: transparent;
-}
-#isle-dock.dock-top.peek .isle-peek-line {
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 12px;
-}
-#isle-dock.dock-left.peek .isle-peek-line {
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 12px;
-}
-#isle-dock.dock-right.peek .isle-peek-line {
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-}
-/* 存在感细线：令牌色 64px 居中短段（透明度 0.4）——三边一致的克制存在提示；
-   不做全边长线（右缘全高细线被用户判为"占满整个边缘"） */
-#isle-dock.peek .isle-peek-line::after {
-  content: '';
-  position: absolute;
-  background: var(--accent);
-  opacity: 0.4;
-  border-radius: 1px;
-}
-#isle-dock.dock-top.peek .isle-peek-line::after {
+#isle-dock.dock-top.peek .isle-logo {
   left: 50%;
   transform: translateX(-50%);
-  top: 5px;
-  width: 64px;
-  height: 2px;
+  top: 0; /* 上半露出（窗高 60，logo 64 → 底部 4px 被裁） */
 }
-#isle-dock.dock-left.peek .isle-peek-line::after {
-  top: 50%;
-  transform: translateY(-50%);
-  left: 5px;
-  height: 64px;
-  width: 2px;
+#isle-dock.dock-left.peek .isle-logo {
+  left: 0; /* 左半露出 */
+  top: 24px;
 }
-#isle-dock.dock-right.peek .isle-peek-line::after {
-  top: 50%;
-  transform: translateY(-50%);
-  right: 5px;
-  height: 64px;
-  width: 2px;
+#isle-dock.dock-right.peek .isle-logo {
+  left: auto;
+  right: 0; /* 右半露出 */
+  top: 24px;
 }
 #isle-dock.dock-right .isle-logo {
   left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */

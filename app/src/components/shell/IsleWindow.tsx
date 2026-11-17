@@ -228,10 +228,10 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-15 学习 MiniDock 的成熟交互：完全隐藏=整条边缘热区）：
-  // 停靠模式收回时 Rust 把窗口变形为贴边热区条（整条边缘任意位置可命中，不再依赖
-  // 人眼找 2px 隐形点）；命中后先恢复画布尺寸与定位，再展开——次序不能反（展开的
-  // 内容渲染在 12px 细条窗里会被裁没）。
+  // 呼出/收回（2026-11-17 重做占位：完全隐藏=logo 露出区小窗，不再拦整条边缘）：
+  // 停靠模式收回时 Rust 把窗口缩为 logo 半露小窗（84px 级，其余边缘让给下层应用）；
+  // 鼠标进入小窗即命中，先恢复画布尺寸与定位，再展开——次序不能反（展开的
+  // 内容渲染在小窗里会被裁没）。
   const onEnter = () => {
     if (dragging) return
     clearTimers()
@@ -271,9 +271,6 @@ export function IsleWindow() {
       onMouseLeave={onLeave}
       onMouseDown={startDrag}
     >
-      {/* 完全隐藏态（停靠模式）：热区条内的一条极淡细线——存在感提示，非点击目标
-          （热区=整条 12px 窗条，鼠标甩到该边缘任意位置即呼出） */}
-      <div className="isle-peek-line" aria-hidden />
       <div className="isle-bar">
         <div className="isle-bar-content">
           <span className="isle-divider" aria-hidden />

@@ -114,11 +114,13 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 完全隐藏（2026-11-15 学习 MiniDock 的成熟交互）：窗口变形为「整条边缘热区条」——
-/// top=屏宽×12px 贴顶缘，left/right=12px×屏高贴左右缘。视觉上只剩一条极淡细线
-/// （窗内 CSS 渲染），呼出不再依赖人眼精确命中一个隐形点：鼠标甩到该边缘任意位置
-/// 即触发（整条边缘都是热区），随后 isle_expand 恢复画布尺寸并按模式定位。
-const PEEK_STRIP_PX: f64 = 12.0;
+/// 完全隐藏（2026-11-17 重做占位，用户反馈整条边缘热区拦截下层点击）：
+/// 窗口变形为「logo 露出区」——只保留 logo 半露的那一小块（64×36 露出 + 24px 命中余量），
+/// 其余屏幕边缘完全让给下层应用。呼出目标从「整条边缘」缩为「logo 周边 84px」，
+/// 但 logo 可见半露（比旧细线更显眼），鼠标靠近即命中，不依赖人眼找点。
+const PEEK_VISIBLE: f64 = 36.0; // logo 露出高度/宽度（CSS px）
+const PEEK_PAD: f64 = 24.0; // 命中余量（窗口四周各留一圈，靠近即命中）
+const PEEK_LOGO: f64 = 64.0; // logo 本体尺寸（与前端 .isle-logo 一致）
 
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
@@ -134,28 +136,40 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   };
   let mp = monitor.position();
   let ms = monitor.size();
-  let strip = (PEEK_STRIP_PX * scale) as i32;
+  let vis = (PEEK_VISIBLE * scale) as i32;
+  let pad = (PEEK_PAD * scale) as i32;
+  let logo = (PEEK_LOGO * scale) as i32;
   match mode.as_str() {
-    // 顶缘：全屏宽横条贴顶（整条在屏内——曾带 -10 悬出偏移导致存在感细线在屏外不可见）
+    // 顶缘：logo 上半露出贴顶居中（窗宽=logo+2pad，纵=露出+2pad）
     "top" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(ms.width as u32, strip as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y));
+      let pw = logo + 2 * pad;
+      let ph = vis + 2 * pad;
+      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + (ms.width as i32 - pw) / 2, mp.y));
     }
-    // 左缘：全屏高竖条贴左
+    // 左缘：logo 左半露出贴左，纵向跟随停靠位 y（pad 吸收对齐误差）
     "left" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(strip as u32, ms.height as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, mp.y));
+      let pw = vis + 2 * pad;
+      let ph = logo + 2 * pad;
+      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, my_val(mp.y, y)));
     }
-    // 右缘：全屏高竖条贴右
+    // 右缘：logo 右半露出贴右
     "right" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(strip as u32, ms.height as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - strip, mp.y));
+      let pw = vis + 2 * pad;
+      let ph = logo + 2 * pad;
+      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - pw, my_val(mp.y, y)));
     }
     // free 不参与完全隐藏（无固定边缘可贴）
     _ => {}
   }
-  let _ = y;
   Ok(())
+}
+
+/// peek 窗纵向定位：跟随停靠位 y（画布顶），上移一个 pad 内的视觉偏移并钳回屏内
+fn my_val(monitor_y: i32, y: i32) -> i32 {
+  monitor_y + y.max(0)
 }
 
 /// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向）
