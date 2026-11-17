@@ -114,13 +114,54 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 完全隐藏（2026-11-17 重做占位，用户反馈整条边缘热区拦截下层点击）：
-/// 窗口变形为「logo 露出区」——只保留 logo 半露的那一小块（64×36 露出 + 24px 命中余量），
-/// 其余屏幕边缘完全让给下层应用。呼出目标从「整条边缘」缩为「logo 周边 84px」，
-/// 但 logo 可见半露（比旧细线更显眼），鼠标靠近即命中，不依赖人眼找点。
+/// 完全隐藏（2026-11-17 二轮重做，用户反馈整条边缘热区拦截下层点击 + 自由驻留无法隐藏）：
+/// 窗口变形为「logo 露出区」小窗（logo 64×64 半露 + 24px 命中余量），并用 SetWindowRgn
+/// 把命中区裁成 logo 圆角矩形——窗口矩形内 logo 以外的部分系统级完全穿透（点得到下层），
+/// 根治「窗口矩形内 logo 以外点不到下层」。free 模式（屏幕中间驻留）同样可隐藏：
+/// 窗缩到 logo 区并留在原位。呼出=鼠标进入小窗，isle_expand 恢复画布并清除 region。
 const PEEK_VISIBLE: f64 = 36.0; // logo 露出高度/宽度（CSS px）
 const PEEK_PAD: f64 = 24.0; // 命中余量（窗口四周各留一圈，靠近即命中）
 const PEEK_LOGO: f64 = 64.0; // logo 本体尺寸（与前端 .isle-logo 一致）
+
+/// 把窗口命中区裁为 logo 圆角矩形（物理 px；region 外系统级完全穿透）。
+/// x/y = logo 矩形左上角在窗口内的物理坐标。
+#[cfg(windows)]
+fn clip_region_to_logo(w: &tauri::WebviewWindow, x: i32, y: i32) {
+  use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let Ok(hwnd) = w.hwnd() else { return };
+  let logo = (PEEK_LOGO * scale) as i32;
+  let r = (2.0 * scale) as i32; // 微余量：圆角外沿 2px 内仍可命中
+  let radius = (18.0 * scale) as i32; // 与前端 .isle-logo border-radius 一致
+  unsafe {
+    let region = CreateRoundRectRgn(x - r, y - r, x + logo + r, y + logo + r, radius, radius);
+    SetWindowRgn(hwnd, Some(region), true);
+  }
+}
+
+/// 清除命中裁剪（展开态恢复整个窗口可命中）
+#[cfg(windows)]
+fn clear_region(w: &tauri::WebviewWindow) {
+  use windows::Win32::Graphics::Gdi::{HRGN, SetWindowRgn};
+  let Ok(hwnd) = w.hwnd() else { return };
+  unsafe {
+    SetWindowRgn(hwnd, None, true);
+  }
+}
+
+#[cfg(windows)]
+fn logo_origin(mode: &str, win_w: i32) -> (i32, i32) {
+  let scale_stub = 1.0;
+  let _ = scale_stub;
+  match mode {
+    // 顶缘：logo 水平居中、贴窗顶
+    "top" => ((win_w - (PEEK_LOGO as i32)) / 2, 0),
+    // 左缘：logo 贴窗左、纵向 24px（窗内 top:24 与前端一致）
+    "left" => (0, 24),
+    // 右缘：logo 贴窗右
+    _ => ((win_w - (PEEK_LOGO as i32)), 24),
+  }
+}
 
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
@@ -161,8 +202,22 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
       let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
       let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - pw, my_val(mp.y, y)));
     }
-    // free 不参与完全隐藏（无固定边缘可贴）
-    _ => {}
+    // 自由驻留（2026-11-17 用户反馈中间驻留无法隐藏）：窗口缩到 logo 露出区并留在原位
+    _ => {
+      let pw = logo + 2 * pad;
+      let ph = logo + 2 * pad;
+      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(mp.x, mp.y));
+      let (cx, cy) = clamp_pos(&w, cur.x, cur.y);
+      let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
+    }
+  }
+  // 命中区裁成 logo 圆角矩形：窗口矩形内 logo 以外的部分点得到下层（2026-11-17 用户拍板方案 A）
+  #[cfg(windows)]
+  {
+    let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or(0);
+    let (lx, ly) = logo_origin(&mode, win_w);
+    clip_region_to_logo(&w, lx, ly);
   }
   Ok(())
 }
@@ -172,7 +227,8 @@ fn my_val(monitor_y: i32, y: i32) -> i32 {
   monitor_y + y.max(0)
 }
 
-/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向）
+/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向），
+/// 并清除命中裁剪（展开态整个窗口恢复可命中）
 #[tauri::command]
 pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
@@ -181,6 +237,8 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
     (CANVAS_W * scale) as u32,
     (140.0 * scale) as u32,
   ));
+  #[cfg(windows)]
+  clear_region(&w);
   match mode.as_str() {
     "top" => snap_top(&app),
     "left" => dock_left(&app, y),
@@ -250,6 +308,14 @@ fn left_button_up() -> bool {
 pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  // 从隐藏态（region 裁剪）抓起：先清裁剪再恢复画布尺寸，否则拖动全程命中区缺失
+  #[cfg(windows)]
+  clear_region(&w);
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let _ = w.set_size(tauri::PhysicalSize::new(
+    (CANVAS_W * scale) as u32,
+    (140.0 * scale) as u32,
+  ));
   w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
   let app = app.clone();
   thread::spawn(move || {
