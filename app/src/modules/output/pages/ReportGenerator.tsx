@@ -291,8 +291,8 @@ export function ReportGenerator() {
             ) : (
               snapshots.slice(0, 6).map((s) => (
                 <div className="kv" key={s.id}>
-                  <span>{s.mode === 'weekly' ? '周报' : '月报'} · {s.createdAt.slice(5, 10)}</span>
-                  <b>闭环 {s.closureRate}%</b>
+                  <span>{s.day.slice(5)} 生成</span>
+                  <b>闭环 {s.closureRate}% · 洞察 +{s.insightsCount}</b>
                 </div>
               ))
             )}
