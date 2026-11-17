@@ -97,6 +97,18 @@ function registryRoutes(): ReactNode[] {
   })
 }
 
+/** 宽幅路由宿主（2026-11-17 三轮「回路四页没变化」的最终根治）：这些路由的页面根容器
+ *  自带 content-wide（1560 宽幅形态），content-inner 显式放宽承接；其余页面维持 --content-w。
+ *  路由清单而非 :has 选择器——:has 在部分 WebView2 环境不生效（CSS 在产物里、页面仍 1200），
+ *  环境能力不可控的动效一律换确定性实现 */
+const WIDE_PATHS = ['/', '/tasks', '/goals', '/input', '/process', '/output', '/review', '/settings', '/help']
+
+function WideContent({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  const wide = WIDE_PATHS.some((p) => (p === '/' ? pathname === '/' : pathname === p || pathname.startsWith(`${p}/`)))
+  return <div className={`content-inner${wide ? ' wide-host' : ''}`}>{children}</div>
+}
+
 /** 首访引导：只发生一次（本地标记），且仅在打开首页时。须在 Router 上下文内（useNavigate）。 */
 function FirstRunRedirect() {
   const navigate = useNavigate()
@@ -576,7 +588,7 @@ export default function App() {
             <Topbar />
             <MobileSubTabs />
             <div className="content">
-              <div className="content-inner">
+              <WideContent>
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                     {registryRoutes()}
@@ -584,7 +596,7 @@ export default function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>
-              </div>
+              </WideContent>
             </div>
           </div>
         </div>

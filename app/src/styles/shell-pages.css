@@ -418,9 +418,11 @@
    实时概览（sticky 跟随）。右栏内容纪律：只放与列表状态相关的实时信息（概览数字/统计
    分布/快捷筛选/高频操作），静态说明一律进帮助页。宽度分级：≥1440 出右栏；
    1024–1439 右栏隐藏（.only-wide 元素一并隐藏、.only-narrow 兜底元素显示）；<1024 单列现状。 */
-/* :has 后代匹配（不带 >）：回路四页的 content-wide 在 review-root 布局层内（隔一层），
-   直接子选择器曾使回路页放宽失效（2026-11-17 实机反馈「回路四页没变化」根因） */
-.content-inner:has(.content-wide) {
+/* 宽幅路由宿主（确定性方案，2026-11-17）：App 壳按路由显式挂 wide-host 类——
+   :has 选择器在部分 WebView2 环境不生效（CSS 在产物里、页面仍 1200 的三轮实测），
+   环境能力不可控的动效一律换确定性实现。配合 .settings/.container 的 --container-w
+   变量式，页面根类自带的上限同样由 content-wide 放宽 */
+.content-inner.wide-host {
   max-width: 1560px;
 }
 .content-wide .wide-grid {
