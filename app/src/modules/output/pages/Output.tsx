@@ -109,7 +109,7 @@ export function Output() {
         <h2>外部工具精选（跳转官网）</h2>
         <div className="desc">更好用的外部能力不重复造轮子——直接绑定跳转；欢迎积累增补</div>
         <div className="set-body">
-          <div className="module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+          <div className="module-grid">
             {EXTERNAL.map((e) => (
               <a key={e.url} href={e.url} target="_blank" rel="noreferrer noopener" className="mcard mcard-link">
                 <div className="m-head">
