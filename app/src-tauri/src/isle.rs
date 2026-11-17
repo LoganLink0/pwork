@@ -228,7 +228,9 @@ fn my_val(monitor_y: i32, y: i32) -> i32 {
 }
 
 /// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向），
-/// 并清除命中裁剪（展开态整个窗口恢复可命中）
+/// 清除命中裁剪，并显示窗口（2026-11-18 开关链路修复：设置页开关在窗隐藏态直接调
+/// expand——旧交互 expand 前窗必然可见（鼠标靠近才展开），开关场景打破了这个前提，
+/// 缺 show 时窗永远隐藏——「点开找不到 logo/闪现一下消失」的根因）
 #[tauri::command]
 pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
@@ -239,6 +241,7 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   ));
   #[cfg(windows)]
   clear_region(&w);
+  let _ = w.show();
   match mode.as_str() {
     "top" => snap_top(&app),
     "left" => dock_left(&app, y),
