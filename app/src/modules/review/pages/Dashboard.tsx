@@ -141,8 +141,9 @@ export function Dashboard() {
         </Link>
       </section>
 
-      {/* 双栏：档案 / 待办 */}
-      <div className="home-grid">
+      {/* 宽幅双栏（第三批按设计稿）：主列=最近档案面板；右栏=回路概览+行动项待办（≥1440 出右栏；窄屏右栏隐藏回落单列） */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
         <section className="panel">
           <div className="panel-head">
             <h2>最近档案</h2>
@@ -301,6 +302,24 @@ export function Dashboard() {
             </ul>
           )}
         </section>
+        </div>
+
+        <aside className="wide-aside" aria-label="回路概览">
+          <div className="aside-card">
+            <h3>回路概览</h3>
+            <div className="kv"><span>复盘档案</span><b>{reviews?.length ?? 0} 份</b></div>
+            <div className="kv"><span>行动闭环率</span><b>{closurePct}%</b></div>
+            <div className="kv"><span>行动项进行中</span><b>{open.length} 个</b></div>
+            <div className="kv"><span>洞察卡累计</span><b>{insightCount} 条</b></div>
+            <div className="kv"><span>待回访洞察</span><b>{dueCount} 条</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>快捷入口</h3>
+            <div className="kv"><span>3 分钟快速复盘</span><Link to="/review/wizard?template=personal-daily&mode=quick" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>开始 →</Link></div>
+            <div className="kv"><span>认知资产库</span><Link to="/review/assets" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+            <div className="kv"><span>聚合分析</span><Link to="/review/analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+          </div>
+        </aside>
       </div>
     </div>
   )
