@@ -132,7 +132,7 @@ export function ReportGenerator() {
   }
 
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>{mode === 'weekly' ? '周报' : '月报'}导出为 HTML/PPT</h1>
         <span className="sub">素材自动汇总（任务/目标/洞察/外部数据）→ 一键成稿：Markdown / HTML / PPT</span>
@@ -141,6 +141,9 @@ export function ReportGenerator() {
         </div>
       </div>
 
+      {/* 宽幅双栏（第三批 C 形态）：左参数与产出 + 右栏最近产出；窄屏右栏整体隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <div className="set-card">
         <div className="set-body">
           <div className="set-row">
@@ -277,6 +280,31 @@ export function ReportGenerator() {
             </div>
           )}
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="最近产出">
+          <div className="aside-card">
+            <h3>最近产出</h3>
+            {snapshots.length === 0 ? (
+              <div className="kv"><span>还没有生成过——每次生成自动留档</span><b>—</b></div>
+            ) : (
+              snapshots.slice(0, 6).map((s) => (
+                <div className="kv" key={s.id}>
+                  <span>{s.mode === 'weekly' ? '周报' : '月报'} · {s.createdAt.slice(5, 10)}</span>
+                  <b>闭环 {s.tasksClosureRate ?? '—'}%</b>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="aside-card">
+            <h3>产出形态</h3>
+            <div className="kv"><span>Markdown / HTML</span><b>主列下载</b></div>
+            <div className="kv"><span>PPT</span><b>主列导出</b></div>
+            <div className="kv"><span>Obsidian</span><b>主列一键写入</b></div>
+            <div className="kv"><span>朗读版</span><Link to="/output/read" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)' }}>前往 →</Link></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

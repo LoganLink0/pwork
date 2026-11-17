@@ -169,7 +169,7 @@ export function PptWriter() {
   const materialsReady = materials.length > 0
 
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>PPT 撰写</h1>
         <span className="sub">从零起草：主题 + 材料 → AI 大纲（你逐页审核修改）→ 可编辑 PPT</span>
@@ -177,6 +177,10 @@ export function PptWriter() {
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
         </div>
       </div>
+
+      {/* 宽幅双栏（第三批 C 形态）：左操作流 + 右栏大纲结构与最近导出；窄屏右栏整体隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
 
       <div className="set-card">
         <h2>一、材料</h2>
@@ -452,6 +456,31 @@ export function PptWriter() {
             {exportMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{exportMsg}</span>}
           </div>
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="大纲结构">
+          <div className="aside-card">
+            <h3>大纲结构{outline ? `（${outline.slides.length} 页）` : ''}</h3>
+            {outline ? (
+              outline.slides.map((sl, i) => (
+                <div className="kv" key={i}>
+                  <span title={sl.title}>{i + 1}. {sl.title.length > 12 ? `${sl.title.slice(0, 12)}…` : sl.title}</span>
+                  <b>{sl.bullets?.length ?? 0} 点</b>
+                </div>
+              ))
+            ) : (
+              <div className="kv"><span>还没生成大纲——左栏第三步点「AI 生成大纲」</span><b>—</b></div>
+            )}
+          </div>
+          <div className="aside-card">
+            <h3>流程</h3>
+            <div className="kv"><span>① 材料粘贴</span><b>左栏</b></div>
+            <div className="kv"><span>② 主题与受众</span><b>左栏</b></div>
+            <div className="kv"><span>③ AI 大纲逐页审改</span><b>左栏</b></div>
+            <div className="kv"><span>④ 导出可编辑 pptx</span><b>左栏</b></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

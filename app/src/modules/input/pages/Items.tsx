@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useCollect } from '../../../store/collect'
 import { useTasks } from '../../../store/tasks'
+import { useNotes } from '../../../store/notes'
 import { confirmDialog } from '../../../engine/confirm'
+import { fmtLocal } from '../../../engine/datetime'
 import { ItemCard } from '../components/ItemCard'
 import { itemTiers } from '../engine/itemTier'
 import { rejectionStats } from '../engine/rejectionStats'
@@ -174,6 +176,11 @@ export function Items() {
     return dist
   }, [monthItems])
 
+  // 详情右栏面板（第三批）：宽屏点「详情」右栏整体切换为该条目详情，主列卡片保持紧凑
+  //（窄屏无右栏，ItemCard 保持卡内展开现状——expanded 由 wide 取反驱动）
+  const wide = useMinWidth(1440)
+  const detailItem = useMemo(() => (wide ? filtered.find((i) => i.id === expandedId) : undefined), [wide, filtered, expandedId])
+
   return (
     <section className="content-wide">
       <div className="page-head">
@@ -332,7 +339,7 @@ export function Items() {
             <ItemCard
               item={item}
               showStage
-              expanded={expandedId === item.id}
+              expanded={!wide && expandedId === item.id}
               onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
               onVote={(v) => void setVote(item.id, v)}
               tier={tiers.get(item.id)}
@@ -352,29 +359,143 @@ export function Items() {
       ))}
         </div>
 
-        <aside className="wide-aside" aria-label="库概览">
-          <div className="aside-card">
-            <h3>{curMonth || '本月'}库概览</h3>
-            <div className="kv"><span>入库</span><b>{counts.all} 条</b></div>
-            <div className="kv"><span>评分入选</span><b>{counts.kept} 条</b></div>
-            <div className="kv"><span>已筛除（14 天后清理）</span><b>{counts.discarded} 条</b></div>
-          </div>
-          <div className="aside-card">
-            <h3>我的评分</h3>
-            <div className="dist-bar"><span className="lbl">多推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.want / monthItems.length) * 100 : 0}%`, background: 'var(--accent)' }} /></div><b>{voteDist.want}</b></div>
-            <div className="dist-bar"><span className="lbl">没想好</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.meh / monthItems.length) * 100 : 0}%`, background: 'var(--line-strong)' }} /></div><b>{voteDist.meh}</b></div>
-            <div className="dist-bar"><span className="lbl">少推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.no / monthItems.length) * 100 : 0}%`, background: 'var(--surface-2)', outline: '1px solid var(--line)' }} /></div><b>{voteDist.no}</b></div>
-          </div>
-          {rejects && rejects.total > 0 && (
-            <div className="aside-card">
-              <h3>本月筛除 {rejects.total} 条</h3>
-              {rejects.byReason.slice(0, 3).map((b) => (
-                <div className="kv" key={b.reason}><span>{b.reason}</span><b>{b.count} 条</b></div>
-              ))}
-            </div>
+        <aside className="wide-aside" aria-label={detailItem ? '条目详情' : '库概览'}>
+          {detailItem ? (
+            <ItemDetailPanel
+              key={detailItem.id}
+              item={detailItem}
+              tier={tiers.get(detailItem.id)}
+              converted={converted.has(detailItem.id)}
+              onClose={() => setExpandedId(null)}
+              onVote={(v) => void setVote(detailItem.id, v)}
+              onNotes={(t) => void setNotes(detailItem.id, t)}
+              onKeep={() => void toggleKeep(detailItem.id)}
+              onCycleOt={() => void cycleOt(detailItem.id)}
+              onConvert={() => convert(detailItem.id, detailItem.title)}
+              onDelete={() => {
+                void confirmDialog({ title: `删除「${detailItem.title.slice(0, 24)}」？`, body: '软删除：移入条目库回收站，可随时恢复。', danger: true, confirmLabel: '删除' }).then((ok) => {
+                  if (ok) void deleteItem(detailItem.id).then(reloadTrash).then(() => setExpandedId(null))
+                })
+              }}
+            />
+          ) : (
+            <>
+              <div className="aside-card">
+                <h3>{curMonth || '本月'}库概览</h3>
+                <div className="kv"><span>入库</span><b>{counts.all} 条</b></div>
+                <div className="kv"><span>评分入选</span><b>{counts.kept} 条</b></div>
+                <div className="kv"><span>已筛除（14 天后清理）</span><b>{counts.discarded} 条</b></div>
+              </div>
+              <div className="aside-card">
+                <h3>我的评分</h3>
+                <div className="dist-bar"><span className="lbl">多推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.want / monthItems.length) * 100 : 0}%`, background: 'var(--accent)' }} /></div><b>{voteDist.want}</b></div>
+                <div className="dist-bar"><span className="lbl">没想好</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.meh / monthItems.length) * 100 : 0}%`, background: 'var(--line-strong)' }} /></div><b>{voteDist.meh}</b></div>
+                <div className="dist-bar"><span className="lbl">少推</span><div className="bar"><i style={{ width: `${monthItems.length ? (voteDist.no / monthItems.length) * 100 : 0}%`, background: 'var(--surface-2)', outline: '1px solid var(--line)' }} /></div><b>{voteDist.no}</b></div>
+              </div>
+              {rejects && rejects.total > 0 && (
+                <div className="aside-card">
+                  <h3>本月筛除 {rejects.total} 条</h3>
+                  {rejects.byReason.slice(0, 3).map((b) => (
+                    <div className="kv" key={b.reason}><span>{b.reason}</span><b>{b.count} 条</b></div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </aside>
       </div>
     </section>
+  )
+}
+
+/** 视口宽度判定（≥px 为 true，matchMedia 变化实时跟随）——详情右栏只在大屏出现。
+ *  能力检测：测试环境（jsdom）无 matchMedia，恒 false（详情面板不出现，卡内展开兜底） */
+function useMinWidth(px: number): boolean {
+  const [ok, setOk] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia(`(min-width: ${px}px)`).matches)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const m = window.matchMedia(`(min-width: ${px}px)`)
+    const on = () => setOk(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [px])
+  return ok
+}
+
+/** 条目详情右栏面板（第三批）：宽屏点「详情」时右栏整体切换为该条目的详情与操作。
+ *  key=条目 id 由调用方给出，切换条目时批注草稿自然重置。 */
+function ItemDetailPanel(opts: {
+  item: Item
+  tier: 'must' | 'may' | 'skip' | undefined
+  converted: boolean
+  onClose: () => void
+  onVote: (v: 'want' | 'meh' | 'no' | null) => void
+  onNotes: (t: string) => void
+  onKeep: () => void
+  onCycleOt: () => void
+  onConvert: () => void
+  onDelete: () => void
+}) {
+  const item = opts.item
+  const [draft, setDraft] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const createNote = useNotes((s) => s.create)
+
+  // 写速记：以这条条目为引，速记自动挂回本条目（与 ItemCard 卡内按钮同一行为）
+  const writeNote = async () => {
+    const note = await createNote({
+      body: `【${item.title}】(${item.url})\n\n`,
+      tags: [],
+      source: 'manual',
+      links: { itemIds: [item.id], reviewIds: [], taskIds: [] },
+    })
+    navigate(`/input/notes/${note.id}`)
+  }
+
+  return (
+    <>
+      <div className="aside-card">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-2)' }}>
+          <h3 style={{ margin: 0, flex: 1, minWidth: 0, lineHeight: 1.5 }}>{item.title}</h3>
+          <button type="button" className="mini-btn" onClick={opts.onClose} aria-label="关闭详情">收起</button>
+        </div>
+        <div className="kv"><span>来源 / 入库</span><b>{item.sourceName} · {fmtLocal(item.fetchedAt)}</b></div>
+        <div className="kv"><span>分层</span><b>{opts.tier === 'must' ? '必看' : opts.tier === 'may' ? '可看' : '可略'}</b></div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', marginTop: 'var(--sp-2)', lineHeight: 1.8 }}>
+          筛选理由：{item.scoreReason || '—'}
+        </div>
+        {/^https?:\/\//i.test(item.url) && (
+          <a href={item.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-text)', display: 'inline-block', marginTop: 'var(--sp-2)' }}>
+            阅读原文 ↗
+          </a>
+        )}
+      </div>
+
+      <div className="aside-card">
+        <h3>我的批注</h3>
+        <textarea
+          value={draft ?? item.annotation?.notes ?? ''}
+          placeholder="批注（永久保留，随备份）"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => { if (draft !== null && draft !== item.annotation?.notes) opts.onNotes(draft) }}
+          aria-label={`批注：${item.title}`}
+          style={{ width: '100%', minHeight: 84, border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', padding: 'var(--sp-2)', fontSize: 'var(--fs-xs)', background: 'var(--bg)', color: 'var(--ink)', resize: 'vertical' }}
+        />
+      </div>
+
+      <div className="aside-card">
+        <h3>操作</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <button type="button" className={`chip${item.annotation?.vote === 'want' ? ' on' : ''}`} onClick={() => opts.onVote(item.annotation?.vote === 'want' ? null : 'want')}>✦ 多推</button>
+          <button type="button" className={`chip${item.annotation?.vote === 'meh' ? ' on' : ''}`} onClick={() => opts.onVote(item.annotation?.vote === 'meh' ? null : 'meh')}>◦ 没想好</button>
+          <button type="button" className={`chip${item.annotation?.vote === 'no' ? ' on' : ''}`} onClick={() => opts.onVote(item.annotation?.vote === 'no' ? null : 'no')}>✗ 少推</button>
+          <button type="button" className="chip" onClick={opts.onCycleOt}>{item.otFlag ? `${item.otFlag === 'opportunity' ? '机会' : item.otFlag === 'threat' ? '威胁' : '趋势'}（换/取消）` : '标记机会/威胁/趋势'}</button>
+          <button type="button" className="chip" onClick={opts.onKeep}>{item.annotation?.keepForever ? '★ 取消永久保留' : '永久保留'}</button>
+          <button type="button" className="chip" disabled={opts.converted} onClick={opts.onConvert}>{opts.converted ? '已转待办 ✓' : '转待办'}</button>
+          <button type="button" className="chip" onClick={() => void writeNote()}>写速记</button>
+          <button type="button" className="chip" onClick={opts.onDelete}>删除</button>
+        </div>
+      </div>
+    </>
   )
 }

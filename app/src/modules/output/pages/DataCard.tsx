@@ -79,7 +79,7 @@ export function DataCard() {
   }
 
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>{mode === 'weekly' ? '周报' : '月报'}导出为数据卡片</h1>
         <span className="sub">本期关键数字 → 分享卡片图（Canvas 本地渲染）</span>
@@ -87,30 +87,59 @@ export function DataCard() {
           <Link to="/output" className="btn-ghost">← 输出工具箱</Link>
         </div>
       </div>
-      <div className="set-card">
-        <div className="set-body">
-          <div className="set-row">
-            <label>周期</label>
-            <div className="radio">
-              <button type="button" className={mode === 'weekly' ? 'on' : ''} onClick={() => setMode('weekly')}>周报</button>
-              <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报</button>
-            </div>
-            <button type="button" className="btn-primary" disabled={!data || Boolean(loadErrNow)} onClick={generate} data-testid="datacard-btn">生成卡片</button>
-          </div>
-          {loadErrNow && (
-            <div className="notice" style={{ borderLeftColor: 'var(--danger)', marginBottom: 'var(--sp-3)' }} role="alert">
-              数据汇总失败：{loadErrNow}——可切一下周期重试。
-            </div>
-          )}
-          {url && (
-            <div style={{ paddingTop: 'var(--sp-3)' }}>
-              <img src={url} alt="数据快照卡片" style={{ maxWidth: '100%', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />
-              <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
-                <a href={url} download={`pwork-snapshot-${data?.today ?? ''}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>下载 PNG</a>
+
+      {/* 宽幅双栏（第三批 C 形态）：左参数表单 + 右栏实时预览（改周期/生成后立即可见）；窄屏回落单列 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
+          <div className="set-card">
+            <div className="set-body">
+              <div className="set-row">
+                <label>周期</label>
+                <div className="radio">
+                  <button type="button" className={mode === 'weekly' ? 'on' : ''} onClick={() => setMode('weekly')}>周报</button>
+                  <button type="button" className={mode === 'monthly' ? 'on' : ''} onClick={() => setMode('monthly')}>月报</button>
+                </div>
+                <button type="button" className="btn-primary" disabled={!data || Boolean(loadErrNow)} onClick={generate} data-testid="datacard-btn">生成卡片</button>
+              </div>
+              {loadErrNow && (
+                <div className="notice" style={{ borderLeftColor: 'var(--danger)', marginTop: 'var(--sp-3)' }} role="alert">
+                  数据汇总失败：{loadErrNow}——可切一下周期重试。
+                </div>
+              )}
+              {url && (
+                <div className="only-narrow" style={{ paddingTop: 'var(--sp-3)' }}>
+                  <img src={url} alt="数据快照卡片" style={{ maxWidth: '100%', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }} />
+                  <div className="set-row" style={{ paddingTop: 'var(--sp-2)' }}>
+                    <a href={url} download={`pwork-snapshot-${data?.today ?? ''}.png`} className="btn-ghost" style={{ textDecoration: 'none' }}>下载 PNG</a>
+                  </div>
+                </div>
+              )}
+              <div className="set-row" style={{ marginTop: 'var(--sp-3)' }}>
+                <span className="val" style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-faint)' }}>
+                  生成后卡片出现在右侧——改周期重新生成即刷新；窄屏窗口下预览与下载回到这里。
+                </span>
               </div>
             </div>
-          )}
+          </div>
         </div>
+
+        <aside className="wide-aside only-wide" aria-label="卡片预览">
+          <div className="aside-card">
+            <h3>卡片预览</h3>
+            {url ? (
+              <>
+                <img src={url} alt="数据快照卡片" style={{ width: '100%', borderRadius: 'var(--r-sm)', border: '1px solid var(--line)' }} />
+                <a href={url} download={`pwork-snapshot-${data?.today ?? ''}.png`} className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 'var(--sp-2)' }}>
+                  下载 PNG
+                </a>
+              </>
+            ) : (
+              <div style={{ border: '1px dashed var(--line-strong)', borderRadius: 'var(--r-sm)', padding: 'var(--sp-5) var(--sp-3)', textAlign: 'center', color: 'var(--ink-faint)', fontSize: 'var(--fs-xs)', lineHeight: 1.8 }}>
+                点左侧「生成卡片」——<br />卡片会在这里实时出现
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </section>
   )

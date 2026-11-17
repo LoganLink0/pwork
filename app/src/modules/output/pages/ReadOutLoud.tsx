@@ -58,7 +58,7 @@ export function ReadOutLoud() {
   }
 
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>{MODE_LABEL[mode]}导出为朗读音频</h1>
         <span className="sub">报告正文 → 浏览器本地语音（通勤场景"听你的{MODE_LABEL[mode]}"）</span>
@@ -70,6 +70,8 @@ export function ReadOutLoud() {
       {!supported ? (
         <div className="notice" role="alert">当前浏览器不支持语音合成，请使用 Chrome / Edge / Safari。</div>
       ) : (
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
         <div className="set-card">
           <div className="set-body">
             <div className="set-row">
@@ -94,6 +96,24 @@ export function ReadOutLoud() {
             </div>
           </div>
         </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="朗读说明">
+          <div className="aside-card">
+            <h3>怎么听</h3>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--ink-soft)', lineHeight: 1.8 }}>
+              点「开始朗读」即用系统语音播报本周期报告正文——边做别的事边"听"你的周报。
+              需要离线 mp3 文件时用系统录音或系统工具台的音频转换。
+            </div>
+          </div>
+          <div className="aside-card">
+            <h3>朗读内容</h3>
+            <div className="kv"><span>来源</span><b>{MODE_LABEL[mode]}正文全文</b></div>
+            <div className="kv"><span>语气</span><b>系统默认语音</b></div>
+            <div className="kv"><span>时长</span><b>按正文长度</b></div>
+          </div>
+        </aside>
+      </div>
       )}
     </section>
   )

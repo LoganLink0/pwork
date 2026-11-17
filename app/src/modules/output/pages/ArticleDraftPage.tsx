@@ -105,8 +105,11 @@ export function ArticleDraftPage() {
 
 
 
+  const skeletonLen = draft?.sections.length ?? 0
+  const skeletonWords = draft?.sections.reduce((sum, s) => sum + s.body.length, 0) ?? 0
+
   return (
-    <section className="settings">
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>文章草稿</h1>
         <span className="sub">速记与洞察按周期聚合成素材 → AI 整理骨架（你逐节修改）→ 导出 Markdown</span>
@@ -115,6 +118,9 @@ export function ArticleDraftPage() {
         </div>
       </div>
 
+      {/* 宽幅双栏（第三批 C 形态）：左操作流 + 右栏草稿骨架；窄屏右栏整体隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <div className="set-card">
         <h2>一、素材范围</h2>
         <div className="desc">文章的原料来自这段时间的速记与复盘产出的洞察卡。</div>
@@ -247,6 +253,31 @@ export function ArticleDraftPage() {
             {exportMsg && <span className="val" style={{ fontSize: 'var(--fs-xs)' }}>{exportMsg}</span>}
           </div>
         </div>
+      </div>
+        </div>
+
+        <aside className="wide-aside" aria-label="草稿骨架">
+          <div className="aside-card">
+            <h3>草稿骨架</h3>
+            {draft && skeletonLen > 0 ? (
+              <>
+                {draft.sections.map((s, i) => (
+                  <div className="kv" key={i}><span>{i + 1}. {s.heading.length > 10 ? `${s.heading.slice(0, 10)}…` : s.heading}</span><b>{s.body.length} 字</b></div>
+                ))}
+                <div className="kv"><span>正文合计</span><b>{skeletonWords} 字</b></div>
+              </>
+            ) : (
+              <div className="kv"><span>还没有骨架——左栏第二步 AI 整理或手动生成</span><b>—</b></div>
+            )}
+          </div>
+          <div className="aside-card">
+            <h3>流程</h3>
+            <div className="kv"><span>① 素材范围</span><b>左栏</b></div>
+            <div className="kv"><span>② AI 整理骨架</span><b>左栏</b></div>
+            <div className="kv"><span>③ 逐节修改</span><b>左栏</b></div>
+            <div className="kv"><span>④ 导出 docx/md</span><b>左栏</b></div>
+          </div>
+        </aside>
       </div>
     </section>
   )

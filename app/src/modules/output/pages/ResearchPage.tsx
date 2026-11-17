@@ -452,12 +452,15 @@ export function ResearchPage() {
   const typeMeta = RESEARCH_TYPES.find((t) => t.id === type)!
 
   return (
-    <section className="settings" style={{ maxWidth: 'var(--content-w)' }}>
+    <section className="settings content-wide">
       <div className="page-head">
         <h1>调研分析</h1>
         <span className="sub">输入调研目标 → 照建议角度调研 → 发现记在一处 → 出稿（Markdown / Word）</span>
       </div>
 
+      {/* 宽幅双栏（第三批 C 形态）：左调研流程 + 右栏进度速览；窄屏右栏整体隐藏 */}
+      <div className="wide-grid">
+        <div className="main-col" style={{ minWidth: 0 }}>
       <div className="set-card">
         <h2>① 调研目标</h2>
         <div className="desc">{coachReady ? 'AI 已配置：框架按目标定制生成' : 'AI 未配置：用内置调研模板，配了 AI 可定制'}</div>
@@ -732,7 +735,25 @@ export function ResearchPage() {
           </div>
         </div>
       )}
+        </div>
 
+        <aside className="wide-aside" aria-label="调研进度">
+          <div className="aside-card">
+            <h3>调研进度</h3>
+            <div className="kv"><span>调研材料</span><b>{taskBlocks.length} 块</b></div>
+            <div className="kv"><span>发现记录</span><b>{findingsBlock ? '已有' : '待记'}</b></div>
+            <div className="kv"><span>分析草稿</span><b>{draft ? '已起草' : '未起草'}</b></div>
+            <div className="kv"><span>导出</span><b>{draft ? 'md / docx 可用' : '起草后可用'}</b></div>
+          </div>
+          <div className="aside-card">
+            <h3>流程</h3>
+            <div className="kv"><span>① 定目标</span><b>左栏</b></div>
+            <div className="kv"><span>② 按建议角度调研</span><b>左栏</b></div>
+            <div className="kv"><span>③ 发现记一处</span><b>左栏</b></div>
+            <div className="kv"><span>④ 出稿 md/word</span><b>左栏</b></div>
+          </div>
+        </aside>
+      </div>
     </section>
   )
 }
