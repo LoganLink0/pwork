@@ -1339,14 +1339,14 @@
   font-style: italic;
   color: var(--ink-soft);
 }
-/* 回路帮助页宽度约束 */
+/* 回路帮助页宽度约束：宽度走 --container-w 变量（默认 1200）——content-wide 页只改变量，
+   不与基础规则抢特异性（2026-11-17 二轮教训：回路四页放宽被 1200 基础规则盖住「没有变化」） */
 .review-root .container {
-  max-width: var(--content-w);
+  max-width: var(--container-w, var(--content-w));
   margin: 0 auto;
 }
-/* 回路仪表盘宽幅形态（2026-11-17 第二批 B）：统计卡阵与双栏 panel 铺满宽幅 */
 .review-root .container.content-wide {
-  max-width: 1560px;
+  --container-w: 1560px;
 }
 /* 打印时隐藏交互面板（归档详情页的双检面板）与宽幅右栏（2026-11-17 自审补：
    右栏「档案信息/行动项去向」是界面导航信息，打印/存 PDF 只应带正文） */

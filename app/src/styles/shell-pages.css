@@ -393,18 +393,24 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  /* 单列工具页容器：2026-10-22 左导航布局上线后旧 840px 上限名存实亡（6 个工具页全靠
-     内联覆盖 1200px，忘写就缩水）——收编为同一令牌，内联覆盖陆续拆除 */
-  max-width: var(--content-w);
+  /* 宽度走 --container-w 变量（默认 1200）：content-wide 页只改变量不与基础规则抢特异性
+     （2026-11-17 二轮教训：处理/输出页右栏从 1200 里分宽度导致主列压扁+右侧 360px 空） */
+  max-width: var(--container-w, var(--content-w));
+}
+.settings.content-wide {
+  --container-w: 1560px;
 }
 
 /* 左导航设置页布局（2026-10-22 改为 VS Code / GitHub 同款：
    左侧分类竖排导航 + 右侧当前分类全宽内容，一次只看一个分类） */
 .settings-page {
-  max-width: 1280px;
+  max-width: var(--container-w, 1280px);
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+}
+.settings-page.content-wide {
+  --container-w: 1560px;
 }
 
 /* ============ 宽幅双栏（2026-11-17 页面利用率第一批，设计稿 docs/design/宽屏空间规划.md） ============
