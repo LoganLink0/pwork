@@ -120,6 +120,8 @@
   <button data-p="review">回路主页</button>
   <button data-p="output">输出主页</button>
   <button data-p="report">周报导出（三批）</button>
+  <button data-p="card">数据卡片（三批）</button>
+  <button data-p="items-detail">条目库详情面板（三批）</button>
   <button data-p="cloud">云端</button>
   <button data-p="settings">设置 ★</button>
   <button data-p="help">帮助 ★</button>
@@ -563,6 +565,92 @@
             <div class="card"><h3>最近产出</h3>
               <div class="kv"><span>11-15 周报</span><b>HTML · PPTX</b></div>
               <div class="kv"><span>11-08 周报</span><b>HTML</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 数据卡片（C 三批） -->
+<div class="page" id="p-card">
+  <div class="frame">
+    <div class="frame-note"><b>C 表单+预览双栏 · 第三批</b> —— 左参数表单 + 右栏 canvas 实时预览（改参数立即可见，下载按钮随预览走）；窄屏回落现状单列</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i on">输出 · 数据卡片</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>数据卡片</h2><span class="sub">周报 / 月报 → 一张可分享的 PNG 数据图</span></div>
+        <div class="wide">
+          <div class="main">
+            <div class="card"><h3>参数</h3>
+              <div class="kv"><span>数据周期</span><b>本周（11-10 ~ 11-16）</b></div>
+              <div class="kv"><span>配色</span><b>琥珀（默认）</b></div>
+              <div class="kv"><span>包含</span><b>速记数 / 抓取数 / 闭环率 / 目标进度</b></div>
+              <div style="margin-top:10px"><span class="btn primary">重新渲染</span></div>
+            </div>
+            <div class="foot-note">左栏 = 参数表单（保持现状行宽）</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card">
+              <h3>实时预览</h3>
+              <div style="border:1px dashed var(--line-strong);border-radius:var(--r-sm);height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;gap:6px">
+                <b style="color:var(--accent-deep);font-size:18px">本周 10 条 · 闭环 78%</b>
+                <span>速记 12 · 抓取 10 · 目标 2 进行中</span>
+                <span style="font-size:11px">canvas 卡片渲染区（1080×1080）</span>
+              </div>
+              <div style="margin-top:8px"><span class="btn primary" style="width:100%">下载 PNG</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 条目库详情面板（A 三批） -->
+<div class="page" id="p-items-detail">
+  <div class="frame">
+    <div class="frame-note"><b>A 详情右栏面板 · 第三批（结构级）</b> —— 宽屏点卡片「详情」→ 右栏整体切为该条目详情面板；主列卡片保持紧凑（不再卡内展开、扫读不中断）；窄屏保持现状卡内展开</div>
+    <div class="layout">
+      <div class="sidenav"><div class="brand">PWORK</div>
+        <div class="nav-i">速记</div><div class="nav-i">信源</div><div class="nav-i on">条目库</div>
+      </div>
+      <div class="content">
+        <div class="page-head"><h2>条目库</h2><span class="sub">2026 年 11 月 · 24 条</span>
+          <div class="right"><button class="btn">‹ 11 月 ›</button></div>
+        </div>
+        <div class="wide">
+          <div class="main">
+            <div style="margin-bottom:10px"><span class="chip on">必看</span><span class="chip">评分入选</span><span class="chip">已筛除</span></div>
+            <div class="digest-item" style="outline:2px solid var(--accent)">
+              <div class="t"><span class="tier must">必看</span>Qwen4-Max 首发上线问 AI 平台 ↗</div>
+              <div class="m"><span>量子位</span><span>入库 15:00</span><span class="grow"></span><span class="vote"><span class="on">✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
+            </div>
+            <div class="digest-item">
+              <div class="t"><span class="tier may">可看</span>2026 甲子引力年终盛典即将启幕 ↗</div>
+              <div class="m"><span>甲子光年</span><span>入库 21:10</span><span class="grow"></span><span class="vote"><span>✦ 多推</span><span>◦ 没想好</span><span>✗ 少推</span></span></div>
+            </div>
+            <div class="foot-note">主列 = 紧凑卡片（选中行琥珀描边）· 点「详情」右栏切换</div>
+          </div>
+          <div class="aside mark-aside">
+            <div class="card">
+              <h3>Qwen4-Max 首发上线问 AI 平台</h3>
+              <div class="kv"><span>来源 / 入库</span><b>量子位 · 11-16 15:00</b></div>
+              <div class="kv"><span>筛选理由</span><b>信源 T1 · #ai 命中 · 新鲜度高</b></div>
+              <div class="kv"><span>分层</span><b>必看（当日排名 1）</b></div>
+            </div>
+            <div class="card">
+              <h3>我的批注</h3>
+              <div style="border:1px solid var(--line);border-radius:var(--r-sm);padding:8px;font-size:13px;color:var(--ink-soft);min-height:52px">Token 砍半这条对成本测算有用，Q3 报价可以更新……</div>
+            </div>
+            <div class="card">
+              <h3>操作</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <span class="chip on">✦ 多推</span><span class="chip">机会标记</span><span class="chip">永久保留</span><span class="chip">转待办</span><span class="chip">写速记</span><span class="chip">阅读全文</span>
+              </div>
             </div>
           </div>
         </div>
