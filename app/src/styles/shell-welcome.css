@@ -815,6 +815,8 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 .isle-menu {
   position: fixed;
   z-index: 321;
+  /* 显式恢复命中：pointer-events 继承容器（展开态容器为 none），不声明则菜单点了穿透 */
+  pointer-events: auto;
   min-width: 136px;
   padding: 4px;
   background: var(--surface);
