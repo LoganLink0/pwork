@@ -148,6 +148,23 @@ export function IsleWindow() {
     }
   }, [])
 
+  // 按持久化模式重新落位（挂载与设置页「重置到屏幕顶部居中」共用）：
+  // 模式对齐（modeRef 实时值）+ 画布定位 + 收起裁剪，全部走当前值
+  const reposition = (): Promise<void> => {
+    const pos = readPos()
+    applyMode(pos.mode)
+    if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
+      // 自由驻留：先落位画布，再锚 logo 套收起裁剪（logo 半透明淡出原地）
+      return invoke('isle_place', { x: pos.x, y: pos.y })
+        .then(() => invoke('isle_peek', { mode: 'free', y: 0 }))
+        .catch((e) => reportIsleError('岛.驻留定位', e))
+        .then(() => {})
+    }
+    return invoke('isle_peek', { mode: pos.mode, y: pos.y ?? 0 })
+      .catch((e) => reportIsleError('岛.' + pos.mode + '收起', e))
+      .then(() => {})
+  }
+
   useEffect(() => {
     let disposed = false
     // 先等 prefs.json 缓存预热再读位置——否则 mount 与预热竞速会回落 localStorage 旧值
@@ -156,25 +173,11 @@ export function IsleWindow() {
       .then((m) => m.readPrefsFile())
       .then(() => {
         if (disposed) return
-        const pos = readPos()
-        applyMode(pos.mode)
         // 窗 visible:false 起始——先落位/缩成隐藏小窗再 show，变形过程不露帧（show 挂链尾）
         const show = () => {
           if (readEnabled()) void invoke('isle_show').catch(() => {})
         }
-        if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
-          // 自由驻留：先落位画布，再锚 logo 缩为隐藏小窗（2026-11-18 中央隐藏接入）
-          void invoke('isle_place', { x: pos.x, y: pos.y })
-            .then(() => invoke('isle_peek', { mode: 'free', y: 0 }))
-            .then(show)
-            .catch((e) => reportIsleError('岛.驻留定位', e))
-        } else if (pos.mode === 'right') {
-          void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).then(show).catch((e) => reportIsleError('岛.右缘隐藏', e))
-        } else if (pos.mode === 'left') {
-          void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).then(show).catch((e) => reportIsleError('岛.左缘隐藏', e))
-        } else {
-          void invoke('isle_peek', { mode: 'top', y: 0 }).then(show).catch((e) => reportIsleError('岛.顶缘隐藏', e))
-        }
+        reposition().then(show)
       })
       .catch((e) => reportIsleError('岛.挂载', e))
     return () => {
@@ -188,20 +191,34 @@ export function IsleWindow() {
     let unlisten: (() => void) | undefined
     let disposed = false
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
-      if (!e.payload?.keys?.includes(SETTINGS_KEY)) return
+      const keys = e.payload?.keys
+      const hasSettings = keys?.includes(SETTINGS_KEY)
+      const hasPos = keys?.includes(POS_KEY)
+      if (!hasSettings && !hasPos) return
       // 失效后同步读只会回落 localStorage 旧值（2026-11-18 开关「关了又自己开回来」根因：
       // 事件处理读了本窗 stale cache；置空缓存不重拉则回落值过期——必须 await 重拉文件再读）
       void refreshPrefsFile().then(() => {
-        if (readEnabled()) {
-          // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
-          const pos = readPos()
-          setOpen(true)
-          setPeek(false)
-          void invoke('isle_expand', { mode: pos.mode, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
-        } else {
+        if (hasPos) {
+          // 设置页「重置到屏幕顶部居中」实时生效：收起 + 按持久化模式重新落位
+          // （驻留模式状态经 applyMode 对齐——重置后呼出/收起不再沿用旧模式）
           clearTimers()
           setOpen(false)
-          void invoke('isle_hide').catch(() => {})
+          setPeek(true)
+          suppressEnter.current = false // 光标在主窗设置页，不在岛把手上
+          requestAnimationFrame(() => { reposition() })
+        }
+        if (hasSettings) {
+          if (readEnabled()) {
+            // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
+            const pos = readPos()
+            setOpen(true)
+            setPeek(false)
+            void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
+          } else {
+            clearTimers()
+            setOpen(false)
+            void invoke('isle_hide').catch(() => {})
+          }
         }
       })
     }).then((fn) => {

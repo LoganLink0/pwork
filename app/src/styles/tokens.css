@@ -95,7 +95,10 @@
   --font-display: var(--font-body);
   --font-hand: var(--font-body);
   /* 品牌区固定基准特例（不随 --font-scale 缩放，用户拍板左上角标识恒定）：
-     侧栏品牌 19px/13px 与顶栏 10px 徽标字固定（shell.css .logo 区）——特例登记，非偏离 */
+     侧栏品牌 19px/13px 与顶栏 10px 徽标字固定（shell.css .logo 区）——特例登记，非偏离。
+     另三处固定字登记（2026-11-19 扫描补账）：InfoTip 按钮 10px（shell-widgets
+     .info-tip-btn）、轮盘槽位键角注 10px（shell-welcome .wheel-slot-key）与迁移计量
+     大数 28px（shell-welcome .mig-meter-head b）——均为角标/展示型固定字，非正文字号 */
 
   /* ======= 字号阶梯（8 级，唯一来源；--font-scale 由偏好中心字号缩放驱动） ======= */
   --fs-xs: calc(13px * var(--font-scale, 1)); /* 标签、说明 */

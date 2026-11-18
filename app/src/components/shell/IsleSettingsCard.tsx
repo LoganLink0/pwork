@@ -65,7 +65,7 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
   return (
     <div className="set-card" data-tab="isle" style={{ display: active ? undefined : 'none' }}>
       <h2>胶囊岛</h2>
-      <div className="desc">桌面上的常驻小 P：按住 logo 拖到哪驻留到哪，拖近屏幕上缘自动吸附居中；靠近展开状态条，进行中的抓取、导出与 AI 问答都在这里可见</div>
+      <div className="desc">桌面上的常驻小 P：按住拖到哪驻留到哪，拖近屏幕上缘吸附居中、贴左右缘自动留一半贴边可见；靠近展开状态条，进行中的抓取、导出与 AI 问答都在这里可见；右键 logo 可一键收纳到屏幕上方/右侧/左侧，收纳后靠近把手滑出</div>
       <div className="set-body">
         <div className="set-row">
           <label>显示</label>
