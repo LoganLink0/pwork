@@ -8,7 +8,7 @@
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 .guard-drops b {
@@ -16,7 +16,7 @@
 }
 .guard-quo {
   margin: 0 0 14px;
-  font-size: 13.5px;
+  font-size: var(--fs-xs);
   color: var(--ink-soft);
   line-height: 1.7;
 }
@@ -413,19 +413,19 @@ h2 .info-tip {
   padding: 22px 24px 18px;
   max-width: 420px; width: 100%;
 }
-.confirm-title { display: block; font-size: 16px; line-height: 1.5; }
-.confirm-body { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-soft, #66625a); line-height: 1.7; }
+.confirm-title { display: block; font-size: var(--fs-md); line-height: 1.5; }
+.confirm-body { margin: 8px 0 0; font-size: var(--fs-xs); color: var(--ink-soft, #66625a); line-height: 1.7; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-.confirm-actions .btn-ghost, .confirm-actions .btn-primary { padding: 8px 18px; font-size: 14px; }
+.confirm-actions .btn-ghost, .confirm-actions .btn-primary { padding: 8px 18px; font-size: var(--fs-sm); }
 
 /* 设置页高级选项折叠（API Token 等降位入口，2026-11-09 走查二批④） */
 .adv-block { margin: 0; }
 .adv-block summary {
-  cursor: pointer; font-size: 13px; color: var(--ink-faint);
+  cursor: pointer; font-size: var(--fs-xs); color: var(--ink-faint);
   list-style: none; display: flex; align-items: center; gap: 6px;
 }
 .adv-block summary::-webkit-details-marker { display: none; }
-.adv-block summary::before { content: '▸'; font-size: 12px; }
+.adv-block summary::before { content: '▸'; font-size: var(--fs-xs); }
 .adv-block[open] summary::before { content: '▾'; }
 .adv-block[open] summary { margin-bottom: var(--sp-3); }
 

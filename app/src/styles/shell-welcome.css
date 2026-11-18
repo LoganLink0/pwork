@@ -547,7 +547,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--danger) 12%, transparent);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -864,7 +864,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   white-space: nowrap;
 }
 .isle-note {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--ink-faint);
   white-space: nowrap;
   overflow: hidden;
@@ -883,7 +883,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 7px 14px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--ink);
   cursor: pointer;
   white-space: nowrap;
@@ -1116,7 +1116,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   z-index: 300;
   background: var(--accent-deep);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-xs);
   line-height: 1.5;
   text-align: center;
   padding: 5px 16px;
@@ -1131,12 +1131,12 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   border-radius: 999px;
   background: #fff;
   color: var(--accent-deep);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
 }
 .demo-install-btn:active { opacity: 0.85; }
-.demo-install-tip { font-size: 12px; opacity: 0.92; }
+.demo-install-tip { font-size: var(--fs-xs); opacity: 0.92; }
 /* 窄屏时横幅上移避开底部导航（须声明在 .demo-banner 基础样式之后以覆盖 bottom:0）；
    避让高度 = 底栏高度 + 设备安全区（env 动态计算，iPhone 底部横条也算入）；
    底部导航层级同时抬到横幅之上（2026-11-06 用户报告「更多」被横幅挡住） */
@@ -1173,24 +1173,24 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 }
 .mig-modal h2 {
   margin: 0 0 14px;
-  font-size: 22px;
+  font-size: var(--fs-xl);
   letter-spacing: -0.01em;
 }
 .mig-lead {
   margin: 0 0 12px;
-  font-size: 15px;
+  font-size: var(--fs-sm);
   color: var(--ink);
 }
 .mig-list {
   margin: 0 0 18px;
   padding-left: 20px;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--ink-soft);
 }
 .mig-list li { margin: 4px 0; }
 .mig-note {
   margin: 0 0 14px;
-  font-size: 13.5px;
+  font-size: var(--fs-xs);
   color: var(--ink-soft);
 }
 .mig-progress {
@@ -1199,7 +1199,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   border-radius: 10px;
   padding: 14px 18px;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--ink-soft);
   margin-bottom: 14px;
 }
@@ -1218,7 +1218,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   letter-spacing: -0.02em;
 }
 .mig-meter-head span {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--ink-soft);
 }
 .mig-meter-bar {
@@ -1236,7 +1236,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 }
 .mig-meter-table {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--ink-soft);
 }
 .mig-actions {

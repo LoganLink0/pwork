@@ -1043,7 +1043,7 @@
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
-  font-size: 15px;
+  font-size: var(--fs-sm);
   line-height: 1;
   cursor: pointer;
 }
