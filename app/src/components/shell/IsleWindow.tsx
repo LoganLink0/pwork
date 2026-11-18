@@ -109,6 +109,13 @@ export function IsleWindow() {
   const suppressEnter = useRef(false)
   /** 右键收纳菜单（画布内坐标；null=关闭） */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  /** 驻留模式实时值：收起计时器等异步回调若读 state，拿到的是旧渲染的闭包值——
+      曾致右键收纳后 1 秒收起计时器用旧模式把窗口拉回原位（陈旧闭包回写） */
+  const modeRef = useRef<SavedPos['mode']>('top')
+  const applyMode = (m: SavedPos['mode']) => {
+    modeRef.current = m
+    setMode(m)
+  }
 
   const clearTimers = () => {
     if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
@@ -150,7 +157,7 @@ export function IsleWindow() {
       .then(() => {
         if (disposed) return
         const pos = readPos()
-        setMode(pos.mode)
+        applyMode(pos.mode)
         // 窗 visible:false 起始——先落位/缩成隐藏小窗再 show，变形过程不露帧（show 挂链尾）
         const show = () => {
           if (readEnabled()) void invoke('isle_show').catch(() => {})
@@ -231,7 +238,7 @@ export function IsleWindow() {
       setOpen(false)
       setDragging(false)
       if (moved) {
-        setMode(m)
+        applyMode(m)
         setPeek(true)
         // 热区在光标落点附近，合成 enter 会让刚收起的岛立即弹回展开——抑制到离开
         suppressEnter.current = true
@@ -280,7 +287,7 @@ export function IsleWindow() {
     setMenu(null)
     if (peek) {
       const pos = readPos()
-      void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
+      void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
     openTimer.current = window.setTimeout(() => {
       setOpen(true)
@@ -298,7 +305,7 @@ export function IsleWindow() {
       setPeek(true)
       // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁块闪现
       requestAnimationFrame(() => {
-        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
+        void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
       })
     }, 1000)
   }
@@ -310,7 +317,7 @@ export function IsleWindow() {
     clearTimers()
     void invoke('isle_unclip').catch((e2) => reportIsleError('岛.菜单清裁剪', e2))
     const menuW = 148
-    const menuH = 78
+    const menuH = 112
     setMenu({
       x: Math.max(6, Math.min(e.clientX, 520 - menuW - 6)),
       y: Math.max(6, Math.min(e.clientY, 140 - menuH - 6)),
@@ -322,11 +329,11 @@ export function IsleWindow() {
     // 关闭即恢复收起命中裁剪（横条本就隐藏，region 回落无闪现风险）
     if (peek) {
       const pos = readPos()
-      void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
+      void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
     }
   }
   // 收纳动作：Rust 落位+套收起裁剪并返回落位，前端持久化与状态收起
-  const stashTo = (target: 'center' | 'right') => {
+  const stashTo = (target: 'top' | 'right' | 'left') => {
     setMenu(null)
     clearTimers()
     setOpen(false)
@@ -336,9 +343,10 @@ export function IsleWindow() {
       void invoke('isle_stash_to', { target })
         .then((pos) => {
           const p = pos as { mode: SavedPos['mode']; x: number; y: number }
-          setMode(p.mode)
+          applyMode(p.mode)
           if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
-          else savePos({ mode: 'free', x: p.x, y: p.y })
+          else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
+          else savePos({ mode: 'top' })
         })
         .catch((e) => reportIsleError('岛.收纳', e))
     })
@@ -391,8 +399,9 @@ export function IsleWindow() {
           {/* 菜单开启期间罩住整张画布：点菜单外任意处即关闭并还原命中裁剪 */}
           <div className="isle-menu-overlay" onMouseDown={closeMenu} onContextMenu={(e) => { e.preventDefault(); closeMenu() }} />
           <div className="isle-menu" style={{ left: menu.x, top: menu.y }} role="menu">
-            <button type="button" role="menuitem" onClick={() => stashTo('center')}>隐藏到屏幕中央</button>
+            <button type="button" role="menuitem" onClick={() => stashTo('top')}>隐藏到屏幕上方</button>
             <button type="button" role="menuitem" onClick={() => stashTo('right')}>隐藏到屏幕右侧</button>
+            <button type="button" role="menuitem" onClick={() => stashTo('left')}>隐藏到屏幕左侧</button>
           </div>
         </>
       )}

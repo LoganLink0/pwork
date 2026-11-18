@@ -196,9 +196,9 @@ fn apply_peek_region(w: &tauri::WebviewWindow, mode: &str, scale: f64) {
   clip_region_to_hotspot(w, hx, hy, hw, hh);
 }
 
-/// 右键收纳：把岛完全隐藏到指定去处（2026-11-18 用户需求，logo 右键菜单两项）。
-/// center=画布居中于屏幕（自由驻留形态，logo 半透明淡出）；right=半探入屏幕右缘
-/// （纵向居中）。落位后即套收起命中裁剪，返回落位供前端持久化。
+/// 右键收纳：把岛完全隐藏到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。
+/// top=半探入屏幕上缘（贴顶居中）；right=半探入屏幕右缘；left=半探入屏幕左缘
+/// （右/左纵向居中）。落位后即套收起命中裁剪，返回落位供前端持久化。
 #[tauri::command]
 pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
   let Some(w) = app.get_webview_window("isle") else {
@@ -217,19 +217,30 @@ pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value
   let ms = monitor.size();
   let canvas_w = (CANVAS_W * scale) as i32;
   let canvas_h = (140.0 * scale) as i32;
+  let tuck = (TUCK * scale) as i32;
+  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
   let (mode, px, py) = match target.as_str() {
-    "center" => {
-      let x = mp.x + (ms.width as i32 - canvas_w) / 2;
-      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
+    // 上缘：贴顶居中 + logo 上半探出屏外（与收起态顶缘定位同式）
+    "top" => {
+      let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or(canvas_w);
+      let x = mp.x + (ms.width as i32 - win_w) / 2;
+      let y = mp.y - logo_y - tuck;
       let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
-      ("free", x, y)
+      ("top", x, y)
     }
+    // 右缘：logo 右缘探出屏外 tuck，纵向居中
     "right" => {
-      let tuck = (TUCK * scale) as i32;
       let x = mp.x + ms.width as i32 - (CANVAS_LOGO_X_RIGHT * scale) as i32 - tuck;
       let y = mp.y + (ms.height as i32 - canvas_h) / 2;
       let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
       ("right", x, y)
+    }
+    // 左缘：logo 左缘探出屏外 tuck，纵向居中
+    "left" => {
+      let x = mp.x - (CANVAS_LOGO_X_LEFT * scale) as i32 - tuck;
+      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
+      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      ("left", x, y)
     }
     _ => return Err(format!("未知的目标位置：{}", target)),
   };
