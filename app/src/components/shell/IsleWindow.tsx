@@ -12,13 +12,14 @@ function reportIsleError(where: string, e: unknown): void {
 
 /**
  * 胶囊岛窗（/isle 分流渲染）——三种停靠模式 + 自由驻留，统一「靠近展开 / 离开收回」：
- * 固定 520×140 透明画布。收起态=logo 本体（64px 品牌胶囊，窗口同步缩为 64×64 小窗）；
- * 展开态=毛玻璃横条（logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
+ * 固定 520×140 透明画布，窗体从不变形（可见窗 resize 会白闪）。完全隐藏态=整窗
+ * 视觉不可见（横条与 logo 全隐），Rust 以 SetWindowRgn 把命中区裁为画布内 logo 位
+ * 64×64 隐形热区（region 外穿透给下层）；呼出=鼠标走到岛消失的位置，靠近滑出展开
+ * 毛玻璃横条（logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
  * 模式（拖拽落点由 Rust 按光标判定并落位，前端持久化）：
  *   top   灵动岛：横条零间距贴屏幕上缘居中；
  *   left/right 缘停靠：画布贴屏幕左/右缘，纵向跟随落点；
- *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内）——离开同样收回为 logo 小窗
- *         （2026-11-18 接入：此前 free 永不收回，画布矩形还拦截下层点击）。
+ *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内），离开同样完全隐藏。
  * 单击=收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
  * 配置文件化 2026-11-16；localStorage 双写为兼容期回落）；
  * 启用开关在主窗设置页（经 pwork-prefs-changed 事件实时响应显隐）。
@@ -84,7 +85,7 @@ function readEnabled(): boolean {
   }
 }
 
-/** 停靠模式的容器类名（free 为空）；peek=完全隐藏态（窗口已缩为 logo 64×64 小窗，四模式统一；展开态永不叠加） */
+/** 停靠模式的容器类名（free 为空）；peek=完全隐藏态（横条与 logo 全隐+隐形热区，四模式统一；展开态永不叠加） */
 function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
   const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : ''
   return [base, peek && !open ? 'peek' : ''].filter(Boolean).join(' ')
@@ -97,7 +98,7 @@ export function IsleWindow() {
   const [dragging, setDragging] = useState(false)
   /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
   const [mode, setMode] = useState<SavedPos['mode']>('top')
-  /** 完全隐藏态（窗口缩为 logo 64×64 小窗，靠近滑出展开；四模式统一） */
+  /** 完全隐藏态（横条与 logo 全隐，命中区=logo 位 64×64 隐形热区；四模式统一） */
   const [peek, setPeek] = useState(true)
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
@@ -212,14 +213,14 @@ export function IsleWindow() {
     if ((e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     setDragging(true)
-    // 拖拽中解除完全隐藏与位移（否则从隐藏态抓起时 logo 带着缺损位跟随拖动，不美观）
+    // 拖拽中解除完全隐藏（横条随抓起显示，拖动全程完整可见）
     setPeek(false)
     clearTimers()
-    void invoke('isle_start_drag', { mode }).catch(() => setDragging(false))
+    void invoke('isle_start_drag').catch(() => setDragging(false))
   }
 
   // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，前端持久化
-  // 模式；随即收回为 logo 小窗（2026-11-18 四模式统一——此前 free 永不收回），松手即收起
+  // 模式；随即完全隐藏（命中区缩回隐形热区，2026-11-18 四模式统一），松手即收起
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
@@ -229,13 +230,16 @@ export function IsleWindow() {
       if (moved) {
         setMode(m)
         setPeek(true)
-        // 缩窗瞬间光标仍在小窗上，合成 enter 会让刚收回的岛立即弹回展开——抑制到离开
+        // 热区在光标落点附近，合成 enter 会让刚收起的岛立即弹回展开——抑制到离开
         suppressEnter.current = true
-        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
         if (m === 'top') savePos({ mode: 'top' })
         else if (m === 'right') savePos({ mode: 'right', y })
         else if (m === 'left') savePos({ mode: 'left', y })
         else savePos({ mode: 'free', x, y })
+        // 先让 peek 类生效（横条瞬间隐藏）再缩命中区，避免可见横条被裁块闪现
+        requestAnimationFrame(() => {
+          void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
+        })
       }
     }).then((fn) => {
       un = fn
@@ -263,9 +267,9 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-18 四模式统一：完全隐藏=窗口缩为 logo 精确 64×64 小窗）：
-  // 鼠标进入小窗即命中，先恢复画布尺寸与定位（free 以 logo 为锚铺开），再展开——
-  // 次序不能反（展开的内容渲染在小窗里会被裁没）。
+  // 呼出/收回（2026-11-18 四模式统一：完全隐藏=横条与 logo 全隐+隐形热区）：
+  // 鼠标进入热区即命中，先清命中裁剪（region 外不可见——不清则展开内容被裁在热区里），
+  // 再展开——次序不能反。
   const onEnter = () => {
     if (dragging) return
     if (suppressEnter.current) return
@@ -287,7 +291,10 @@ export function IsleWindow() {
       setOpen(false)
       const pos = readPos()
       setPeek(true)
-      void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
+      // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁成小块闪一下
+      requestAnimationFrame(() => {
+        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
+      })
     }, 1000)
   }
   useEffect(() => () => clearTimers(), [])

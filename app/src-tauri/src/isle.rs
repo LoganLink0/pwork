@@ -1,7 +1,8 @@
 //! 胶囊岛窗（伙伴常驻形态·自由拖拽+顶部吸附式）：
-//! 固定 520×140 透明画布，收起态=logo 本体（64px 品牌胶囊）居中画布，
+//! 固定 520×140 透明画布（窗体从不变形——可见窗 resize 会白闪），收起隐藏态=整窗
+//! 视觉不可见，命中区经 SetWindowRgn 裁为 logo 位 64×64 隐形热区（region 外穿透）；
 //! 展开态=毛玻璃横条（logo 滑至条内左侧+状态单行）。
-//! 按住 logo 原生拖拽（start_dragging），松手驻留（位置持久化在前端 localStorage），
+//! 按住画布原生拖拽（start_dragging），松手驻留（位置持久化在 prefs.json），
 //! 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。装饰（边框/圆角/投影）在 lib.rs 统一关闭。
 
 use std::thread;
@@ -114,35 +115,44 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 完全隐藏（2026-11-18 三轮重做，用户反馈余量环仍拦截下层点击）：窗口缩到 logo
-/// 精确尺寸（64×64）——「logo 以外」不复存在，余量环消失，下层必然点得到；
-/// SetWindowRgn 把命中区裁成 logo 圆角矩形只作增强（裁掉圆角外四个小角），
-/// 失效兜底=窗口本身已只有 logo 大小（SetWindowRgn 曾实测静默失效 rgn=NONE）。
-/// free 模式（屏幕中间驻留）同样可隐藏：窗缩到 logo 尺寸并留在原位。
-/// 呼出=鼠标进入小窗，isle_expand 恢复画布并清除 region。
-const PEEK_LOGO: f64 = 64.0; // logo 本体尺寸（与前端 .isle-logo 一致）
+/// 完全隐藏（2026-11-18 四轮重做，用户拍板「完全隐藏=屏幕上连 logo 也不该显示」，
+/// 回归 f61b9bc 的隐形语义并吸收 a1ccf18「隐形后找不到」的教训）：窗口保持画布
+/// 尺寸不变形——可见窗 resize 的新暴出区域会先刷底色再绘制（展开白闪的根因）；
+/// SetWindowRgn 命中裁剪=画布内 logo 位 64×64 **隐形热区**（region 外系统级完全
+/// 穿透给下层），整窗视觉完全不可见。呼出=鼠标走到岛消失的位置（热区在原地等，
+/// 比早期 2px 隐形线可找：岛总藏在它消失的原位），isle_expand 清 region 整窗恢复。
+const HOT_SIZE: f64 = 64.0; // 隐形热区边长（与 logo 同位同尺寸）
 
-/// 画布内 logo 收起位（逻辑 px，与 .isle-logo 的 CSS left/top 一致）：
-/// top/free 模式 logo 居画布中上 (228,10)。free 隐藏/展开/抓起的锚定换算全靠它。
+/// 画布内 logo 位（逻辑 px，与 .isle-logo 各模式的 CSS left/top 一致）：
+/// top/free 居画布中上 (228,10)、left 贴左 (10,10)、right 贴右 (446,10)。
+/// 隐形热区的定位与 free 隐藏锚定换算全靠它们。
 const CANVAS_LOGO_X: f64 = 228.0;
+const CANVAS_LOGO_X_LEFT: f64 = 10.0;
+const CANVAS_LOGO_X_RIGHT: f64 = 446.0;
 const CANVAS_LOGO_Y: f64 = 10.0;
 
-/// 把窗口命中区裁为 logo 圆角矩形（物理 px；region 外系统级完全穿透）。
-/// peek 窗口=logo 精确尺寸，region 只裁掉 logo 圆角外的四个小角。
-/// 设置后立即回读验证：失败/被清非静默，console 留痕（此前实测静默失效 rgn=NONE）。
+/// 把窗口命中区裁为指定矩形热区（x/y=size 为**客户区**物理 px；region 外系统级完全
+/// 穿透且不可见）。region 坐标系=窗口原点，无边框窗的不可见边距使客户原点 ≠ 窗口
+/// 原点（实测外框 536×149 vs 客户 520×140）——先换算客户原点偏移再落 region。
+/// 设置后立即回读验证：失败非静默，console 留痕（rgn 实测生效 COMPLEX，留痕是兜底）。
 #[cfg(windows)]
-fn clip_region_to_logo(w: &tauri::WebviewWindow) {
-  use windows::Win32::Graphics::Gdi::{
-    CreateRectRgn, CreateRoundRectRgn, GDI_REGION_TYPE, GetWindowRgn, SetWindowRgn,
-  };
-  let scale = w.scale_factor().unwrap_or(1.0);
+fn clip_region_to_hotspot(w: &tauri::WebviewWindow, x: i32, y: i32, size: i32) {
+  use windows::Win32::Foundation::{POINT, RECT};
+  // ClientToScreen 在 windows crate 里归 Gdi 模块（官方分区如此），非 WindowsAndMessaging
+  use windows::Win32::Graphics::Gdi::{ClientToScreen, CreateRectRgn, GDI_REGION_TYPE, GetWindowRgn, SetWindowRgn};
+  use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
   let Ok(hwnd) = w.hwnd() else { return };
-  let logo = (PEEK_LOGO * scale) as i32;
-  let radius = (18.0 * scale) as i32; // 与前端 .isle-logo border-radius 一致
   unsafe {
-    let region = CreateRoundRectRgn(0, 0, logo, logo, radius, radius);
+    let mut win = RECT::default();
+    let _ = GetWindowRect(hwnd, &mut win);
+    let mut org = POINT { x: 0, y: 0 };
+    let _ = ClientToScreen(hwnd, &mut org);
+    // 热区目标在客户区坐标（=画布坐标），落 region 前补客户原点-窗口原点偏移
+    let off_x = org.x - win.left;
+    let off_y = org.y - win.top;
+    let region = CreateRectRgn(off_x + x, off_y + y, off_x + x + size, off_y + y + size);
     let applied = SetWindowRgn(hwnd, Some(region), true);
-    // 回读验证（SetWindowRgn 曾静默失效——不静默，留痕）：GetWindowRgn 只收 region 句柄
+    // 回读验证（失效不静默，留痕）：GetWindowRgn 只收 region 句柄
     let probe = CreateRectRgn(0, 0, 1, 1);
     let kind = GetWindowRgn(hwnd, probe);
     if applied == 0 || kind == GDI_REGION_TYPE(0) {
@@ -169,85 +179,36 @@ fn clear_region(w: &tauri::WebviewWindow) {
 
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let scale = w.scale_factor().unwrap_or(1.0);
-  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
-  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
-    Ok(Some(m)) => Some(m),
-    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
-  };
-  let Some(monitor) = monitor else {
-    return Err("找不到可用显示器".into());
-  };
-  let mp = monitor.position();
-  let ms = monitor.size();
-  let logo = (PEEK_LOGO * scale) as i32;
+  // 画布定位（窗体不变形）：top 吸顶居中 / left·right 贴缘纵向跟随 / free 留在原位
+  //（自由驻留的落位由 place/展开位决定，画布从未变形，原位即画布位）
   match mode.as_str() {
-    // 顶缘：logo 上半露出贴顶居中（窗=logo 精确尺寸——「logo 以外」不复存在，
-    // 2026-11-18 用户反馈余量环仍拦截下层；命中裁剪 region 作为圆角增强保留）
-    "top" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + (ms.width as i32 - logo) / 2, mp.y));
-    }
-    // 左缘：logo 贴左，纵向=停靠位画布 y + logo 顶偏移（logo 落回原位不跳）
-    "left" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, my_val(mp.y, y + (CANVAS_LOGO_Y * scale) as i32)));
-    }
-    // 右缘：logo 贴右，纵向同左缘
-    "right" => {
-      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(
-        mp.x + ms.width as i32 - logo,
-        my_val(mp.y, y + (CANVAS_LOGO_Y * scale) as i32),
-      ));
-    }
-    // 自由驻留（2026-11-18 用户反馈中央无法隐藏）：锚定 logo 当前位置缩为 64×64——
-    // 窗顶左移画布内 logo 位 (228,10)·缩放，缩窗后 logo 视觉位置不动。
-    // 幂等：已是 logo 小窗（StrictMode 双挂载 / 抑制进入后的二次收回）不再偏移。
-    _ => {
-      let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(mp.x, mp.y));
-      let peek_already = {
-        let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-        sz.width > 0 && sz.width <= logo as u32 + 8
-      };
-      let lx = if peek_already { cur.x } else { cur.x + (CANVAS_LOGO_X * scale) as i32 };
-      let ly = if peek_already { cur.y } else { cur.y + (CANVAS_LOGO_Y * scale) as i32 };
-      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let (cx, cy) = clamp_pos(&w, lx, ly);
-      let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
-    }
+    "top" => snap_top(&app)?,
+    "left" => dock_left(&app, y)?,
+    "right" => dock_right(&app, y)?,
+    _ => {}
   }
-  // 命中裁剪增强（用户拍板方案 A）：region 把窗口四角（logo 圆角外）也裁掉——
-  // SetWindowRgn 曾实测静默失效（rgn=NONE），故窗口尺寸已先缩到 logo 精确尺寸兜底；
-  // region 成功则连四角也穿透，失败仅四小角拦截。失效会经回读留痕（不静默）。
+  // 命中裁剪=该模式 logo 位的 64×64 隐形热区（窗口相对物理 px；region 外穿透且不可见）
   #[cfg(windows)]
-  clip_region_to_logo(&w);
+  {
+    let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+    let scale = w.scale_factor().unwrap_or(1.0);
+    let hot = (HOT_SIZE * scale) as i32;
+    let (hx, hy) = match mode.as_str() {
+      "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
+      "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
+      _ => ((CANVAS_LOGO_X * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
+    };
+    clip_region_to_hotspot(&w, hx, hy, hot);
+  }
   Ok(())
 }
 
-/// peek 窗纵向定位：跟随停靠位 y（画布顶），上移一个 pad 内的视觉偏移并钳回屏内
-fn my_val(monitor_y: i32, y: i32) -> i32 {
-  monitor_y + y.max(0)
-}
-
-/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向 /
-/// free 以 logo 为锚铺开），清除命中裁剪，并显示窗口（2026-11-18 开关链路修复：设置页
-/// 开关在窗隐藏态直接调 expand——旧交互 expand 前窗必然可见（鼠标靠近才展开），
-/// 开关场景打破了这个前提，缺 show 时窗永远隐藏——「点开找不到 logo/闪现一下消失」根因）
+/// 从完全隐藏恢复（窗口从未变形，无需尺寸复位）：清除命中裁剪整窗恢复并显示，
+/// 按模式定位（top 吸顶居中 / left·right 贴缘 / free 原位即画布位）。设置页开关
+/// 在隐藏态直接调 expand——缺 show 时窗永远隐藏（「点开找不到 logo」根因）
 #[tauri::command]
 pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  let scale = w.scale_factor().unwrap_or(1.0);
-  // 变形前尺寸：窗≈logo（64×64）说明从完全隐藏态来（free 展开需以 logo 为锚，见下）
-  let was_peek = {
-    let s = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-    s.width > 0 && s.width <= (PEEK_LOGO * scale) as u32 + 8
-  };
-  let _ = w.set_size(tauri::PhysicalSize::new(
-    (CANVAS_W * scale) as u32,
-    (140.0 * scale) as u32,
-  ));
   #[cfg(windows)]
   clear_region(&w);
   let _ = w.show();
@@ -255,24 +216,8 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
     "top" => snap_top(&app),
     "left" => dock_left(&app, y),
     "right" => dock_right(&app, y),
-    // free：画布以 logo 为锚铺开（窗顶左移 logo 位 -(228,10)·缩放）并钳回屏内——
-    // 直接铺开会把窗顶留在 logo 位，logo 跳到画布左上、画布悬出屏外。
-    // 已是画布尺寸（设置开关路径）只钳不挪。
-    _ => {
-      if was_peek {
-        let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(0, 0));
-        let _ = w.set_position(tauri::PhysicalPosition::new(
-          cur.x - (CANVAS_LOGO_X * scale) as i32,
-          cur.y - (CANVAS_LOGO_Y * scale) as i32,
-        ));
-      }
-      let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(0, 0));
-      let (cx, cy) = clamp_pos(&w, cur.x, cur.y);
-      if cx != cur.x || cy != cur.y {
-        let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
-      }
-      Ok(())
-    }
+    // 自由驻留：窗从未变形，原位即画布位（logo 从未离开画布中上）
+    _ => Ok(()),
   }
 }
 
@@ -334,52 +279,18 @@ fn left_button_up() -> bool {
   true
 }
 
-/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用；mode=当前驻留模式，用于
-/// 从隐藏态抓起时把画布锚回 logo 原位——右缘/自由驻留的小窗直接铺画布会把 logo
-/// 推到窗外（右缘画布悬出屏外 456px）或推到画布左上角，拖动全程看不到抓着的东西）。
+/// 胶囊岛：按住横条/logo 原生拖拽（在画布 mousedown 时调用）。
+/// 从隐形热区抓起：先清命中裁剪整窗恢复（横条随抓起立即显示，拖动全程完整可见）。
 /// 关键事实：Windows 上 start_dragging 是异步发起——立即返回，模态移动循环在其后由
 /// 事件循环驱动（实测日志铁证：命令返回时窗口尚未动过）。因此拖拽结束检测放在
 /// 轮询线程：左键松开（GetAsyncKeyState）且位置连续两拍稳定 → 真正松手，
 /// 此时才做停靠判定/落位，并向 isle 窗发 isle-drag-end {mode,x,y,moved} 供前端持久化。
 #[tauri::command]
-pub fn isle_start_drag(app: AppHandle, mode: String) -> Result<(), String> {
+pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
-  let scale = w.scale_factor().unwrap_or(1.0);
-  // 变形前尺寸：窗≈logo（64×64）= 从完全隐藏态抓起
-  let peek_sized = {
-    let s = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-    s.width > 0 && s.width <= (PEEK_LOGO * scale) as u32 + 8
-  };
-  // 从隐藏态（region 裁剪）抓起：先清裁剪再恢复画布尺寸，否则拖动全程命中区缺失
   #[cfg(windows)]
   clear_region(&w);
-  let _ = w.set_size(tauri::PhysicalSize::new(
-    (CANVAS_W * scale) as u32,
-    (140.0 * scale) as u32,
-  ));
-  if peek_sized {
-    match mode.as_str() {
-      // 顶缘：吸附居中后 logo 落回屏顶中央（与隐藏位相同，零跳动）
-      "top" => {
-        let _ = snap_top(&app);
-      }
-      // 左右缘：画布贴缘重锚，纵向保持 logo 位（logo 只平移画布内 10px 到展开位）
-      "left" => {
-        let _ = dock_left(&app, before.y - (CANVAS_LOGO_Y * scale) as i32);
-      }
-      "right" => {
-        let _ = dock_right(&app, before.y - (CANVAS_LOGO_Y * scale) as i32);
-      }
-      // 自由：画布以 logo 为锚铺开（logo 原位不动），拖拽全程在手底下
-      _ => {
-        let _ = w.set_position(tauri::PhysicalPosition::new(
-          before.x - (CANVAS_LOGO_X * scale) as i32,
-          before.y - (CANVAS_LOGO_Y * scale) as i32,
-        ));
-      }
-    }
-  }
   w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
   let app = app.clone();
   thread::spawn(move || {
