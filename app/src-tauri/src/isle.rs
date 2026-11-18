@@ -114,52 +114,51 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 完全隐藏（2026-11-17 二轮重做，用户反馈整条边缘热区拦截下层点击 + 自由驻留无法隐藏）：
-/// 窗口变形为「logo 露出区」小窗（logo 64×64 半露 + 24px 命中余量），并用 SetWindowRgn
-/// 把命中区裁成 logo 圆角矩形——窗口矩形内 logo 以外的部分系统级完全穿透（点得到下层），
-/// 根治「窗口矩形内 logo 以外点不到下层」。free 模式（屏幕中间驻留）同样可隐藏：
-/// 窗缩到 logo 区并留在原位。呼出=鼠标进入小窗，isle_expand 恢复画布并清除 region。
-const PEEK_VISIBLE: f64 = 36.0; // logo 露出高度/宽度（CSS px）
-const PEEK_PAD: f64 = 24.0; // 命中余量（窗口四周各留一圈，靠近即命中）
+/// 完全隐藏（2026-11-18 三轮重做，用户反馈余量环仍拦截下层点击）：窗口缩到 logo
+/// 精确尺寸（64×64）——「logo 以外」不复存在，余量环消失，下层必然点得到；
+/// SetWindowRgn 把命中区裁成 logo 圆角矩形只作增强（裁掉圆角外四个小角），
+/// 失效兜底=窗口本身已只有 logo 大小（SetWindowRgn 曾实测静默失效 rgn=NONE）。
+/// free 模式（屏幕中间驻留）同样可隐藏：窗缩到 logo 尺寸并留在原位。
+/// 呼出=鼠标进入小窗，isle_expand 恢复画布并清除 region。
 const PEEK_LOGO: f64 = 64.0; // logo 本体尺寸（与前端 .isle-logo 一致）
 
 /// 把窗口命中区裁为 logo 圆角矩形（物理 px；region 外系统级完全穿透）。
-/// x/y = logo 矩形左上角在窗口内的物理坐标。
+/// peek 窗口=logo 精确尺寸，region 只裁掉 logo 圆角外的四个小角。
+/// 设置后立即回读验证：失败/被清非静默，console 留痕（此前实测静默失效 rgn=NONE）。
 #[cfg(windows)]
-fn clip_region_to_logo(w: &tauri::WebviewWindow, x: i32, y: i32) {
-  use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+fn clip_region_to_logo(w: &tauri::WebviewWindow) {
+  use windows::Win32::Graphics::Gdi::{
+    CreateRectRgn, CreateRoundRectRgn, GDI_REGION_TYPE, GetWindowRgn, SetWindowRgn,
+  };
   let scale = w.scale_factor().unwrap_or(1.0);
   let Ok(hwnd) = w.hwnd() else { return };
   let logo = (PEEK_LOGO * scale) as i32;
-  let r = (2.0 * scale) as i32; // 微余量：圆角外沿 2px 内仍可命中
   let radius = (18.0 * scale) as i32; // 与前端 .isle-logo border-radius 一致
   unsafe {
-    let region = CreateRoundRectRgn(x - r, y - r, x + logo + r, y + logo + r, radius, radius);
-    SetWindowRgn(hwnd, Some(region), true);
+    let region = CreateRoundRectRgn(0, 0, logo, logo, radius, radius);
+    let applied = SetWindowRgn(hwnd, Some(region), true);
+    // 回读验证（SetWindowRgn 曾静默失效——不静默，留痕）：GetWindowRgn 只收 region 句柄
+    let probe = CreateRectRgn(0, 0, 1, 1);
+    let kind = GetWindowRgn(hwnd, probe);
+    if applied == 0 || kind == GDI_REGION_TYPE(0) {
+      web_console_log(w, format!("SetWindowRgn applied={} rgnKind={:?} —— 命中裁剪未生效", applied, kind));
+    }
   }
+}
+
+/// 前端 console 转发（进 tauri-plugin-log 运行日志，错误页可见）
+#[cfg(windows)]
+fn web_console_log(w: &tauri::WebviewWindow, msg: String) {
+  let _ = w.eval(&format!("console.warn('[isle] {}')", msg.replace('\'', "")));
 }
 
 /// 清除命中裁剪（展开态恢复整个窗口可命中）
 #[cfg(windows)]
 fn clear_region(w: &tauri::WebviewWindow) {
-  use windows::Win32::Graphics::Gdi::{HRGN, SetWindowRgn};
+  use windows::Win32::Graphics::Gdi::SetWindowRgn;
   let Ok(hwnd) = w.hwnd() else { return };
   unsafe {
     SetWindowRgn(hwnd, None, true);
-  }
-}
-
-#[cfg(windows)]
-fn logo_origin(mode: &str, win_w: i32, scale: f64) -> (i32, i32) {
-  let logo = (PEEK_LOGO * scale) as i32; // 物理 px——窗口宽与 logo 同域，杜绝 DPI 混算偏移
-  let top_y = (24.0 * scale) as i32;
-  match mode {
-    // 顶缘：logo 水平居中、贴窗顶
-    "top" => ((win_w - logo) / 2, 0),
-    // 左缘：logo 贴窗左、纵向 24px（窗内 top:24 与前端一致）
-    "left" => (0, top_y),
-    // 右缘：logo 贴窗右
-    _ => (win_w - logo, top_y),
   }
 }
 
@@ -177,48 +176,37 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   };
   let mp = monitor.position();
   let ms = monitor.size();
-  let vis = (PEEK_VISIBLE * scale) as i32;
-  let pad = (PEEK_PAD * scale) as i32;
   let logo = (PEEK_LOGO * scale) as i32;
   match mode.as_str() {
-    // 顶缘：logo 上半露出贴顶居中（窗宽=logo+2pad，纵=露出+2pad）
+    // 顶缘：logo 上半露出贴顶居中（窗=logo 精确尺寸——「logo 以外」不复存在，
+    // 2026-11-18 用户反馈余量环仍拦截下层；命中裁剪 region 作为圆角增强保留）
     "top" => {
-      let pw = logo + 2 * pad;
-      let ph = vis + 2 * pad;
-      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + (ms.width as i32 - pw) / 2, mp.y));
+      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + (ms.width as i32 - logo) / 2, mp.y));
     }
-    // 左缘：logo 左半露出贴左，纵向跟随停靠位 y（pad 吸收对齐误差）
+    // 左缘：logo 左半露出贴左，纵向跟随停靠位 y
     "left" => {
-      let pw = vis + 2 * pad;
-      let ph = logo + 2 * pad;
-      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
       let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, my_val(mp.y, y)));
     }
     // 右缘：logo 右半露出贴右
     "right" => {
-      let pw = vis + 2 * pad;
-      let ph = logo + 2 * pad;
-      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - pw, my_val(mp.y, y)));
+      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - logo, my_val(mp.y, y)));
     }
-    // 自由驻留（2026-11-17 用户反馈中间驻留无法隐藏）：窗口缩到 logo 露出区并留在原位
+    // 自由驻留（用户反馈中间驻留无法隐藏）：窗口缩到 logo 尺寸并留在原位
     _ => {
-      let pw = logo + 2 * pad;
-      let ph = logo + 2 * pad;
-      let _ = w.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32));
+      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
       let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(mp.x, mp.y));
       let (cx, cy) = clamp_pos(&w, cur.x, cur.y);
       let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
     }
   }
-  // 命中区裁成 logo 圆角矩形：窗口矩形内 logo 以外的部分点得到下层（2026-11-17 用户拍板方案 A）
+  // 命中裁剪增强（用户拍板方案 A）：region 把窗口四角（logo 圆角外）也裁掉——
+  // SetWindowRgn 曾实测静默失效（rgn=NONE），故窗口尺寸已先缩到 logo 精确尺寸兜底；
+  // region 成功则连四角也穿透，失败仅四小角拦截。失效会经回读留痕（不静默）。
   #[cfg(windows)]
-  {
-    let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or(0);
-    let (lx, ly) = logo_origin(&mode, win_w, scale);
-    clip_region_to_logo(&w, lx, ly);
-  }
+  clip_region_to_logo(&w);
   Ok(())
 }
 
