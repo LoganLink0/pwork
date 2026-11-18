@@ -1,7 +1,8 @@
 //! 胶囊岛窗（伙伴常驻形态·自由拖拽+顶部吸附式）：
-//! 固定 520×140 透明画布（窗体从不变形——可见窗 resize 会白闪），收起隐藏态=整窗
-//! 视觉不可见，命中区经 SetWindowRgn 裁为 logo 位 64×64 隐形热区（region 外穿透）；
-//! 展开态=毛玻璃横条（logo 滑至条内左侧+状态单行）。
+//! 固定 520×140 透明画布（窗体从不变形——可见窗 resize 会白闪）。
+//! 收起隐藏态=「藏进去、留把手」：缘停靠 logo 半探出屏幕外（屏内留 32px 贴边把手），
+//! 自由驻留 logo 半透明淡出原地；命中区经 SetWindowRgn 裁为 logo 屏内可见部分
+//! （region 外穿透给下层）。展开态=毛玻璃横条（logo 滑至条内左侧+状态单行）。
 //! 按住画布原生拖拽（start_dragging），松手驻留（位置持久化在 prefs.json），
 //! 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。装饰（边框/圆角/投影）在 lib.rs 统一关闭。
 
@@ -115,30 +116,28 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 完全隐藏（2026-11-18 四轮重做，用户拍板「完全隐藏=屏幕上连 logo 也不该显示」，
-/// 回归 f61b9bc 的隐形语义并吸收 a1ccf18「隐形后找不到」的教训）：窗口保持画布
-/// 尺寸不变形——可见窗 resize 的新暴出区域会先刷底色再绘制（展开白闪的根因）；
-/// SetWindowRgn 命中裁剪=画布内 logo 位 64×64 **隐形热区**（region 外系统级完全
-/// 穿透给下层），整窗视觉完全不可见。呼出=鼠标走到岛消失的位置（热区在原地等，
-/// 比早期 2px 隐形线可找：岛总藏在它消失的原位），isle_expand 清 region 整窗恢复。
-const HOT_SIZE: f64 = 64.0; // 隐形热区边长（与 logo 同位同尺寸）
+/// 收起隐藏（2026-11-18 五轮定稿，用户拍板）：**藏进去、留把手**——缘停靠把 logo
+/// 半探出屏幕外（屏内留 32·缩放贴边可见当把手），free 驻留 logo 半透明淡出停在
+/// 原地；鼠标靠近把手滑出展开。窗体从不变形（可见窗 resize 是白闪根因），命中区
+/// 经 SetWindowRgn 裁为 logo 屏内可见部分（region 外穿透给下层，不重演整条边拦点击）。
+const TUCK: f64 = 32.0; // 半探入深度：屏内留出的把手宽度/高度（logo 64 的一半）
 
 /// 画布内 logo 位（逻辑 px，与 .isle-logo 各模式的 CSS left/top 一致）：
 /// top/free 居画布中上 (228,10)、left 贴左 (10,10)、right 贴右 (446,10)。
-/// 隐形热区的定位与 free 隐藏锚定换算全靠它们。
+/// 半探入定位与热区换算全靠它们。
 const CANVAS_LOGO_X: f64 = 228.0;
 const CANVAS_LOGO_X_LEFT: f64 = 10.0;
 const CANVAS_LOGO_X_RIGHT: f64 = 446.0;
 const CANVAS_LOGO_Y: f64 = 10.0;
 
-/// 把窗口命中区裁为指定矩形热区（x/y=size 为**客户区**物理 px；region 外系统级完全
+/// 把窗口命中区裁为指定矩形热区（x/y/w/h 为**客户区**物理 px；region 外系统级完全
 /// 穿透且不可见）。region 坐标系=窗口原点，无边框窗的不可见边距使客户原点 ≠ 窗口
 /// 原点（实测外框 536×149 vs 客户 520×140）——先换算客户原点偏移再落 region。
 /// 设置后立即回读验证：失败非静默，console 留痕（rgn 实测生效 COMPLEX，留痕是兜底）。
 #[cfg(windows)]
-fn clip_region_to_hotspot(w: &tauri::WebviewWindow, x: i32, y: i32, size: i32) {
-  use windows::Win32::Foundation::{POINT, RECT};
+fn clip_region_to_hotspot(w: &tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) {
   // ClientToScreen 在 windows crate 里归 Gdi 模块（官方分区如此），非 WindowsAndMessaging
+  use windows::Win32::Foundation::{POINT, RECT};
   use windows::Win32::Graphics::Gdi::{ClientToScreen, CreateRectRgn, GDI_REGION_TYPE, GetWindowRgn, SetWindowRgn};
   use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
   let Ok(hwnd) = w.hwnd() else { return };
@@ -150,7 +149,7 @@ fn clip_region_to_hotspot(w: &tauri::WebviewWindow, x: i32, y: i32, size: i32) {
     // 热区目标在客户区坐标（=画布坐标），落 region 前补客户原点-窗口原点偏移
     let off_x = org.x - win.left;
     let off_y = org.y - win.top;
-    let region = CreateRectRgn(off_x + x, off_y + y, off_x + x + size, off_y + y + size);
+    let region = CreateRectRgn(off_x + x, off_y + y, off_x + x + width, off_y + y + height);
     let applied = SetWindowRgn(hwnd, Some(region), true);
     // 回读验证（失效不静默，留痕）：GetWindowRgn 只收 region 句柄
     let probe = CreateRectRgn(0, 0, 1, 1);
@@ -179,26 +178,64 @@ fn clear_region(w: &tauri::WebviewWindow) {
 
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
-  // 画布定位（窗体不变形）：top 吸顶居中 / left·right 贴缘纵向跟随 / free 留在原位
-  //（自由驻留的落位由 place/展开位决定，画布从未变形，原位即画布位）
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
+    Ok(Some(m)) => Some(m),
+    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
+  };
+  let Some(monitor) = monitor else {
+    return Err("找不到可用显示器".into());
+  };
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let tuck = (TUCK * scale) as i32;
+  let logo_x = (CANVAS_LOGO_X * scale) as i32;
+  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
+  // 画布定位（窗体不变形）：缘停靠把 logo 半探出屏幕外（屏内留 tuck 把手），free 原位
   match mode.as_str() {
-    "top" => snap_top(&app)?,
-    "left" => dock_left(&app, y)?,
-    "right" => dock_right(&app, y)?,
+    // 顶缘：logo 上缘探出屏外 tuck，屏内留下半贴顶居中（水平与 snap_top 同法按外框宽居中）
+    "top" => {
+      let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or((CANVAS_W * scale) as i32);
+      let left = mp.x + (ms.width as i32 - win_w) / 2;
+      let _ = w.set_position(tauri::PhysicalPosition::new(left, mp.y - logo_y - tuck));
+    }
+    // 左缘：logo 左缘探出屏外 tuck，屏内留右半贴左；纵向跟随停靠位并钳屏内
+    "left" => {
+      let win_h = w.outer_size().map(|s| s.height as i32).unwrap_or((140.0 * scale) as i32);
+      let cy = y.clamp(mp.y, mp.y + ms.height as i32 - win_h);
+      let _ = w.set_position(tauri::PhysicalPosition::new(
+        mp.x - (CANVAS_LOGO_X_LEFT * scale) as i32 - tuck,
+        cy,
+      ));
+    }
+    // 右缘：logo 右缘探出屏外 tuck，屏内留左半贴右
+    "right" => {
+      let win_h = w.outer_size().map(|s| s.height as i32).unwrap_or((140.0 * scale) as i32);
+      let cy = y.clamp(mp.y, mp.y + ms.height as i32 - win_h);
+      let _ = w.set_position(tauri::PhysicalPosition::new(
+        mp.x + ms.width as i32 - (CANVAS_LOGO_X_RIGHT * scale) as i32 - tuck,
+        cy,
+      ));
+    }
+    // 自由驻留：留在原位（半透明淡出由 CSS 完成），命中区=完整 logo
     _ => {}
   }
-  // 命中裁剪=该模式 logo 位的 64×64 隐形热区（窗口相对物理 px；region 外穿透且不可见）
+  // 命中裁剪=logo 屏内可见部分（把手）；region 外穿透给下层应用
   #[cfg(windows)]
   {
-    let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-    let scale = w.scale_factor().unwrap_or(1.0);
-    let hot = (HOT_SIZE * scale) as i32;
-    let (hx, hy) = match mode.as_str() {
-      "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
-      "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
-      _ => ((CANVAS_LOGO_X * scale) as i32, (CANVAS_LOGO_Y * scale) as i32),
+    let (hx, hy, hw, hh) = match mode.as_str() {
+      // 顶缘：屏内段=logo 下半（y 从 logo_y+tuck 到 logo_y+64）
+      "top" => (logo_x, logo_y + tuck, (64.0 * scale) as i32, (64.0 * scale) as i32 - tuck),
+      // 左缘：屏内段=logo 右半（x 从 logo_x+tuck 到 logo_x+64）
+      "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32 + tuck, logo_y, (64.0 * scale) as i32 - tuck, (64.0 * scale) as i32),
+      // 右缘：屏内段=logo 左半（x 从 logo_x 到 logo_x+tuck）
+      "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, logo_y, tuck, (64.0 * scale) as i32),
+      // 自由：完整 logo
+      _ => (logo_x, logo_y, (64.0 * scale) as i32, (64.0 * scale) as i32),
     };
-    clip_region_to_hotspot(&w, hx, hy, hot);
+    clip_region_to_hotspot(&w, hx, hy, hw, hh);
   }
   Ok(())
 }

@@ -783,19 +783,24 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
 }
 
-/* ── 完全隐藏态（peek，四模式统一：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
-   2026-11-18 用户拍板「完全隐藏=屏幕上连 logo 也不该显示」（回归 f61b9bc 隐形语义）：
-   窗体不变形（变形曾产生展开白闪），横条与 logo 全部不可见；Rust 以 SetWindowRgn 把
-   命中区裁为画布内 logo 位 64×64 隐形热区，region 外穿透给下层。呼出=鼠标走到岛
-   消失的位置（热区在原地等），靠近即滑出展开。 */
+/* ── 收起隐藏态（peek，四模式：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
+   「藏进去、留把手」（2026-11-18 用户拍板）：缘停靠 logo 半探出屏幕外（窗体由 Rust
+   定位探出，屏内留约一半贴边可见当把手），自由驻留 logo 半透明淡出原地——可见把手
+   就是提醒/引导。窗体不变形（变形曾产生展开白闪）；横条隐藏，命中范围由 Rust region
+   裁为 logo 屏内可见部分，region 外穿透给下层应用。靠近把手滑出展开，离开 1 秒收回。 */
 #isle-dock.peek .isle-bar,
-#isle-dock.peek .isle-bar-content,
-#isle-dock.peek .isle-logo {
+#isle-dock.peek .isle-bar-content {
   visibility: hidden;
 }
+#isle-dock.peek .isle-logo {
+  transition: none; /* 把手定位即时生效（不与画布态的滑动动画纠缠） */
+}
 #isle-dock.peek {
-  /* 隐形热区收鼠标事件靠容器 pointer-events；窗其余部分由 region 穿透给下层应用 */
   pointer-events: auto;
+}
+/* 自由驻留：中央没有屏幕边缘可藏——logo 半透明淡出原地，隐约可见提示存在 */
+#isle-dock.free.peek .isle-logo {
+  opacity: 0.45;
 }
 #isle-dock.dock-right .isle-logo {
   left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */

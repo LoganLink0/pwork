@@ -12,14 +12,15 @@ function reportIsleError(where: string, e: unknown): void {
 
 /**
  * 胶囊岛窗（/isle 分流渲染）——三种停靠模式 + 自由驻留，统一「靠近展开 / 离开收回」：
- * 固定 520×140 透明画布，窗体从不变形（可见窗 resize 会白闪）。完全隐藏态=整窗
- * 视觉不可见（横条与 logo 全隐），Rust 以 SetWindowRgn 把命中区裁为画布内 logo 位
- * 64×64 隐形热区（region 外穿透给下层）；呼出=鼠标走到岛消失的位置，靠近滑出展开
- * 毛玻璃横条（logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
+ * 固定 520×140 透明画布，窗体从不变形（可见窗 resize 会白闪）。收起隐藏态=
+ * 「藏进去、留把手」：缘停靠 logo 半探出屏幕外（屏内留约一半贴边可见），自由驻留
+ * logo 半透明淡出原地——可见把手就是提醒/引导；Rust 以 SetWindowRgn 把命中区裁为
+ * logo 屏内可见部分（region 外穿透给下层）；靠近把手滑出展开毛玻璃横条
+ * （logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
  * 模式（拖拽落点由 Rust 按光标判定并落位，前端持久化）：
  *   top   灵动岛：横条零间距贴屏幕上缘居中；
  *   left/right 缘停靠：画布贴屏幕左/右缘，纵向跟随落点；
- *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内），离开同样完全隐藏。
+ *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内），离开半透明淡出原地。
  * 单击=收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
  * 配置文件化 2026-11-16；localStorage 双写为兼容期回落）；
  * 启用开关在主窗设置页（经 pwork-prefs-changed 事件实时响应显隐）。
@@ -85,9 +86,9 @@ function readEnabled(): boolean {
   }
 }
 
-/** 停靠模式的容器类名（free 为空）；peek=完全隐藏态（横条与 logo 全隐+隐形热区，四模式统一；展开态永不叠加） */
+/** 驻留模式的容器类名；peek=收起隐藏态（缘停靠 logo 半探入/free 半透明，四模式统一；展开态永不叠加） */
 function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
-  const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : ''
+  const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : 'free'
   return [base, peek && !open ? 'peek' : ''].filter(Boolean).join(' ')
 }
 
@@ -98,7 +99,7 @@ export function IsleWindow() {
   const [dragging, setDragging] = useState(false)
   /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
   const [mode, setMode] = useState<SavedPos['mode']>('top')
-  /** 完全隐藏态（横条与 logo 全隐，命中区=logo 位 64×64 隐形热区；四模式统一） */
+  /** 收起隐藏态（缘停靠 logo 半探入边缘/free 半透明淡出；命中区=logo 屏内可见部分；四模式统一） */
   const [peek, setPeek] = useState(true)
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
@@ -220,7 +221,7 @@ export function IsleWindow() {
   }
 
   // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，前端持久化
-  // 模式；随即完全隐藏（命中区缩回隐形热区，2026-11-18 四模式统一），松手即收起
+  // 模式；随即收起隐藏（logo 半探入边缘/半透明淡出，2026-11-18 四模式统一），松手即收起
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
@@ -267,8 +268,8 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-18 四模式统一：完全隐藏=横条与 logo 全隐+隐形热区）：
-  // 鼠标进入热区即命中，先清命中裁剪（region 外不可见——不清则展开内容被裁在热区里），
+  // 呼出/收回（2026-11-18 四模式统一：收起隐藏=把手可见+命中区裁为 logo 屏内可见部分）：
+  // 鼠标进入把手即命中，先清命中裁剪（region 外不可见——不清则展开内容被裁在热区里），
   // 再展开——次序不能反。
   const onEnter = () => {
     if (dragging) return
@@ -291,9 +292,9 @@ export function IsleWindow() {
       setOpen(false)
       const pos = readPos()
       setPeek(true)
-      // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁成小块闪一下
+      // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁块闪现
       requestAnimationFrame(() => {
-        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
+        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
       })
     }, 1000)
   }
