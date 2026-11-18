@@ -802,6 +802,43 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 #isle-dock.free.peek .isle-logo {
   opacity: 0.45;
 }
+
+/* ── 右键收纳菜单（隐藏到屏幕中央 / 右侧）──
+   在岛画布内渲染（画布只有 520×140，位置由前端钳在画布内）；开启前 Rust 先清
+   命中裁剪（收起态 region 会把菜单裁没），罩层点任意处关闭并还原裁剪。 */
+.isle-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  pointer-events: auto;
+}
+.isle-menu {
+  position: fixed;
+  z-index: 321;
+  min-width: 136px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: var(--ink);
+}
+.isle-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.isle-menu button:hover {
+  background: var(--surface-2);
+}
 #isle-dock.dock-right .isle-logo {
   left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */
 }

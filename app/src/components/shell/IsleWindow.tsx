@@ -107,6 +107,8 @@ export function IsleWindow() {
   /** 拖放收起后的进入抑制：缩窗瞬间光标还在小窗上，合成 mouseenter 会让刚收回的岛立即弹回展开——
       抑制到下一次 mouseleave（离开后再靠近才正常展开） */
   const suppressEnter = useRef(false)
+  /** 右键收纳菜单（画布内坐标；null=关闭） */
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   const clearTimers = () => {
     if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
@@ -275,6 +277,7 @@ export function IsleWindow() {
     if (dragging) return
     if (suppressEnter.current) return
     clearTimers()
+    setMenu(null)
     if (peek) {
       const pos = readPos()
       void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
@@ -287,6 +290,7 @@ export function IsleWindow() {
   const onLeave = () => {
     if (dragging) return
     suppressEnter.current = false // 离开即解除落位抑制，下次靠近正常展开
+    setMenu(null)
     clearTimers()
     closeTimer.current = window.setTimeout(() => {
       setOpen(false)
@@ -298,6 +302,48 @@ export function IsleWindow() {
       })
     }, 1000)
   }
+  // 右键收纳菜单：先清命中裁剪（菜单要在整窗内渲染，收起态 region 会裁掉它），
+  // 菜单位置钳在画布内（画布只有 520×140，右缘/底部点击时向内收）
+  const onContextMenu = (e: ReactMouseEvent) => {
+    e.preventDefault()
+    if ((e.target as HTMLElement).closest('button')) return
+    clearTimers()
+    void invoke('isle_unclip').catch((e2) => reportIsleError('岛.菜单清裁剪', e2))
+    const menuW = 148
+    const menuH = 78
+    setMenu({
+      x: Math.max(6, Math.min(e.clientX, 520 - menuW - 6)),
+      y: Math.max(6, Math.min(e.clientY, 140 - menuH - 6)),
+    })
+  }
+  const closeMenu = () => {
+    if (!menu) return
+    setMenu(null)
+    // 关闭即恢复收起命中裁剪（横条本就隐藏，region 回落无闪现风险）
+    if (peek) {
+      const pos = readPos()
+      void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
+    }
+  }
+  // 收纳动作：Rust 落位+套收起裁剪并返回落位，前端持久化与状态收起
+  const stashTo = (target: 'center' | 'right') => {
+    setMenu(null)
+    clearTimers()
+    setOpen(false)
+    setPeek(true)
+    suppressEnter.current = true
+    requestAnimationFrame(() => {
+      void invoke('isle_stash_to', { target })
+        .then((pos) => {
+          const p = pos as { mode: SavedPos['mode']; x: number; y: number }
+          setMode(p.mode)
+          if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
+          else savePos({ mode: 'free', x: p.x, y: p.y })
+        })
+        .catch((e) => reportIsleError('岛.收纳', e))
+    })
+  }
+
   useEffect(() => () => clearTimers(), [])
 
   const count = activities.length
@@ -312,6 +358,7 @@ export function IsleWindow() {
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onMouseDown={startDrag}
+      onContextMenu={onContextMenu}
     >
       <div className="isle-bar">
         <div className="isle-bar-content">
@@ -339,6 +386,16 @@ export function IsleWindow() {
         className="isle-logo"
         draggable={false}
       />
+      {menu && (
+        <>
+          {/* 菜单开启期间罩住整张画布：点菜单外任意处即关闭并还原命中裁剪 */}
+          <div className="isle-menu-overlay" onMouseDown={closeMenu} onContextMenu={(e) => { e.preventDefault(); closeMenu() }} />
+          <div className="isle-menu" style={{ left: menu.x, top: menu.y }} role="menu">
+            <button type="button" role="menuitem" onClick={() => stashTo('center')}>隐藏到屏幕中央</button>
+            <button type="button" role="menuitem" onClick={() => stashTo('right')}>隐藏到屏幕右侧</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

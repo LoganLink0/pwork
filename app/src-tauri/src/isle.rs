@@ -176,6 +176,82 @@ fn clear_region(w: &tauri::WebviewWindow) {
   }
 }
 
+/// 收起隐藏态的命中裁剪：logo 屏内可见部分（把手）；region 外穿透给下层应用
+#[cfg(windows)]
+fn apply_peek_region(w: &tauri::WebviewWindow, mode: &str, scale: f64) {
+  let tuck = (TUCK * scale) as i32;
+  let logo = (64.0 * scale) as i32;
+  let logo_x = (CANVAS_LOGO_X * scale) as i32;
+  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
+  let (hx, hy, hw, hh) = match mode {
+    // 顶缘：屏内段=logo 下半（y 从 logo_y+tuck 到 logo_y+64）
+    "top" => (logo_x, logo_y + tuck, logo, logo - tuck),
+    // 左缘：屏内段=logo 右半（x 从 logo_x+tuck 到 logo_x+64）
+    "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32 + tuck, logo_y, logo - tuck, logo),
+    // 右缘：屏内段=logo 左半（x 从 logo_x 到 logo_x+tuck）
+    "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, logo_y, tuck, logo),
+    // 自由：完整 logo
+    _ => (logo_x, logo_y, logo, logo),
+  };
+  clip_region_to_hotspot(w, hx, hy, hw, hh);
+}
+
+/// 右键收纳：把岛完全隐藏到指定去处（2026-11-18 用户需求，logo 右键菜单两项）。
+/// center=画布居中于屏幕（自由驻留形态，logo 半透明淡出）；right=半探入屏幕右缘
+/// （纵向居中）。落位后即套收起命中裁剪，返回落位供前端持久化。
+#[tauri::command]
+pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
+  let Some(w) = app.get_webview_window("isle") else {
+    return Err("找不到胶囊岛窗口".into());
+  };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
+    Ok(Some(m)) => Some(m),
+    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
+  };
+  let Some(monitor) = monitor else {
+    return Err("找不到可用显示器".into());
+  };
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let canvas_w = (CANVAS_W * scale) as i32;
+  let canvas_h = (140.0 * scale) as i32;
+  let (mode, px, py) = match target.as_str() {
+    "center" => {
+      let x = mp.x + (ms.width as i32 - canvas_w) / 2;
+      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
+      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      ("free", x, y)
+    }
+    "right" => {
+      let tuck = (TUCK * scale) as i32;
+      let x = mp.x + ms.width as i32 - (CANVAS_LOGO_X_RIGHT * scale) as i32 - tuck;
+      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
+      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      ("right", x, y)
+    }
+    _ => return Err(format!("未知的目标位置：{}", target)),
+  };
+  #[cfg(windows)]
+  apply_peek_region(&w, mode, scale);
+  #[cfg(not(windows))]
+  let _ = &w;
+  Ok(serde_json::json!({ "mode": mode, "x": px, "y": py }))
+}
+
+/// 右键菜单前置：仅清除命中裁剪（整窗可绘制可命中，菜单才能在画布内渲染），
+/// 不改尺寸、不定位、不展开横条。
+#[tauri::command]
+pub fn isle_unclip(app: AppHandle) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  #[cfg(windows)]
+  clear_region(&w);
+  #[cfg(not(windows))]
+  let _ = w;
+  Ok(())
+}
+
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
@@ -191,7 +267,6 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let mp = monitor.position();
   let ms = monitor.size();
   let tuck = (TUCK * scale) as i32;
-  let logo_x = (CANVAS_LOGO_X * scale) as i32;
   let logo_y = (CANVAS_LOGO_Y * scale) as i32;
   // 画布定位（窗体不变形）：缘停靠把 logo 半探出屏幕外（屏内留 tuck 把手），free 原位
   match mode.as_str() {
@@ -222,21 +297,8 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
     // 自由驻留：留在原位（半透明淡出由 CSS 完成），命中区=完整 logo
     _ => {}
   }
-  // 命中裁剪=logo 屏内可见部分（把手）；region 外穿透给下层应用
   #[cfg(windows)]
-  {
-    let (hx, hy, hw, hh) = match mode.as_str() {
-      // 顶缘：屏内段=logo 下半（y 从 logo_y+tuck 到 logo_y+64）
-      "top" => (logo_x, logo_y + tuck, (64.0 * scale) as i32, (64.0 * scale) as i32 - tuck),
-      // 左缘：屏内段=logo 右半（x 从 logo_x+tuck 到 logo_x+64）
-      "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32 + tuck, logo_y, (64.0 * scale) as i32 - tuck, (64.0 * scale) as i32),
-      // 右缘：屏内段=logo 左半（x 从 logo_x 到 logo_x+tuck）
-      "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, logo_y, tuck, (64.0 * scale) as i32),
-      // 自由：完整 logo
-      _ => (logo_x, logo_y, (64.0 * scale) as i32, (64.0 * scale) as i32),
-    };
-    clip_region_to_hotspot(&w, hx, hy, hw, hh);
-  }
+  apply_peek_region(&w, &mode, scale);
   Ok(())
 }
 

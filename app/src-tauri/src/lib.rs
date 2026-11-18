@@ -620,6 +620,8 @@ pub fn run() {
       isle::isle_dock_right,
       isle::isle_dock_left,
       isle::isle_peek,
+      isle::isle_stash_to,
+      isle::isle_unclip,
       isle::isle_expand,
       isle::isle_hide,
       isle::isle_set_activity,
