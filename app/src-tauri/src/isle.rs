@@ -122,6 +122,11 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
 /// 呼出=鼠标进入小窗，isle_expand 恢复画布并清除 region。
 const PEEK_LOGO: f64 = 64.0; // logo 本体尺寸（与前端 .isle-logo 一致）
 
+/// 画布内 logo 收起位（逻辑 px，与 .isle-logo 的 CSS left/top 一致）：
+/// top/free 模式 logo 居画布中上 (228,10)。free 隐藏/展开/抓起的锚定换算全靠它。
+const CANVAS_LOGO_X: f64 = 228.0;
+const CANVAS_LOGO_Y: f64 = 10.0;
+
 /// 把窗口命中区裁为 logo 圆角矩形（物理 px；region 外系统级完全穿透）。
 /// peek 窗口=logo 精确尺寸，region 只裁掉 logo 圆角外的四个小角。
 /// 设置后立即回读验证：失败/被清非静默，console 留痕（此前实测静默失效 rgn=NONE）。
@@ -184,21 +189,32 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
       let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
       let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + (ms.width as i32 - logo) / 2, mp.y));
     }
-    // 左缘：logo 左半露出贴左，纵向跟随停靠位 y
+    // 左缘：logo 贴左，纵向=停靠位画布 y + logo 顶偏移（logo 落回原位不跳）
     "left" => {
       let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, my_val(mp.y, y)));
+      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x, my_val(mp.y, y + (CANVAS_LOGO_Y * scale) as i32)));
     }
-    // 右缘：logo 右半露出贴右
+    // 右缘：logo 贴右，纵向同左缘
     "right" => {
       let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
-      let _ = w.set_position(tauri::PhysicalPosition::new(mp.x + ms.width as i32 - logo, my_val(mp.y, y)));
+      let _ = w.set_position(tauri::PhysicalPosition::new(
+        mp.x + ms.width as i32 - logo,
+        my_val(mp.y, y + (CANVAS_LOGO_Y * scale) as i32),
+      ));
     }
-    // 自由驻留（用户反馈中间驻留无法隐藏）：窗口缩到 logo 尺寸并留在原位
+    // 自由驻留（2026-11-18 用户反馈中央无法隐藏）：锚定 logo 当前位置缩为 64×64——
+    // 窗顶左移画布内 logo 位 (228,10)·缩放，缩窗后 logo 视觉位置不动。
+    // 幂等：已是 logo 小窗（StrictMode 双挂载 / 抑制进入后的二次收回）不再偏移。
     _ => {
-      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
       let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(mp.x, mp.y));
-      let (cx, cy) = clamp_pos(&w, cur.x, cur.y);
+      let peek_already = {
+        let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+        sz.width > 0 && sz.width <= logo as u32 + 8
+      };
+      let lx = if peek_already { cur.x } else { cur.x + (CANVAS_LOGO_X * scale) as i32 };
+      let ly = if peek_already { cur.y } else { cur.y + (CANVAS_LOGO_Y * scale) as i32 };
+      let _ = w.set_size(tauri::PhysicalSize::new(logo as u32, logo as u32));
+      let (cx, cy) = clamp_pos(&w, lx, ly);
       let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
     }
   }
@@ -215,14 +231,19 @@ fn my_val(monitor_y: i32, y: i32) -> i32 {
   monitor_y + y.max(0)
 }
 
-/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向），
-/// 清除命中裁剪，并显示窗口（2026-11-18 开关链路修复：设置页开关在窗隐藏态直接调
-/// expand——旧交互 expand 前窗必然可见（鼠标靠近才展开），开关场景打破了这个前提，
-/// 缺 show 时窗永远隐藏——「点开找不到 logo/闪现一下消失」的根因）
+/// 从完全隐藏恢复：画布尺寸复位并按模式定位（top 吸顶居中 / left·right 保持纵向 /
+/// free 以 logo 为锚铺开），清除命中裁剪，并显示窗口（2026-11-18 开关链路修复：设置页
+/// 开关在窗隐藏态直接调 expand——旧交互 expand 前窗必然可见（鼠标靠近才展开），
+/// 开关场景打破了这个前提，缺 show 时窗永远隐藏——「点开找不到 logo/闪现一下消失」根因）
 #[tauri::command]
 pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let scale = w.scale_factor().unwrap_or(1.0);
+  // 变形前尺寸：窗≈logo（64×64）说明从完全隐藏态来（free 展开需以 logo 为锚，见下）
+  let was_peek = {
+    let s = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+    s.width > 0 && s.width <= (PEEK_LOGO * scale) as u32 + 8
+  };
   let _ = w.set_size(tauri::PhysicalSize::new(
     (CANVAS_W * scale) as u32,
     (140.0 * scale) as u32,
@@ -234,13 +255,33 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
     "top" => snap_top(&app),
     "left" => dock_left(&app, y),
     "right" => dock_right(&app, y),
-    _ => Ok(()),
+    // free：画布以 logo 为锚铺开（窗顶左移 logo 位 -(228,10)·缩放）并钳回屏内——
+    // 直接铺开会把窗顶留在 logo 位，logo 跳到画布左上、画布悬出屏外。
+    // 已是画布尺寸（设置开关路径）只钳不挪。
+    _ => {
+      if was_peek {
+        let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(0, 0));
+        let _ = w.set_position(tauri::PhysicalPosition::new(
+          cur.x - (CANVAS_LOGO_X * scale) as i32,
+          cur.y - (CANVAS_LOGO_Y * scale) as i32,
+        ));
+      }
+      let cur = w.outer_position().unwrap_or(tauri::PhysicalPosition::new(0, 0));
+      let (cx, cy) = clamp_pos(&w, cur.x, cur.y);
+      if cx != cur.x || cy != cur.y {
+        let _ = w.set_position(tauri::PhysicalPosition::new(cx, cy));
+      }
+      Ok(())
+    }
   }
 }
 
 /// 拖拽落点的停靠模式判定与落位（拖拽真正结束后调用）：
-/// 落点近屏顶（窗顶距屏顶 ≤120·缩放）→ top（灵动岛，零间距贴顶居中）；
-/// logo 中心近屏幕右缘（≤80·缩放）→ right（右缘停靠，纵向保持落点并钳进屏内）；
+/// 判定基准=光标（用户手里拖的就是 logo）——旧实现用窗口矩形边缘做阈值，从右缘
+/// 隐藏态抓 logo 拖放时画布中心永远到不了右缘 80px 阈值内（光标最多到屏幕边缘），
+/// 右缘落点全部误判 free：
+/// 光标近屏顶（≤120·缩放）→ top（灵动岛，零间距贴顶居中）；
+/// 近屏幕左/右缘（≤80·缩放）→ left/right（缘停靠，logo 竖向中心跟随光标并钳进屏内）；
 /// 其余 → free（自由驻留，全向钳回屏内）。返回 (mode, 终位)。
 fn decide_and_place(app: &AppHandle, after: tauri::PhysicalPosition<i32>) -> (String, tauri::PhysicalPosition<i32>) {
   let Some(w) = app.get_webview_window("isle") else { return ("free".into(), after) };
@@ -254,20 +295,23 @@ fn decide_and_place(app: &AppHandle, after: tauri::PhysicalPosition<i32>) -> (St
   let (mx, my, mw) = monitor
     .map(|m| (m.position().x, m.position().y, m.size().width as i32))
     .unwrap_or((0, 0, 0));
+  let cx_phys = cursor.x as i32;
+  let cy_phys = cursor.y as i32;
 
-  if after.y - my <= (120.0 * scale) as i32 {
+  if cy_phys - my <= (120.0 * scale) as i32 {
     let _ = snap_top(app);
     let final_pos = w.outer_position().unwrap_or(after);
     return ("top".into(), final_pos);
   }
-  // 左缘判定在右缘之前（窗宽大于落点偏移时两个条件可同时近似成立，先近者赢）
-  if after.x - mx <= (80.0 * scale) as i32 {
-    let _ = dock_left(app, after.y);
+  // 左缘判定在右缘之前（近角落落点两个条件可同时成立，先近者赢）
+  if cx_phys - mx <= (80.0 * scale) as i32 {
+    // 画布顶=光标 y-logo 竖向中心（画布内 top 10+半高 32）→ logo 竖向正对光标落点
+    let _ = dock_left(app, cy_phys - (42.0 * scale) as i32);
     let final_pos = w.outer_position().unwrap_or(after);
     return ("left".into(), final_pos);
   }
-  if after.x + (260.0 * scale) as i32 >= mx + mw - (80.0 * scale) as i32 {
-    let _ = dock_right(app, after.y);
+  if mx + mw - cx_phys <= (80.0 * scale) as i32 {
+    let _ = dock_right(app, cy_phys - (42.0 * scale) as i32);
     let final_pos = w.outer_position().unwrap_or(after);
     return ("right".into(), final_pos);
   }
@@ -290,23 +334,52 @@ fn left_button_up() -> bool {
   true
 }
 
-/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用）。
+/// 胶囊岛：按住 logo 原生拖拽（在 logo mousedown 时调用；mode=当前驻留模式，用于
+/// 从隐藏态抓起时把画布锚回 logo 原位——右缘/自由驻留的小窗直接铺画布会把 logo
+/// 推到窗外（右缘画布悬出屏外 456px）或推到画布左上角，拖动全程看不到抓着的东西）。
 /// 关键事实：Windows 上 start_dragging 是异步发起——立即返回，模态移动循环在其后由
 /// 事件循环驱动（实测日志铁证：命令返回时窗口尚未动过）。因此拖拽结束检测放在
 /// 轮询线程：左键松开（GetAsyncKeyState）且位置连续两拍稳定 → 真正松手，
 /// 此时才做停靠判定/落位，并向 isle 窗发 isle-drag-end {mode,x,y,moved} 供前端持久化。
 #[tauri::command]
-pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
+pub fn isle_start_drag(app: AppHandle, mode: String) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  let scale = w.scale_factor().unwrap_or(1.0);
+  // 变形前尺寸：窗≈logo（64×64）= 从完全隐藏态抓起
+  let peek_sized = {
+    let s = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+    s.width > 0 && s.width <= (PEEK_LOGO * scale) as u32 + 8
+  };
   // 从隐藏态（region 裁剪）抓起：先清裁剪再恢复画布尺寸，否则拖动全程命中区缺失
   #[cfg(windows)]
   clear_region(&w);
-  let scale = w.scale_factor().unwrap_or(1.0);
   let _ = w.set_size(tauri::PhysicalSize::new(
     (CANVAS_W * scale) as u32,
     (140.0 * scale) as u32,
   ));
+  if peek_sized {
+    match mode.as_str() {
+      // 顶缘：吸附居中后 logo 落回屏顶中央（与隐藏位相同，零跳动）
+      "top" => {
+        let _ = snap_top(&app);
+      }
+      // 左右缘：画布贴缘重锚，纵向保持 logo 位（logo 只平移画布内 10px 到展开位）
+      "left" => {
+        let _ = dock_left(&app, before.y - (CANVAS_LOGO_Y * scale) as i32);
+      }
+      "right" => {
+        let _ = dock_right(&app, before.y - (CANVAS_LOGO_Y * scale) as i32);
+      }
+      // 自由：画布以 logo 为锚铺开（logo 原位不动），拖拽全程在手底下
+      _ => {
+        let _ = w.set_position(tauri::PhysicalPosition::new(
+          before.x - (CANVAS_LOGO_X * scale) as i32,
+          before.y - (CANVAS_LOGO_Y * scale) as i32,
+        ));
+      }
+    }
+  }
   w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
   let app = app.clone();
   thread::spawn(move || {

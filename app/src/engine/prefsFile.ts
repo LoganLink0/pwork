@@ -39,6 +39,16 @@ export function invalidatePrefsCache(): void {
   cache = null
 }
 
+/** 失效并立即重拉文件（事件入口专用）：缓存置空后 readPref 的同步读只会回落
+ *  localStorage 旧值——回落值正是失效想逃离的东西（设置页重置只写 prefs.json，
+ *  两处存储会分叉；强杀丢的 localStorage 写更是配置文件化的立项目标）。
+ *  事件处理必须 await 本函数完成后再做同步读（2026-11-18 胶囊岛「广播后按回落值
+ *  展开成错误模式」根因：监听器失效缓存后立即同步读，读到的是 null→localStorage） */
+export function refreshPrefsFile(): Promise<PrefsFile> {
+  cache = null
+  return readPrefsFile()
+}
+
 export async function readPrefsFile(): Promise<PrefsFile> {
   if (cache) return cache
   if (!isDesktopApp()) {

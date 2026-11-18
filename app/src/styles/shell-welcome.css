@@ -783,44 +783,27 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
 }
 
-/* ── 停靠模式（top 灵动岛 / left 左缘 / right 右缘）──
-   完全隐藏（2026-11-17 重做占位）：窗口=logo 露出区（Rust isle_peek：露出 36px+24px
-   命中余量），logo 半露可见（比旧细线更显眼），其余屏幕边缘完全让给下层应用——
-   旧整条边缘热区条会拦截下层点击（用户实测：点到屏缘无法点下层）。呼出=鼠标靠近
-   logo（84px 窗口内任意位置），Rust isle_expand 恢复画布后滑出展开。 */
+/* ── 完全隐藏态（peek，四模式统一：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
+   窗口已被 Rust isle_peek 缩为 logo 精确尺寸 64×64（2026-11-18：「logo 以外」不复存在，
+   余量环不再拦截下层点击），SetWindowRgn 只裁圆角外四角作增强。logo 填满小窗，
+   靠近呼出展开，离开 1 秒收回。 */
 #isle-dock.peek .isle-bar,
 #isle-dock.peek .isle-bar-content {
   visibility: hidden;
 }
-/* peek 态窗口已被 Rust 缩为 logo 露出区（84×60 / 60×84）——容器铺满小窗并裁掉
-   logo 露出外的部分（「半探入边缘」视觉） */
 #isle-dock.peek {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  /* 整个小窗（logo 露出+24px 余量）都可命中呼出；窗外区域完全穿透给下层应用 */
+  /* 小窗=logo 本体，整窗都可命中呼出；窗外区域完全穿透给下层应用 */
   pointer-events: auto;
 }
-/* peek 态 logo 半露（2026-11-17 重做占位）：细线提示退役，logo 本体半探入边缘——
-   呼出目标更大更直观；logo 按模式定位在露出侧，露出外的部分被窗口裁掉 */
 #isle-dock.peek .isle-logo {
   visibility: visible;
   pointer-events: auto;
   transition: none; /* peek 定位即时生效（不与画布态的滑动动画纠缠） */
-}
-#isle-dock.dock-top.peek .isle-logo {
-  left: 50%;
-  transform: translateX(-50%);
-  top: 0; /* 上半露出（窗高 60，logo 64 → 底部 4px 被裁） */
-}
-#isle-dock.dock-left.peek .isle-logo {
-  left: 0; /* 左半露出 */
-  top: 24px;
-}
-#isle-dock.dock-right.peek .isle-logo {
-  left: auto;
-  right: 0; /* 右半露出 */
-  top: 24px;
+  left: 0; /* 窗=logo 精确尺寸：logo 填满小窗，四模式统一左上角原点 */
+  top: 0;
 }
 #isle-dock.dock-right .isle-logo {
   left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */

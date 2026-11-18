@@ -7,7 +7,7 @@ import { Toaster } from './Toast'
 import { useUi } from '../../store/ui'
 import { useConfirmStore } from '../../engine/confirm'
 import { syncThemeFromStore } from '../../engine/appearance'
-import { invalidatePrefsCache, readPrefsFile } from '../../engine/prefsFile'
+import { readPrefsFile, refreshPrefsFile } from '../../engine/prefsFile'
 import { useNotes } from '../../store/notes'
 
 /**
@@ -40,10 +40,12 @@ export function PaletteWindow() {
     let themeDisposed = false
     void import('@tauri-apps/api/event').then(({ listen }) => {
       void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
-        // 先失效本窗缓存再读（stale cache 教训同 IsleWindow），主题读文件最新值
-        invalidatePrefsCache()
         const keys = e.payload?.keys
-        if (!keys || keys.includes('pwork-theme')) syncThemeFromStore()
+        if (!keys || keys.includes('pwork-theme')) {
+          // 失效后同步读只会回落 localStorage 旧值——await 重拉文件拿到最新值再应用
+          // （stale cache 教训同 IsleWindow；置空缓存不重拉等于换一批旧值来读）
+          void refreshPrefsFile().then(() => syncThemeFromStore())
+        }
       }).then((fn) => {
         if (themeDisposed) fn()
         else unlistenTheme = fn

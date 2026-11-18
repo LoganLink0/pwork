@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { syncThemeFromStore } from '../../engine/appearance'
-import { invalidatePrefsCache, readPref, writePref } from '../../engine/prefsFile'
+import { readPref, refreshPrefsFile, writePref } from '../../engine/prefsFile'
 import { recordError } from '../../engine/errorLog'
 
 /** 定位/变形失败的统一留痕（岛会从屏幕上消失，绝不能静默） */
@@ -11,14 +11,15 @@ function reportIsleError(where: string, e: unknown): void {
 }
 
 /**
- * 胶囊岛窗（/isle 分流渲染）——三种驻留模式 + 停靠自动半隐藏：
- * 固定 520×140 透明画布。收起态=logo 本体（64px 品牌胶囊）；展开态=毛玻璃横条
- * （logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
- * 模式（拖拽落点由 Rust 判定并落位，前端持久化）：
- *   top  灵动岛：横条零间距贴屏幕上缘居中；鼠标离开后 logo 上滑半探入边缘，靠近滑出；
- *   right 右缘停靠：画布右缘贴屏幕右缘，logo 停画布右侧；同样半隐藏贴边；
- *   free 自由驻留：拖到哪驻留到哪（全向钳回屏内），不做半隐藏。
- * 单击=展开/收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
+ * 胶囊岛窗（/isle 分流渲染）——三种停靠模式 + 自由驻留，统一「靠近展开 / 离开收回」：
+ * 固定 520×140 透明画布。收起态=logo 本体（64px 品牌胶囊，窗口同步缩为 64×64 小窗）；
+ * 展开态=毛玻璃横条（logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
+ * 模式（拖拽落点由 Rust 按光标判定并落位，前端持久化）：
+ *   top   灵动岛：横条零间距贴屏幕上缘居中；
+ *   left/right 缘停靠：画布贴屏幕左/右缘，纵向跟随落点；
+ *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内）——离开同样收回为 logo 小窗
+ *         （2026-11-18 接入：此前 free 永不收回，画布矩形还拦截下层点击）。
+ * 单击=收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
  * 配置文件化 2026-11-16；localStorage 双写为兼容期回落）；
  * 启用开关在主窗设置页（经 pwork-prefs-changed 事件实时响应显隐）。
  */
@@ -83,10 +84,10 @@ function readEnabled(): boolean {
   }
 }
 
-/** 停靠模式下的容器类名（free 为空）；peek=完全隐藏态（展开态永不叠加） */
+/** 停靠模式的容器类名（free 为空）；peek=完全隐藏态（窗口已缩为 logo 64×64 小窗，四模式统一；展开态永不叠加） */
 function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
   const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : ''
-  return [base, peek && base && !open ? 'peek' : ''].filter(Boolean).join(' ')
+  return [base, peek && !open ? 'peek' : ''].filter(Boolean).join(' ')
 }
 
 export function IsleWindow() {
@@ -96,11 +97,14 @@ export function IsleWindow() {
   const [dragging, setDragging] = useState(false)
   /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
   const [mode, setMode] = useState<SavedPos['mode']>('top')
-  /** 停靠模式下的半隐藏态（logo 探入屏幕边缘，靠近滑出） */
+  /** 完全隐藏态（窗口缩为 logo 64×64 小窗，靠近滑出展开；四模式统一） */
   const [peek, setPeek] = useState(true)
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
   const noticeTimer = useRef<number | null>(null)
+  /** 拖放收起后的进入抑制：缩窗瞬间光标还在小窗上，合成 mouseenter 会让刚收回的岛立即弹回展开——
+      抑制到下一次 mouseleave（离开后再靠近才正常展开） */
+  const suppressEnter = useRef(false)
 
   const clearTimers = () => {
     if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
@@ -119,7 +123,10 @@ export function IsleWindow() {
     let disposed = false
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
       const keys = e.payload?.keys
-      if (!keys || keys.includes('pwork-theme')) syncThemeFromStore()
+      if (!keys || keys.includes('pwork-theme')) {
+        // 失效后同步读只会回落 localStorage 旧值——await 重拉文件拿到最新值再应用
+        void refreshPrefsFile().then(() => syncThemeFromStore())
+      }
     }).then((fn) => {
       if (disposed) fn()
       else unlisten = fn
@@ -131,19 +138,36 @@ export function IsleWindow() {
   }, [])
 
   useEffect(() => {
-    const pos = readPos()
-    setMode(pos.mode)
-    if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
-      void invoke('isle_place', { x: pos.x, y: pos.y }).catch((e) => reportIsleError('岛.驻留定位', e))
-    } else if (pos.mode === 'right') {
-      void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.右缘隐藏', e))
-    } else if (pos.mode === 'left') {
-      void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.左缘隐藏', e))
-    } else {
-      void invoke('isle_peek', { mode: 'top', y: 0 }).catch((e) => reportIsleError('岛.顶缘隐藏', e))
-    }
-    if (readEnabled()) {
-      void invoke('isle_show').catch(() => {})
+    let disposed = false
+    // 先等 prefs.json 缓存预热再读位置——否则 mount 与预热竞速会回落 localStorage 旧值
+    // （配置文件化后设置页重置只写 prefs.json，两处存储在真实档案里会分叉，回落值是过期的）
+    void import('../../engine/prefsFile')
+      .then((m) => m.readPrefsFile())
+      .then(() => {
+        if (disposed) return
+        const pos = readPos()
+        setMode(pos.mode)
+        // 窗 visible:false 起始——先落位/缩成隐藏小窗再 show，变形过程不露帧（show 挂链尾）
+        const show = () => {
+          if (readEnabled()) void invoke('isle_show').catch(() => {})
+        }
+        if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
+          // 自由驻留：先落位画布，再锚 logo 缩为隐藏小窗（2026-11-18 中央隐藏接入）
+          void invoke('isle_place', { x: pos.x, y: pos.y })
+            .then(() => invoke('isle_peek', { mode: 'free', y: 0 }))
+            .then(show)
+            .catch((e) => reportIsleError('岛.驻留定位', e))
+        } else if (pos.mode === 'right') {
+          void invoke('isle_peek', { mode: 'right', y: pos.y ?? 0 }).then(show).catch((e) => reportIsleError('岛.右缘隐藏', e))
+        } else if (pos.mode === 'left') {
+          void invoke('isle_peek', { mode: 'left', y: pos.y ?? 0 }).then(show).catch((e) => reportIsleError('岛.左缘隐藏', e))
+        } else {
+          void invoke('isle_peek', { mode: 'top', y: 0 }).then(show).catch((e) => reportIsleError('岛.顶缘隐藏', e))
+        }
+      })
+      .catch((e) => reportIsleError('岛.挂载', e))
+    return () => {
+      disposed = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
   }, [])
@@ -154,20 +178,21 @@ export function IsleWindow() {
     let disposed = false
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
       if (!e.payload?.keys?.includes(SETTINGS_KEY)) return
-      // 先失效本窗缓存再读（2026-11-18 开关「关了又自己开回来」根因：事件处理读了
-      // 本窗 stale cache——主窗写的值在别窗缓存里永远是旧值）
-      invalidatePrefsCache()
-      if (readEnabled()) {
-        // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
-        const pos = readPos()
-        setOpen(true)
-        setPeek(false)
-        void invoke('isle_expand', { mode: pos.mode, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
-      } else {
-        clearTimers()
-        setOpen(false)
-        void invoke('isle_hide').catch(() => {})
-      }
+      // 失效后同步读只会回落 localStorage 旧值（2026-11-18 开关「关了又自己开回来」根因：
+      // 事件处理读了本窗 stale cache；置空缓存不重拉则回落值过期——必须 await 重拉文件再读）
+      void refreshPrefsFile().then(() => {
+        if (readEnabled()) {
+          // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
+          const pos = readPos()
+          setOpen(true)
+          setPeek(false)
+          void invoke('isle_expand', { mode: pos.mode, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
+        } else {
+          clearTimers()
+          setOpen(false)
+          void invoke('isle_hide').catch(() => {})
+        }
+      })
     }).then((fn) => {
       if (disposed) fn()
       else unlisten = fn
@@ -187,28 +212,31 @@ export function IsleWindow() {
     if ((e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     setDragging(true)
-    // 拖拽中解除完全隐藏与位移（否则从探边态抓起时 logo 带着缺损位跟随拖动，不美观）
+    // 拖拽中解除完全隐藏与位移（否则从隐藏态抓起时 logo 带着缺损位跟随拖动，不美观）
     setPeek(false)
     clearTimers()
-    void invoke('isle_start_drag').catch(() => setDragging(false))
+    void invoke('isle_start_drag', { mode }).catch(() => setDragging(false))
   }
 
-  // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，
-  // 前端持久化模式；横条此时才收起，停靠模式回到半隐藏探边态
+  // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，前端持久化
+  // 模式；随即收回为 logo 小窗（2026-11-18 四模式统一——此前 free 永不收回），松手即收起
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
       const { mode: m, x, y, moved } = e.payload
       setOpen(false)
+      setDragging(false)
       if (moved) {
         setMode(m)
-        setPeek(m !== 'free')
+        setPeek(true)
+        // 缩窗瞬间光标仍在小窗上，合成 enter 会让刚收回的岛立即弹回展开——抑制到离开
+        suppressEnter.current = true
+        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
         if (m === 'top') savePos({ mode: 'top' })
         else if (m === 'right') savePos({ mode: 'right', y })
         else if (m === 'left') savePos({ mode: 'left', y })
         else savePos({ mode: 'free', x, y })
       }
-      setDragging(false)
     }).then((fn) => {
       un = fn
     })
@@ -235,14 +263,14 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-17 重做占位：完全隐藏=logo 露出区小窗，不再拦整条边缘）：
-  // 停靠模式收回时 Rust 把窗口缩为 logo 半露小窗（84px 级，其余边缘让给下层应用）；
-  // 鼠标进入小窗即命中，先恢复画布尺寸与定位，再展开——次序不能反（展开的
-  // 内容渲染在小窗里会被裁没）。
+  // 呼出/收回（2026-11-18 四模式统一：完全隐藏=窗口缩为 logo 精确 64×64 小窗）：
+  // 鼠标进入小窗即命中，先恢复画布尺寸与定位（free 以 logo 为锚铺开），再展开——
+  // 次序不能反（展开的内容渲染在小窗里会被裁没）。
   const onEnter = () => {
     if (dragging) return
+    if (suppressEnter.current) return
     clearTimers()
-    if (mode !== 'free' && peek) {
+    if (peek) {
       const pos = readPos()
       void invoke('isle_expand', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
@@ -253,14 +281,13 @@ export function IsleWindow() {
   }
   const onLeave = () => {
     if (dragging) return
+    suppressEnter.current = false // 离开即解除落位抑制，下次靠近正常展开
     clearTimers()
     closeTimer.current = window.setTimeout(() => {
       setOpen(false)
-      if (mode !== 'free') {
-        const pos = readPos()
-        setPeek(true)
-        void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
-      }
+      const pos = readPos()
+      setPeek(true)
+      void invoke('isle_peek', { mode, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
     }, 1000)
   }
   useEffect(() => () => clearTimers(), [])
