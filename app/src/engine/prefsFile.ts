@@ -31,6 +31,14 @@ const emptyFile = (): PrefsFile => ({})
 
 let cache: PrefsFile | null = null
 
+/** 失效本进程缓存（跨窗一致性用）：伴生窗收到 pwork-prefs-changed 时调用，
+ *  下一次 readPrefsFile 重新 invoke prefs_read 拿文件最新值——
+ *  cache 是每窗独立内存，写方（主窗）更新自己的，伴生窗不失效就会读到旧值
+ *  （2026-11-18 胶囊岛开关「关了又自己开回来」根因：事件处理读了 stale cache） */
+export function invalidatePrefsCache(): void {
+  cache = null
+}
+
 export async function readPrefsFile(): Promise<PrefsFile> {
   if (cache) return cache
   if (!isDesktopApp()) {

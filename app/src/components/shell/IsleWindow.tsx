@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { syncThemeFromStore } from '../../engine/appearance'
-import { readPref, writePref } from '../../engine/prefsFile'
+import { invalidatePrefsCache, readPref, writePref } from '../../engine/prefsFile'
 import { recordError } from '../../engine/errorLog'
 
 /** 定位/变形失败的统一留痕（岛会从屏幕上消失，绝不能静默） */
@@ -154,6 +154,9 @@ export function IsleWindow() {
     let disposed = false
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
       if (!e.payload?.keys?.includes(SETTINGS_KEY)) return
+      // 先失效本窗缓存再读（2026-11-18 开关「关了又自己开回来」根因：事件处理读了
+      // 本窗 stale cache——主窗写的值在别窗缓存里永远是旧值）
+      invalidatePrefsCache()
       if (readEnabled()) {
         // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
         const pos = readPos()

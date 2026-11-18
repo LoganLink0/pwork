@@ -7,6 +7,7 @@ import { Toaster } from './Toast'
 import { useUi } from '../../store/ui'
 import { useConfirmStore } from '../../engine/confirm'
 import { syncThemeFromStore } from '../../engine/appearance'
+import { invalidatePrefsCache, readPrefsFile } from '../../engine/prefsFile'
 import { useNotes } from '../../store/notes'
 
 /**
@@ -34,11 +35,13 @@ export function PaletteWindow() {
     // 偏好变化经 pwork-prefs-changed 事件实时跟随（伴生窗桌面专属，Tauri 事件是唯一跨窗通道）
     syncThemeFromStore()
     // prefs.json 缓存预热（main.tsx 只在主窗跑；伴生窗独立进程视图，读偏好前自行预热）
-    void import('../../engine/prefsFile').then((m) => m.readPrefsFile())
+    void readPrefsFile()
     let unlistenTheme: (() => void) | undefined
     let themeDisposed = false
     void import('@tauri-apps/api/event').then(({ listen }) => {
       void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
+        // 先失效本窗缓存再读（stale cache 教训同 IsleWindow），主题读文件最新值
+        invalidatePrefsCache()
         const keys = e.payload?.keys
         if (!keys || keys.includes('pwork-theme')) syncThemeFromStore()
       }).then((fn) => {
