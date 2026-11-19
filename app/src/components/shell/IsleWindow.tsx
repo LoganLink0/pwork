@@ -95,7 +95,7 @@ function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [notice, setNotice] = useState<ActivityNotice | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpenState] = useState(false)
   const [dragging, setDragging] = useState(false)
   /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
   const [mode, setMode] = useState<SavedPos['mode']>('top')
@@ -115,6 +115,12 @@ export function IsleWindow() {
   const applyMode = (m: SavedPos['mode']) => {
     modeRef.current = m
     setMode(m)
+  }
+  /** 展开态实时值：拖拽结束回调需区分「单击把手」与「单击展开横条」——读 state 同样是旧闭包值 */
+  const openRef = useRef(false)
+  const applyOpen = (v: boolean) => {
+    openRef.current = v
+    setOpenState(v)
   }
 
   const clearTimers = () => {
@@ -202,7 +208,7 @@ export function IsleWindow() {
           // 设置页「重置到屏幕顶部居中」实时生效：收起 + 按持久化模式重新落位
           // （驻留模式状态经 applyMode 对齐——重置后呼出/收起不再沿用旧模式）
           clearTimers()
-          setOpen(false)
+          applyOpen(false)
           setPeek(true)
           suppressEnter.current = false // 光标在主窗设置页，不在岛把手上
           requestAnimationFrame(() => { reposition() })
@@ -211,12 +217,12 @@ export function IsleWindow() {
           if (readEnabled()) {
             // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
             const pos = readPos()
-            setOpen(true)
+            applyOpen(true)
             setPeek(false)
             void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
           } else {
             clearTimers()
-            setOpen(false)
+            applyOpen(false)
             void invoke('isle_hide').catch(() => {})
           }
         }
@@ -247,14 +253,16 @@ export function IsleWindow() {
   }
 
   // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，前端持久化
-  // 模式；随即收起隐藏（logo 半探入边缘/半透明淡出，2026-11-18 四模式统一），松手即收起
+  // 模式。拖动过=收起隐藏（logo 半探入边缘/半透明淡出，四模式统一）；未拖动=单击——
+  // 收起态单击把手=展开并保持（此前走拖拽收回：位置切换后首次点击表现为「弹出即消失」，
+  // 2026-11-19 用户报）；展开态单击横条=收回（既有语义）。
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
       const { mode: m, x, y, moved } = e.payload
-      setOpen(false)
       setDragging(false)
       if (moved) {
+        applyOpen(false)
         applyMode(m)
         setPeek(true)
         // 热区在光标落点附近，合成 enter 会让刚收起的岛立即弹回展开——抑制到离开
@@ -267,6 +275,15 @@ export function IsleWindow() {
         requestAnimationFrame(() => {
           void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
         })
+      } else if (!openRef.current) {
+        // 收起态单击把手：展开并保持（光标就在横条上，不会被收回计时器收走）
+        suppressEnter.current = false
+        setPeek(false)
+        applyOpen(true)
+        const pos = readPos()
+        void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.点击展开', e))
+      } else {
+        applyOpen(false) // 展开态单击=收回（既有语义）
       }
     }).then((fn) => {
       un = fn
@@ -307,7 +324,7 @@ export function IsleWindow() {
       void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
     openTimer.current = window.setTimeout(() => {
-      setOpen(true)
+      applyOpen(true)
       setPeek(false)
     }, 200)
   }
@@ -317,7 +334,7 @@ export function IsleWindow() {
     setMenu(null)
     clearTimers()
     closeTimer.current = window.setTimeout(() => {
-      setOpen(false)
+      applyOpen(false)
       const pos = readPos()
       setPeek(true)
       // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁块闪现
@@ -353,7 +370,7 @@ export function IsleWindow() {
   const stashTo = (target: 'top' | 'right' | 'left') => {
     setMenu(null)
     clearTimers()
-    setOpen(false)
+    applyOpen(false)
     setPeek(true)
     suppressEnter.current = true
     requestAnimationFrame(() => {
