@@ -176,9 +176,11 @@ fn clear_region(w: &tauri::WebviewWindow) {
   }
 }
 
-/// 收起隐藏态的命中裁剪：logo 屏内可见部分（把手）；region 外穿透给下层应用
+/// 收起隐藏态的命中裁剪：logo 屏内可见部分 + 描边环外扩（把手白环 3px 需在 region
+/// 内才能渲染，2026-11-19 实测被 region 裁掉）；region 外穿透给下层应用
 #[cfg(windows)]
 fn apply_peek_region(w: &tauri::WebviewWindow, mode: &str, scale: f64) {
+  let pad = (4.0 * scale) as i32; // 描边环外扩余量（白环 2px + 深色发丝 1px + 1px slack）
   let tuck = (TUCK * scale) as i32;
   let logo = (64.0 * scale) as i32;
   let logo_x = (CANVAS_LOGO_X * scale) as i32;
@@ -193,7 +195,7 @@ fn apply_peek_region(w: &tauri::WebviewWindow, mode: &str, scale: f64) {
     // 自由：完整 logo
     _ => (logo_x, logo_y, logo, logo),
   };
-  clip_region_to_hotspot(w, hx, hy, hw, hh);
+  clip_region_to_hotspot(w, hx - pad, hy - pad, hw + pad * 2, hh + pad * 2);
 }
 
 /// 右键收纳：把岛完全隐藏到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。

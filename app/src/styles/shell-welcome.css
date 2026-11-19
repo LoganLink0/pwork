@@ -794,13 +794,16 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 }
 #isle-dock.peek .isle-logo {
   transition: none; /* 把手定位即时生效（不与画布态的滑动动画纠缠） */
+  /* 把手描边：白环+深色外发丝，任意壁纸（亮/暗/纯色）上都读作明确的 UI 把手——
+     防「透明画布+壁纸透出=神秘窗口」感知（2026-11-19 用户反馈蓝底幻影窗口） */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(40, 36, 32, 0.4);
 }
 #isle-dock.peek {
   pointer-events: auto;
 }
 /* 自由驻留：中央没有屏幕边缘可藏——logo 半透明淡出原地，隐约可见提示存在 */
 #isle-dock.free.peek .isle-logo {
-  opacity: 0.45;
+  opacity: 0.55;
 }
 
 /* ── 右键收纳菜单（隐藏到屏幕中央 / 右侧）──
