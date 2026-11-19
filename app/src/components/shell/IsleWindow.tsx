@@ -104,6 +104,7 @@ export function IsleWindow() {
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
   const noticeTimer = useRef<number | null>(null)
+  const slideTimer = useRef<number | null>(null)
   /** 拖放收起后的进入抑制：缩窗瞬间光标还在小窗上，合成 mouseenter 会让刚收回的岛立即弹回展开——
       抑制到下一次 mouseleave（离开后再靠近才正常展开） */
   const suppressEnter = useRef(false)
@@ -126,6 +127,22 @@ export function IsleWindow() {
   const clearTimers = () => {
     if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
+    if (slideTimer.current) { clearTimeout(slideTimer.current); slideTimer.current = null }
+  }
+
+  // 探边条滑动动画（2026-11-20 探边条形态）：窗体只做原子定位（位置跳变），横条的
+  // 滑入/滑出由条内 translate 承担——呼出时窗体跳到展开位的同时条内先反向偏移到与
+  // 探边条相同的屏幕像素，再过渡回原位；收回时反向。偏移量与 Rust 探边几何同源：
+  // top=窗体上下差 (BAR_TOP+BAR_H-STRIP)-LOGO_Y=40；right/left=画布宽-探边条=496。
+  const barEl = () => document.querySelector('#isle-dock .isle-bar') as HTMLElement | null
+  const slideOffset = (m: SavedPos['mode']): { x: number; y: number } =>
+    m === 'top' ? { x: 0, y: -40 } : m === 'right' ? { x: 496, y: 0 } : m === 'left' ? { x: -496, y: 0 } : { x: 0, y: 0 }
+  const resetBar = () => {
+    const bar = barEl()
+    if (bar) {
+      bar.style.transition = ''
+      bar.style.transform = ''
+    }
   }
 
   // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
@@ -208,6 +225,7 @@ export function IsleWindow() {
           // 设置页「重置到屏幕顶部居中」实时生效：收起 + 按持久化模式重新落位
           // （驻留模式状态经 applyMode 对齐——重置后呼出/收起不再沿用旧模式）
           clearTimers()
+          resetBar()
           applyOpen(false)
           setPeek(true)
           suppressEnter.current = false // 光标在主窗设置页，不在岛把手上
@@ -216,6 +234,7 @@ export function IsleWindow() {
         if (hasSettings) {
           if (readEnabled()) {
             // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
+            resetBar()
             const pos = readPos()
             applyOpen(true)
             setPeek(false)
@@ -271,17 +290,42 @@ export function IsleWindow() {
         else if (m === 'right') savePos({ mode: 'right', y })
         else if (m === 'left') savePos({ mode: 'left', y })
         else savePos({ mode: 'free', x, y })
-        // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
+        // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）；拖拽落位
+        // 无滑入滑出观感需求，跳切即可（条内偏移同步清理防残留）
+        resetBar()
         void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
       } else if (!openRef.current) {
-        // 收起态单击把手：展开并保持（光标就在横条上，不会被收回计时器收走）
+        // 收起态单击把手：展开并保持（光标就在横条上，不会被收回计时器收走）——滑入
         suppressEnter.current = false
         setPeek(false)
         applyOpen(true)
         const pos = readPos()
+        const m2 = modeRef.current
+        const bar = m2 !== 'free' ? barEl() : null
+        if (bar) {
+          const o = slideOffset(m2)
+          bar.style.transition = 'none'
+          bar.style.transform = `translate(${o.x}px, ${o.y}px)`
+        }
         void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.点击展开', e))
+        if (bar) {
+          requestAnimationFrame(() => {
+            bar.style.transition = 'transform 0.22s ease-out'
+            bar.style.transform = 'translate(0, 0)'
+            slideTimer.current = window.setTimeout(() => {
+              bar.style.transition = ''
+              bar.style.transform = ''
+            }, 240)
+          })
+        }
       } else {
-        applyOpen(false) // 展开态单击=收回（既有语义）
+        // 展开态单击=收回（既有语义）：完整收回——只隐藏横条不落位会把窗体留在展开位，
+        // 成为一块不可见却拦截点击的空窗（左缘实测暴露）
+        applyOpen(false)
+        setPeek(true)
+        suppressEnter.current = true
+        resetBar()
+        void invoke('isle_peek', { mode: modeRef.current, y: readPos().y ?? 0 }).catch((e) => reportIsleError('岛.单击收回', e))
       }
     }).then((fn) => {
       un = fn
@@ -309,9 +353,9 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-19 双尺寸生命周期：收起=72×72 小窗把手，展开=520×140 画布横条，
-  // 窗体变形全部可见 morph 无隐藏帧）：鼠标进入小窗即命中，Rust 变形回画布后 React
-  // 置展开类，横条滑出。
+  // 呼出/收回（2026-11-20 探边条形态：缘停靠收起=横条探边条可见，展开=完整横条；
+  // 自由驻留收起=logo 小窗）。靠近探边条即命中：窗体原子跳展开位，横条条内反向偏移
+  // 起步再过渡回原位（滑出屏幕边缘的观感）；离开 1 秒收回（先滑出再落探边位）。
   const onEnter = () => {
     if (dragging) return
     if (suppressEnter.current) return
@@ -319,11 +363,34 @@ export function IsleWindow() {
     setMenu(null)
     if (peek) {
       const pos = readPos()
-      void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
+      const m = modeRef.current
+      if (m !== 'free') {
+        // 滑入预备：条内反向偏移=探边条的屏幕位置（窗体即将跳展开位，像素连续）
+        const bar = barEl()
+        if (bar) {
+          const o = slideOffset(m)
+          bar.style.transition = 'none'
+          bar.style.transform = `translate(${o.x}px, ${o.y}px)`
+        }
+      }
+      void invoke('isle_expand', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
     openTimer.current = window.setTimeout(() => {
       applyOpen(true)
       setPeek(false)
+      const m = modeRef.current
+      const bar = m !== 'free' ? barEl() : null
+      if (bar) {
+        // 过渡回原位=横条滑入（rAF 只为触发过渡起步，遮挡时退化为直接就位，无指令丢失）
+        requestAnimationFrame(() => {
+          bar.style.transition = 'transform 0.22s ease-out'
+          bar.style.transform = 'translate(0, 0)'
+          slideTimer.current = window.setTimeout(() => {
+            bar.style.transition = ''
+            bar.style.transform = ''
+          }, 240)
+        })
+      }
     }, 200)
   }
   const onLeave = () => {
@@ -335,16 +402,32 @@ export function IsleWindow() {
       applyOpen(false)
       const pos = readPos()
       setPeek(true)
-      // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
-      void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
+      const m = modeRef.current
+      const bar = m !== 'free' ? barEl() : null
+      if (bar) {
+        // 滑出动画先行（窗体暂留展开位，横条滑向屏幕边缘），落定后原子落探边位
+        const o = slideOffset(m)
+        bar.style.transition = 'transform 0.22s ease-in'
+        bar.style.transform = `translate(${o.x}px, ${o.y}px)`
+        slideTimer.current = window.setTimeout(() => {
+          void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
+          resetBar()
+        }, 230)
+      } else {
+        // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
+        void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
+      }
     }, 1000)
   }
-  // 右键收纳菜单：先长为画布（72×72 小窗放不下菜单），菜单位置钳在画布内
+  // 右键收纳菜单：画布须完整可见（探边条/小窗内放不下菜单且菜单不得出屏）——
+  // 缘停靠变形到展开位，自由驻留以 logo 为锚原位长回；菜单位置按点击点钳在画布内
   const onContextMenu = (e: ReactMouseEvent) => {
     e.preventDefault()
     if ((e.target as HTMLElement).closest('button')) return
     clearTimers()
-    void invoke('isle_grow').catch((e2) => reportIsleError('岛.菜单长画布', e2))
+    resetBar()
+    const pos = readPos()
+    void invoke('isle_grow', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e2) => reportIsleError('岛.菜单展开画布', e2))
     const menuW = 148
     const menuH = 112
     setMenu({
@@ -355,13 +438,24 @@ export function IsleWindow() {
   const closeMenu = () => {
     if (!menu) return
     setMenu(null)
-    // 关闭即恢复收起小窗
-    if (peek) {
-      const pos = readPos()
-      void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
+    if (!peek) return
+    const pos = readPos()
+    const m = modeRef.current
+    const bar = m !== 'free' ? barEl() : null
+    if (bar) {
+      // 从展开位滑出回探边条
+      const o = slideOffset(m)
+      bar.style.transition = 'transform 0.22s ease-in'
+      bar.style.transform = `translate(${o.x}px, ${o.y}px)`
+      slideTimer.current = window.setTimeout(() => {
+        void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
+        resetBar()
+      }, 230)
+    } else {
+      void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
     }
   }
-  // 收纳动作：Rust 变小窗落位（可见 morph）并返回落位，前端持久化与状态收起
+  // 收纳动作：先滑出（横条滑向屏幕边缘），落定后 Rust 原子落探边位并返回落位持久化
   // （禁 rAF 包裹：遮挡判定下 rAF 停摆会让指令被静默丢弃）
   const stashTo = (target: 'top' | 'right' | 'left') => {
     setMenu(null)
@@ -369,15 +463,27 @@ export function IsleWindow() {
     applyOpen(false)
     setPeek(true)
     suppressEnter.current = true
-    void invoke('isle_stash_to', { target })
-      .then((pos) => {
-        const p = pos as { mode: SavedPos['mode']; x: number; y: number }
-        applyMode(p.mode)
-        if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
-        else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
-        else savePos({ mode: 'top' })
-      })
-      .catch((e) => reportIsleError('岛.收纳', e))
+    const bar = barEl()
+    const doStash = () => {
+      void invoke('isle_stash_to', { target })
+        .then((pos) => {
+          const p = pos as { mode: SavedPos['mode']; x: number; y: number }
+          applyMode(p.mode)
+          if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
+          else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
+          else savePos({ mode: 'top' })
+          resetBar()
+        })
+        .catch((e) => reportIsleError('岛.收纳', e))
+    }
+    if (bar) {
+      const o = slideOffset(target)
+      bar.style.transition = 'transform 0.22s ease-in'
+      bar.style.transform = `translate(${o.x}px, ${o.y}px)`
+      slideTimer.current = window.setTimeout(doStash, 230)
+    } else {
+      doStash()
+    }
   }
 
   useEffect(() => () => clearTimers(), [])
