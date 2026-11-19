@@ -59,7 +59,8 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
   const resetPos = () => {
     localStorage.removeItem(POS_KEY)
     writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部居中）
-    void invoke('isle_snap_top').catch(() => {})
+    // 禁用态重置只写偏好不复活窗体（snap_top 会补 show）；启用时才直接对齐到顶缘
+    if (enabled) void invoke('isle_snap_top').catch(() => {})
   }
 
   return (

@@ -68,6 +68,11 @@ fn snap_top(app: &AppHandle) -> Result<(), String> {
   let left = pos.x + ((msize.width as i32 - win_w_phys) / 2);
   let top = pos.y - (LOGO_Y * scale) as i32;
   let _ = w.set_position(tauri::PhysicalPosition::new(left, top));
+  // 重置可从隐藏态发起（设置页「重置到屏幕顶部居中」）：重置的语义=把岛带回可点状态，
+  // 隐藏窗补 show（禁用态的隐藏由前端按 enabled 门控，不会走到这里）
+  if !w.is_visible().unwrap_or(false) {
+    let _ = w.show();
+  }
   Ok(())
 }
 
@@ -267,6 +272,11 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
     }
   };
   morph(&w, cw as f64, ch as f64, x, yv);
+  // 从隐藏态呼出（设置页开关「打开」路径直接调 expand）：morph 不改可见性，
+  // 隐藏窗必须补 show——呼出的语义=必可见（复盘 3.80「点开找不到 logo」同款根因）
+  if !w.is_visible().unwrap_or(false) {
+    let _ = w.show();
+  }
   Ok(())
 }
 
