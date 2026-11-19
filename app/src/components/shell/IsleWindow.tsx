@@ -211,7 +211,7 @@ export function IsleWindow() {
           applyOpen(false)
           setPeek(true)
           suppressEnter.current = false // 光标在主窗设置页，不在岛把手上
-          requestAnimationFrame(() => { reposition() })
+          reposition()
         }
         if (hasSettings) {
           if (readEnabled()) {
@@ -271,10 +271,8 @@ export function IsleWindow() {
         else if (m === 'right') savePos({ mode: 'right', y })
         else if (m === 'left') savePos({ mode: 'left', y })
         else savePos({ mode: 'free', x, y })
-        // 先让 peek 类生效（横条瞬间隐藏）再缩命中区，避免可见横条被裁块闪现
-        requestAnimationFrame(() => {
-          void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
-        })
+        // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
+        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
       } else if (!openRef.current) {
         // 收起态单击把手：展开并保持（光标就在横条上，不会被收回计时器收走）
         suppressEnter.current = false
@@ -311,9 +309,9 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 呼出/收回（2026-11-18 四模式统一：收起隐藏=把手可见+命中区裁为 logo 屏内可见部分）：
-  // 鼠标进入把手即命中，先清命中裁剪（region 外不可见——不清则展开内容被裁在热区里），
-  // 再展开——次序不能反。
+  // 呼出/收回（2026-11-19 双尺寸生命周期：收起=72×72 小窗把手，展开=520×140 画布横条，
+  // 窗体变形全部可见 morph 无隐藏帧）：鼠标进入小窗即命中，Rust 变形回画布后 React
+  // 置展开类，横条滑出。
   const onEnter = () => {
     if (dragging) return
     if (suppressEnter.current) return
@@ -337,19 +335,16 @@ export function IsleWindow() {
       applyOpen(false)
       const pos = readPos()
       setPeek(true)
-      // 先让 peek 类生效（横条瞬间隐藏）再缩命中区——次序反了会把还可见的横条裁块闪现
-      requestAnimationFrame(() => {
-        void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
-      })
+      // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
+      void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
     }, 1000)
   }
-  // 右键收纳菜单：先清命中裁剪（菜单要在整窗内渲染，收起态 region 会裁掉它），
-  // 菜单位置钳在画布内（画布只有 520×140，右缘/底部点击时向内收）
+  // 右键收纳菜单：先长为画布（72×72 小窗放不下菜单），菜单位置钳在画布内
   const onContextMenu = (e: ReactMouseEvent) => {
     e.preventDefault()
     if ((e.target as HTMLElement).closest('button')) return
     clearTimers()
-    void invoke('isle_unclip').catch((e2) => reportIsleError('岛.菜单清裁剪', e2))
+    void invoke('isle_grow').catch((e2) => reportIsleError('岛.菜单长画布', e2))
     const menuW = 148
     const menuH = 112
     setMenu({
@@ -360,30 +355,29 @@ export function IsleWindow() {
   const closeMenu = () => {
     if (!menu) return
     setMenu(null)
-    // 关闭即恢复收起命中裁剪（横条本就隐藏，region 回落无闪现风险）
+    // 关闭即恢复收起小窗
     if (peek) {
       const pos = readPos()
       void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
     }
   }
-  // 收纳动作：Rust 落位+套收起裁剪并返回落位，前端持久化与状态收起
+  // 收纳动作：Rust 变小窗落位（可见 morph）并返回落位，前端持久化与状态收起
+  // （禁 rAF 包裹：遮挡判定下 rAF 停摆会让指令被静默丢弃）
   const stashTo = (target: 'top' | 'right' | 'left') => {
     setMenu(null)
     clearTimers()
     applyOpen(false)
     setPeek(true)
     suppressEnter.current = true
-    requestAnimationFrame(() => {
-      void invoke('isle_stash_to', { target })
-        .then((pos) => {
-          const p = pos as { mode: SavedPos['mode']; x: number; y: number }
-          applyMode(p.mode)
-          if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
-          else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
-          else savePos({ mode: 'top' })
-        })
-        .catch((e) => reportIsleError('岛.收纳', e))
-    })
+    void invoke('isle_stash_to', { target })
+      .then((pos) => {
+        const p = pos as { mode: SavedPos['mode']; x: number; y: number }
+        applyMode(p.mode)
+        if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
+        else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
+        else savePos({ mode: 'top' })
+      })
+      .catch((e) => reportIsleError('岛.收纳', e))
   }
 
   useEffect(() => () => clearTimers(), [])

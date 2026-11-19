@@ -1,15 +1,52 @@
 //! 胶囊岛窗（伙伴常驻形态·自由拖拽+顶部吸附式）：
-//! 固定 520×140 透明画布（窗体从不变形——可见窗 resize 会白闪）。
-//! 收起隐藏态=「藏进去、留把手」：缘停靠 logo 半探出屏幕外（屏内留 32px 贴边把手），
-//! 自由驻留 logo 半透明淡出原地；命中区经 SetWindowRgn 裁为 logo 屏内可见部分
-//! （region 外穿透给下层）。展开态=毛玻璃横条（logo 滑至条内左侧+状态单行）。
-//! 按住画布原生拖拽（start_dragging），松手驻留（位置持久化在 prefs.json），
+//! 双尺寸生命周期（2026-11-19 定稿）：**可见窗体永不变形**——一切尺寸/位置变化都在
+//! 隐藏状态下完成（hide → set_size/set_position → show，三步原子切换）。
+//! 收起隐藏态=72×72 小窗（logo 满窗 + 白环描边，缘停靠时小窗半探出屏幕外留把手，
+//! 自由驻留小窗原地半透明淡出）；展开态=520×140 画布（毛玻璃横条：logo 滑至条内
+//! 左侧+状态单行）。命中区域=整个小窗（无 SetWindowRgn——region 裁剪与可见窗变形
+//! 是白闪/幻影蓝窗的根因，均已从机制上移除）。
+//! 按住小窗/横条原生拖拽（start_dragging），松手驻留（位置持久化在 prefs.json），
 //! 拖近屏幕上缘自动吸附为顶部居中（灵动岛站位）。装饰（边框/圆角/投影）在 lib.rs 统一关闭。
+//!
+//! 尺寸语义（CSS px，Rust 全部 ×scale 换物理）：
+//!   画布 520×140；小窗 72×72（logo 64×64 居中 + 描边环余量 4px）
+//!   画布内 logo 位：top/free (228,10)、left (10,10)、right (446,10)
+//!   小窗内 logo 位：恒 (4,4)
+//!   半探出：缘停靠小窗中心对齐屏幕边缘（各探出 36px，屏内留 36px 把手）
 
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
 const CANVAS_W: f64 = 520.0;
+const CANVAS_H: f64 = 140.0;
+const HANDLE_SIZE: f64 = 72.0; // 收起态小窗边长（logo 64 + 描边余量 8）
+const LOGO_INSET: f64 = 4.0; // 小窗内 logo 内缩（描边环余量）
+
+/// 画布内 logo 位（CSS px，与 .isle-logo 各模式 CSS left/top 一致）：
+/// top/free (228,10)、left (10,10)、right (446,10)。
+const LOGO_X: f64 = 228.0;
+const LOGO_X_LEFT: f64 = 10.0;
+const LOGO_X_RIGHT: f64 = 446.0;
+const LOGO_Y: f64 = 10.0;
+
+fn canvas_size_phys(scale: f64) -> (f64, f64) {
+  (CANVAS_W * scale, CANVAS_H * scale)
+}
+fn handle_size_phys(scale: f64) -> (f64, f64) {
+  (HANDLE_SIZE * scale, HANDLE_SIZE * scale)
+}
+
+/// 光标所在显示器（失败回退主显示器）
+fn cursor_monitor(app: &AppHandle) -> Result<tauri::Monitor, String> {
+  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
+  match app.monitor_from_point(cursor.x, cursor.y) {
+    Ok(Some(m)) => Ok(m),
+    _ => app
+      .primary_monitor()
+      .map_err(|e| format!("读取主显示器失败：{}", e))
+      .and_then(|m| m.ok_or_else(|| "找不到可用显示器".to_string())),
+  }
+}
 
 /// 锚定到屏幕上缘居中（灵动岛站位·零间距）：横条内 CSS y=10，窗体顶=屏顶-10·缩放，
 /// 让条的顶边正好压在屏幕上缘（画布透明部分悬出屏外，无任何可见间隙）。
@@ -26,16 +63,15 @@ fn snap_top(app: &AppHandle) -> Result<(), String> {
   };
   let pos = monitor.position();
   let msize = monitor.size();
-  // 窗体实际物理宽（Windows 无边框窗会在配置值外多出不可见边距，实测 536>520，用实况值居中才准）
+  // 窗体实际物理宽（Windows 无边框窗会在配置值外多出不可见边距，用实况值居中才准）
   let win_w_phys = w.outer_size().map(|s| s.width as i32).unwrap_or((CANVAS_W * scale) as i32);
   let left = pos.x + ((msize.width as i32 - win_w_phys) / 2);
-  let top = pos.y - (10.0 * scale) as i32;
+  let top = pos.y - (LOGO_Y * scale) as i32;
   let _ = w.set_position(tauri::PhysicalPosition::new(left, top));
   Ok(())
 }
 
-/// 停靠屏幕右缘（垂直位置由拖拽落点决定，纵向钳进屏内）：
-/// 画布右缘=屏幕右缘，logo 停在画布右侧（CSS left 446），隐藏态向右平移半个身位探出边缘。
+/// 停靠屏幕右缘（垂直位置由拖拽落点决定，纵向钳进屏内）：画布右缘=屏幕右缘。
 fn dock_right(app: &AppHandle, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let scale = w.scale_factor().map_err(|e| format!("读取缩放失败：{}", e))?;
@@ -51,7 +87,7 @@ fn dock_right(app: &AppHandle, y: i32) -> Result<(), String> {
   let msize = monitor.size();
   let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new(CANVAS_W as u32, 140));
   let canvas_w_phys = (CANVAS_W * scale) as i32;
-  // 画布右缘对齐屏幕右缘：右侧不可见边距条悬出屏外（透明+鼠标穿透，无副作用）
+  // 画布右缘对齐屏幕右缘
   let x = mpos.x + msize.width as i32 - canvas_w_phys;
   let max_y = mpos.y + msize.height as i32 - size.height as i32;
   let cy = y.min(max_y).max(mpos.y);
@@ -59,8 +95,7 @@ fn dock_right(app: &AppHandle, y: i32) -> Result<(), String> {
   Ok(())
 }
 
-/// 停靠屏幕左缘（2026-11-15 用户要求补左停靠）：画布左缘=屏幕左缘，
-/// logo 停画布左侧（CSS left 10），纵向位置由拖拽落点决定并钳进屏内。
+/// 停靠屏幕左缘：画布左缘=屏幕左缘，纵向位置由拖拽落点决定并钳进屏内。
 fn dock_left(app: &AppHandle, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
@@ -76,7 +111,6 @@ fn dock_left(app: &AppHandle, y: i32) -> Result<(), String> {
   let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new(CANVAS_W as u32, 140));
   let max_y = mpos.y + msize.height as i32 - size.height as i32;
   let cy = y.min(max_y).max(mpos.y);
-  // 画布左缘对齐屏幕左缘：左侧不可见边距条悬出屏外（透明+鼠标穿透，无副作用）
   let _ = w.set_position(tauri::PhysicalPosition::new(mpos.x, cy));
   Ok(())
 }
@@ -116,221 +150,175 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 收起隐藏（2026-11-18 五轮定稿，用户拍板）：**藏进去、留把手**——缘停靠把 logo
-/// 半探出屏幕外（屏内留 32·缩放贴边可见当把手），free 驻留 logo 半透明淡出停在
-/// 原地；鼠标靠近把手滑出展开。窗体从不变形（可见窗 resize 是白闪根因），命中区
-/// 经 SetWindowRgn 裁为 logo 屏内可见部分（region 外穿透给下层，不重演整条边拦点击）。
-const TUCK: f64 = 32.0; // 半探入深度：屏内留出的把手宽度/高度（logo 64 的一半）
-
-/// 画布内 logo 位（逻辑 px，与 .isle-logo 各模式的 CSS left/top 一致）：
-/// top/free 居画布中上 (228,10)、left 贴左 (10,10)、right 贴右 (446,10)。
-/// 半探入定位与热区换算全靠它们。
-const CANVAS_LOGO_X: f64 = 228.0;
-const CANVAS_LOGO_X_LEFT: f64 = 10.0;
-const CANVAS_LOGO_X_RIGHT: f64 = 446.0;
-const CANVAS_LOGO_Y: f64 = 10.0;
-
-/// 把窗口命中区裁为指定矩形热区（x/y/w/h 为**客户区**物理 px；region 外系统级完全
-/// 穿透且不可见）。region 坐标系=窗口原点，无边框窗的不可见边距使客户原点 ≠ 窗口
-/// 原点（实测外框 536×149 vs 客户 520×140）——先换算客户原点偏移再落 region。
-/// 设置后立即回读验证：失败非静默，console 留痕（rgn 实测生效 COMPLEX，留痕是兜底）。
-#[cfg(windows)]
-fn clip_region_to_hotspot(w: &tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) {
-  // ClientToScreen 在 windows crate 里归 Gdi 模块（官方分区如此），非 WindowsAndMessaging
-  use windows::Win32::Foundation::{POINT, RECT};
-  use windows::Win32::Graphics::Gdi::{ClientToScreen, CreateRectRgn, GDI_REGION_TYPE, GetWindowRgn, SetWindowRgn};
-  use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
-  let Ok(hwnd) = w.hwnd() else { return };
-  unsafe {
-    let mut win = RECT::default();
-    let _ = GetWindowRect(hwnd, &mut win);
-    let mut org = POINT { x: 0, y: 0 };
-    let _ = ClientToScreen(hwnd, &mut org);
-    // 热区目标在客户区坐标（=画布坐标），落 region 前补客户原点-窗口原点偏移
-    let off_x = org.x - win.left;
-    let off_y = org.y - win.top;
-    let region = CreateRectRgn(off_x + x, off_y + y, off_x + x + width, off_y + y + height);
-    let applied = SetWindowRgn(hwnd, Some(region), true);
-    // 回读验证（失效不静默，留痕）：GetWindowRgn 只收 region 句柄
-    let probe = CreateRectRgn(0, 0, 1, 1);
-    let kind = GetWindowRgn(hwnd, probe);
-    if applied == 0 || kind == GDI_REGION_TYPE(0) {
-      web_console_log(w, format!("SetWindowRgn applied={} rgnKind={:?} —— 命中裁剪未生效", applied, kind));
-    }
-  }
-}
-
-/// 前端 console 转发（进 tauri-plugin-log 运行日志，错误页可见）
-#[cfg(windows)]
-fn web_console_log(w: &tauri::WebviewWindow, msg: String) {
-  let _ = w.eval(&format!("console.warn('[isle] {}')", msg.replace('\'', "")));
-}
-
-/// 清除命中裁剪（展开态恢复整个窗口可命中）
-#[cfg(windows)]
-fn clear_region(w: &tauri::WebviewWindow) {
-  use windows::Win32::Graphics::Gdi::SetWindowRgn;
-  let Ok(hwnd) = w.hwnd() else { return };
-  unsafe {
-    SetWindowRgn(hwnd, None, true);
-  }
-}
-
-/// 收起隐藏态的命中裁剪：logo 屏内可见部分 + 描边环外扩（把手白环 3px 需在 region
-/// 内才能渲染，2026-11-19 实测被 region 裁掉）；region 外穿透给下层应用
-#[cfg(windows)]
-fn apply_peek_region(w: &tauri::WebviewWindow, mode: &str, scale: f64) {
-  let pad = (4.0 * scale) as i32; // 描边环外扩余量（白环 2px + 深色发丝 1px + 1px slack）
-  let tuck = (TUCK * scale) as i32;
-  let logo = (64.0 * scale) as i32;
-  let logo_x = (CANVAS_LOGO_X * scale) as i32;
-  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
-  let (hx, hy, hw, hh) = match mode {
-    // 顶缘：屏内段=logo 下半（y 从 logo_y+tuck 到 logo_y+64）
-    "top" => (logo_x, logo_y + tuck, logo, logo - tuck),
-    // 左缘：屏内段=logo 右半（x 从 logo_x+tuck 到 logo_x+64）
-    "left" => ((CANVAS_LOGO_X_LEFT * scale) as i32 + tuck, logo_y, logo - tuck, logo),
-    // 右缘：屏内段=logo 左半（x 从 logo_x 到 logo_x+tuck）
-    "right" => ((CANVAS_LOGO_X_RIGHT * scale) as i32, logo_y, tuck, logo),
-    // 自由：完整 logo
-    _ => (logo_x, logo_y, logo, logo),
+/// 画布内各模式 logo 位（CSS px）→ 用于小窗⇄画布切换时的锚定换算
+fn logo_anchor_phys(mode: &str, scale: f64) -> (i32, i32) {
+  let x = match mode {
+    "left" => LOGO_X_LEFT,
+    "right" => LOGO_X_RIGHT,
+    _ => LOGO_X,
   };
-  clip_region_to_hotspot(w, hx - pad, hy - pad, hw + pad * 2, hh + pad * 2);
+  ((x * scale) as i32, (LOGO_Y * scale) as i32)
+}
+
+/// 实况外框-客户边距（无边框窗应为 0；防御性读取，为 0 时 SetWindowPos 尺寸语义
+/// 与 tauri set_size 一致）
+fn frame_margins(w: &tauri::WebviewWindow) -> (i32, i32) {
+  let inner = w.inner_size().unwrap_or_default();
+  let outer = w.outer_size().unwrap_or_default();
+  (
+    (outer.width as i32 - inner.width as i32).max(0),
+    (outer.height as i32 - inner.height as i32).max(0),
+  )
+}
+
+/// 变形（尺寸/位置）：单次 SetWindowPos 同帧落定。两步 set_size→set_position 之间
+/// 会被 40ms 窗口轮询 / 30fps 相机捕到中间矩形（小窗先出现在旧位再跳目标位）——
+/// 即用户反复拍到的残余闪烁源。可见状态直接变形，窗口全程不消失（hide→show 的
+/// 隐藏帧完全露出壁纸=「蓝色窗体闪现」，全生命周期禁用）。
+#[cfg(windows)]
+fn morph(w: &tauri::WebviewWindow, width: f64, height: f64, x: i32, y: i32) {
+  use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+  let Ok(hwnd) = w.hwnd() else { return };
+  let (dx, dy) = frame_margins(w);
+  unsafe {
+    let _ = SetWindowPos(hwnd, None, x, y, width as i32 + dx, height as i32 + dy, SWP_NOZORDER | SWP_NOACTIVATE);
+  }
+}
+#[cfg(not(windows))]
+fn morph(w: &tauri::WebviewWindow, width: f64, height: f64, x: i32, y: i32) {
+  let _ = w.set_size(tauri::PhysicalSize::new(width as u32, height as u32));
+  let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+}
+
+/// 收起隐藏（2026-11-19 用户拍板「藏进去、留把手」）：窗体缩为 72×72 小窗
+/// （logo 满窗+白环描边），缘停靠半探出屏幕外留 36px 把手，free 原地半透明淡出；
+/// 命中区=整个小窗（无 region——region 裁剪与可见窗变形是白闪/幻影蓝窗根因，已移除）。
+#[tauri::command]
+pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let monitor = cursor_monitor(&app)?;
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let hw = (HANDLE_SIZE * scale) as i32;
+  let hh = hw;
+  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
+  let inset = (LOGO_INSET * scale) as i32;
+  // 小窗定位（logo 半探出屏外=小窗半探出）：top 贴顶居中（窗体居中=logo 居中，与
+  // stash_to/展开态一致；竖向 tuck 由 y 承担，横向无 tuck 不横移）/
+  // left·right 贴缘纵向跟随 / free 原位（按小窗尺寸钳屏内）
+  let before = w.outer_position().unwrap_or_default();
+  let (x, yv) = match mode.as_str() {
+    "top" => (mp.x + (ms.width as i32 - hw) / 2, mp.y - half + inset),
+    "left" => (mp.x - half + inset, y.clamp(mp.y, mp.y + ms.height as i32 - hh)),
+    "right" => (
+      mp.x + ms.width as i32 - half + inset,
+      y.clamp(mp.y, mp.y + ms.height as i32 - hh),
+    ),
+    _ => (
+      before.x.clamp(mp.x, mp.x + ms.width as i32 - hw),
+      before.y.clamp(mp.y, mp.y + ms.height as i32 - hh),
+    ),
+  };
+  morph(&w, hw as f64, hh as f64, x, yv);
+  Ok(())
+}
+
+/// 展开（2026-11-19）：窗体还原为 520×140 画布并按模式定位，单次原子变形。
+/// 缘停靠目标位与 snap_top/dock_right/dock_left 同式（那里服务设置重置/拖拽落位，
+/// 窗体已是画布尺寸）；自由驻留以 logo 为锚（小窗 logo 位 (4,4) → 画布 logo 位），
+/// 按目标画布尺寸钳屏内——先算目标再原子落位，无中间帧。
+#[tauri::command]
+pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let (cw, ch) = canvas_size_phys(scale);
+  let monitor = cursor_monitor(&app)?;
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let (dx, dy) = frame_margins(&w);
+  let was_small = {
+    let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+    sz.width > 0 && sz.width < (CANVAS_W * scale) as u32
+  };
+  let before = w.outer_position().unwrap_or_default();
+  let (x, yv) = match mode.as_str() {
+    "top" => (mp.x + (ms.width as i32 - (cw as i32 + dx)) / 2, mp.y - (LOGO_Y * scale) as i32),
+    "right" => (
+      mp.x + ms.width as i32 - cw as i32,
+      y.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
+    ),
+    "left" => (
+      mp.x,
+      y.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
+    ),
+    _ => {
+      if was_small {
+        let (ax, ay) = logo_anchor_phys("free", scale);
+        let nx = before.x - ax + (LOGO_INSET * scale) as i32;
+        let ny = before.y - ay + (LOGO_INSET * scale) as i32;
+        (
+          nx.clamp(mp.x, mp.x + ms.width as i32 - (cw as i32 + dx)),
+          ny.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
+        )
+      } else {
+        (before.x, before.y)
+      }
+    }
+  };
+  morph(&w, cw as f64, ch as f64, x, yv);
+  Ok(())
 }
 
 /// 右键收纳：把岛完全隐藏到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。
-/// top=半探入屏幕上缘（贴顶居中）；right=半探入屏幕右缘；left=半探入屏幕左缘
-/// （右/左纵向居中）。落位后即套收起命中裁剪，返回落位供前端持久化。
+/// top=半探入屏幕上缘（贴顶居中）；right=半探入右缘；left=半探入左缘（纵向居中）。
+/// 隐藏状态下变形（72×72 小窗），返回落位供前端持久化。
 #[tauri::command]
 pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
   let Some(w) = app.get_webview_window("isle") else {
     return Err("找不到胶囊岛窗口".into());
   };
   let scale = w.scale_factor().unwrap_or(1.0);
-  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
-  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
-    Ok(Some(m)) => Some(m),
-    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
-  };
-  let Some(monitor) = monitor else {
-    return Err("找不到可用显示器".into());
-  };
+  let monitor = cursor_monitor(&app)?;
   let mp = monitor.position();
   let ms = monitor.size();
-  let canvas_w = (CANVAS_W * scale) as i32;
-  let canvas_h = (140.0 * scale) as i32;
-  let tuck = (TUCK * scale) as i32;
-  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
-  let (mode, px, py) = match target.as_str() {
-    // 上缘：贴顶居中 + logo 上半探出屏外（与收起态顶缘定位同式）
+  let (hw, hh) = handle_size_phys(scale);
+  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
+  let inset = (LOGO_INSET * scale) as i32;
+  let logo_y = (LOGO_Y * scale) as i32;
+  let (mode, x, y) = match target.as_str() {
+    // 上缘：贴顶居中 + logo 上半探出屏外
     "top" => {
-      let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or(canvas_w);
-      let x = mp.x + (ms.width as i32 - win_w) / 2;
-      let y = mp.y - logo_y - tuck;
-      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      let x = mp.x + (ms.width as i32 - hw as i32) / 2;
+      let y = mp.y - logo_y - (half - inset);
       ("top", x, y)
     }
-    // 右缘：logo 右缘探出屏外 tuck，纵向居中
     "right" => {
-      let x = mp.x + ms.width as i32 - (CANVAS_LOGO_X_RIGHT * scale) as i32 - tuck;
-      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
-      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      let x = mp.x + ms.width as i32 - hw as i32 + inset;
+      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
       ("right", x, y)
     }
-    // 左缘：logo 左缘探出屏外 tuck，纵向居中
     "left" => {
-      let x = mp.x - (CANVAS_LOGO_X_LEFT * scale) as i32 - tuck;
-      let y = mp.y + (ms.height as i32 - canvas_h) / 2;
-      let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+      let x = mp.x - inset;
+      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
       ("left", x, y)
     }
     _ => return Err(format!("未知的目标位置：{}", target)),
   };
-  #[cfg(windows)]
-  apply_peek_region(&w, mode, scale);
-  #[cfg(not(windows))]
-  let _ = &w;
-  Ok(serde_json::json!({ "mode": mode, "x": px, "y": py }))
+  morph(&w, hw as f64, hh as f64, x, y);
+  Ok(serde_json::json!({ "mode": mode, "x": x, "y": y }))
 }
 
-/// 右键菜单前置：仅清除命中裁剪（整窗可绘制可命中，菜单才能在画布内渲染），
-/// 不改尺寸、不定位、不展开横条。
+/// 右键菜单前置：小窗长为画布（菜单 136×112 在 72×72 小窗内放不下），
+/// 原位原子变形（全程不隐藏），菜单位置由前端按点击点钳算。
 #[tauri::command]
-pub fn isle_unclip(app: AppHandle) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  #[cfg(windows)]
-  clear_region(&w);
-  #[cfg(not(windows))]
-  let _ = w;
-  Ok(())
-}
-
-#[tauri::command]
-pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+pub fn isle_grow(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let scale = w.scale_factor().unwrap_or(1.0);
-  let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
-  let monitor = match app.monitor_from_point(cursor.x, cursor.y) {
-    Ok(Some(m)) => Some(m),
-    _ => app.primary_monitor().map_err(|e| format!("读取主显示器失败：{}", e))?,
-  };
-  let Some(monitor) = monitor else {
-    return Err("找不到可用显示器".into());
-  };
-  let mp = monitor.position();
-  let ms = monitor.size();
-  let tuck = (TUCK * scale) as i32;
-  let logo_y = (CANVAS_LOGO_Y * scale) as i32;
-  // 画布定位（窗体不变形）：缘停靠把 logo 半探出屏幕外（屏内留 tuck 把手），free 原位
-  match mode.as_str() {
-    // 顶缘：logo 上缘探出屏外 tuck，屏内留下半贴顶居中（水平与 snap_top 同法按外框宽居中）
-    "top" => {
-      let win_w = w.outer_size().map(|s| s.width as i32).unwrap_or((CANVAS_W * scale) as i32);
-      let left = mp.x + (ms.width as i32 - win_w) / 2;
-      let _ = w.set_position(tauri::PhysicalPosition::new(left, mp.y - logo_y - tuck));
-    }
-    // 左缘：logo 左缘探出屏外 tuck，屏内留右半贴左；纵向跟随停靠位并钳屏内
-    "left" => {
-      let win_h = w.outer_size().map(|s| s.height as i32).unwrap_or((140.0 * scale) as i32);
-      let cy = y.clamp(mp.y, mp.y + ms.height as i32 - win_h);
-      let _ = w.set_position(tauri::PhysicalPosition::new(
-        mp.x - (CANVAS_LOGO_X_LEFT * scale) as i32 - tuck,
-        cy,
-      ));
-    }
-    // 右缘：logo 右缘探出屏外 tuck，屏内留左半贴右
-    "right" => {
-      let win_h = w.outer_size().map(|s| s.height as i32).unwrap_or((140.0 * scale) as i32);
-      let cy = y.clamp(mp.y, mp.y + ms.height as i32 - win_h);
-      let _ = w.set_position(tauri::PhysicalPosition::new(
-        mp.x + ms.width as i32 - (CANVAS_LOGO_X_RIGHT * scale) as i32 - tuck,
-        cy,
-      ));
-    }
-    // 自由驻留：留在原位（半透明淡出由 CSS 完成），命中区=完整 logo
-    _ => {}
-  }
-  #[cfg(windows)]
-  apply_peek_region(&w, &mode, scale);
+  let (cw, ch) = canvas_size_phys(scale);
+  let before = w.outer_position().unwrap_or_default();
+  morph(&w, cw as f64, ch as f64, before.x, before.y);
   Ok(())
-}
-
-/// 从完全隐藏恢复（窗口从未变形，无需尺寸复位）：清除命中裁剪整窗恢复并显示，
-/// 按模式定位（top 吸顶居中 / left·right 贴缘 / free 原位即画布位）。设置页开关
-/// 在隐藏态直接调 expand——缺 show 时窗永远隐藏（「点开找不到 logo」根因）
-#[tauri::command]
-pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
-  #[cfg(windows)]
-  clear_region(&w);
-  let _ = w.show();
-  match mode.as_str() {
-    "top" => snap_top(&app),
-    "left" => dock_left(&app, y),
-    "right" => dock_right(&app, y),
-    // 自由驻留：窗从未变形，原位即画布位（logo 从未离开画布中上）
-    _ => Ok(()),
-  }
 }
 
 /// 拖拽落点的停靠模式判定与落位（拖拽真正结束后调用）：
@@ -392,7 +380,6 @@ fn left_button_up() -> bool {
 }
 
 /// 胶囊岛：按住横条/logo 原生拖拽（在画布 mousedown 时调用）。
-/// 从隐形热区抓起：先清命中裁剪整窗恢复（横条随抓起立即显示，拖动全程完整可见）。
 /// 关键事实：Windows 上 start_dragging 是异步发起——立即返回，模态移动循环在其后由
 /// 事件循环驱动（实测日志铁证：命令返回时窗口尚未动过）。因此拖拽结束检测放在
 /// 轮询线程：左键松开（GetAsyncKeyState）且位置连续两拍稳定 → 真正松手，
@@ -401,8 +388,6 @@ fn left_button_up() -> bool {
 pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
-  #[cfg(windows)]
-  clear_region(&w);
   w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
   let app = app.clone();
   thread::spawn(move || {
