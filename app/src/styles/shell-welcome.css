@@ -783,54 +783,18 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
 }
 
-/* ── 收起态（peek，四模式：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
-   「直观可见」（2026-11-20 用户拍板，复刻 0.1.23 探边条形态）：缘停靠窗体由 Rust
-   定位到探边位（横条探出屏幕外，屏内留 24px 毛玻璃探边条），横条本体可见——岛在哪，
-   屏幕边缘就有一条显眼的岛身边，一眼可寻；靠近滑出展开，离开 1 秒收回（滑出动画由
-   条内 translate 承担，见 IsleWindow slideOffset）。自由驻留无边缘可探，72×72 小窗
-   logo 满窗原地驻留（logo 必须落在小窗可见区 (4,4)——曾因停在画布 64px 位导致小窗
-   全透明空窗，把手不可见的根因，2026-11-20 像素采样定位）。 */
-#isle-dock.peek.free .isle-bar,
-#isle-dock.peek.free .isle-bar-content {
+/* ── 收起态（peek，四模式统一：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
+   「只展示 LOGO」（2026-11-20 用户拍板）：四模式统一 72×72 小窗把手——logo 满窗
+   (4,4)+白环描边，缘停靠由 Rust 定位半探出屏幕外（屏内留约半枚 logo 贴边可见），
+   自由驻留原地驻留；横条与内容全部隐藏。靠近把手滑出展开，离开 1 秒收回。
+   logo 必须落在小窗可见区 (4,4)——曾因停在画布 64px 位导致小窗全透明空窗，把手
+   不可见的根因（2026-11-20 像素采样定位）；选择器令牌是 free（非 dock-free）——
+   曾因令牌写错规则从未生效（computed style 定位）。 */
+#isle-dock.peek .isle-bar,
+#isle-dock.peek .isle-bar-content {
   visibility: hidden;
 }
-/* 缘停靠收起态：横条可见（探边条=横条的屏内边缘），内容与展开态一致（滑入过程
-   完整呈现横条） */
-#isle-dock.peek.dock-top .isle-bar,
-#isle-dock.peek.dock-right .isle-bar,
-#isle-dock.peek.dock-left .isle-bar {
-  opacity: 1;
-  pointer-events: auto;
-}
-#isle-dock.peek.dock-top .isle-bar-content,
-#isle-dock.peek.dock-right .isle-bar-content,
-#isle-dock.peek.dock-left .isle-bar-content {
-  opacity: 1;
-  pointer-events: auto;
-}
-/* 缘停靠收起态 logo 随横条走（条内展开位；右缘锚右侧与展开态一致） */
-#isle-dock.peek.dock-top .isle-logo,
-#isle-dock.peek.dock-left .isle-logo {
-  transition: none;
-  left: 10px;
-  top: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  transform: none;
-}
-#isle-dock.peek.dock-right .isle-logo {
-  transition: none;
-  left: 458px;
-  top: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  transform: none;
-}
-/* 自由驻留：把手（logo+白环）满窗驻留原地——logo 必须落在小窗可见区 (4,4)，
-   2026-11-19 用户反馈半透明淡出读作「幽灵残影」，改全不透明明确控件 */
-#isle-dock.peek.free .isle-logo {
+#isle-dock.peek .isle-logo {
   transition: none;
   left: 4px;
   top: 4px;

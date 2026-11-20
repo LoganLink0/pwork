@@ -19,11 +19,8 @@ use tauri::{AppHandle, Emitter, Manager};
 
 const CANVAS_W: f64 = 520.0;
 const CANVAS_H: f64 = 140.0;
-const HANDLE_SIZE: f64 = 72.0; // 自由驻留收起态小窗边长（logo 64 + 描边余量 8）
+const HANDLE_SIZE: f64 = 72.0; // 收起态小窗边长（logo 64 + 描边余量 8）
 const LOGO_INSET: f64 = 4.0; // 小窗内 logo 内缩（描边环余量）
-const BAR_TOP: f64 = 10.0; // 横条在画布内的纵坐标（CSS px，与 .isle-bar top 一致）
-const BAR_H: f64 = 64.0; // 横条高度（CSS px，与 .isle-bar height 一致）
-const STRIP: f64 = 24.0; // 探边条：缘停靠收起态横条屏内可见宽度/高度（0.1.23 探边条形态）
 
 /// 画布内 logo 位（CSS px，与 .isle-logo 各模式 CSS left/top 一致）：
 /// top/free (228,10)、left (10,10)、right (446,10)。
@@ -198,11 +195,11 @@ fn morph(w: &tauri::WebviewWindow, width: f64, height: f64, x: i32, y: i32) {
   let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
 }
 
-/// 收起态（2026-11-20 用户拍板「直观可见」，复刻 0.1.23 探边条形态）：
-/// 缘停靠=窗体保持画布尺寸、原子定位到探边位——横条探出屏幕外，屏内留 STRIP(24)px
-/// 毛玻璃探边条（显眼可寻，靠近滑出展开）；自由驻留=72×72 小窗 logo 满窗原地驻留
-/// （中央无边缘可探）。命中区=屏内可见部分（窗体探出屏外的部分收不到点击，无需
-/// region——region 裁剪与可见窗变形是白闪/幻影蓝窗根因，已移除）。
+/// 收起态（2026-11-20 用户拍板「只展示 LOGO」）：四模式统一 72×72 小窗把手——
+/// logo 满窗+白环描边，缘停靠小窗半探出屏幕外（屏内留约半枚 logo 贴边可见），
+/// 自由驻留小窗原地驻留；命中区=小窗本体（探出屏外部分收不到点击，无需 region）。
+/// 画布态收起时缘停靠锚 logo 贴缘、自由驻留锚 logo 原位（带尺寸守卫防累计漂移，
+/// 复盘 3.80 ⑤）。
 #[tauri::command]
 pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
@@ -210,52 +207,36 @@ pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
   let monitor = cursor_monitor(&app)?;
   let mp = monitor.position();
   let ms = monitor.size();
-  let (cw, ch) = canvas_size_phys(scale);
-  let strip = (STRIP * scale) as i32;
-  let bar_top_phys = (BAR_TOP * scale) as i32;
-  let bar_h_phys = (BAR_H * scale) as i32;
-  // 缘停靠探边位：top 露条底部 24px（窗顶=屏顶-(BAR_TOP+BAR_H-STRIP)），
-  // right 露条左部 24px / left 露条右部 24px（纵向整条在屏内并跟随停靠点）
+  let hw = (HANDLE_SIZE * scale) as i32;
+  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
+  let inset = (LOGO_INSET * scale) as i32;
+  let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+  let is_canvas = sz.width as f64 >= CANVAS_W * scale;
+  let before = w.outer_position().unwrap_or_default();
+  // 画布态收起：以画布内 logo 位为锚换算小窗位置（logo 不跳位）——top 缘 logo 在
+  // 画布 (228,10)、left (10,10)、right (446,10)，小窗 logo 位 (4,4)。小窗态保持
+  // 原位（top 横向重归居中，纠正历史偏移）。
   let (x, yv) = match mode.as_str() {
-    "top" => (
-      mp.x + (ms.width as i32 - cw as i32) / 2,
-      mp.y - (bar_top_phys + bar_h_phys - strip),
-    ),
+    "top" => {
+      let cx = if is_canvas { before.x + ((LOGO_X - LOGO_INSET) * scale) as i32 } else { mp.x + (ms.width as i32 - hw) / 2 };
+      (cx, mp.y - half + inset)
+    }
     "left" => (
-      mp.x - (cw as i32 - strip),
-      y.clamp(mp.y - bar_top_phys, mp.y + ms.height as i32 - bar_top_phys - bar_h_phys),
+      mp.x - half + inset,
+      if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { y.clamp(mp.y, mp.y + ms.height as i32 - hw) },
     ),
     "right" => (
-      mp.x + ms.width as i32 - strip,
-      y.clamp(mp.y - bar_top_phys, mp.y + ms.height as i32 - bar_top_phys - bar_h_phys),
+      mp.x + ms.width as i32 - half + inset,
+      if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { y.clamp(mp.y, mp.y + ms.height as i32 - hw) },
     ),
-    // 自由驻留：72×72 小窗 logo 满窗原地驻留（钳屏内）。画布态收起时以 logo 为锚
-    // （画布 logo 位 (228,10) → 小窗 logo 位 (4,4)）——留在画布左上角会让 logo 跳位
-    // 224px，且后续 grow 以小窗位置回锚会累计漂移（复盘 3.80 ⑤ 同款相对锚定教训）
+    // 自由驻留：logo 原位（钳屏内）
     _ => {
-      let hw = (HANDLE_SIZE * scale) as i32;
-      let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-      let is_canvas = sz.width as f64 >= CANVAS_W * scale;
-      let before = w.outer_position().unwrap_or_default();
-      let (bx, by) = if is_canvas {
-        (
-          before.x + ((LOGO_X - LOGO_INSET) * scale) as i32,
-          before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32,
-        )
-      } else {
-        (before.x, before.y)
-      };
-      (
-        bx.clamp(mp.x, mp.x + ms.width as i32 - hw),
-        by.clamp(mp.y, mp.y + ms.height as i32 - hw),
-      )
+      let bx = if is_canvas { before.x + ((LOGO_X - LOGO_INSET) * scale) as i32 } else { before.x };
+      let by = if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { before.y };
+      (bx.clamp(mp.x, mp.x + ms.width as i32 - hw), by.clamp(mp.y, mp.y + ms.height as i32 - hw))
     }
   };
-  let (mw, mh) = match mode.as_str() {
-    "top" | "left" | "right" => (cw, ch),
-    _ => handle_size_phys(scale),
-  };
-  morph(&w, mw, mh, x, yv);
+  morph(&w, hw as f64, hw as f64, x, yv);
   Ok(())
 }
 
@@ -311,8 +292,8 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
 }
 
 /// 右键收纳：把岛收到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。
-/// 三目标与收起态同形（画布探边位，2026-11-20 探边条形态）：top=条底 24px 探边条
-/// 贴顶居中；right=条左部 24px 探边条贴右缘；left=条右部 24px 贴左缘（纵向居中）。
+/// 三目标与收起态同形（72×72 logo 把手半探出）：top=贴顶居中 logo 上半探出；
+/// right=贴右缘 logo 右半探出（纵向居中）；left=贴左缘 logo 左半探出（纵向居中）。
 /// 返回落位供前端持久化。
 #[tauri::command]
 pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
@@ -323,29 +304,28 @@ pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value
   let monitor = cursor_monitor(&app)?;
   let mp = monitor.position();
   let ms = monitor.size();
-  let (cw, ch) = canvas_size_phys(scale);
-  let strip = (STRIP * scale) as i32;
-  let bar_top_phys = (BAR_TOP * scale) as i32;
-  let bar_h_phys = (BAR_H * scale) as i32;
+  let (hw, hh) = handle_size_phys(scale);
+  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
+  let inset = (LOGO_INSET * scale) as i32;
   let (mode, x, y) = match target.as_str() {
     "top" => {
-      let x = mp.x + (ms.width as i32 - cw as i32) / 2;
-      let y = mp.y - (bar_top_phys + bar_h_phys - strip);
+      let x = mp.x + (ms.width as i32 - hw as i32) / 2;
+      let y = mp.y - half + inset;
       ("top", x, y)
     }
     "right" => {
-      let x = mp.x + ms.width as i32 - strip;
-      let y = mp.y + (ms.height as i32 - bar_top_phys - bar_h_phys) / 2;
+      let x = mp.x + ms.width as i32 - half + inset;
+      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
       ("right", x, y)
     }
     "left" => {
-      let x = mp.x - (cw as i32 - strip);
-      let y = mp.y + (ms.height as i32 - bar_top_phys - bar_h_phys) / 2;
+      let x = mp.x - half + inset;
+      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
       ("left", x, y)
     }
     _ => return Err(format!("未知的目标位置：{}", target)),
   };
-  morph(&w, cw, ch, x, y);
+  morph(&w, hw as f64, hh as f64, x, y);
   Ok(serde_json::json!({ "mode": mode, "x": x, "y": y }))
 }
 
