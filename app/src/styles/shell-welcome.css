@@ -790,8 +790,8 @@ html[data-theme='dark'] #isle-dock .isle-bar {
    条内 translate 承担，见 IsleWindow slideOffset）。自由驻留无边缘可探，72×72 小窗
    logo 满窗原地驻留（logo 必须落在小窗可见区 (4,4)——曾因停在画布 64px 位导致小窗
    全透明空窗，把手不可见的根因，2026-11-20 像素采样定位）。 */
-#isle-dock.peek.dock-free .isle-bar,
-#isle-dock.peek.dock-free .isle-bar-content {
+#isle-dock.peek.free .isle-bar,
+#isle-dock.peek.free .isle-bar-content {
   visibility: hidden;
 }
 /* 缘停靠收起态：横条可见（探边条=横条的屏内边缘），内容与展开态一致（滑入过程
@@ -830,7 +830,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 }
 /* 自由驻留：把手（logo+白环）满窗驻留原地——logo 必须落在小窗可见区 (4,4)，
    2026-11-19 用户反馈半透明淡出读作「幽灵残影」，改全不透明明确控件 */
-#isle-dock.peek.dock-free .isle-logo {
+#isle-dock.peek.free .isle-logo {
   transition: none;
   left: 4px;
   top: 4px;

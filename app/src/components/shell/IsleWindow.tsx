@@ -310,7 +310,7 @@ export function IsleWindow() {
         void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.点击展开', e))
         if (bar) {
           requestAnimationFrame(() => {
-            bar.style.transition = 'transform 0.22s ease-out'
+            bar.style.transition = 'transform 0.24s var(--ease)'
             bar.style.transform = 'translate(0, 0)'
             slideTimer.current = window.setTimeout(() => {
               bar.style.transition = ''
@@ -383,7 +383,7 @@ export function IsleWindow() {
       if (bar) {
         // 过渡回原位=横条滑入（rAF 只为触发过渡起步，遮挡时退化为直接就位，无指令丢失）
         requestAnimationFrame(() => {
-          bar.style.transition = 'transform 0.22s ease-out'
+          bar.style.transition = 'transform 0.24s var(--ease)'
           bar.style.transform = 'translate(0, 0)'
           slideTimer.current = window.setTimeout(() => {
             bar.style.transition = ''
@@ -407,7 +407,7 @@ export function IsleWindow() {
       if (bar) {
         // 滑出动画先行（窗体暂留展开位，横条滑向屏幕边缘），落定后原子落探边位
         const o = slideOffset(m)
-        bar.style.transition = 'transform 0.22s ease-in'
+        bar.style.transition = 'transform 0.24s var(--ease)'
         bar.style.transform = `translate(${o.x}px, ${o.y}px)`
         slideTimer.current = window.setTimeout(() => {
           void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
@@ -445,7 +445,7 @@ export function IsleWindow() {
     if (bar) {
       // 从展开位滑出回探边条
       const o = slideOffset(m)
-      bar.style.transition = 'transform 0.22s ease-in'
+      bar.style.transition = 'transform 0.24s var(--ease)'
       bar.style.transform = `translate(${o.x}px, ${o.y}px)`
       slideTimer.current = window.setTimeout(() => {
         void invoke('isle_peek', { mode: m, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
@@ -478,7 +478,7 @@ export function IsleWindow() {
     }
     if (bar) {
       const o = slideOffset(target)
-      bar.style.transition = 'transform 0.22s ease-in'
+      bar.style.transition = 'transform 0.24s var(--ease)'
       bar.style.transform = `translate(${o.x}px, ${o.y}px)`
       slideTimer.current = window.setTimeout(doStash, 230)
     } else {
