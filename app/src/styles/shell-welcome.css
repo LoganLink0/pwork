@@ -801,6 +801,15 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   /* 把手描边：白环+深色外发丝，任意壁纸（亮/暗/纯色）上都读作明确的 UI 把手 */
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(40, 36, 32, 0.4);
 }
+/* 从收起态拖动把手：startDrag 摘掉 peek 类后 logo 须留在小窗可见区 (4,4)——
+   否则 logo 跳回画布位 (228,10) 落在 72px 视口外，把手拖动全程隐形（拖空窗）。
+   :not(.open) 排除画布态拖拽（彼时 logo 走 .open 条内位） */
+#isle-dock.dragging:not(.open) .isle-logo {
+  transition: none;
+  left: 4px;
+  top: 4px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(40, 36, 32, 0.4);
+}
 #isle-dock.peek {
   pointer-events: auto;
 }

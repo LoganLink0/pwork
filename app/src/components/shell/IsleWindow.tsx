@@ -395,7 +395,7 @@ export function IsleWindow() {
   return (
     <div
       id="isle-dock"
-      className={[open ? 'open' : '', dockCls].filter(Boolean).join(' ')}
+      className={[open ? 'open' : '', dragging ? 'dragging' : '', dockCls].filter(Boolean).join(' ')}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onMouseDown={startDrag}
