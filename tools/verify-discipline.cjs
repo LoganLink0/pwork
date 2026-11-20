@@ -27,14 +27,14 @@ const IMG_RE = /\.(png|jpe?g|webp|gif)$/i;
 /* 豁免路径：规则文本与门禁自身（黑名单文件自身必然含黑名单词）。git 输出路径永远是正斜杠，统一按 / 判定 */
 const EXEMPT = p => { const u = p.split(path.sep).join('/'); return u === 'AGENTS.md' || u.startsWith('tools/verify-discipline') || u.includes('scripts/hooks/'); };
 
-const git = (args) => execSync('git ' + args, { encoding: 'utf8', cwd: ROOT }).trim();
+const git = (args) => execSync('git ' + args, { encoding: 'utf8', cwd: ROOT, maxBuffer: 64 * 1024 * 1024 }).trim();
 
 let failed = [];
 const fail = (msg) => { failed.push(msg); };
 
 /* ---------- 提交前模式：只查暂存新增行 ---------- */
-function checkStaged() {
-  const diff = git('diff --cached -U0 --no-color');
+/* 行检查核心：给定一段 git diff 文本，查新增行（暂存与待推共用同一套规则） */
+function scanAddedLines(diff, label) {
   const lines = diff.split('\n');
   let file = '';
   const hits = [];
@@ -51,13 +51,31 @@ function checkStaged() {
     const m = body.match(TODO_RE);
     if (m) hits.push(`新增 ${m[1]} 注释 ${file}: ${body.trim().slice(0, 80)}`);
   }
-  hits.forEach(h => fail('暂存新增行违规：' + h));
+  hits.forEach(h => fail(label + '违规：' + h));
+  return hits;
+}
+
+function checkStaged() {
+  const hits = scanAddedLines(git('diff --cached -U0 --no-color'), '暂存新增行');
+  if (hits.length) return; /* 已 fail，跳过清单打印 */
 
   /* 混提预警：把暂存文件清单打出来，提交者对着任务清单自证只含本任务改动（cba6f82 教训） */
   const stagedFiles = git('diff --cached --name-only').split('\n').filter(Boolean);
   console.log('本次提交涉及 ' + stagedFiles.length + ' 个文件：');
   stagedFiles.forEach(f => console.log('  ' + f));
   console.log('确认以上全部属于本任务——并行会话的改动留给其所属会话提交。');
+}
+
+/* ---------- 推送口：重查所有待推提交的新增行（--no-verify 绕过提交口后，这里兜底） ---------- */
+function checkRange(base) {
+  let baseOk = true;
+  try { git('rev-parse --verify --quiet "' + base + '"'); } catch (e) { baseOk = false; }
+  if (!baseOk) {
+    console.log('[跳过] 找不到 ' + base + '（首次推送），推送口无历史可比对');
+    return;
+  }
+  const hits = scanAddedLines(git('diff "' + base + '"..HEAD -U0 --no-color'), '待推提交新增行');
+  if (!hits.length) console.log('[通过] 待推提交新增行无违规（' + base + '..HEAD）');
 }
 
 /* ---------- 说明模式：声称截图验证必须有图片入库 ---------- */
@@ -111,6 +129,9 @@ if (process.argv.includes('--staged')) {
 } else if (process.argv.includes('--commit-msg')) {
   const i = process.argv.indexOf('--commit-msg');
   checkCommitMsg(process.argv[i + 1]);
+} else if (process.argv.includes('--range')) {
+  const i = process.argv.indexOf('--range');
+  checkRange(process.argv[i + 1] || 'origin/master');
 } else {
   checkAll();
 }
