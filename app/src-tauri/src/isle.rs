@@ -295,16 +295,42 @@ pub fn isle_expand(app: AppHandle, mode: String, _y: i32) -> Result<(), String> 
 }
 
 /// 右键收纳：把岛收到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。
-/// 三目标与收起态同形（小窗把手完全可见贴缘）：top=贴顶下方居中；right=贴右缘；
-/// left=贴左缘（纵向跟随/居中）。返回落位供前端持久化。
+/// 三目标与收起态同形（小窗把手完全可见贴缘）：top=贴顶下方 10px 居中（横向跟随
+/// 画布 logo，横条居中→把手居中）；right=贴右缘内 2px **纵向居中**；left=贴左缘
+/// 内 2px 纵向居中——纵向居中是既有共识（重构曾把 y=0 透传进画布锚定分支，把手
+/// 被收到屏幕顶角）。**收纳是刻意搬家：定位不锚画布位置**（与 peek 的「纵向跟随
+/// 展开位」不同语义）。返回落位供前端持久化。
 #[tauri::command]
 pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
   let Some(w) = app.get_webview_window("isle") else {
     return Err("找不到胶囊岛窗口".into());
   };
-  let (hw, hh) = handle_size_phys(w.scale_factor().unwrap_or(1.0));
-  let (x, y) = handle_target(&app, &w, &target, 0)?;
-  morph(&w, hw, hh, x, y);
+  let scale = w.scale_factor().unwrap_or(1.0);
+  let monitor = cursor_monitor(&app)?;
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let hw = (HANDLE_SIZE * scale) as i32;
+  let inset4 = (LOGO_INSET * scale) as i32;
+  let gap_i = (2.0 * scale) as i32;
+  let (slot_x, _slot_y) = open_slot(&target);
+  let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+  let is_canvas = sz.width as f64 >= CANVAS_W * scale;
+  let before = w.outer_position().unwrap_or_default();
+  let (x, y) = match target.as_str() {
+    // 贴顶下方 10s，横向跟随画布 logo（横条居中→把手居中）
+    "top" => {
+      let ax = if is_canvas { before.x + ((slot_x - LOGO_INSET) * scale) as i32 } else { mp.x + (ms.width as i32 - hw) / 2 + inset4 };
+      (ax, mp.y + gap_i + (4.0 * scale) as i32)
+    }
+    // 贴缘内 2s，纵向居中（刻意搬家：不锚画布位置）
+    "left" => (mp.x + gap_i - inset4, mp.y + ((ms.height as i32 - hw) / 2).max(mp.y + gap_i)),
+    "right" => (
+      mp.x + ms.width as i32 - hw + gap_i - inset4,
+      mp.y + ((ms.height as i32 - hw) / 2).max(mp.y + gap_i),
+    ),
+    _ => return Err(format!("未知的目标位置：{}", target)),
+  };
+  morph(&w, hw as f64, hw as f64, x, y);
   Ok(serde_json::json!({ "mode": target, "x": x, "y": y }))
 }
 
@@ -404,6 +430,7 @@ fn left_button_up() -> bool {
 pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let before = w.outer_position().map_err(|e| format!("读取位置失败：{}", e))?;
+  let cursor0 = app.cursor_position().unwrap_or_default();
   w.start_dragging().map_err(|e| format!("启动拖拽失败：{}", e))?;
   let app = app.clone();
   thread::spawn(move || {
@@ -435,8 +462,18 @@ pub fn isle_start_drag(app: AppHandle) -> Result<(), String> {
       .get_webview_window("isle")
       .and_then(|w| w.outer_position().ok())
       .unwrap_or(before);
-    let moved = before != final_pos;
-    let (mode, pos) = decide_and_place(&app, final_pos);
+    // moved 判定用**光标位移**（≥3px）而非窗体位置：原地单击把手时，decide_and_place
+    // 的贴缘重定位本身会移动窗体，把它算进 moved 会把单击误判成拖动 → 收回（
+    // 「弹出即消失」复发，2026-11-20 右/左缘实测）。单击（光标没动）= 展开分支；
+    // 真拖动才做停靠判定落位。
+    let cursor1 = app.cursor_position().unwrap_or_default();
+    let moved_cursor = (cursor1.x - cursor0.x).abs() > 3.0 || (cursor1.y - cursor0.y).abs() > 3.0;
+    let moved = moved_cursor && before != final_pos;
+    let (mode, pos) = if moved_cursor {
+      decide_and_place(&app, final_pos)
+    } else {
+      (String::new(), final_pos)
+    };
     let _ = app.emit(
       "isle-drag-end",
       serde_json::json!({ "mode": mode, "x": pos.x, "y": pos.y, "moved": moved }),
