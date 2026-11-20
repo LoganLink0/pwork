@@ -813,6 +813,27 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 #isle-dock.peek {
   pointer-events: auto;
 }
+/* 顶缘展开：logo 落画布居中槽 (228,20)（展开锚定 logo 不动，横条保持屏中）——
+   内容行让位：状态文本限宽在 logo 左侧，操作按钮右缘对齐（避开居中 logo） */
+#isle-dock.open.dock-top .isle-bar-content {
+  padding-left: 18px;
+}
+#isle-dock.open.dock-top .isle-note {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#isle-dock.open.dock-top .isle-acts {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+#isle-dock.open.dock-top .isle-logo {
+  left: 228px;
+  top: 20px;
+}
 
 /* ── 右键收纳菜单（隐藏到屏幕中央 / 右侧）──
    在岛画布内渲染（画布只有 520×140，位置由前端钳在画布内）；开启前 Rust 先清

@@ -21,13 +21,20 @@ const CANVAS_W: f64 = 520.0;
 const CANVAS_H: f64 = 140.0;
 const HANDLE_SIZE: f64 = 72.0; // 收起态小窗边长（logo 64 + 描边余量 8）
 const LOGO_INSET: f64 = 4.0; // 小窗内 logo 内缩（描边环余量）
+const LOGO_Y: f64 = 10.0; // 横条内基准纵坐标（snap_top 贴顶用）
+const BAR_TOP: f64 = 10.0; // 横条在画布内的纵坐标（CSS px，与 .isle-bar top 一致）
+const BAR_H: f64 = 64.0; // 横条高度（CSS px，与 .isle-bar height 一致）
 
-/// 画布内 logo 位（CSS px，与 .isle-logo 各模式 CSS left/top 一致）：
-/// top/free (228,10)、left (10,10)、right (446,10)。
-const LOGO_X: f64 = 228.0;
-const LOGO_X_LEFT: f64 = 10.0;
-const LOGO_X_RIGHT: f64 = 446.0;
-const LOGO_Y: f64 = 10.0;
+/// 展开态 logo 槽位（画布内 CSS px，与 .open .isle-logo 各模式 left/top 一致）：
+/// top=画布居中槽（228,20，横条保持屏中）；right=条内右侧槽（458,20，贴右缘）；
+/// left/free=条内左侧槽（10,20）。
+fn open_slot(mode: &str) -> (f64, f64) {
+  match mode {
+    "top" => (228.0, 20.0),
+    "right" => (458.0, 20.0),
+    _ => (10.0, 20.0),
+  }
+}
 
 fn canvas_size_phys(scale: f64) -> (f64, f64) {
   (CANVAS_W * scale, CANVAS_H * scale)
@@ -155,16 +162,6 @@ pub fn isle_snap_top(app: AppHandle) -> Result<(), String> {
   snap_top(&app)
 }
 
-/// 画布内各模式 logo 位（CSS px）→ 用于小窗⇄画布切换时的锚定换算
-fn logo_anchor_phys(mode: &str, scale: f64) -> (i32, i32) {
-  let x = match mode {
-    "left" => LOGO_X_LEFT,
-    "right" => LOGO_X_RIGHT,
-    _ => LOGO_X,
-  };
-  ((x * scale) as i32, (LOGO_Y * scale) as i32)
-}
-
 /// 实况外框-客户边距（无边框窗应为 0；防御性读取，为 0 时 SetWindowPos 尺寸语义
 /// 与 tauri set_size 一致）
 fn frame_margins(w: &tauri::WebviewWindow) -> (i32, i32) {
@@ -195,93 +192,99 @@ fn morph(w: &tauri::WebviewWindow, width: f64, height: f64, x: i32, y: i32) {
   let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
 }
 
-/// 收起态（2026-11-20 用户拍板「只展示 LOGO」）：四模式统一 72×72 小窗把手——
-/// logo 满窗+白环描边，缘停靠小窗半探出屏幕外（屏内留约半枚 logo 贴边可见），
-/// 自由驻留小窗原地驻留；命中区=小窗本体（探出屏外部分收不到点击，无需 region）。
-/// 画布态收起时缘停靠锚 logo 贴缘、自由驻留锚 logo 原位（带尺寸守卫防累计漂移，
-/// 复盘 3.80 ⑤）。
-#[tauri::command]
-pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
-  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+/// 收起态（2026-11-20 用户拍板「只展示 LOGO」+「展开过程 LOGO 位置不变」）：
+/// 四模式统一 72×72 小窗把手，**完全可见**（不再半探出屏外——半探出与「展开过程
+/// logo 不动」数学上互斥：探出部分的 logo 展开时必然位移）。站位=logo 左上角贴缘
+/// 完全可见：top=贴顶下方居中（灵动岛站位）/ left·right=贴缘纵向跟随 / free=原地。
+/// 画布态收起：小窗 tl = 画布 tl + 展开槽位 - 内缩（logo 不跳位）。命中区=小窗本体。
+fn handle_target(app: &AppHandle, w: &tauri::WebviewWindow, mode: &str, y: i32) -> Result<(i32, i32), String> {
   let scale = w.scale_factor().unwrap_or(1.0);
-  let monitor = cursor_monitor(&app)?;
+  let monitor = cursor_monitor(app)?;
   let mp = monitor.position();
   let ms = monitor.size();
   let hw = (HANDLE_SIZE * scale) as i32;
-  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
+  let gap = (2.0 * scale) as i32;
   let inset = (LOGO_INSET * scale) as i32;
+  let (slot_x, slot_y) = open_slot(mode);
   let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
   let is_canvas = sz.width as f64 >= CANVAS_W * scale;
   let before = w.outer_position().unwrap_or_default();
-  // 画布态收起：以画布内 logo 位为锚换算小窗位置（logo 不跳位）——top 缘 logo 在
-  // 画布 (228,10)、left (10,10)、right (446,10)，小窗 logo 位 (4,4)。小窗态保持
-  // 原位（top 横向重归居中，纠正历史偏移）。
-  let (x, yv) = match mode.as_str() {
+  // 画布态：小窗 tl = 画布 tl + 槽位 - 内缩（logo 落在展开槽位=不跳位）；小窗态：原位
+  let anchored = (
+    before.x + ((slot_x - LOGO_INSET) * scale) as i32,
+    before.y + ((slot_y - LOGO_INSET) * scale) as i32,
+  );
+  let kept = (before.x, before.y);
+  let (x, yv) = match mode {
     "top" => {
-      let cx = if is_canvas { before.x + ((LOGO_X - LOGO_INSET) * scale) as i32 } else { mp.x + (ms.width as i32 - hw) / 2 };
-      (cx, mp.y - half + inset)
+      let x = if is_canvas { anchored.0 } else { mp.x + (ms.width as i32 - hw) / 2 + inset };
+      // 顶站位 y=mp.y+6s（logo 上缘 10s）：展开钳制界=mp.y-10s，小窗-16s 恰好无钳制
+      // （logo 展开全程零位移）
+      (x, mp.y + gap + (4.0 * scale) as i32)
     }
-    "left" => (
-      mp.x - half + inset,
-      if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { y.clamp(mp.y, mp.y + ms.height as i32 - hw) },
-    ),
-    "right" => (
-      mp.x + ms.width as i32 - half + inset,
-      if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { y.clamp(mp.y, mp.y + ms.height as i32 - hw) },
-    ),
-    // 自由驻留：logo 原位（钳屏内）
+    "left" => {
+      // 左站位 x=mp.x+6s（logo 左缘 10s）：展开钳制界=mp.x，小窗-6s 恰好无钳制
+      let x = mp.x + gap + (4.0 * scale) as i32;
+      let y = if is_canvas { anchored.1 } else { y.clamp(mp.y + gap - inset, mp.y + ms.height as i32 - hw - gap + inset) };
+      (x, y)
+    }
+    "right" => {
+      let x = mp.x + ms.width as i32 - hw + gap - inset;
+      let y = if is_canvas { anchored.1 } else { y.clamp(mp.y + gap - inset, mp.y + ms.height as i32 - hw - gap + inset) };
+      (x, y)
+    }
     _ => {
-      let bx = if is_canvas { before.x + ((LOGO_X - LOGO_INSET) * scale) as i32 } else { before.x };
-      let by = if is_canvas { before.y + ((LOGO_Y - LOGO_INSET) * scale) as i32 } else { before.y };
-      (bx.clamp(mp.x, mp.x + ms.width as i32 - hw), by.clamp(mp.y, mp.y + ms.height as i32 - hw))
+      let (bx, by) = if is_canvas { anchored } else { kept };
+      (
+        bx.clamp(mp.x + gap - inset, mp.x + ms.width as i32 - hw - gap + inset),
+        by.clamp(mp.y + gap - inset, mp.y + ms.height as i32 - hw - gap + inset),
+      )
     }
   };
-  morph(&w, hw as f64, hw as f64, x, yv);
+  Ok((x, yv))
+}
+
+/// 收起（四模式统一小窗把手，完全可见）。
+#[tauri::command]
+pub fn isle_peek(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+  let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
+  let (hw, hh) = handle_size_phys(w.scale_factor().unwrap_or(1.0));
+  let (x, yv) = handle_target(&app, &w, &mode, y)?;
+  morph(&w, hw, hh, x, yv);
   Ok(())
 }
 
-/// 展开（2026-11-19）：窗体还原为 520×140 画布并按模式定位，单次原子变形。
-/// 缘停靠目标位与 snap_top/dock_right/dock_left 同式（那里服务设置重置/拖拽落位，
-/// 窗体已是画布尺寸）；自由驻留以 logo 为锚（小窗 logo 位 (4,4) → 画布 logo 位），
-/// 按目标画布尺寸钳屏内——先算目标再原子落位，无中间帧。
+/// 展开（2026-11-20 用户拍板「展开过程 LOGO 位置不变」）：窗体还原为 520×140 画布，
+/// **画布左上 = 把手 logo 左上 - 展开槽位偏移**——logo 左上角坐标全程不变（仅按
+/// .open 槽位 64→44 原地缩小），横条在 logo 周围淡入。钳制只保横条完整可见
+/// （画布 y10..74、x0..520 进屏；画布透明余量允许悬出屏外）。
 #[tauri::command]
-pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+pub fn isle_expand(app: AppHandle, mode: String, _y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let scale = w.scale_factor().unwrap_or(1.0);
   let (cw, ch) = canvas_size_phys(scale);
   let monitor = cursor_monitor(&app)?;
   let mp = monitor.position();
   let ms = monitor.size();
-  let (dx, dy) = frame_margins(&w);
-  let was_small = {
-    let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-    sz.width > 0 && sz.width < (CANVAS_W * scale) as u32
-  };
+  let inset = (LOGO_INSET * scale) as i32;
+  let (slot_x, slot_y) = open_slot(&mode);
+  let bar_top_phys = (BAR_TOP * scale) as i32;
+  let bar_h_phys = (BAR_H * scale) as i32;
+  let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+  let is_small = sz.width > 0 && (sz.width as f64) < CANVAS_W * scale;
   let before = w.outer_position().unwrap_or_default();
-  let (x, yv) = match mode.as_str() {
-    "top" => (mp.x + (ms.width as i32 - (cw as i32 + dx)) / 2, mp.y - (LOGO_Y * scale) as i32),
-    "right" => (
-      mp.x + ms.width as i32 - cw as i32,
-      y.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
-    ),
-    "left" => (
-      mp.x,
-      y.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
-    ),
-    _ => {
-      if was_small {
-        let (ax, ay) = logo_anchor_phys("free", scale);
-        let nx = before.x - ax + (LOGO_INSET * scale) as i32;
-        let ny = before.y - ay + (LOGO_INSET * scale) as i32;
-        (
-          nx.clamp(mp.x, mp.x + ms.width as i32 - (cw as i32 + dx)),
-          ny.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy)),
-        )
-      } else {
-        (before.x, before.y)
-      }
-    }
+  let (x, yv) = if is_small {
+    // 画布 tl = 把手 logo 左上 - 槽位偏移（logo 不动），钳横条完整可见
+    let px = before.x + inset;
+    let py = before.y + inset;
+    (
+      (px - (slot_x * scale) as i32).clamp(mp.x, mp.x + ms.width as i32 - cw as i32),
+      (py - (slot_y * scale) as i32).clamp(mp.y - bar_top_phys, mp.y + ms.height as i32 - bar_top_phys - bar_h_phys),
+    )
+  } else {
+    (before.x, before.y)
   };
+  let _ = &_y;
   morph(&w, cw as f64, ch as f64, x, yv);
   // 从隐藏态呼出（设置页开关「打开」路径直接调 expand）：morph 不改可见性，
   // 隐藏窗必须补 show——呼出的语义=必可见（复盘 3.80「点开找不到 logo」同款根因）
@@ -292,87 +295,45 @@ pub fn isle_expand(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
 }
 
 /// 右键收纳：把岛收到指定去处（2026-11-19 用户需求，logo 右键菜单三项）。
-/// 三目标与收起态同形（72×72 logo 把手半探出）：top=贴顶居中 logo 上半探出；
-/// right=贴右缘 logo 右半探出（纵向居中）；left=贴左缘 logo 左半探出（纵向居中）。
-/// 返回落位供前端持久化。
+/// 三目标与收起态同形（小窗把手完全可见贴缘）：top=贴顶下方居中；right=贴右缘；
+/// left=贴左缘（纵向跟随/居中）。返回落位供前端持久化。
 #[tauri::command]
 pub fn isle_stash_to(app: AppHandle, target: String) -> Result<serde_json::Value, String> {
   let Some(w) = app.get_webview_window("isle") else {
     return Err("找不到胶囊岛窗口".into());
   };
-  let scale = w.scale_factor().unwrap_or(1.0);
-  let monitor = cursor_monitor(&app)?;
-  let mp = monitor.position();
-  let ms = monitor.size();
-  let (hw, hh) = handle_size_phys(scale);
-  let half = (HANDLE_SIZE / 2.0 * scale) as i32;
-  let inset = (LOGO_INSET * scale) as i32;
-  let (mode, x, y) = match target.as_str() {
-    "top" => {
-      let x = mp.x + (ms.width as i32 - hw as i32) / 2;
-      let y = mp.y - half + inset;
-      ("top", x, y)
-    }
-    "right" => {
-      let x = mp.x + ms.width as i32 - half + inset;
-      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
-      ("right", x, y)
-    }
-    "left" => {
-      let x = mp.x - half + inset;
-      let y = mp.y + (ms.height as i32 - hh as i32) / 2;
-      ("left", x, y)
-    }
-    _ => return Err(format!("未知的目标位置：{}", target)),
-  };
-  morph(&w, hw as f64, hh as f64, x, y);
-  Ok(serde_json::json!({ "mode": mode, "x": x, "y": y }))
+  let (hw, hh) = handle_size_phys(w.scale_factor().unwrap_or(1.0));
+  let (x, y) = handle_target(&app, &w, &target, 0)?;
+  morph(&w, hw, hh, x, y);
+  Ok(serde_json::json!({ "mode": target, "x": x, "y": y }))
 }
 
-/// 右键菜单前置：画布完整可见（菜单 136×112 在探边条/72×72 小窗内放不下，且菜单
-/// 必须完整在屏内）。缘停靠=变形到展开位（与 expand 同式）；自由驻留=以 logo 为锚
-/// 原位长回画布（logo 不跳位）。菜单位置由前端按点击点钳算。
+/// 右键菜单前置：画布完整可见（菜单在小窗内放不下且不得出屏）——四模式统一
+/// logo 锚定长回画布（画布 tl = 把手 logo 左上 - 展开槽位偏移，logo 不跳位）；
+/// 已是画布尺寸（悬停展开后的右键）时原位不动。菜单位置由前端按点击点钳算。
 #[tauri::command]
-pub fn isle_grow(app: AppHandle, mode: String, y: i32) -> Result<(), String> {
+pub fn isle_grow(app: AppHandle, mode: String, _y: i32) -> Result<(), String> {
   let Some(w) = app.get_webview_window("isle") else { return Ok(()) };
   let scale = w.scale_factor().unwrap_or(1.0);
   let (cw, ch) = canvas_size_phys(scale);
-  let before = w.outer_position().unwrap_or_default();
-  match mode.as_str() {
-    // 缘停靠收起态（探边位）→ 展开位（与 isle_expand 缘停靠目标同式）
-    "top" => {
-      let monitor = cursor_monitor(&app)?;
-      let mp = monitor.position();
-      let ms = monitor.size();
-      let (dx, _dy) = frame_margins(&w);
-      let x = mp.x + (ms.width as i32 - (cw as i32 + dx)) / 2;
-      let yv = mp.y - (LOGO_Y * scale) as i32;
-      morph(&w, cw, ch, x, yv);
-    }
-    "right" | "left" => {
-      let monitor = cursor_monitor(&app)?;
-      let mp = monitor.position();
-      let ms = monitor.size();
-      let (_dx, dy) = frame_margins(&w);
-      let x = if mode == "right" { mp.x + ms.width as i32 - cw as i32 } else { mp.x };
-      let yv = y.clamp(mp.y, mp.y + ms.height as i32 - (ch as i32 + dy));
-      morph(&w, cw, ch, x, yv);
-    }
-    // 自由驻留：logo 为锚原位长回（小窗 logo 位 (4,4) → 画布 logo 位），logo 不跳位。
-    // 已是画布尺寸（悬停展开后的右键）时原位不动——再减一次锚点会把画布推走 224px
-    _ => {
-      let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-      let is_canvas = sz.width as f64 >= CANVAS_W * scale;
-      if is_canvas {
-        morph(&w, cw, ch, before.x, before.y);
-      } else {
-        let (ax, ay) = logo_anchor_phys("free", scale);
-        let nx = before.x - ax + (LOGO_INSET * scale) as i32;
-        let ny = before.y - ay + (LOGO_INSET * scale) as i32;
-        morph(&w, cw, ch, nx, ny);
-      }
-    }
+  let monitor = cursor_monitor(&app)?;
+  let mp = monitor.position();
+  let ms = monitor.size();
+  let inset = (LOGO_INSET * scale) as i32;
+  let bar_top_phys = (BAR_TOP * scale) as i32;
+  let bar_h_phys = (BAR_H * scale) as i32;
+  let (slot_x, slot_y) = open_slot(&mode);
+  let sz = w.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
+  let is_canvas = sz.width as f64 >= CANVAS_W * scale;
+  if is_canvas {
+    return Ok(());
   }
+  let before = w.outer_position().unwrap_or_default();
+  let px = before.x + inset;
+  let py = before.y + inset;
+  let x = (px - (slot_x * scale) as i32).clamp(mp.x, mp.x + ms.width as i32 - cw as i32);
+  let yv = (py - (slot_y * scale) as i32).clamp(mp.y - bar_top_phys, mp.y + ms.height as i32 - bar_top_phys - bar_h_phys);
+  morph(&w, cw, ch, x, yv);
   Ok(())
 }
 

@@ -104,6 +104,9 @@ export function IsleWindow() {
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
   const noticeTimer = useRef<number | null>(null)
+  /** 最近一次展开（morph）完成时刻：悬停自动展开即时 morph 后，快速单击意图是
+      「确认展开」而非收回——展开后 700ms 内的单击不收回 */
+  const expandedAt = useRef(0)
   /** 拖放收起后的进入抑制：缩窗瞬间光标还在小窗上，合成 mouseenter 会让刚收回的岛立即弹回展开——
       抑制到下一次 mouseleave（离开后再靠近才正常展开） */
   const suppressEnter = useRef(false)
@@ -278,11 +281,14 @@ export function IsleWindow() {
         suppressEnter.current = false
         setPeek(false)
         applyOpen(true)
+        expandedAt.current = Date.now()
         const pos = readPos()
         void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.点击展开', e))
       } else {
-        // 展开态单击=收回（既有语义）：完整收回——只隐藏横条不落位会把窗体留在展开位，
-        // 成为一块不可见却拦截点击的空窗（左缘实测暴露）
+        // 展开态单击=收回（既有语义）。但悬停自动展开是即时 morph（把手一碰横条就
+        // 原地出现），用户快速点击刚展开的横条意图是「确认展开」——700ms 内的单击
+        // 不收回（否则「弹出即消失」复发）；超时后的单击才走收回切换。
+        if (Date.now() - expandedAt.current < 700) return
         applyOpen(false)
         setPeek(true)
         suppressEnter.current = true
@@ -323,6 +329,7 @@ export function IsleWindow() {
     setMenu(null)
     if (peek) {
       const pos = readPos()
+      expandedAt.current = Date.now() // 即时 morph=展开起点（快速单击=确认展开）
       void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
     }
     openTimer.current = window.setTimeout(() => {
@@ -332,10 +339,18 @@ export function IsleWindow() {
   }
   const onLeave = () => {
     if (dragging) return
-    suppressEnter.current = false // 离开即解除落位抑制，下次靠近正常展开
+    // 窗体变形（收起/展开/收纳）会触发合成 mouseleave——光标实际仍在变形后的窗体上
+    // （:hover 命中）时不算真离开：落位抑制保持武装（收纳后首次点击=展开保持的
+    // 前提），收回计时器也不武装（光标在窗内不该收回）
+    if (document.getElementById('isle-dock')?.matches(':hover')) return
+    suppressEnter.current = false // 真实离开才解除落位抑制，下次靠近正常展开
     setMenu(null)
     clearTimers()
     closeTimer.current = window.setTimeout(() => {
+      // 收回前以 CSS :hover 实况为准：窗体变形（小窗⇄画布）会触发成对的合成
+      // leave/enter，drag 会话还可能吞掉 enter——光标实际仍在窗内时（:hover 命中）
+      // 不收回，否则刚展开的岛会被误收（真实用户在窗体变形+光标静止时同样撞上）
+      if (document.getElementById('isle-dock')?.matches(':hover')) return
       applyOpen(false)
       const pos = readPos()
       setPeek(true)
@@ -349,6 +364,9 @@ export function IsleWindow() {
     e.preventDefault()
     if ((e.target as HTMLElement).closest('button')) return
     clearTimers()
+    // grow 变形（小窗→画布）会在光标静止时触发合成 mouseenter——不武装抑制的话
+    // onEnter 的 setMenu(null) 会把刚打开的菜单立刻关掉
+    suppressEnter.current = true
     const pos = readPos()
     void invoke('isle_grow', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e2) => reportIsleError('岛.菜单展开画布', e2))
     const menuW = 148
