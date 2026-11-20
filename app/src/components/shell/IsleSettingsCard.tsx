@@ -42,31 +42,24 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
     localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
     writePref(KEY, { enabled: on })
     if (on) {
-      // 打开=直接展开完整横条（2026-11-18 用户反馈：只 show 会停在 logo 小窗并被 1 秒
-      // 自动收回计时器收走——「闪现一下就消失」根因）；mode/y 从共享 localStorage 读
-      try {
-        const pos = JSON.parse(localStorage.getItem('pwork-isle-pos') || '{}') as { mode?: string; y?: number }
-        void invoke('isle_expand', { mode: pos.mode ?? 'top', y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
-        return
-      } catch {
-        void invoke('isle_show').catch(() => {})
-        return
-      }
+      // 打开=本体在锚点站位展开并保持（锚点旁出现完整横条）
+      void invoke('isle_show_expanded').catch(() => {})
+      return
     }
-    invoke('isle_hide').catch(() => {})
+    invoke('isle_hide_all').catch(() => {})
   }
 
   const resetPos = () => {
     localStorage.removeItem(POS_KEY)
     writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部居中）
-    // 禁用态重置只写偏好不复活窗体（snap_top 会补 show）；启用时才直接对齐到顶缘
-    if (enabled) void invoke('isle_snap_top').catch(() => {})
+    // 禁用态重置只写偏好不复活窗体；启用时锚点回顶缘下方居中
+    if (enabled) void invoke('isle_anchor_snap_top').catch(() => {})
   }
 
   return (
     <div className="set-card" data-tab="isle" style={{ display: active ? undefined : 'none' }}>
       <h2>胶囊岛</h2>
-      <div className="desc">桌面上的常驻小 P：按住拖到哪驻留到哪，拖近屏幕上缘吸附居中、贴左右缘自动留一半贴边可见；靠近展开状态条，进行中的抓取、导出与 AI 问答都在这里可见；右键 logo 可一键收纳到屏幕上方/右侧/左侧，收纳后靠近把手滑出</div>
+      <div className="desc">桌面上的常驻小 P：迷你胶囊常驻可见，按住拖到哪驻留到哪（任意位置）；靠近胶囊展开状态条，进行中的抓取、导出与 AI 问答都在这里可见，鼠标离开自动收回；开关关闭后屏上完全隐藏</div>
       <div className="set-body">
         <div className="set-row">
           <label>显示</label>

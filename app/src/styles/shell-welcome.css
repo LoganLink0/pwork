@@ -783,36 +783,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
 }
 
-/* ── 收起态（peek，四模式统一：top 灵动岛 / left 左缘 / right 右缘 / free 自由驻留）──
-   「只展示 LOGO」（2026-11-20 用户拍板）：四模式统一 72×72 小窗把手——logo 满窗
-   (4,4)+白环描边，缘停靠由 Rust 定位半探出屏幕外（屏内留约半枚 logo 贴边可见），
-   自由驻留原地驻留；横条与内容全部隐藏。靠近把手滑出展开，离开 1 秒收回。
-   logo 必须落在小窗可见区 (4,4)——曾因停在画布 64px 位导致小窗全透明空窗，把手
-   不可见的根因（2026-11-20 像素采样定位）；选择器令牌是 free（非 dock-free）——
-   曾因令牌写错规则从未生效（computed style 定位）。 */
-#isle-dock.peek .isle-bar,
-#isle-dock.peek .isle-bar-content {
-  visibility: hidden;
-}
-#isle-dock.peek .isle-logo {
-  transition: none;
-  left: 4px;
-  top: 4px;
-  /* 把手描边：白环+深色外发丝，任意壁纸（亮/暗/纯色）上都读作明确的 UI 把手 */
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(40, 36, 32, 0.4);
-}
-/* 从收起态拖动把手：startDrag 摘掉 peek 类后 logo 须留在小窗可见区 (4,4)——
-   否则 logo 跳回画布位 (228,10) 落在 72px 视口外，把手拖动全程隐形（拖空窗）。
-   :not(.open) 排除画布态拖拽（彼时 logo 走 .open 条内位） */
-#isle-dock.dragging:not(.open) .isle-logo {
-  transition: none;
-  left: 4px;
-  top: 4px;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(40, 36, 32, 0.4);
-}
-#isle-dock.peek {
-  pointer-events: auto;
-}
+
 /* 顶缘展开：logo 落画布居中槽 (228,20)（展开锚定 logo 不动，横条保持屏中）——
    内容行让位：状态文本限宽在 logo 左侧，操作按钮右缘对齐（避开居中 logo） */
 #isle-dock.open.dock-top .isle-bar-content {
@@ -835,55 +806,68 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   top: 20px;
 }
 
-/* ── 右键收纳菜单（隐藏到屏幕中央 / 右侧）──
-   在岛画布内渲染（画布只有 520×140，位置由前端钳在画布内）；开启前 Rust 先清
-   命中裁剪（收起态 region 会把菜单裁没），罩层点任意处关闭并还原裁剪。 */
-.isle-menu-overlay {
+/* ── 常驻锚点迷你胶囊（/anchor 独立窗）──
+   双窗架构的「肉眼可见提示」：深色迷你胶囊常驻完全可见（本体横条只在展开时出现，
+   其余时间完全隐藏）。Fluent 语言：深色底 85% + 1px 白描边 + 内高光；白 P 单色
+   标识 + 白色状态词 + 橙色活动点（有任务才亮）。悬停变亮；按住拖动换驻留位置。 */
+#isle-anchor {
   position: fixed;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 32px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 60;
+}
+.anchor-capsule {
+  position: absolute;
   inset: 0;
-  z-index: 320;
+  border-radius: 16px;
+  background: rgba(26, 26, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 4px 14px rgba(0, 0, 0, 0.22);
+  cursor: grab;
   pointer-events: auto;
+  transition: background 0.18s var(--ease), transform 0.15s ease;
 }
-.isle-menu {
-  position: fixed;
-  z-index: 321;
-  /* 显式恢复命中：pointer-events 继承容器（展开态容器为 none），不声明则菜单点了穿透 */
-  pointer-events: auto;
-  min-width: 136px;
-  padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  color: var(--ink);
+.anchor-capsule:active {
+  cursor: grabbing;
+  transform: scale(1.03);
 }
-.isle-menu button {
-  display: block;
-  width: 100%;
-  padding: 7px 12px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  text-align: left;
-  cursor: pointer;
+.anchor-capsule:hover,
+.anchor-capsule.active {
+  background: rgba(34, 34, 36, 1);
 }
-.isle-menu button:hover {
-  background: var(--surface-2);
+.anchor-p {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
 }
-#isle-dock.dock-right .isle-logo {
-  left: 446px; /* 右缘停靠：logo 停画布右侧（520-64-10），展开态仍锚定条内右侧（抽屉从驻留点滑出，把手不动） */
+.anchor-word {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  line-height: 1;
+  color: rgb(240, 238, 234);
+  pointer-events: none;
+  white-space: nowrap;
 }
-#isle-dock.dock-left .isle-logo {
-  left: 10px; /* 左缘停靠：logo 停画布左侧（与 top 收起位一致），画布左缘贴屏幕左缘 */
-}
-#isle-dock.dock-right.open .isle-logo {
-  left: 458px; /* 展开态：条内右侧锚定（520-18-44），距探边位仅 ~12px——不再横穿整条 */
-}
-#isle-dock.dock-right.open .isle-bar-content {
-  padding: 0 64px 0 18px; /* 右缘展开：右侧让位给 logo，内容行从左侧起 */
+.anchor-dot {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(232, 131, 58);
+  pointer-events: none;
 }
 .isle-divider {
   width: 1px;

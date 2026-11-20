@@ -1,29 +1,16 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { syncThemeFromStore } from '../../engine/appearance'
-import { readPref, refreshPrefsFile, writePref } from '../../engine/prefsFile'
-import { recordError } from '../../engine/errorLog'
-
-/** 定位/变形失败的统一留痕（岛会从屏幕上消失，绝不能静默） */
-function reportIsleError(where: string, e: unknown): void {
-  void recordError({ where, kind: 'app', message: e instanceof Error ? e.message : String(e) }, { silent: true })
-}
+import { refreshPrefsFile, writePref } from '../../engine/prefsFile'
 
 /**
- * 胶囊岛窗（/isle 分流渲染）——三种停靠模式 + 自由驻留，统一「靠近展开 / 离开收回」：
- * 固定 520×140 透明画布，窗体从不变形（可见窗 resize 会白闪）。收起隐藏态=
- * 「藏进去、留把手」：缘停靠 logo 半探出屏幕外（屏内留约一半贴边可见），自由驻留
- * logo 半透明淡出原地——可见把手就是提醒/引导；Rust 以 SetWindowRgn 把命中区裁为
- * logo 屏内可见部分（region 外穿透给下层）；靠近把手滑出展开毛玻璃横条
- * （logo 滑至条内左侧 + 状态单行 + 问小 P / 打开 PWORK）。
- * 模式（拖拽落点由 Rust 按光标判定并落位，前端持久化）：
- *   top   灵动岛：横条零间距贴屏幕上缘居中；
- *   left/right 缘停靠：画布贴屏幕左/右缘，纵向跟随落点；
- *   free  自由驻留：拖到哪驻留到哪（全向钳回屏内），离开半透明淡出原地。
- * 单击=收回；按住=原生拖拽。位置/模式持久化在数据目录 prefs.json（pwork-isle-pos，
- * 配置文件化 2026-11-16；localStorage 双写为兼容期回落）；
- * 启用开关在主窗设置页（经 pwork-prefs-changed 事件实时响应显隐）。
+ * 胶囊岛本体横条窗（/isle 分流渲染）——双窗架构的本体：
+ * 常驻可见的是锚点迷你胶囊窗（/anchor），本体横条仅在悬停锚点时出现，
+ * 光标离开 1 秒即隐藏（完全隐藏=屏上只剩锚点圆点，不拦任何点击）。
+ * 本体窗生命周期：Rust isle_anchor_hover_show_body 定位+show；前端只负责
+ * 「离开 1 秒→调用隐藏+锚点回归」与「拖拽结束→持久化站位」。
+ * 状态词随任务变化（活动推送经 isle-activities 事件）。
  */
 
 interface ActivityItem {
@@ -38,7 +25,6 @@ interface ActivityNotice {
 }
 
 const POS_KEY = 'pwork-isle-pos'
-const SETTINGS_KEY = 'pwork-isle-settings'
 
 interface SavedPos {
   mode: 'top' | 'left' | 'right' | 'free'
@@ -46,105 +32,26 @@ interface SavedPos {
   y?: number
 }
 
-/** localStorage 兼容期回落（读取失败返回 null） */
-function readLocal(key: string): unknown {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function readPos(): SavedPos {
-  try {
-    // 配置文件化：prefs.json 优先（null=已重置），兼容期回落 localStorage 旧键
-    const raw = readPref<unknown>(POS_KEY, undefined) ?? readLocal(POS_KEY)
-    if (raw == null || raw === 'null' || raw === '') return { mode: 'top' }
-    const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as SavedPos
-    if (p.mode === 'right' && typeof p.y === 'number') return { mode: 'right', y: p.y }
-    if (p.mode === 'left' && typeof p.y === 'number') return { mode: 'left', y: p.y }
-    if (p.mode === 'free' && typeof p.x === 'number' && typeof p.y === 'number') return { mode: 'free', x: p.x, y: p.y }
-    return { mode: 'top' }
-  } catch {
-    return { mode: 'top' }
-  }
-}
-
 function savePos(pos: SavedPos) {
   localStorage.setItem(POS_KEY, JSON.stringify(pos))
   writePref(POS_KEY, pos)
 }
 
-function readEnabled(): boolean {
-  try {
-    const raw = readPref<unknown>(SETTINGS_KEY, undefined) ?? readLocal(SETTINGS_KEY)
-    if (raw == null) return true
-    const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { enabled?: boolean }
-    return p.enabled !== false
-  } catch {
-    return true
-  }
-}
-
-/** 驻留模式的容器类名；peek=收起隐藏态（缘停靠 logo 半探入/free 半透明，四模式统一；展开态永不叠加） */
-function dockClass(mode: SavedPos['mode'], peek: boolean, open: boolean): string {
-  const base = mode === 'top' ? 'dock-top' : mode === 'left' ? 'dock-left' : mode === 'right' ? 'dock-right' : 'free'
-  return [base, peek && !open ? 'peek' : ''].filter(Boolean).join(' ')
-}
-
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [notice, setNotice] = useState<ActivityNotice | null>(null)
-  const [open, setOpenState] = useState(false)
+  /** 拖拽中（Rust 原生拖拽窗体，前端只标记样式） */
   const [dragging, setDragging] = useState(false)
-  /** 驻留模式：Rust 拖拽判定/挂载恢复共同维护 */
-  const [mode, setMode] = useState<SavedPos['mode']>('top')
-  /** 收起隐藏态（缘停靠 logo 半探入边缘/free 半透明淡出；命中区=logo 屏内可见部分；四模式统一） */
-  const [peek, setPeek] = useState(true)
-  const openTimer = useRef<number | null>(null)
-  const closeTimer = useRef<number | null>(null)
-  const noticeTimer = useRef<number | null>(null)
-  /** 最近一次展开（morph）完成时刻：悬停自动展开即时 morph 后，快速单击意图是
-      「确认展开」而非收回——展开后 700ms 内的单击不收回 */
-  const expandedAt = useRef(0)
-  /** 拖放收起后的进入抑制：缩窗瞬间光标还在小窗上，合成 mouseenter 会让刚收回的岛立即弹回展开——
-      抑制到下一次 mouseleave（离开后再靠近才正常展开） */
-  const suppressEnter = useRef(false)
-  /** 右键收纳菜单（画布内坐标；null=关闭） */
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
-  /** 驻留模式实时值：收起计时器等异步回调若读 state，拿到的是旧渲染的闭包值——
-      曾致右键收纳后 1 秒收起计时器用旧模式把窗口拉回原位（陈旧闭包回写） */
-  const modeRef = useRef<SavedPos['mode']>('top')
-  const applyMode = (m: SavedPos['mode']) => {
-    modeRef.current = m
-    setMode(m)
-  }
-  /** 展开态实时值：拖拽结束回调需区分「单击把手」与「单击展开横条」——读 state 同样是旧闭包值 */
-  const openRef = useRef(false)
-  const applyOpen = (v: boolean) => {
-    openRef.current = v
-    setOpenState(v)
-  }
 
-  const clearTimers = () => {
-    if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
-    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
-  }
-
-  // 首帧：按持久化模式恢复窗位（越界由 Rust 钳回屏内）→ 按启用开关决定显示。
-  // 停靠模式直接以完全隐藏态（整条边缘热区条）出场——呼出即展开（靠近即滑出）。
-  // 主题跟随主窗（视觉·MiniDock 学习：融入系统深浅外观）；偏好变化经 pwork-prefs-changed
-  // 事件实时跟随（伴生窗只在桌面存在，Tauri 事件是唯一跨窗通道，主窗写 prefs.json 后广播）
+  // 主题跟随主窗；偏好变化实时跟随（伴生窗独立进程视图，Tauri 事件是唯一跨窗通道）
   useEffect(() => {
     syncThemeFromStore()
-    // prefs.json 缓存预热（main.tsx 只在主窗跑；伴生窗独立进程视图，读偏好前自行预热）
     void import('../../engine/prefsFile').then((m) => m.readPrefsFile())
     let unlisten: (() => void) | undefined
     let disposed = false
     void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
       const keys = e.payload?.keys
       if (!keys || keys.includes('pwork-theme')) {
-        // 失效后同步读只会回落 localStorage 旧值——await 重拉文件拿到最新值再应用
         void refreshPrefsFile().then(() => syncThemeFromStore())
       }
     }).then((fn) => {
@@ -157,270 +64,54 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 按持久化模式重新落位（挂载与设置页「重置到屏幕顶部居中」共用）：
-  // 模式对齐（modeRef 实时值）+ 画布定位 + 收起裁剪，全部走当前值
-  const reposition = (): Promise<void> => {
-    const pos = readPos()
-    applyMode(pos.mode)
-    if (pos.mode === 'free' && pos.x !== undefined && pos.y !== undefined) {
-      // 自由驻留：先落位画布，再锚 logo 套收起裁剪（logo 半透明淡出原地）
-      return invoke('isle_place', { x: pos.x, y: pos.y })
-        .then(() => invoke('isle_peek', { mode: 'free', y: 0 }))
-        .catch((e) => reportIsleError('岛.驻留定位', e))
-        .then(() => {})
-    }
-    return invoke('isle_peek', { mode: pos.mode, y: pos.y ?? 0 })
-      .catch((e) => reportIsleError('岛.' + pos.mode + '收起', e))
-      .then(() => {})
-  }
-
-  useEffect(() => {
-    let disposed = false
-    // 先等 prefs.json 缓存预热再读位置——否则 mount 与预热竞速会回落 localStorage 旧值
-    // （配置文件化后设置页重置只写 prefs.json，两处存储在真实档案里会分叉，回落值是过期的）
-    void import('../../engine/prefsFile')
-      .then((m) => m.readPrefsFile())
-      .then(() => {
-        if (disposed) return
-        // 窗 visible:false 起始——先落位/缩成隐藏小窗再 show，变形过程不露帧（show 挂链尾）
-        const show = () => {
-          if (readEnabled()) void invoke('isle_show').catch(() => {})
-        }
-        reposition().then(show)
-      })
-      .catch((e) => reportIsleError('岛.挂载', e))
-    return () => {
-      disposed = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
-  }, [])
-
-  // 设置页启用开关实时生效（主窗写 prefs.json 后广播 pwork-prefs-changed）
-  useEffect(() => {
-    let unlisten: (() => void) | undefined
-    let disposed = false
-    void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
-      const keys = e.payload?.keys
-      const hasSettings = keys?.includes(SETTINGS_KEY)
-      const hasPos = keys?.includes(POS_KEY)
-      if (!hasSettings && !hasPos) return
-      // 失效后同步读只会回落 localStorage 旧值（2026-11-18 开关「关了又自己开回来」根因：
-      // 事件处理读了本窗 stale cache；置空缓存不重拉则回落值过期——必须 await 重拉文件再读）
-      void refreshPrefsFile().then(() => {
-        if (hasPos) {
-          // 设置页「重置到屏幕顶部居中」实时生效：收起 + 按持久化模式重新落位
-          // （驻留模式状态经 applyMode 对齐——重置后呼出/收起不再沿用旧模式）
-          clearTimers()
-          applyOpen(false)
-          setPeek(true)
-          suppressEnter.current = false // 光标在主窗设置页，不在岛把手上
-          reposition()
-        }
-        if (hasSettings) {
-          if (readEnabled()) {
-            // 打开=直接展开完整横条（只 show 会停在 logo 小窗并被收回计时器收走——「闪现一下消失」根因）
-            const pos = readPos()
-            applyOpen(true)
-            setPeek(false)
-            void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch(() => invoke('isle_show').catch(() => {}))
-          } else {
-            clearTimers()
-            applyOpen(false)
-            void invoke('isle_hide').catch(() => {})
-          }
-        }
-      })
-    }).then((fn) => {
-      if (disposed) fn()
-      else unlisten = fn
-    })
-    return () => {
-      disposed = true
-      unlisten?.()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
-  }, [])
-
-  // 按下=启动原生拖拽（Rust 立即返回，拖拽结束经 isle-drag-end 事件异步通知）。
-  // 抓着什么拖什么：按下不收起，横条保持展开跟随拖动，松手后才按模式收起/探边。
-  // 按钮豁免（点击语义优先于拖拽）。
-  const startDrag = (e: ReactMouseEvent) => {
-    if (e.button !== 0) return
-    if ((e.target as HTMLElement).closest('button')) return
-    e.stopPropagation()
-    setDragging(true)
-    // 拖拽中解除完全隐藏（横条随抓起显示，拖动全程完整可见）
-    setPeek(false)
-    clearTimers()
-    void invoke('isle_start_drag').catch(() => setDragging(false))
-  }
-
-  // 拖拽真正结束（Rust 轮询到左键松开+位置稳定）：Rust 已按判定模式落位，前端持久化
-  // 模式。拖动过=收起隐藏（logo 半探入边缘/半透明淡出，四模式统一）；未拖动=单击——
-  // 收起态单击把手=展开并保持（此前走拖拽收回：位置切换后首次点击表现为「弹出即消失」，
-  // 2026-11-19 用户报）；展开态单击横条=收回（既有语义）。
+  // 活动列表 + 结果瞬态（完成 ✓ / 失败 ✗，数秒自动消失）
   useEffect(() => {
     let un: (() => void) | undefined
-    void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-drag-end', (e) => {
-      const { mode: m, x, y, moved } = e.payload
+    void listen<{ activities: ActivityItem[]; notice: ActivityNotice | null }>('isle-activities', (e) => {
+      setActivities(e.payload.activities)
+      setNotice(e.payload.notice)
+    }).then((fn) => {
+      un = fn
+    })
+    return () => {
+      un?.()
+    }
+  }, [])
+
+  // 本体拖拽结束（Rust 已把锚点落位到新站位并隐藏本体）：持久化站位
+  useEffect(() => {
+    let un: (() => void) | undefined
+    void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-body-drag-end', (e) => {
       setDragging(false)
-      if (moved) {
-        applyOpen(false)
-        applyMode(m)
-        setPeek(true)
-        // 热区在光标落点附近，合成 enter 会让刚收起的岛立即弹回展开——抑制到离开
-        suppressEnter.current = true
-        if (m === 'top') savePos({ mode: 'top' })
-        else if (m === 'right') savePos({ mode: 'right', y })
-        else if (m === 'left') savePos({ mode: 'left', y })
-        else savePos({ mode: 'free', x, y })
-        // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
-        void invoke('isle_peek', { mode: m, y }).catch((err) => reportIsleError('岛.落位收回', err))
-      } else if (!openRef.current) {
-        // 收起态单击把手：展开并保持（光标就在横条上，不会被收回计时器收走）
-        suppressEnter.current = false
-        setPeek(false)
-        applyOpen(true)
-        expandedAt.current = Date.now()
-        const pos = readPos()
-        void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.点击展开', e))
-      } else {
-        // 展开态单击=收回（既有语义）。但悬停自动展开是即时 morph（把手一碰横条就
-        // 原地出现），用户快速点击刚展开的横条意图是「确认展开」——700ms 内的单击
-        // 不收回（否则「弹出即消失」复发）；超时后的单击才走收回切换。
-        if (Date.now() - expandedAt.current < 700) return
-        applyOpen(false)
-        setPeek(true)
-        suppressEnter.current = true
-        void invoke('isle_peek', { mode: modeRef.current, y: readPos().y ?? 0 }).catch((e) => reportIsleError('岛.单击收回', e))
-      }
+      const { mode: m, x, y } = e.payload
+      if (m === 'right') savePos({ mode: 'right', y })
+      else if (m === 'left') savePos({ mode: 'left', y })
+      else if (m === 'top') savePos({ mode: 'top' })
+      else savePos({ mode: 'free', x, y })
     }).then((fn) => {
       un = fn
     })
     return () => un?.()
   }, [])
 
-  // 主窗推送活动列表 + 结果瞬态（瞬态 3.5 秒后自动消失）
-  useEffect(() => {
-    let un: (() => void) | undefined
-    void listen<{ activities: ActivityItem[]; notice: ActivityNotice | null }>('isle-activities', (e) => {
-      setActivities(e.payload.activities)
-      // notice 空值也清（无 done 的结束不该让上一次瞬态复现）
-      setNotice(e.payload.notice)
-      if (e.payload.notice) {
-        if (noticeTimer.current) clearTimeout(noticeTimer.current)
-        noticeTimer.current = window.setTimeout(() => setNotice(null), 3500)
-      }
-    }).then((unlisten) => {
-      un = unlisten
-    })
-    return () => {
-      un?.()
-      if (noticeTimer.current) clearTimeout(noticeTimer.current)
-    }
-  }, [])
-
-  // 呼出/收回（2026-11-20 logo 把手形态：四模式收起=72×72 小窗把手，展开=520×140
-  // 画布横条；窗体原子变形，横条经 opacity 过渡淡入淡出）。
-  const onEnter = () => {
-    if (dragging) return
-    if (suppressEnter.current) return
-    clearTimers()
-    setMenu(null)
-    if (peek) {
-      const pos = readPos()
-      expandedAt.current = Date.now() // 即时 morph=展开起点（快速单击=确认展开）
-      void invoke('isle_expand', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.呼出恢复', e))
-    }
-    openTimer.current = window.setTimeout(() => {
-      applyOpen(true)
-      setPeek(false)
-    }, 200)
-  }
-  const onLeave = () => {
-    if (dragging) return
-    // 窗体变形（收起/展开/收纳）会触发合成 mouseleave——光标实际仍在变形后的窗体上
-    // （:hover 命中）时不算真离开：落位抑制保持武装（收纳后首次点击=展开保持的
-    // 前提），收回计时器也不武装（光标在窗内不该收回）
-    if (document.getElementById('isle-dock')?.matches(':hover')) return
-    suppressEnter.current = false // 真实离开才解除落位抑制，下次靠近正常展开
-    setMenu(null)
-    clearTimers()
-    closeTimer.current = window.setTimeout(() => {
-      // 收回前以 CSS :hover 实况为准：窗体变形（小窗⇄画布）会触发成对的合成
-      // leave/enter，drag 会话还可能吞掉 enter——光标实际仍在窗内时（:hover 命中）
-      // 不收回，否则刚展开的岛会被误收（真实用户在窗体变形+光标静止时同样撞上）
-      if (document.getElementById('isle-dock')?.matches(':hover')) return
-      applyOpen(false)
-      const pos = readPos()
-      setPeek(true)
-      // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
-      void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.隐藏变形', e))
-    }, 1000)
-  }
-  // 右键收纳菜单：画布须完整可见（小窗内放不下菜单且菜单不得出屏）——
-  // 缘停靠变形到展开位，自由驻留以 logo 为锚原位长回；菜单位置按点击点钳在画布内
-  const onContextMenu = (e: ReactMouseEvent) => {
-    e.preventDefault()
-    if ((e.target as HTMLElement).closest('button')) return
-    clearTimers()
-    // grow 变形（小窗→画布）会在光标静止时触发合成 mouseenter——不武装抑制的话
-    // onEnter 的 setMenu(null) 会把刚打开的菜单立刻关掉
-    suppressEnter.current = true
-    const pos = readPos()
-    void invoke('isle_grow', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e2) => reportIsleError('岛.菜单展开画布', e2))
-    const menuW = 148
-    const menuH = 112
-    setMenu({
-      x: Math.max(6, Math.min(e.clientX, 520 - menuW - 6)),
-      y: Math.max(6, Math.min(e.clientY, 140 - menuH - 6)),
-    })
-  }
-  const closeMenu = () => {
-    if (!menu) return
-    setMenu(null)
-    if (!peek) return
-    const pos = readPos()
-    // 直接落位收回（禁 rAF：遮挡判定下 rAF 停摆会让指令被静默丢弃）
-    void invoke('isle_peek', { mode: modeRef.current, y: pos.y ?? 0 }).catch((e) => reportIsleError('岛.菜单还原', e))
-  }
-  // 收纳动作：Rust 原子落把手位（小窗半探出）并返回落位，前端持久化与状态收起
-  // （禁 rAF 包裹：遮挡判定下 rAF 停摆会让指令被静默丢弃）
-  const stashTo = (target: 'top' | 'right' | 'left') => {
-    setMenu(null)
-    clearTimers()
-    applyOpen(false)
-    setPeek(true)
-    suppressEnter.current = true
-    void invoke('isle_stash_to', { target })
-      .then((pos) => {
-        const p = pos as { mode: SavedPos['mode']; x: number; y: number }
-        applyMode(p.mode)
-        if (p.mode === 'right') savePos({ mode: 'right', y: p.y })
-        else if (p.mode === 'left') savePos({ mode: 'left', y: p.y })
-        else savePos({ mode: 'top' })
-      })
-      .catch((e) => reportIsleError('岛.收纳', e))
-  }
-
-  useEffect(() => () => clearTimers(), [])
-
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
   const idleNote = notice ? (notice.ok ? '✓ ' : '✗ ') + notice.label : '一切就绪'
-  const dockCls = dockClass(mode, peek, open)
+  const dockCls = [dragging ? 'dragging' : ''].filter(Boolean).join(' ')
 
   return (
     <div
       id="isle-dock"
-      className={[open ? 'open' : '', dragging ? 'dragging' : '', dockCls].filter(Boolean).join(' ')}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
-      onMouseDown={startDrag}
-      onContextMenu={onContextMenu}
+      className={['open', dockCls].filter(Boolean).join(' ')}
+      onMouseDown={() => {
+        if (dragging) return
+        setDragging(true)
+        void invoke('isle_body_drag_start').catch(() => setDragging(false))
+      }}
     >
       <div className="isle-bar">
         <div className="isle-bar-content">
+          <img src="favicon.svg" alt="小 P" className="isle-logo" draggable={false} />
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
           <span className="isle-title">{count > 0 ? `小 P · 进行中（${count}）` : '小 P 在'}</span>
@@ -435,27 +126,6 @@ export function IsleWindow() {
           </div>
         </div>
       </div>
-      {/* logo 是收起态唯一可见物，必须是 #isle-dock 的直接子元素——
-          放进 .isle-bar 内会被收起态的 opacity:0 连带压成全透明（opacity 压平后代）。
-          拖拽在画布层统一处理（整条可拖），logo 无独立监听、无 title（悬停驱动的
-          UI 里原生提示框是噪音，出现在横条正下方被误认为渲染缺陷） */}
-      <img
-        src="favicon.svg"
-        alt="小 P"
-        className="isle-logo"
-        draggable={false}
-      />
-      {menu && (
-        <>
-          {/* 菜单开启期间罩住整张画布：点菜单外任意处即关闭并还原命中裁剪 */}
-          <div className="isle-menu-overlay" onMouseDown={closeMenu} onContextMenu={(e) => { e.preventDefault(); closeMenu() }} />
-          <div className="isle-menu" style={{ left: menu.x, top: menu.y }} role="menu">
-            <button type="button" role="menuitem" onClick={() => stashTo('top')}>隐藏到屏幕上方</button>
-            <button type="button" role="menuitem" onClick={() => stashTo('right')}>隐藏到屏幕右侧</button>
-            <button type="button" role="menuitem" onClick={() => stashTo('left')}>隐藏到屏幕左侧</button>
-          </div>
-        </>
-      )}
     </div>
   )
 }

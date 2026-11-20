@@ -147,6 +147,16 @@ if (window.location.hash.startsWith('#/wheel') && isDesktopApp()) {
       </StrictMode>,
     )
   })
+} else if (window.location.hash.startsWith('#/anchor') && isDesktopApp()) {
+  // 胶囊岛常驻锚点独立窗（双窗架构的「肉眼可见提示」）：透明小窗只渲染迷你胶囊本体
+  document.documentElement.dataset.isle = '1'
+  void import('./components/shell/IsleAnchorWindow').then(({ IsleAnchorWindow }) => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <IsleAnchorWindow />
+      </StrictMode>,
+    )
+  })
 } else if (window.location.hash.startsWith('#/isle') && isDesktopApp()) {
   // 胶囊岛独立窗：同轮盘的透明窗分流（html 打 isle 标记，body 底色转透明）
   document.documentElement.dataset.isle = '1'
