@@ -41,6 +41,9 @@ function savePos(pos: SavedPos) {
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [notice, setNotice] = useState<ActivityNotice | null>(null)
+  /** 悬停操作提示（用户增补 2026-11-22）：LOGO 区=点我问一问，其余=打开PWORK。
+   *  提示在状态词位置原地切换——画布不增高（多余窗体矩形会拦截下层点击） */
+  const [hoverHint, setHoverHint] = useState<'ask' | 'open' | null>(null)
 
   // 主题跟随主窗；偏好变化实时跟随（伴生窗独立进程视图，Tauri 事件是唯一跨窗通道）
   useEffect(() => {
@@ -112,12 +115,14 @@ export function IsleWindow() {
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
   // 条上无按钮（用户拍板）：文字区按状态切换——空闲=「小 P 在」；忙碌=任务名；
-  // 瞬态（完成 ✓ / 失败 ✗）短提示覆盖显示
-  const statusText = notice
-    ? (notice.ok ? '✓ ' : '✗ ') + notice.label
-    : count > 0
-      ? `进行中（${count}）${firstLabel}`
-      : '小 P 在'
+  // 瞬态（完成 ✓ / 失败 ✗）短提示覆盖显示；悬停时切换为操作提示（点击分派语义一致）
+  const hintText = hoverHint === 'ask' ? '点我问一问' : hoverHint === 'open' ? '打开PWORK' : null
+  const statusText = hintText
+    ?? (notice
+      ? (notice.ok ? '✓ ' : '✗ ') + notice.label
+      : count > 0
+        ? `进行中（${count}）${firstLabel}`
+        : '小 P 在')
 
   return (
     <div
@@ -126,10 +131,19 @@ export function IsleWindow() {
       onMouseDown={() => {
         void invoke('isle_body_drag_start').catch(() => {})
       }}
+      onMouseEnter={() => setHoverHint('open')}
+      onMouseLeave={() => setHoverHint(null)}
     >
       <div className="isle-bar">
         <div className="isle-bar-content">
-          <img src="favicon.svg" alt="小 P" className="isle-logo" draggable={false} />
+          <img
+            src="favicon.svg"
+            alt="小 P"
+            className="isle-logo"
+            draggable={false}
+            onMouseEnter={() => setHoverHint('ask')}
+            onMouseLeave={() => setHoverHint('open')}
+          />
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
           <span className="isle-note">{statusText}</span>

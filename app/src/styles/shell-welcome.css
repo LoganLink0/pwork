@@ -688,10 +688,9 @@ html[data-palette] .overlay {
 html[data-palette] .palette {
   box-shadow: none;
 }
-/* 胶囊岛 · 横条模型（46 批三稿，用户定案 logo 方案）：
-   固定 520×140 画布（Rust 按自由/顶部两模式放置）。收起态=logo 本体 64px 居中画布
-   （把手=品牌资产本体，无外壳）；展开态=毛玻璃横条（520×64 圆角胶囊）显现，
-   logo 滑至条内左侧作身份锚点。拖拽=按住 logo 原生拖拽，松手驻留；近上缘吸附顶部居中。 */
+/* 胶囊岛 · 横条模型（2026-11-21 语义定案）：320×84 画布（Rust 按同尺寸落位），
+   bar 64px 落画布 top 10。画布不增高——多余的窗体矩形会拦截下层点击
+   （「屏上无残留不拦点击」是既有共识），悬浮提示走状态词原地切换。 */
 #isle-dock {
   position: fixed;
   left: 0;
@@ -801,7 +800,6 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   inset: 0;
   border-radius: 16px;
   background: rgba(26, 26, 28, 0.85);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
   cursor: grab;
   pointer-events: auto;
   transition: background 0.18s var(--ease), transform 0.15s ease;
@@ -817,8 +815,7 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   cursor: grabbing;
   transform: scale(1.03);
 }
-.anchor-capsule:hover,
-.anchor-capsule.active {
+.anchor-capsule:hover {
   background: rgba(34, 34, 36, 1);
 }
 .anchor-p {
@@ -851,34 +848,46 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   background: rgb(232, 131, 58);
   pointer-events: none;
 }
-/* 竖排内容：P 上、状态词纵排（逐字直立、字距收紧）居中、活动点下；
-   窗高 100 = P(10+22) + 三字(13px×3+字距2×2≈43) + 点，三字完整不截断 */
+/* 竖排内容：flex 纵向居中——P 上、状态词纵排（逐字直立、无空格紧凑串「小P在」）、
+   活动点下；有点/没点两态都自动对称居中（绝对定位曾致无任务时内容栈偏上 4.5px）。
+   横排串「小 P 在」的空格在 upright 竖排里占整字位，曾致 5 字位+字距≈73px 从
+   top34 排到 107 超出窗高（「在」被裁+大空隙）。 */
+#isle-anchor.vert .anchor-capsule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
 #isle-anchor.vert .anchor-p {
-  left: 50%;
-  top: 10px;
-  transform: translateX(-50%);
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
 }
 #isle-anchor.vert .anchor-word {
-  left: 50%;
-  top: 34px;
-  transform: translateX(-50%);
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
   writing-mode: vertical-rl;
   text-orientation: upright;
   letter-spacing: 2px;
 }
 #isle-anchor.vert .anchor-dot {
+  position: static;
   right: auto;
   top: auto;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: auto;
+  bottom: auto;
+  transform: none;
 }
-/* 锚点亮色模式：浅底深字（三态写法与横条玻璃一致：显式 light / auto 跟系统） */
+/* 锚点亮色模式：浅底深字（三态写法与横条玻璃一致：显式 light / auto 跟系统）；
+   P 标识两主题同用品牌橙资产（anchor-p-orange.png），不做主题切换 */
 html[data-theme='light'] .anchor-capsule {
   background: rgba(250, 248, 242, 0.92);
 }
-html[data-theme='light'] .anchor-capsule:hover,
-html[data-theme='light'] .anchor-capsule.active {
+html[data-theme='light'] .anchor-capsule:hover {
   background: rgb(255, 255, 255);
 }
 html[data-theme='light'] .anchor-word {
@@ -888,8 +897,7 @@ html[data-theme='light'] .anchor-word {
   html:not([data-theme='dark']) .anchor-capsule {
     background: rgba(250, 248, 242, 0.92);
   }
-  html:not([data-theme='dark']) .anchor-capsule:hover,
-  html:not([data-theme='dark']) .anchor-capsule.active {
+  html:not([data-theme='dark']) .anchor-capsule:hover {
     background: rgb(255, 255, 255);
   }
   html:not([data-theme='dark']) .anchor-word {

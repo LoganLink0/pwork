@@ -53,6 +53,23 @@ export function IsleAnchorWindow() {
       if (p.mode !== 'free') setMode(p.mode)
       void invoke('isle_restore', { mode: p.mode, x: p.x ?? null, y: p.y ?? null }).catch(() => {})
     })
+    // 主题实时跟随主窗切换（本体横条窗同款链路：此前只在挂载同步一次，
+    // 主窗切主题后锚点不跟随、重启才变）
+    let unlisten: (() => void) | undefined
+    let disposed = false
+    void listen<{ keys?: string[] }>('pwork-prefs-changed', (e) => {
+      const keys = e.payload?.keys
+      if (!keys || keys.includes('pwork-theme')) {
+        void import('../../engine/prefsFile').then((m) => m.refreshPrefsFile()).then(() => syncThemeFromStore())
+      }
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlisten = fn
+    })
+    return () => {
+      disposed = true
+      unlisten?.()
+    }
   }, [])
 
   // 形态自检兜底：窗体尺寸是 Rust set_size 落位的直接事实。isle-anchor-form 事件
@@ -136,8 +153,10 @@ export function IsleAnchorWindow() {
   return (
     <div id="isle-anchor" className={vert ? `vert anchor-${mode}` : undefined}>
       <div className="anchor-capsule">
-        <img src="anchor-p-white.png" alt="小 P" className="anchor-p" draggable={false} />
-        <span className="anchor-word">小 P 在</span>
+        {/* P 标识两主题同用品牌橙（anchor-p-orange.png），不再随主题切换 */}
+        <img src="anchor-p-orange.png" alt="小 P" className="anchor-p" draggable={false} />
+        {/* 竖排用无空格紧凑串：空格在 upright 竖排里占整字位（曾致溢出裁切+大空隙） */}
+        <span className="anchor-word">{vert ? '小P在' : '小 P 在'}</span>
         {count > 0 && <span className="anchor-dot" aria-hidden />}
       </div>
     </div>

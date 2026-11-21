@@ -11,7 +11,11 @@
   }
 }
 
-:root[data-theme='dark'] .overlay {
+/* 主窗 Ctrl+K 的暗色压暗层；独立问小 P 窗排除（html[data-palette]）——
+   该窗是透明桌面窗，背后没有应用内容可压暗，50% 黑涂满整个窗体=一块黑遮罩
+   （特异性 (0,3,0) 曾压过 shell-welcome 的 data-palette 透明豁免 (0,2,1)，
+   故在此处排除而非加important） */
+:root[data-theme='dark']:not([data-palette]) .overlay {
   background: rgba(0, 0, 0, 0.5);
 }
 
