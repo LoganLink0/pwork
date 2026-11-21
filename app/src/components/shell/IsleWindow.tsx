@@ -6,10 +6,11 @@ import { refreshPrefsFile, writePref } from '../../engine/prefsFile'
 
 /**
  * 胶囊岛本体横条窗（/isle 分流渲染）——双窗架构的本体：
- * 常驻可见的是锚点迷你胶囊窗（/anchor），本体横条仅在悬停锚点时出现，
- * 光标离开 1 秒即隐藏（完全隐藏=屏上只剩锚点圆点，不拦任何点击）。
- * 本体窗生命周期：Rust isle_anchor_hover_show_body 定位+show；前端只负责
- * 「离开 1 秒→调用隐藏+锚点回归」与「拖拽结束→持久化站位」。
+ * 稳定驻留两种——自由驻留（拖到非贴边区松手，屏上只有胶囊岛本体，光标离开不收回）
+ * 与临时展开（悬停/单击收纳锚点呼出，光标离开 1 秒收回）。窗体显隐由 Rust 状态机
+ * 驱动（isle_restore / expand_body_at / 拖拽落点判定），前端只负责「拖拽结束→持久化
+ * 站位」。条上无按钮（用户拍板）：原地点击 LOGO 区=问小 P、其余部位=打开 PWORK、
+ * 按住拖动=换位置——分派在 Rust isle_body_drag_start（按下位置+位移判定）。
  * 状态词随任务变化（活动推送经 isle-activities 事件）。
  */
 
@@ -40,8 +41,6 @@ function savePos(pos: SavedPos) {
 export function IsleWindow() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [notice, setNotice] = useState<ActivityNotice | null>(null)
-  /** 拖拽中（Rust 原生拖拽窗体，前端只标记样式） */
-  const [dragging, setDragging] = useState(false)
 
   // 主题跟随主窗；偏好变化实时跟随（伴生窗独立进程视图，Tauri 事件是唯一跨窗通道）
   useEffect(() => {
@@ -78,11 +77,10 @@ export function IsleWindow() {
     }
   }, [])
 
-  // 本体拖拽结束（Rust 已把锚点落位到新站位并隐藏本体）：持久化站位
+  // 本体拖拽结束（落点定形态：贴边带→收纳态本体已隐藏；非贴边→自由驻留本体保持显示）
   useEffect(() => {
     let un: (() => void) | undefined
     void listen<{ mode: SavedPos['mode']; x: number; y: number; moved: boolean }>('isle-body-drag-end', (e) => {
-      setDragging(false)
       const { mode: m, x, y } = e.payload
       if (m === 'right') savePos({ mode: 'right', y })
       else if (m === 'left') savePos({ mode: 'left', y })
@@ -94,19 +92,39 @@ export function IsleWindow() {
     return () => un?.()
   }, [])
 
+  // 锚点拖拽落位的兜底持久化（锚点窗隐藏时它的事件不可靠，本体窗显示中必达）：
+  // free=本体自由驻留位；贴边位同样双写（幂等，与锚点页互备）
+  useEffect(() => {
+    let un: (() => void) | undefined
+    void listen<{ mode?: SavedPos['mode']; x?: number; y?: number; moved: boolean }>('isle-anchor-drag-end', (e) => {
+      if (!e.payload.moved) return
+      const { mode: m, x, y } = e.payload
+      if (m === 'free' && typeof x === 'number' && typeof y === 'number') savePos({ mode: 'free', x, y })
+      else if (m === 'top') savePos({ mode: 'top' })
+      else if (m === 'right' && typeof y === 'number') savePos({ mode: 'right', y })
+      else if (m === 'left' && typeof y === 'number') savePos({ mode: 'left', y })
+    }).then((fn) => {
+      un = fn
+    })
+    return () => un?.()
+  }, [])
+
   const count = activities.length
   const firstLabel = activities[0]?.label ?? ''
-  const idleNote = notice ? (notice.ok ? '✓ ' : '✗ ') + notice.label : '一切就绪'
-  const dockCls = [dragging ? 'dragging' : ''].filter(Boolean).join(' ')
+  // 条上无按钮（用户拍板）：文字区按状态切换——空闲=「小 P 在」；忙碌=任务名；
+  // 瞬态（完成 ✓ / 失败 ✗）短提示覆盖显示
+  const statusText = notice
+    ? (notice.ok ? '✓ ' : '✗ ') + notice.label
+    : count > 0
+      ? `进行中（${count}）${firstLabel}`
+      : '小 P 在'
 
   return (
     <div
       id="isle-dock"
-      className={['open', dockCls].filter(Boolean).join(' ')}
+      className="open"
       onMouseDown={() => {
-        if (dragging) return
-        setDragging(true)
-        void invoke('isle_body_drag_start').catch(() => setDragging(false))
+        void invoke('isle_body_drag_start').catch(() => {})
       }}
     >
       <div className="isle-bar">
@@ -114,16 +132,7 @@ export function IsleWindow() {
           <img src="favicon.svg" alt="小 P" className="isle-logo" draggable={false} />
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
-          <span className="isle-title">{count > 0 ? `小 P · 进行中（${count}）` : '小 P 在'}</span>
-          <span className="isle-note">{count > 0 ? firstLabel : idleNote}</span>
-          <div className="isle-acts">
-            <button type="button" className="isle-pbtn isle-brand" onClick={(e) => { e.stopPropagation(); void invoke('isle_open_palette').catch(() => {}) }}>
-              问小 P
-            </button>
-            <button type="button" className="isle-pbtn" onClick={(e) => { e.stopPropagation(); void invoke('isle_open_main').catch(() => {}) }}>
-              打开 PWORK
-            </button>
-          </div>
+          <span className="isle-note">{statusText}</span>
         </div>
       </div>
     </div>

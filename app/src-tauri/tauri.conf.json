@@ -42,14 +42,16 @@
       {
         "label": "isle",
         "title": "小 P",
-        "width": 520,
-        "height": 140,
+        "width": 320,
+        "height": 84,
         "resizable": false,
         "transparent": true,
         "decorations": false,
         "skipTaskbar": true,
         "alwaysOnTop": true,
-        "visible": false,
+        "visible": true,
+        "x": -4000,
+        "y": -4000,
         "focus": false,
         "focusable": false,
         "url": "index.html#/isle"
@@ -65,6 +67,8 @@
         "skipTaskbar": true,
         "alwaysOnTop": true,
         "visible": true,
+        "x": -4000,
+        "y": -4000,
         "focus": false,
         "focusable": false,
         "url": "index.html#/anchor"

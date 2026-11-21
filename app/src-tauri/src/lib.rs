@@ -493,6 +493,9 @@ pub fn run() {
       }
     }))
     .setup(|app| {
+      // 胶囊岛锚点交互线程：悬停呼出/按住拖动全在 Rust 轮询+低级鼠标钩子驱动
+      // （WebView2 对经历隐藏循环的窗不再派发 mousedown——实测，页面侧交互不可靠）
+      isle::spawn_anchor_interactor(app.handle().clone());
       // 应用内更新（0.2）：更新包与签名清单挂 GitHub Releases，插件在设置页触发检查/下载/重启
       app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
       app.handle().plugin(tauri_plugin_process::init())?;
@@ -613,13 +616,9 @@ pub fn run() {
       system::shell_bridge_install,
       wheel_dispatch_action,
       wheel_hide,
-      isle::isle_show_expanded,
-      isle::isle_place,
+      isle::isle_restore,
       isle::isle_anchor_snap_top,
-      isle::isle_anchor_drag_start,
       isle::isle_body_drag_start,
-      isle::isle_anchor_hover_show_body,
-      isle::isle_body_hide_show_anchor,
       isle::isle_hide_all,
       isle::isle_set_activity,
       isle::isle_open_main,

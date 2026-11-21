@@ -696,8 +696,8 @@ html[data-palette] .palette {
   position: fixed;
   left: 0;
   top: 0;
-  width: 520px;
-  height: 140px;
+  width: 320px;
+  height: 84px;
   pointer-events: none;
   user-select: none; /* 常驻桌面小窗：拖拽与悬停交互中不允许选中文本 */
   z-index: 60;
@@ -707,7 +707,7 @@ html[data-palette] .palette {
   position: absolute;
   left: 0;
   top: 10px;
-  width: 520px;
+  width: 320px;
   height: 64px;
   border-radius: 18px; /* 圆角矩形，与 logo 圆角一致（拉长的 logo，非胶囊椭圆） */
   /* 亮色=米白玻璃（设计稿 v2 变体 C 的浅色玻璃）；玻璃色为岛专属（tokens 无对应变量），
@@ -756,60 +756,32 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   pointer-events: auto;
 }
 .isle-logo {
-  /* 收起态：logo 本体 64px 居中画布（设计稿 v2 定案的把手尺寸）；
-     展开态：缩至条内 44px 滑向左侧作身份锚点。整窗其余区域 pointer-events none，
-     logo 必须显式恢复 auto，否则收起态没有任何可命中目标（悬停/拖拽全失效）。 */
-  width: 64px;
-  height: 64px;
+  /* 展开态：LOGO 落横条左端帽（bar 内 10px 起），垂直居中（44px logo 在 64px 条内
+     top=(64-44)/2=10）。注意定位上下文是 .isle-bar（absolute），top 直接是 bar 内
+     坐标——曾按画布坐标算成 20 导致偏下 11px（用户指出的「没对齐」）。
+     LOGO 屏幕位置不变（顶站位）：横条展开的 tl 偏移由 Rust 保证白圆中心对齐锚点
+     白圆中心（EXPAND_DX/DY 注记）。 */
+  width: 44px;
+  height: 44px;
   border-radius: 18px;
   pointer-events: auto;
   cursor: grab;
   transition: left 0.24s var(--ease), width 0.24s var(--ease), height 0.24s var(--ease),
     border-radius 0.24s var(--ease), top 0.24s var(--ease), transform 0.15s ease;
   position: absolute;
-  left: 228px; /* 收起态：画布居中 ((520-64)/2)；展开态滑至 10（条内左侧） */
+  left: 10px;
   top: 10px;
 }
 .isle-logo:active {
   cursor: grabbing;
   transform: scale(1.05);
 }
-#isle-dock.open .isle-logo {
-  left: 10px;
-  top: 20px; /* 展开态：垂直居中于条内（条 top 10 高 64，logo 44 → (64-44)/2+10） */
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  transform: none; /* 展开态取消半隐藏位移（peek 的 translate 只属于收起停靠态） */
-}
-
-
-/* 顶缘展开：logo 落画布居中槽 (228,20)（展开锚定 logo 不动，横条保持屏中）——
-   内容行让位：状态文本限宽在 logo 左侧，操作按钮右缘对齐（避开居中 logo） */
-#isle-dock.open.dock-top .isle-bar-content {
-  padding-left: 18px;
-}
-#isle-dock.open.dock-top .isle-note {
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#isle-dock.open.dock-top .isle-acts {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-#isle-dock.open.dock-top .isle-logo {
-  left: 228px;
-  top: 20px;
-}
 
 /* ── 常驻锚点迷你胶囊（/anchor 独立窗）──
-   双窗架构的「肉眼可见提示」：深色迷你胶囊常驻完全可见（本体横条只在展开时出现，
-   其余时间完全隐藏）。Fluent 语言：深色底 85% + 1px 白描边 + 内高光；白 P 单色
-   标识 + 白色状态词 + 橙色活动点（有任务才亮）。悬停变亮；按住拖动换驻留位置。 */
+   收纳态专属形态：锚点只存在于贴边带——顶=横排(100×32)贴顶居中，左右缘=竖排
+   (44×100)贴缘（贴缘侧直角）。深色圆角色块**无边框线、无内高光**（框线已三次
+   触发用户指出：白环→把手描边→锚点描边，一律禁止）；白 P 单色标识 + 白色状态词 +
+   橙色活动点（有任务才亮）。悬停变亮；按住拖动换驻留位置（落点定形态）。 */
 #isle-anchor {
   position: fixed;
   left: 0;
@@ -820,16 +792,26 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   user-select: none;
   z-index: 60;
 }
+#isle-anchor.vert {
+  width: 44px;
+  height: 100px;
+}
 .anchor-capsule {
   position: absolute;
   inset: 0;
   border-radius: 16px;
   background: rgba(26, 26, 28, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 4px 14px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
   cursor: grab;
   pointer-events: auto;
   transition: background 0.18s var(--ease), transform 0.15s ease;
+}
+/* 竖排贴缘：贴屏缘一侧直角、外侧圆角 */
+#isle-anchor.vert.anchor-left .anchor-capsule {
+  border-radius: 0 14px 14px 0;
+}
+#isle-anchor.vert.anchor-right .anchor-capsule {
+  border-radius: 14px 0 0 14px;
 }
 .anchor-capsule:active {
   cursor: grabbing;
@@ -869,6 +851,51 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   background: rgb(232, 131, 58);
   pointer-events: none;
 }
+/* 竖排内容：P 上、状态词纵排（逐字直立、字距收紧）居中、活动点下；
+   窗高 100 = P(10+22) + 三字(13px×3+字距2×2≈43) + 点，三字完整不截断 */
+#isle-anchor.vert .anchor-p {
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+}
+#isle-anchor.vert .anchor-word {
+  left: 50%;
+  top: 34px;
+  transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 2px;
+}
+#isle-anchor.vert .anchor-dot {
+  right: auto;
+  top: auto;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* 锚点亮色模式：浅底深字（三态写法与横条玻璃一致：显式 light / auto 跟系统） */
+html[data-theme='light'] .anchor-capsule {
+  background: rgba(250, 248, 242, 0.92);
+}
+html[data-theme='light'] .anchor-capsule:hover,
+html[data-theme='light'] .anchor-capsule.active {
+  background: rgb(255, 255, 255);
+}
+html[data-theme='light'] .anchor-word {
+  color: rgb(33, 30, 26);
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme='dark']) .anchor-capsule {
+    background: rgba(250, 248, 242, 0.92);
+  }
+  html:not([data-theme='dark']) .anchor-capsule:hover,
+  html:not([data-theme='dark']) .anchor-capsule.active {
+    background: rgb(255, 255, 255);
+  }
+  html:not([data-theme='dark']) .anchor-word {
+    color: rgb(33, 30, 26);
+  }
+}
 .isle-divider {
   width: 1px;
   height: 28px;
@@ -907,34 +934,6 @@ html[data-theme='dark'] #isle-dock .isle-bar {
   flex: 1;
   min-width: 0;
   text-align: right;
-}
-.isle-acts {
-  display: flex;
-  gap: 8px;
-  flex: none;
-}
-.isle-pbtn {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 7px 14px;
-  font-size: var(--fs-xs);
-  color: var(--ink);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform 0.12s var(--ease); /* 悬停微动效（MiniDock 学习）：可交互元素的轻量抬升 */
-}
-.isle-pbtn.isle-brand {
-  background: rgba(232, 131, 58, 0.18);
-  border: 1px solid rgba(232, 131, 58, 0.4);
-  color: var(--accent);
-}
-.isle-pbtn:hover {
-  background: var(--surface-2);
-  transform: translateY(-1px);
-}
-.isle-pbtn.isle-brand:hover {
-  background: rgba(232, 131, 58, 0.28);
 }
 .wheel-window {
   width: 100vw;

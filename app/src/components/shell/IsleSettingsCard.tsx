@@ -5,8 +5,9 @@ import { readPref, writePref } from '../../engine/prefsFile'
 /**
  * 胶囊岛设置卡：桌面常驻小 P 的显示开关与位置重置。
  * 开关写数据目录 prefs.json（pwork-isle-settings，配置文件化 2026-11-16；localStorage
- * 双写为兼容期回落），isle 独立窗经 pwork-prefs-changed 事件实时显隐。
- * 位置=拖拽驻留，重置则清驻留点并吸回顶部居中。
+ * 双写为兼容期回落）。开关「开」=isle_restore 恢复持久化状态（贴边收纳锚点 /
+ * 自由驻留横条）；「关」=屏上完全隐藏。位置=拖拽驻留（贴边带内收成锚点、屏幕
+ * 中间驻留横条），重置则清驻留点并收回顶部居中收纳。
  */
 
 const KEY = 'pwork-isle-settings'
@@ -18,6 +19,19 @@ function readLocal(key: string): unknown {
     return localStorage.getItem(key)
   } catch {
     return null
+  }
+}
+
+/** 持久化站位（与锚点窗/本体窗同一结构；无值=顶部收纳默认） */
+function readPos(): { mode: string; x?: number; y?: number } {
+  try {
+    const raw = readPref<unknown>(POS_KEY, undefined) ?? readLocal(POS_KEY)
+    if (raw == null) return { mode: 'top' }
+    const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { mode?: string; x?: number; y?: number }
+    if (p.mode && (p.mode === 'free' || p.mode === 'left' || p.mode === 'right' || p.mode === 'top')) return p as { mode: string; x?: number; y?: number }
+    return { mode: 'top' }
+  } catch {
+    return { mode: 'top' }
   }
 }
 
@@ -42,8 +56,13 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
     localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
     writePref(KEY, { enabled: on })
     if (on) {
-      // 打开=本体在锚点站位展开并保持（锚点旁出现完整横条）
-      void invoke('isle_show_expanded').catch(() => {})
+      // 打开=恢复持久化状态（贴边收纳锚点 / 自由驻留横条；从未驻留过=顶部收纳）。
+      // 位置由伴生窗在拖拽落位时写入：主窗缓存可能陈旧（跨窗写只广播事件、不刷新
+      // 本进程缓存），恢复前必须失效重拉再读——否则关→开会跳回启动时的旧位置。
+      void import('../../engine/prefsFile').then((m) => m.refreshPrefsFile()).then(() => {
+        const p = readPos()
+        void invoke('isle_restore', { mode: p.mode, x: p.x ?? null, y: p.y ?? null }).catch(() => {})
+      })
       return
     }
     invoke('isle_hide_all').catch(() => {})
@@ -51,15 +70,15 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
 
   const resetPos = () => {
     localStorage.removeItem(POS_KEY)
-    writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部居中）
-    // 禁用态重置只写偏好不复活窗体；启用时锚点回顶缘下方居中
+    writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部收纳）
+    // 禁用态重置只写偏好不复活窗体；启用时收回顶部居中收纳（锚点横排贴顶）
     if (enabled) void invoke('isle_anchor_snap_top').catch(() => {})
   }
 
   return (
     <div className="set-card" data-tab="isle" style={{ display: active ? undefined : 'none' }}>
       <h2>胶囊岛</h2>
-      <div className="desc">桌面上的常驻小 P：迷你胶囊常驻可见，按住拖到哪驻留到哪（任意位置）；靠近胶囊展开状态条，进行中的抓取、导出与 AI 问答都在这里可见，鼠标离开自动收回；开关关闭后屏上完全隐藏</div>
+      <div className="desc">桌面上的常驻小 P：拖到屏幕边缘（上缘或左右侧）时收成迷你锚点、本体完全隐藏，悬停锚点即可展开；拖到屏幕中间则以完整横条驻留；点击横条上的 LOGO 问小 P，点击横条其他部位打开 PWORK；开关关闭后屏上完全隐藏</div>
       <div className="set-body">
         <div className="set-row">
           <label>显示</label>
@@ -78,7 +97,7 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
           <button type="button" className="btn-ghost" onClick={resetPos}>
             重置到屏幕顶部居中
           </button>
-          <span className="val">平时按住 logo 拖动即可，找不到时用这里一键复位</span>
+          <span className="val">平时按住拖动即可换位置，找不到时用这里一键收回顶部收纳</span>
         </div>
       </div>
     </div>
