@@ -215,7 +215,7 @@ export function CldBuilder() {
           placeholder={CLD.nodePlaceholder}
           aria-label={CLD.nodePlaceholder}
           onKeyDown={(e) => {
-            if (e.nativeEvent.isComposing) return // 中文输入法选词回车不触发（MWG ime-safe-enter-submit）
+            if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return // 中文输入法选词回车不触发（MWG ime-safe-enter-submit；229 兜 Safari 事件乱序）
             if (e.key === 'Enter') addNode()
           }}
         />
