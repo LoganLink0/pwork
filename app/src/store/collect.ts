@@ -180,7 +180,7 @@ export const useCollect = create<CollectState>((set, get) => ({
     const { sources, config } = get()
     const active = sources.filter((s) => s.active)
     set({ fetch: { running: true, summary: null, lastRunAt: get().fetch.lastRunAt, error: null } })
-    useActivity.getState().start('fetch', '正在抓取信息日报')
+    useActivity.getState().start('fetch', '正在抓取信息日报', '/input/digest')
     try {
       const summary = await runCollect(active, config)
       useActivity.getState().end('fetch', { ok: true, label: `信息日报完成 · 新入库 ${summary.newContentIds.length} 条` })

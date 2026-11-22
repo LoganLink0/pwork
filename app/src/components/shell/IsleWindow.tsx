@@ -17,6 +17,7 @@ import { refreshPrefsFile, writePref } from '../../engine/prefsFile'
 interface ActivityItem {
   id: string
   label: string
+  route?: string
 }
 
 /** 活动结束瞬态（完成 ✓ / 失败 ✗）：展示数秒自动消失 */
@@ -44,6 +45,9 @@ export function IsleWindow() {
   /** 悬停操作提示（用户增补 2026-11-22）：LOGO 区=点我问一问，其余=打开PWORK。
    *  提示在状态词位置原地切换——画布不增高（多余窗体矩形会拦截下层点击） */
   const [hoverHint, setHoverHint] = useState<'ask' | 'open' | null>(null)
+  /** 呼出/收回动效（0.1.25）：Rust 状态机 show/hide 前广播，页面播滑入/滑出 */
+  const [anim, setAnim] = useState<'in' | 'out' | null>(null)
+  const [animKey, setAnimKey] = useState(0)
 
   // 主题跟随主窗；偏好变化实时跟随（伴生窗独立进程视图，Tauri 事件是唯一跨窗通道）
   useEffect(() => {
@@ -78,6 +82,19 @@ export function IsleWindow() {
     return () => {
       un?.()
     }
+  }, [])
+
+  // 呼出/收回动效（0.1.25）：Rust show/hide 前广播——in 期间重挂横条重播滑入，
+  // out 播滑出（Rust 已延迟 160ms 后才真隐藏）
+  useEffect(() => {
+    let un: (() => void) | undefined
+    void listen<{ phase: 'in' | 'out' }>('isle-anim', (e) => {
+      setAnim(e.payload.phase)
+      if (e.payload.phase === 'in') setAnimKey((k) => k + 1)
+    }).then((fn) => {
+      un = fn
+    })
+    return () => un?.()
   }, [])
 
   // 本体拖拽结束（落点定形态：贴边带→收纳态本体已隐藏；非贴边→自由驻留本体保持显示）
@@ -134,7 +151,12 @@ export function IsleWindow() {
       onMouseEnter={() => setHoverHint('open')}
       onMouseLeave={() => setHoverHint(null)}
     >
-      <div className="isle-bar">
+      <div
+        key={anim === 'in' ? animKey : 'bar'}
+        className={['isle-bar', anim === 'in' ? 'isle-anim-in' : anim === 'out' ? 'isle-anim-out' : '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         <div className="isle-bar-content">
           <img
             src="favicon.svg"
@@ -146,7 +168,20 @@ export function IsleWindow() {
           />
           <span className="isle-divider" aria-hidden />
           <span className={`isle-dot${count > 0 ? ' live' : ''}`} aria-hidden />
-          <span className="isle-note">{statusText}</span>
+          <span
+            className="isle-note"
+            style={count > 0 && activities[0]?.route ? { cursor: 'pointer' } : undefined}
+            onMouseDown={(e) => {
+              // 任务名可点击（0.1.25）：有活动且带路由时点击跳对应页面——
+              // stopPropagation 阻断横条的拖拽/分派 mousedown，路由独占本次点击
+              if (count > 0 && activities[0]?.route) {
+                e.stopPropagation()
+                void invoke('isle_note_goto', { path: activities[0].route }).catch(() => {})
+              }
+            }}
+          >
+            {statusText}
+          </span>
         </div>
       </div>
     </div>

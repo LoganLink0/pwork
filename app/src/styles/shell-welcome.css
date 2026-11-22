@@ -736,6 +736,27 @@ html[data-theme='dark'] #isle-dock .isle-bar {
 #isle-dock .isle-bar:active {
   cursor: grabbing;
 }
+/* 呼出/收回动效（0.1.25）：Rust 状态机 show 前广播 isle-anim(in)——横条重挂播
+   滑入；hide 前广播 (out) 并延迟 160ms，横条播完滑出再被真隐藏。窗体 show/hide
+   仍是原子切换（动效只发生在画布内，不引入窗体变形） */
+#isle-dock .isle-bar.isle-anim-in {
+  animation: isle-bar-in 0.24s var(--ease) both;
+}
+#isle-dock .isle-bar.isle-anim-out {
+  animation: isle-bar-out 0.16s var(--ease) both;
+}
+@keyframes isle-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes isle-bar-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
 #isle-dock.open .isle-bar {
   opacity: 1;
   pointer-events: auto;

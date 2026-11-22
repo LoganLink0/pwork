@@ -10,6 +10,8 @@ import { isDesktopApp } from '../engine/platform'
 export interface ActivityItem {
   id: string
   label: string
+  /** 任务名点击时跳转的主窗路由（0.1.25 新增；无值=不可点） */
+  route?: string
 }
 
 /** 活动结束时的结果瞬态：岛上展示数秒后自动消失（完成 ✓ / 失败 ✗） */
@@ -20,8 +22,8 @@ export interface ActivityNotice {
 
 interface ActivityState {
   activities: ActivityItem[]
-  /** 登记一个进行中活动（同 id 重复登记为刷新文案） */
-  start: (id: string, label: string) => void
+  /** 登记一个进行中活动（同 id 重复登记为刷新文案）；route=岛上任务名点击的跳转页 */
+  start: (id: string, label: string, route?: string) => void
   /** 活动结束（撤销登记）；带 done 时岛上展示结果瞬态 */
   end: (id: string, done?: ActivityNotice) => void
 }
@@ -33,8 +35,8 @@ function pushToIsle(activities: ActivityItem[], notice?: ActivityNotice) {
 
 export const useActivity = create<ActivityState>((set, get) => ({
   activities: [],
-  start: (id, label) => {
-    const activities = [...get().activities.filter((a) => a.id !== id), { id, label }]
+  start: (id, label, route) => {
+    const activities = [...get().activities.filter((a) => a.id !== id), { id, label, route }]
     set({ activities })
     pushToIsle(activities)
   },

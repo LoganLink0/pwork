@@ -627,6 +627,7 @@ pub fn run() {
       isle::isle_anchor_snap_top,
       isle::isle_body_drag_start,
       isle::isle_hide_all,
+      isle::isle_note_goto,
       isle::isle_set_activity,
       isle::isle_open_main,
       isle::isle_open_palette,
@@ -671,7 +672,25 @@ pub fn run() {
           if label == "main" {
             log::info!("主窗口已关闭，应用退出");
             app_handle.exit(0);
+            // 僵尸看门狗（0.1.25「关主窗后进程不退」backlog 修）：exit(0) 依赖向各
+            // webview 投递消息，任一 webview 已销毁/挂死时 tauri 报
+            // 「failed to exit: failed to send message to the webview」且退出流程可能
+            // 停摆——进程残留握单实例锁，用户被迫强杀（复盘 3.64 的配置清零事故正
+            // 是被迫强杀引起）。2 秒后仍在即硬退出：此时窗口已全部销毁、无用户可
+            // 交互状态，唯一丢失面是被卡死 webview 里永远不会刷新的异步写（僵尸
+            // 情形下本来就永远刷不出来），看门狗严格更优。
+            std::thread::spawn(|| {
+              std::thread::sleep(std::time::Duration::from_secs(2));
+              log::warn!("优雅退出未在 2 秒内完成，硬退出（僵尸看门狗兜底）");
+              std::process::exit(0);
+            });
           }
+        }
+        tauri::RunEvent::ExitRequested { code, .. } => {
+          log::info!("退出请求 ExitRequested code={:?}", code);
+        }
+        tauri::RunEvent::Exit => {
+          log::info!("事件循环退出完成");
         }
         tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Moved(phys), .. } => {
           if label == "isle" {

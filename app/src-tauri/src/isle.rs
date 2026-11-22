@@ -40,6 +40,25 @@ const EXPAND_GAP: f64 = 2.0; // 缘站位展开间隙：横条与竖排锚点之
 static WATCH_ENABLED: AtomicBool = AtomicBool::new(false);
 /// 监视线程在跑标记（防重复 spawn：重复呼出只复用现有线程）
 static WATCH_RUNNING: AtomicBool = AtomicBool::new(false);
+/// 岛启用状态（设置卡开关维护；上下文感知自动呼出必须尊重它——开关「关」绝不自动呼出）
+static ISLE_ENABLED: AtomicBool = AtomicBool::new(true);
+/// 上一次活动数（上下文感知：无任务→有任务跃迁时刻自动呼出一次）
+static PREV_ACTIVITY_COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// 横条单击记录（双击判定：双击窗口期内同位二击=收回顶部收纳）
+static LAST_BODY_CLICK: std::sync::Mutex<Option<(std::time::Instant, f64, f64)>> = std::sync::Mutex::new(None);
+const DOUBLE_CLICK_WINDOW_MS: u64 = 300;
+
+/// 贴边收纳开关（设置卡 0.1.25 新增，默认开）：false 时拖拽落点一律自由驻留。
+/// 拖拽落点是低频事件，直接读 prefs.json（与 JS 侧同源）。
+fn snap_enabled(app: &AppHandle) -> bool {
+  let Ok(dir) = crate::db::app_data_dir(app) else { return true };
+  let Ok(text) = std::fs::read_to_string(dir.join("prefs.json")) else { return true };
+  serde_json::from_str::<serde_json::Value>(&text)
+    .ok()
+    .and_then(|v| v.get("pwork-isle-settings").cloned())
+    .and_then(|s| s.get("snap").and_then(|x| x.as_bool()))
+    .unwrap_or(true)
+}
 
 /// 锚点站位形态
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -375,7 +394,8 @@ fn anchor_drop_settle(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) -> 
   let ms = monitor.size();
   let scale = a.scale_factor().unwrap_or(1.0);
   let (cx, cy) = (cursor.x, cursor.y);
-  if in_snap_band(&mp, &ms, scale, cx, cy) {
+  // 贴边收纳开关（设置卡）：关=拖到贴边带也保持自由驻留
+  if snap_enabled(app) && in_snap_band(&mp, &ms, scale, cx, cy) {
     let am = decide_anchor_mode(&mp, &ms, scale, cx, cy);
     let (_aw, ah) = anchor_size_phys(am, scale);
     let (sx, sy) = anchor_station(am, &mp, &ms, scale, cy - ah / 2.0);
@@ -405,6 +425,7 @@ fn anchor_drop_settle(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) -> 
     let (bx, by) = clamp_anchor(&mp, &ms, bx0, by0, cw as i32, ch as i32);
     if let Some(b) = body_window(app) {
       place_at(&b, bx, by);
+      let _ = app.emit("isle-anim", serde_json::json!({ "phase": "in" }));
       let _ = b.show();
     }
     let _ = a.hide();
@@ -419,6 +440,7 @@ fn anchor_drop_settle(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) -> 
 #[tauri::command]
 pub fn isle_restore(app: AppHandle, mode: String, x: Option<i32>, y: Option<i32>) -> Result<(), String> {
   WATCH_ENABLED.store(false, Ordering::SeqCst);
+  ISLE_ENABLED.store(true, Ordering::SeqCst);
   let Some(a) = anchor_window(&app) else { return Ok(()) };
   let Some(b) = body_window(&app) else { return Ok(()) };
   unminimize_anchor(&a);
@@ -435,6 +457,7 @@ pub fn isle_restore(app: AppHandle, mode: String, x: Option<i32>, y: Option<i32>
       let _ = b.set_size(tauri::PhysicalSize::new(cw as u32, ch as u32));
       let (cx, cy) = clamp_anchor(&mp, &ms, x.unwrap_or(0), y.unwrap_or(0), cw as i32, ch as i32);
       place_at(&b, cx, cy);
+      let _ = app.emit("isle-anim", serde_json::json!({ "phase": "in" }));
       let _ = b.show();
       let _ = a.hide();
     }
@@ -502,6 +525,7 @@ fn expand_body_at(app: &AppHandle) -> Result<(), String> {
     (bx, bar_y - bar_top_phys)
   };
   let _ = place_at(&b, bx, by);
+  let _ = app.emit("isle-anim", serde_json::json!({ "phase": "in" }));
   let _ = b.show();
   let _ = a.hide();
   // 光标监视（只属于临时展开）：光标在横条客户区外持续 1 秒 → 本体隐藏、锚点回归。
@@ -530,6 +554,8 @@ fn expand_body_at(app: &AppHandle) -> Result<(), String> {
           outside_since = Some(std::time::Instant::now());
         } else if outside_since.as_ref().unwrap().elapsed() >= std::time::Duration::from_secs(1) {
           WATCH_ENABLED.store(false, Ordering::SeqCst);
+          let _ = app2.emit("isle-anim", serde_json::json!({ "phase": "out" }));
+          thread::sleep(std::time::Duration::from_millis(160)); // 收回滑出动画播完再隐藏
           let _ = b.hide();
           if let Some(a) = anchor_window(&app2) {
             restore_anchor_show(&a);
@@ -611,7 +637,7 @@ pub fn isle_body_drag_start(app: AppHandle) -> Result<(), String> {
         .get_webview_window("isle-anchor")
         .and_then(|w| w.scale_factor().ok())
         .unwrap_or(1.0);
-      if in_snap_band(&mp, &ms, scale_a, cx, cy) {
+      if snap_enabled(&app) && in_snap_band(&mp, &ms, scale_a, cx, cy) {
         // 贴边带 → 收纳态：本体隐藏，锚点按带落位（顶横排 / 缘竖排）
         let am = decide_anchor_mode(&mp, &ms, scale_a, cx, cy);
         let (_aw, ah) = anchor_size_phys(am, scale_a);
@@ -627,6 +653,8 @@ pub fn isle_body_drag_start(app: AppHandle) -> Result<(), String> {
         }
         let _ = app.emit("isle-body-drag-end", serde_json::json!({ "mode": name, "x": sx, "y": sy, "moved": true }));
         if let Some(b2) = body_window(&app) {
+          let _ = app.emit("isle-anim", serde_json::json!({ "phase": "out" }));
+          thread::sleep(std::time::Duration::from_millis(160)); // 收回滑出动画播完再隐藏
           let _ = b2.hide();
         }
         // 落位收纳后锚点在光标下：限时抑制呼出，让收纳粘住落点
@@ -641,11 +669,35 @@ pub fn isle_body_drag_start(app: AppHandle) -> Result<(), String> {
         let _ = app.emit("isle-body-drag-end", serde_json::json!({ "mode": "free", "x": bpx, "y": bpy, "moved": true }));
       }
     } else {
-      // 原地松手（单击）→ 按按下位置分派：LOGO 区（横条左端 64px 帽）=问小 P，
-      // 其余部位=打开 PWORK。scale 取本体窗的显示器缩放。
-      let scale_b = b
-        .scale_factor()
-        .unwrap_or(1.0);
+      // 原地松手（单击/双击）：双击=收回顶部收纳（自由驻留快捷收纳，0.1.25 用户通过）；
+      // 单击按按下位置分派：LOGO 区（横条左端 64px 帽）=问小 P，其余=打开 PWORK。
+      // 单击分派延迟一个双击窗口期——第二击在期内到达则改判双击，避免「先开主窗
+      // 再收纳」的杂音。scale 取本体窗的显示器缩放。
+      let now = std::time::Instant::now();
+      let scale_b = b.scale_factor().unwrap_or(1.0);
+      let is_double = LAST_BODY_CLICK.lock().ok().and_then(|g| *g).map_or(false, |(t, x0, y0)| {
+        now.duration_since(t) < std::time::Duration::from_millis(DOUBLE_CLICK_WINDOW_MS)
+          && (cursor0.x - x0).abs() <= 12.0
+          && (cursor0.y - y0).abs() <= 12.0
+      });
+      if let Ok(mut g) = LAST_BODY_CLICK.lock() {
+        *g = Some((now, cursor0.x, cursor0.y));
+      }
+      if is_double {
+        WATCH_ENABLED.store(false, Ordering::SeqCst);
+        let _ = isle_anchor_snap_top(app);
+        return;
+      }
+      thread::sleep(std::time::Duration::from_millis(DOUBLE_CLICK_WINDOW_MS));
+      // 窗口期内记录了更新的一击 = 已按双击处理，本击不再分派
+      let superseded = LAST_BODY_CLICK
+        .lock()
+        .ok()
+        .and_then(|g| *g)
+        .map_or(false, |(t, _, _)| t != now);
+      if superseded {
+        return;
+      }
       let (cox, _coy) = client_origin(&b);
       let logo_end_x = cox as f64 + 64.0 * scale_b;
       if cursor0.x < logo_end_x {
@@ -678,6 +730,7 @@ pub fn isle_anchor_snap_top(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn isle_hide_all(app: AppHandle) -> Result<(), String> {
   WATCH_ENABLED.store(false, Ordering::SeqCst);
+  ISLE_ENABLED.store(false, Ordering::SeqCst);
   if let Some(a) = anchor_window(&app) {
     let _ = a.hide();
   }
@@ -699,6 +752,18 @@ pub fn isle_set_activity(
     "isle-activities",
     serde_json::json!({ "activities": activities, "notice": notice }),
   );
+  // 上下文感知（0.1.25 用户通过，Win Dynamic Island 行为）：无任务→有任务的跃迁
+  // 时刻自动呼出一次横条——只在收纳态（锚点可见）呼出：自由驻留条已在屏上、
+  // 设置关闭绝不呼出；呼出走既有 FSM，光标监视照常（离开 1 秒收回）
+  let count = activities.len();
+  let prev = PREV_ACTIVITY_COUNT.swap(count, Ordering::SeqCst);
+  if ISLE_ENABLED.load(Ordering::SeqCst) && prev == 0 && count > 0 {
+    if let Some(a) = anchor_window(&app) {
+      if !a.is_minimized().unwrap_or(false) && !is_anchor_hidden(&a) {
+        let _ = expand_body_at(&app);
+      }
+    }
+  }
   Ok(())
 }
 
@@ -713,11 +778,23 @@ pub fn isle_open_main(app: AppHandle) -> Result<(), String> {
   Ok(())
 }
 
+/// 胶囊岛横条任务名点击（0.1.25 新增）：唤醒主窗并路由到活动对应页面
+/// （复用 isle-goto 桥，App 侧路由与问小 P 独立窗 palette_goto 同一机制）
+#[tauri::command]
+pub fn isle_note_goto(app: AppHandle, path: String) -> Result<(), String> {
+  if let Some(main) = app.get_webview_window("main") {
+    let _ = main.unminimize();
+    let _ = main.show();
+    let _ = main.set_focus();
+    let _ = app.emit("isle-goto", path);
+  }
+  Ok(())
+}
+
 /// 胶囊岛面板「问小 P」：独立 palette 窗（Spotlight 形态）置顶呼出——
 /// 不唤醒主窗；窗位=光标所在显示器顶部居中（上缘下 14% 屏高），带焦点供直接输入。
 #[tauri::command]
-pub fn isle_open_palette(app: AppHandle) -> Result<(), String> {
-  let Some(p) = app.get_webview_window("palette") else { return Ok(()) };
+pub fn isle_open_palette(app: AppHandle) -> Result<(), String> {  let Some(p) = app.get_webview_window("palette") else { return Ok(()) };
   let cursor = app.cursor_position().unwrap_or(tauri::PhysicalPosition::new(0.0, 0.0));
   let monitor = app
     .monitor_from_point(cursor.x, cursor.y)

@@ -88,6 +88,20 @@ preloadIdle(() => {
   void import('./modules/output/pages/ArticleDraftPage')
   void import('./modules/output/pages/ResearchPage')
 })
+// 第三波（0.1.25「模块页加载缓慢」续批）：review 模块其余七页与 process 工具页、
+// 云同步/案例页——此前首次点击现拉 chunk
+preloadIdle(() => {
+  void import('./modules/review/pages/NewReview')
+  void import('./modules/review/pages/Library')
+  void import('./modules/review/pages/MeetingRoom')
+  void import('./modules/review/pages/Wizard')
+  void import('./modules/review/pages/StatsView')
+  void import('./modules/review/pages/ArchiveDetail')
+  void import('./modules/review/pages/Help')
+  void import('./modules/process/pages/ProcessToolPage')
+  void import('./pages/CasesPage')
+  void import('./pages/CloudSync')
+})
 
 // PWA Service Worker：网页版离线可用、安装到主屏。
 // prompt 模式：新版本就绪后顶栏出更新按钮——必须把 registerSW 返回的激活函数传进去，

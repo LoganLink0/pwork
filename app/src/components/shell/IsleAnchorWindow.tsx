@@ -45,10 +45,18 @@ export function IsleAnchorWindow() {
   const [count, setCount] = useState(0)
 
   // 挂载：恢复持久化状态（Rust isle_restore 统一摆两窗：收纳态显示锚点 /
-  // 自由驻留显示本体并隐藏本窗）+ 主题跟随
+  // 自由驻留显示本体并隐藏本窗）+ 主题跟随。开关「关」的持久化状态此前在重启后
+  // 失效（挂载无条件 isle_restore 把关掉的岛复活）——挂载先读启用态再决定恢复或隐藏
   useEffect(() => {
     syncThemeFromStore()
     void import('../../engine/prefsFile').then((m) => m.readPrefsFile()).then(() => {
+      const raw = readPref('pwork-isle-settings', undefined)
+      const enabled =
+        raw != null && typeof raw === 'object' ? (raw as { enabled?: boolean }).enabled !== false : true
+      if (!enabled) {
+        void invoke('isle_hide_all').catch(() => {})
+        return
+      }
       const p = readPos()
       if (p.mode !== 'free') setMode(p.mode)
       void invoke('isle_restore', { mode: p.mode, x: p.x ?? null, y: p.y ?? null }).catch(() => {})

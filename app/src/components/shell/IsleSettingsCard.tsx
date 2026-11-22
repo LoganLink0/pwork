@@ -37,14 +37,16 @@ function readPos(): { mode: string; x?: number; y?: number } {
 
 export function IsleSettingsCard({ active }: { active: boolean }) {
   const [enabled, setEnabled] = useState(true)
+  const [snap, setSnap] = useState(true)
 
   useEffect(() => {
     if (!active) return
     try {
       const raw = readPref<unknown>(KEY, undefined) ?? readLocal(KEY)
       if (raw != null) {
-        const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { enabled?: boolean }
+        const p = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { enabled?: boolean; snap?: boolean }
         setEnabled(p.enabled !== false)
+        setSnap(p.snap !== false)
       }
     } catch {
       // 坏值走默认
@@ -53,8 +55,8 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
 
   const toggle = (on: boolean) => {
     setEnabled(on)
-    localStorage.setItem(KEY, JSON.stringify({ enabled: on }))
-    writePref(KEY, { enabled: on })
+    localStorage.setItem(KEY, JSON.stringify({ enabled: on, snap }))
+    writePref(KEY, { enabled: on, snap })
     if (on) {
       // 打开=恢复持久化状态（贴边收纳锚点 / 自由驻留横条；从未驻留过=顶部收纳）。
       // 位置由伴生窗在拖拽落位时写入：主窗缓存可能陈旧（跨窗写只广播事件、不刷新
@@ -68,6 +70,12 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
     invoke('isle_hide_all').catch(() => {})
   }
 
+  const toggleSnap = (on: boolean) => {
+    setSnap(on)
+    localStorage.setItem(KEY, JSON.stringify({ enabled, snap: on }))
+    writePref(KEY, { enabled, snap: on })
+  }
+
   const resetPos = () => {
     localStorage.removeItem(POS_KEY)
     writePref(POS_KEY, null) // null=重置语义（readPos 判 null 回落顶部收纳）
@@ -78,7 +86,7 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
   return (
     <div className="set-card" data-tab="isle" style={{ display: active ? undefined : 'none' }}>
       <h2>胶囊岛</h2>
-      <div className="desc">桌面上的常驻小 P：拖到屏幕边缘（上缘或左右侧）时收成迷你锚点、本体完全隐藏，悬停锚点即可展开；拖到屏幕中间则以完整横条驻留；点击横条上的 LOGO 问小 P，点击横条其他部位打开 PWORK；开关关闭后屏上完全隐藏</div>
+      <div className="desc">桌面上的常驻小 P：拖到屏幕边缘（上缘或左右侧）时收成迷你锚点、本体完全隐藏，悬停锚点即可展开；拖到屏幕中间则以完整横条驻留，双击横条收回顶部收纳；点击横条上的 LOGO 问小 P，点击横条其他部位打开 PWORK，有任务进行时岛会自动展开提醒；开关关闭后屏上完全隐藏</div>
       <div className="set-body">
         <div className="set-row">
           <label>显示</label>
@@ -91,6 +99,18 @@ export function IsleSettingsCard({ active }: { active: boolean }) {
             </button>
           </div>
           <span className="val">关闭后桌面不显示，随时回这里重新打开</span>
+        </div>
+        <div className="set-row">
+          <label>贴边收纳</label>
+          <div className="radio">
+            <button type="button" className={snap ? 'on' : ''} onClick={() => toggleSnap(true)}>
+              开
+            </button>
+            <button type="button" className={!snap ? 'on' : ''} onClick={() => toggleSnap(false)}>
+              关
+            </button>
+          </div>
+          <span className="val">关：拖到屏幕边缘也保持完整横条，不收成迷你锚点</span>
         </div>
         <div className="set-row">
           <label>位置</label>
