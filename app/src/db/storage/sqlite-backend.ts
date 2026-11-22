@@ -170,7 +170,13 @@ class SqliteTable<T> implements TableStore<T> {
         return rows[0]?.n ?? 0
       },
       delete: async () => {
-        const n = await invoke<number>('db_exec', { sql: sqlOf(''), params: params() })
+        // 生成 DELETE 语句（曾用 sqlOf('') 的 SELECT 走 execute 通道——rusqlite 报
+        // 「Execute returned results」，aiCache 例行清理每次都失败，2026-11-22 实锤）
+        const op = cmp === 'equals' ? '=' : cmp === 'above' ? '>' : '<'
+        const n = await invoke<number>('db_exec', {
+          sql: `DELETE FROM "${this.name}" WHERE "${field}" ${op} ?1`,
+          params: params(),
+        })
         return Number(n)
       },
     }

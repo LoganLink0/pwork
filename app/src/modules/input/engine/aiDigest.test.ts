@@ -16,6 +16,9 @@ import { db } from '../../../db/schema'
 import { loadCoachConfig } from '../../review/engine/coach'
 import type { Item } from '../../../types/models'
 
+const { recordErrorMock } = vi.hoisted(() => ({ recordErrorMock: vi.fn() }))
+vi.mock('../../../engine/errorLog', () => ({ recordError: recordErrorMock }))
+
 const mkItem = (i: number, over: Partial<Item> = {}): Item => ({
   id: 'note-mig-' + String(i).padStart(4, '0'),
   sourceId: 'src-test',
@@ -87,5 +90,26 @@ describe('summarizeDailyBackfill（限量补挂）', () => {
     const n = await summarizeDailyBackfill('2026-11-13', 10)
     expect(n).toBe(1)
     expect(chatCompletionCached).toHaveBeenCalledTimes(1)
+  })
+
+  it('批量失败不再静默：记一条批量错误（含条数与首个原因）', async () => {
+    recordErrorMock.mockReset()
+    await db.items.bulkPut([mkItem(1), mkItem(2)])
+    chatCompletionCached
+      .mockRejectedValueOnce(new Error('配额不足'))
+      .mockRejectedValueOnce(new Error('限流 429'))
+    await summarizeDailyBackfill('2026-11-13', 10)
+    expect(recordErrorMock).toHaveBeenCalledTimes(1)
+    const input = recordErrorMock.mock.calls[0][0]
+    expect(input.where).toContain('summarizeDailyBackfill')
+    expect(input.message).toContain('2 条中 2 条生成失败')
+    expect(input.message).toContain('配额不足')
+  })
+
+  it('全部成功时不记错误', async () => {
+    recordErrorMock.mockReset()
+    await db.items.bulkPut([mkItem(1)])
+    await summarizeDailyBackfill('2026-11-13', 10)
+    expect(recordErrorMock).not.toHaveBeenCalled()
   })
 })
