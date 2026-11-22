@@ -34,3 +34,4 @@ app/.tauri/
 # 本地中间结果（不入仓库）
 local/
 docs/assets/promo-card.render.html
+.discipline.json
