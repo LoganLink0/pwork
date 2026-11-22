@@ -600,6 +600,13 @@ pub fn run() {
         if let Some(w) = app.get_webview_window("palette") {
           strip_window_chrome(&w);
         }
+        // isle-anchor（双窗批新增的收纳锚点窗）必须同列：漏授权时 Win11 系统边框、
+        // 圆角裁切与投影原样画在窗框带里=用户看到的「胶囊外框线」（3.2 视觉批历史
+        // 修复点未随新窗继承，2026-11-22 用户第三次抓出）——历史修复点核对必须
+        // 覆盖「新增窗口」这一类变更。
+        if let Some(w) = app.get_webview_window("isle-anchor") {
+          strip_window_chrome(&w);
+        }
       }
       Ok(())
     })
