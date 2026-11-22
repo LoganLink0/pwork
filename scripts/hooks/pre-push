@@ -2,6 +2,11 @@
 # 推送口复查：重查所有待推提交的新增行。--no-verify 绕过提交口后，这里兜底。
 # 用法说明见 tools/verify-discipline.cjs 顶部注释。
 while read local_ref local_sha remote_ref remote_sha; do
+  # 新建 ref（分支/标签首次推送）时 remote_sha 为全零：标签指向的提交已随分支
+  # 推送并过检，无新增行可查；git diff 全零..HEAD 会报 Invalid revision range
+  case "$remote_sha" in
+    0000000000000000000000000000000000000000) continue ;;
+  esac
   node "$(git rev-parse --show-toplevel)/tools/verify-discipline.cjs" --range "$remote_sha" || exit 1
 done
 exit 0
