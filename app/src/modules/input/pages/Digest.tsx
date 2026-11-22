@@ -128,13 +128,13 @@ export function Digest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次；保鲜链路自身读 store 最新值
   }, [])
 
-  // AI 摘要限量补挂（41 批）：打开日报页时对当日缺摘要的条目补生成（引擎内部自带
-  // AI 配置预检、限量与失败静默——未配 Key 时什么都不发生）
+  // AI 摘要限量补挂（41 批）：打开日报页时对所查看日期缺摘要的条目补生成（引擎内部自带
+  // AI 配置预检、限量与批量失败留痕——未配 Key 时什么都不发生）。按查看日期补挂而非
+  // 固定今天：过午夜后回看昨日日报时（todayLocal 已翻日）补挂曾空转，摘要永远补不上
   useEffect(() => {
-    if (!isToday) return
-    void summarizeDailyBackfill(todayLocal()).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 挂载一次
-  }, [])
+    void summarizeDailyBackfill(digestDate).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- digestDate 变化即补挂该日
+  }, [digestDate])
 
   return (
     <section className="content-wide">
