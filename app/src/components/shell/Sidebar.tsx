@@ -26,7 +26,7 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
 const ANNOUNCES = [
   {
     title: `${__APP_VERSION__} 更新`,
-    desc: '配置不再丢、中文输入不再误触发',
+    desc: '桌面小 P 收放自如：贴边收纳、中间常驻',
     to: 'https://loganlink0.github.io/pwork/#changelog',
     internal: false,
   },
