@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.24-fix8"
+version = "0.1.25"
 description = "PWORK 个人工作台——本地优先的四模块个人操作系统"
 authors = ["LOGANLINK0"]
 license = "MIT"
