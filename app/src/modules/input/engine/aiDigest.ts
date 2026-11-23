@@ -50,7 +50,10 @@ export async function summarizeItem(
       inputKey: `${item.id}@${item.updatedAt}`,
       system: '你是资讯摘要助手。把这条资讯压缩成一句不超过 60 字的中文，说清发生了什么、与关注它的读者何干。只输出摘要本身，不要前缀、引号或解释。',
       user: buildUserInput(item),
-      maxTokens: 120,
+      // 4000 而非 120：思考型模型的推理阶段与正文共用 max_tokens 预算——120 会被
+      // 思考吃光导致 finish_reason=length 截断（2026-11-22 实测 10 条仅 4 成功）。
+      // max_tokens 是上限非计费项：思考短时不多花钱
+      maxTokens: 4000,
     })
     const summary = text.trim().replace(/^["'「『]|["'」』]$/g, '').slice(0, 120)
     if (!summary) {

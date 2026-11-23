@@ -4,7 +4,9 @@
  * localStorage 双写为兼容期回落（读优先 prefs，未迁移/浏览器版走旧键）。
  * 渲染前应用避免闪屏（见 main.tsx）。
  */
+import { invoke } from '@tauri-apps/api/core'
 import { readPref, writePref } from './prefsFile'
+import { isDesktopApp } from './platform'
 
 export type ThemePref = 'auto' | 'light' | 'dark'
 
@@ -24,6 +26,13 @@ export function saveTheme(pref: ThemePref): void {
   writePref(KEY, pref)
 }
 
+/** 窗口标题栏主题跟随（桌面版）：网页 data-theme 管不到原生标题栏，
+ *  经 Rust set_theme 同步亮/暗（auto=跟随系统）。浏览器版无窗口可设。 */
+function syncWindowTheme(pref: ThemePref): void {
+  if (!isDesktopApp()) return
+  void invoke('window_set_theme', { theme: pref === 'auto' ? null : pref }).catch(() => {})
+}
+
 /**
  * 应用并持久化主题（对齐 FUPAN 语义：applyTheme = 写偏好 + 挂 data-theme）。
  * auto 时移除 data-theme，交给 CSS 的 prefers-color-scheme 分支。
@@ -40,6 +49,7 @@ export function applyTheme(pref: ThemePref): void {
   } else {
     document.documentElement.dataset.theme = pref
   }
+  syncWindowTheme(pref)
 }
 
 /**
@@ -54,4 +64,5 @@ export function syncThemeFromStore(): void {
   } else {
     document.documentElement.dataset.theme = pref
   }
+  syncWindowTheme(pref)
 }

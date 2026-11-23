@@ -248,6 +248,25 @@ fn show_main_window(app: tauri::AppHandle) {
     }
 }
 
+/// 主窗标题栏主题跟随（2026-11-23 用户指出：网页 data-theme 管不到原生标题栏，
+/// 深色模式下标题栏仍为浅色）。theme=None 即跟随系统（对应应用「跟随系统」档）。
+#[tauri::command]
+fn window_set_theme(app: tauri::AppHandle, theme: Option<String>) -> Result<(), String> {
+    let main = app
+        .get_webview_window("main")
+        .ok_or_else(|| "主窗口不存在".to_string())?;
+    match theme.as_deref() {
+        Some("dark") => main
+            .set_theme(Some(tauri::Theme::Dark))
+            .map_err(|e| e.to_string())?,
+        Some("light") => main
+            .set_theme(Some(tauri::Theme::Light))
+            .map_err(|e| e.to_string())?,
+        _ => main.set_theme(None).map_err(|e| e.to_string())?,
+    }
+    Ok(())
+}
+
 /// 打开外部网页（桌面版）：WebView 不处理 target=_blank 的外链，
 /// 统一由这里交给系统默认浏览器。只放行 http/https，其余一律拒绝。
 #[tauri::command]
@@ -640,6 +659,7 @@ pub fn run() {
       db::db_select,
       db::db_write,
       db::db_exec,
+      window_set_theme,
       db::db_begin,
       db::db_commit,
       db::db_rollback,

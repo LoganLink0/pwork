@@ -124,13 +124,24 @@ class SqliteTable<T> implements TableStore<T> {
   }
 
   where(field: string): WhereClause<T> {
-    let cmp: 'equals' | 'above' | 'below' = 'equals'
+    type Cmp = 'equals' | 'above' | 'below' | 'between'
+    let cmp: Cmp = 'equals'
     let value: string | number = ''
+    let lo: string | number = ''
+    let hi: string | number = ''
     const sqlOf = (tail: string) => {
-      const op = cmp === 'equals' ? '=' : cmp === 'above' ? '>' : '<'
-      return `SELECT payload FROM "${this.name}" WHERE "${field}" ${op} ?1${tail}`
+      const op =
+        cmp === 'equals'
+          ? '= ?1'
+          : cmp === 'above'
+            ? '> ?1'
+            : cmp === 'below'
+              ? '< ?1'
+              : '>= ?1 AND "' + field + '" < ?2'
+      return `SELECT payload FROM "${this.name}" WHERE "${field}" ${op}${tail}`
     }
-    const params = () => [toSqlValue(value)]
+    const params = () =>
+      cmp === 'between' ? [toSqlValue(lo), toSqlValue(hi)] : [toSqlValue(value)]
     const self: WhereClause<T> = {
       equals: (v) => {
         cmp = 'equals'
@@ -145,6 +156,12 @@ class SqliteTable<T> implements TableStore<T> {
       below: (v) => {
         cmp = 'below'
         value = v
+        return self
+      },
+      between: (vLo, vHi) => {
+        cmp = 'between'
+        lo = vLo
+        hi = vHi
         return self
       },
       toArray: async () => {
@@ -172,9 +189,8 @@ class SqliteTable<T> implements TableStore<T> {
       delete: async () => {
         // 生成 DELETE 语句（曾用 sqlOf('') 的 SELECT 走 execute 通道——rusqlite 报
         // 「Execute returned results」，aiCache 例行清理每次都失败，2026-11-22 实锤）
-        const op = cmp === 'equals' ? '=' : cmp === 'above' ? '>' : '<'
         const n = await invoke<number>('db_exec', {
-          sql: `DELETE FROM "${this.name}" WHERE "${field}" ${op} ?1`,
+          sql: sqlOf('').replace('SELECT payload FROM', 'DELETE FROM'),
           params: params(),
         })
         return Number(n)

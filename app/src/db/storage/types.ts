@@ -29,6 +29,8 @@ export interface WhereClause<T> {
   equals(value: string | number): WhereClause<T>
   above(value: string | number): WhereClause<T>
   below(value: string | number): WhereClause<T>
+  /** 区间 [lo, hi)（含头不含尾）：日期范围类查询下推给后端，避免全表载入 */
+  between(lo: string | number, hi: string | number): WhereClause<T>
   toArray(): Promise<T[]>
   first(): Promise<T | undefined>
   last(): Promise<T | undefined>

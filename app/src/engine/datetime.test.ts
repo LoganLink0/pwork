@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtCompact, fmtLocal, greetWord, nextCalendarDay, relTime, todayLocal, weekdayLocal } from './datetime'
+import { fmtCompact, fmtLocal, greetWord, localDayRangeUtc, localDateOf, nextCalendarDay, relTime, todayLocal, weekdayLocal } from './datetime'
 
 /** UTC 时区漂移回归（开发复盘 1.4）：本地 0:30 不得被算成"昨天/明天" */
 describe('todayLocal / fmtLocal（本地时区）', () => {
@@ -83,5 +83,31 @@ describe('fmtCompact（条目卡入库时间）', () => {
     expect(fmtCompact(new Date(2026, 9, 21, 2, 14).toISOString(), now)).toBe('02:14')
     expect(fmtCompact(new Date(2026, 9, 19, 8, 5).toISOString(), now)).toBe('10-19 08:05')
     expect(fmtCompact('not-a-date')).toBe('')
+  })
+})
+
+describe('localDayRangeUtc（本地日 → UTC ISO 边界对：日期范围查询下推用）', () => {
+  it('当日全部本地时刻落在 [lo, hi) 内（含 UTC+8 的日期翻折线早 8 点）', () => {
+    const [lo, hi] = localDayRangeUtc('2026-11-22')
+    for (const [h, m] of [[0, 0], [8, 0], [12, 0], [23, 59]] as const) {
+      const t = new Date(2026, 10, 22, h, m)
+      expect(localDateOf(t.toISOString())).toBe('2026-11-22')
+      expect(t.toISOString() >= lo && t.toISOString() < hi).toBe(true)
+    }
+  })
+
+  it('相邻日时刻不落进当日区间', () => {
+    const [lo, hi] = localDayRangeUtc('2026-11-22')
+    for (const t of [new Date(2026, 10, 21, 23, 59), new Date(2026, 10, 23, 0, 0)]) {
+      expect(t.toISOString() >= lo && t.toISOString() < hi).toBe(false)
+    }
+  })
+
+  it('月末边界（11-30 → 12-01）不漏不越', () => {
+    const [lo, hi] = localDayRangeUtc('2026-11-30')
+    const inDay = new Date(2026, 10, 30, 12, 0)
+    const nextDay = new Date(2026, 11, 1, 0, 0)
+    expect(inDay.toISOString() >= lo && inDay.toISOString() < hi).toBe(true)
+    expect(nextDay.toISOString() >= lo && nextDay.toISOString() < hi).toBe(false)
   })
 })

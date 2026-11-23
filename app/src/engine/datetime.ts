@@ -43,6 +43,19 @@ export function localDateOf(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : todayLocal(d)
 }
 
+/**
+ * 本地日 'YYYY-MM-DD' → 该日 [起, 止) 的 UTC ISO 边界对——日期范围查询下推给存储层用
+ * （命中 fetchedAt 索引，免全表载入；条目时间戳为 UTC ISO，字典序即时间序）。
+ * 这不是 toISOString 做日期判断（1.4 红线不涉）：日成员判断仍由 localDateOf 精确过滤，
+ * 这里只负责把本地日换算成两个 UTC 时间点。
+ */
+export function localDayRangeUtc(dateLocal: string): [string, string] {
+  const [y, m, d] = dateLocal.split('-').map(Number)
+  const start = new Date(y, m - 1, d)
+  const end = new Date(y, m - 1, d + 1)
+  return [start.toISOString(), end.toISOString()]
+}
+
 /** 本地月份 'YYYY-MM'（月报默认值用） */
 export function monthLocal(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}`

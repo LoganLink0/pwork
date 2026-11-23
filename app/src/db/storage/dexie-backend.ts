@@ -51,15 +51,17 @@ class DexieTable<T extends Record<string, unknown>> implements TableStore<T> {
   }
 
   where(field: keyof T & string): WhereClause<T> {
-    // 条件与取值分离：equals/above/below 只改条件参数，Collection 在每次终结调用时按当前条件重建
-    type Cmp = 'equals' | 'above' | 'below'
+    // 条件与取值分离：equals/above/below/between 只改条件参数，Collection 在每次终结调用时按当前条件重建
+    type Cmp = 'equals' | 'above' | 'below' | 'between'
     let op: Cmp = 'equals'
     let value: string | number = ''
+    let range: [string | number, string | number] = ['', '']
     const collection = () => {
       const w = this.table.where(field)
       if (op === 'equals') return w.equals(value)
       if (op === 'above') return w.above(value)
-      return w.below(value)
+      if (op === 'below') return w.below(value)
+      return w.between(range[0], range[1], true, false) // [lo, hi) 含头不含尾
     }
     const self: WhereClause<T> = {
       equals: (v) => {
@@ -75,6 +77,11 @@ class DexieTable<T extends Record<string, unknown>> implements TableStore<T> {
       below: (v) => {
         op = 'below'
         value = v
+        return self
+      },
+      between: (vLo, vHi) => {
+        op = 'between'
+        range = [vLo, vHi]
         return self
       },
       toArray: async () => (await collection().toArray()) as T[],

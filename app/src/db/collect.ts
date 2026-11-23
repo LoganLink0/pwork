@@ -8,7 +8,7 @@ import { newId } from './repo'
 import { registerTombstones } from './tombstones'
 import type { Item, Source } from '../types/models'
 import { TIER_WEIGHT } from '../content/collect'
-import { localDateOf } from '../engine/datetime'
+import { localDateOf, localDayRangeUtc } from '../engine/datetime'
 
 export const SOURCE_SCHEMA_VERSION = 1
 export const ITEM_SCHEMA_VERSION = 1
@@ -262,10 +262,14 @@ export async function digestFor(dateLocal: string, topN: number): Promise<Item[]
     .slice(0, topN)
 }
 
-/** 某本地日的全部条目（fetchedAt 本地日匹配） */
+/** 某本地日的全部条目（fetchedAt 本地日匹配）。
+ *  日期范围下推给后端（命中 fetchedAt 索引）——曾全表 toArray 载入 1367+ 条再
+ *  JS 过滤，切日期卡约 1 秒且随条目累积线性变差（2026-11-23 用户实测）；
+ *  localDateOf 精确过滤保留为二次校验（非标准时间串的边界由它兜底） */
 export async function itemsOfLocalDay(dateLocal: string): Promise<Item[]> {
-  const all = await db.items.toArray()
-  return all
+  const [lo, hi] = localDayRangeUtc(dateLocal)
+  const inRange = await db.items.where('fetchedAt').between(lo, hi).toArray()
+  return inRange
     .filter((i) => !i.deletedAt && localDateOf(i.fetchedAt) === dateLocal)
     .map(normalizeItem)
 }

@@ -10,12 +10,13 @@ function clone<T>(v: T): T {
   return structuredClone(v)
 }
 
-type Cmp = 'equals' | 'above' | 'below'
+type Cmp = 'equals' | 'above' | 'below' | 'between'
 
-function cellMatch(cell: unknown, op: Cmp, v: string | number): boolean {
+function cellMatch(cell: unknown, op: Cmp, v: string | number, hi?: string | number): boolean {
   if (cell == null) return false
   if (op === 'equals') return cell === v
   if (op === 'above') return cell > v
+  if (op === 'between') return cell >= v && (hi === undefined || cell < hi)
   return cell < v
 }
 
@@ -71,11 +72,12 @@ class MemoryTable<T extends Record<string, unknown>> implements TableStore<T> {
   }
 
   where(field: keyof T & string): WhereClause<T> {
-    // 链式状态：equals/above/below 设定条件（可链改），first/count/delete/toArray 作为终结方法作用于当前条件
+    // 链式状态：equals/above/below/between 设定条件（可链改），first/count/delete/toArray 作为终结方法作用于当前条件
     let op: Cmp = 'equals'
     let value: string | number = ''
+    let hi: string | number | undefined = undefined
     const matched = (): T[] =>
-      [...this.rows.values()].filter((row) => cellMatch(row[field], op, value)).map(clone)
+      [...this.rows.values()].filter((row) => cellMatch(row[field], op, value, hi)).map(clone)
 
     const clause: WhereClause<T> = {
       equals: (v) => {
@@ -91,6 +93,12 @@ class MemoryTable<T extends Record<string, unknown>> implements TableStore<T> {
       below: (v) => {
         op = 'below'
         value = v
+        return clause
+      },
+      between: (vLo, vHi) => {
+        op = 'between'
+        value = vLo
+        hi = vHi
         return clause
       },
       toArray: async () => matched(),
