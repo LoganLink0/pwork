@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更新日志 · PWORK</title>
+<meta name="description" content="PWORK 每个版本的完整更新说明：新功能、修复与改进，全部可回溯。">
+<style>
+  :root {
+    --paper: #f5f1e9; --surface: #fffdf8; --line: #e3ddcf;
+    --ink: #1f1f1f; --ink-2: #3d3d3d; --ink-3: #6b6b6b;
+    --accent: #e8833a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+  .topbar { border-bottom: 1px solid var(--line); background: var(--paper); }
+  .topbar .wrap { display: flex; align-items: center; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-weight: 800; letter-spacing: 1px; }
+  .brand img { width: 26px; height: 26px; display: block; }
+  .topnav { margin-left: auto; display: flex; gap: 24px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; font-size: 15px; }
+  .topnav a:hover { color: var(--accent); }
+  main { padding: 48px 0 60px; }
+  .kicker { color: var(--accent); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; margin-bottom: 10px; }
+  h1 { font-size: 40px; font-weight: 900; margin-bottom: 10px; }
+  .lead { color: var(--ink-3); font-size: 16px; margin-bottom: 36px; }
+  .cl-item { border-left: 2px solid var(--line); padding: 0 0 28px 24px; margin-left: 4px; position: relative; }
+  .cl-item::before {
+    content: ''; position: absolute; left: -5px; top: 6px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+  .cl-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+  .cl-head .v { font-size: 24px; font-weight: 900; }
+  .cl-head .t { color: var(--ink-3); font-size: 14px; }
+  .cl-item ul { list-style: none; }
+  .cl-item li { padding: 3px 0; color: var(--ink-2); font-size: 15px; line-height: 1.6; }
+  .cl-item li b { color: var(--ink); }
+  .back {
+    display: inline-block; margin-bottom: 30px; color: var(--ink-2);
+    text-decoration: none; font-size: 15px;
+  }
+  .back:hover { color: var(--accent); }
+  .dl {
+    margin-top: 40px; padding: 20px 24px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .dl b { font-size: 17px; }
+  .dl a {
+    color: #fff; background: var(--accent); text-decoration: none;
+    padding: 10px 22px; border-radius: 9px; font-weight: 700; white-space: nowrap;
+  }
+  .dl a:hover { background: #d0742e; }
+  footer { border-top: 1px solid var(--line); padding: 24px 0 40px; color: var(--ink-3); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  footer a { color: var(--ink-2); }
+  @media (max-width: 640px) {
+    h1 { font-size: 30px; }
+    .topnav { display: none; }
+    .dl { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="favicon.svg" alt="PWORK" width="26" height="26"><span>PWORK</span></a>
+    <div class="topnav">
+      <a href="/">主页</a>
+      <a href="index.html#download">下载</a>
+      <a href="https://github.com/LoganLink0/pwork" target="_blank" rel="noreferrer noopener">GitHub 开源</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <a class="back" href="index.html">← 返回主页</a>
+  <div class="kicker">CHANGELOG</div>
+  <h1>更新日志</h1>
+  <p class="lead">每个版本改了什么、修了什么，全部可回溯。最新在上。</p>
+
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.25</span><span class="t">2026-11-22</span></div>
+    <ul>
+      <li><b>胶囊岛全面重做</b>：贴边收成迷你锚点、中间横条常驻不收回——悬停展开、双击收纳、任务名点击直达、有任务自动提醒、跟随主题实时切换、外圈框线清除</li>
+      <li><b>修复关窗进程残留</b>：点 ✕ 后进程偶发不退、再启动没反应——看门狗兜底</li>
+      <li><b>AI 一句话摘要修复</b>：思考型模型下整批截断失败（条目无简介）——预算放大、失败留痕、自动重试</li>
+      <li>窗口标题栏跟随主题；信息日报切日期更快；贴边收纳改为可选开关；输入法回车守卫补强</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.24</span><span class="t">2026-11-16</span></div>
+    <ul>
+      <li><b>宽屏铺满</b>：窗口拉宽后正文列不再两侧空置，列表页右栏实时概览</li>
+      <li><b>配置不再丢</b>：用户设置改存数据目录 prefs.json，强杀进程不再丢近期改动</li>
+      <li>输出模块页内预览重做；Ctrl+Z 撤销删除；中文输入法回车守卫</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.23</span><span class="t">2026-11-14</span></div>
+    <ul>
+      <li><b>胶囊岛首版</b>：桌面常驻小 P 上线——收起是把手，靠近展开横条</li>
+      <li><b>问小 P 独立窗</b>：顶部居中的独立搜索问答窗，点窗外即收</li>
+      <li><b>一键成稿</b>：速记与洞察一次生成日报、演示文稿、文章草稿，未配 AI 也能用</li>
+      <li><b>相关的旧内容</b>：写速记时自动展示词法相关的旧速记</li>
+      <li>采集屏蔽词（信源级）；数据安全加固（突变守卫更全、备份对账清单）</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.22</span><span class="t">2026-11-13</span></div>
+    <ul>
+      <li><b>修复轮盘边界线</b>：工具轮盘窗边缘的系统边框线已关闭，透明形态完整</li>
+      <li><b>备份保留 10 份</b>：数据回溯窗口翻倍（0.1.20 起）</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.21</span><span class="t">2026-11-13</span></div>
+    <ul>
+      <li><b>修复迁移超时</b>：慢盘/杀软环境下旧数据迁移失败的修复——批次收紧、超时放宽、连接补忙等</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.20</span><span class="t">2026-11-13</span></div>
+    <ul>
+      <li><b>安全加固</b>：数据库引擎与 TLS 传输栈升级；自动备份保留 5 → 10 份（回溯窗口翻倍）</li>
+      <li><b>依赖审计清零</b>：Rust 与前端依赖漏洞全修，审计工具接入基线化</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.19</span><span class="t">2026-11-13</span></div>
+    <ul>
+      <li><b>问小 P 动效</b>：圆钮呼吸/提问脉冲/完成弹跳三态，面板思考态文字扫光</li>
+      <li><b>视觉体系升级</b>：底色暖一档、圆角 10/14/18、投影暖棕化+卡片悬停浮起、焦点环统一；暗色对比度修正</li>
+      <li><b>侧栏密度优化</b>：品牌行压缩、行距收紧、「最近打开」缩进至子模块层级</li>
+      <li><b>? 说明气泡</b>：悬浮即展示，位置漂移根治</li>
+      <li><b>体验修复批</b>：帮助页分组默认折叠、外部接入说明整改、存储保护桌面版隐藏</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.18</span><span class="t">2026-11-11</span></div>
+    <ul>
+      <li><b>循环待办与习惯追踪</b>：待办可设重复间隔，完成自动派生下一期；新增近 12 周完成热力条</li>
+      <li><b>条目版本回退</b>：重抓覆盖正文前自动保留上一版，阅读视图一键换回</li>
+      <li><b>保存的过滤器</b>：筛选组合命名保存，命令面板输入名字直达</li>
+      <li><b>播客信源与关键词监控</b>：播客 RSS 自动识别标时长；关键词生成必应订阅</li>
+      <li><b>外部接入</b>：其他项目与 MCP 客户端可写入速记待办（桌面版）</li>
+      <li><b>数据守卫</b>：数据量骤减先隔离再弹恢复窗口，支持备份一键恢复</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.17</span><span class="t">2026-11-09</span></div>
+    <ul>
+      <li><b>手机端两步配对</b>：桌面出二维码，手机扫一下即完成云端配置，全程不进 Cloudflare 控制台</li>
+      <li><b>部署完零控制台</b>：一键部署后端点、Token、账户、数据库四项自动填好</li>
+      <li><b>条目库按月浏览</b>：上千条不再卡，更早的条目按月份翻到</li>
+      <li><b>AI 全库问答修好自然语言</b>：整句话提问恢复正常</li>
+      <li>删除确认统一为应用内弹层（危险操作红键）；加载状态不再闪「0 条」</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.16</span><span class="t">2026-11-07</span></div>
+    <ul>
+      <li><b>通知中心</b>：提醒不再弹完即失，铃铛带未读数，可回看历史</li>
+      <li><b>手机端导航重构</b>：21 个页面全部直达，子页标签一键切换</li>
+      <li>侧栏「最近打开」与版本公告卡；帮助页重排 + 数据流向图</li>
+      <li>设置分类四字命名，全站文案瘦身</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.15</span><span class="t">2026-11-05</span></div>
+    <ul>
+      <li><b>条目正文全文</b>：自动抓全文进库参与检索，应用内阅读视图</li>
+      <li><b>划选摘录</b>：看文章划两句直接存进速记，自动带出处</li>
+      <li><b>速记图片附件</b>：截图 Ctrl+V 直接贴，一条最多 10 张</li>
+      <li><b>历史数据搬家</b>：书签、Obsidian、flomo、Notion、印象笔记选文件即导</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.14</span><span class="t">2026-11-03</span></div>
+    <ul>
+      <li><b>工具轮盘悬浮小窗</b>：鼠标边弹出不夺焦点，还能一键置顶任何窗口</li>
+      <li><b>信源健康自检</b>：噪声源、零命中源自报，还会推荐值得订阅的源头</li>
+      <li>B站 UP 主、YouTube 频道可当订阅源；剪贴板速记 Ctrl+Alt+V</li>
+      <li>信息日报主题异动点名；更新源国内直连</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.13</span><span class="t">2026-11-01</span></div>
+    <ul>
+      <li><b>安装包 48MB 瘦到 8MB</b>：下载从几分钟变几秒</li>
+      <li>迁移窗口重做：实时进度条 + 看门狗，不再有卡死的静默画面</li>
+      <li>给开发者的 Shell 通知桥：命令跑完一行 curl 弹通知</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.12</span><span class="t">2026-10-31</span></div>
+    <ul>
+      <li><b>数据独立成文件</b>：pwork.db 单文件可直接复制备份</li>
+      <li><b>vault 镜像</b>：每条数据一个 Markdown，Obsidian 等工具直接可读</li>
+      <li>应用内更新首次真实命中：装一次，后面一键升级</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.11</span><span class="t">2026-10-29</span></div>
+    <ul>
+      <li><b>数据防丢三道闸</b>：持久化保护 + 每周自动备份 + 启动健康检查</li>
+      <li><b>可读档案</b>：全库导出 zip，每条数据一个 Markdown 可回导</li>
+      <li>AI 全库问答；键盘快捷键自定义；macOS 内测首包</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.10</span><span class="t">2026-10-28</span></div>
+    <ul>
+      <li><b>一键上云在应用里完成</b>，不再弹终端窗口</li>
+      <li>信息日报自动保鲜；AI 厂商扩到 16 家；工具轮盘可视化编辑</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.9</span><span class="t">2026-10-27</span></div>
+    <ul>
+      <li>修复桌面版点击外链没反应的问题</li>
+      <li>侧栏 GitHub 入口与明暗主题切换</li>
+    </ul>
+  </div>
+  <div class="cl-item">
+    <div class="cl-head"><span class="v">0.1.8</span><span class="t">2026-10-26</span></div>
+    <ul>
+      <li><b>开源首发</b>（MIT）：源码全部公开，欢迎审查与共建</li>
+      <li>首访引导定稿；联网版与完全离线版双安装包</li>
+    </ul>
+  </div>
+
+  <div class="dl">
+    <b>最新版本 0.1.25——装下来试五分钟就知道。</b>
+    <a href="index.html#download">前往下载</a>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 LOGANLINK0 · <a href="https://github.com/LoganLink0/pwork/blob/master/LICENSE" target="_blank" rel="noreferrer noopener">代码 MIT</a> · <a href="https://github.com/LoganLink0/pwork/blob/master/docs/LICENSE" target="_blank" rel="noreferrer noopener">文档 CC BY 4.0</a></span>
+    <span><a href="https://github.com/LoganLink0/pwork/releases" target="_blank" rel="noreferrer noopener">GitHub 发布页（含历史安装包）</a></span>
+  </div>
+</footer>
+</body>
+</html>
