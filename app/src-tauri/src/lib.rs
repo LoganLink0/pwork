@@ -630,6 +630,7 @@ pub fn run() {
       Ok(())
     })
     .manage(db::DbState(std::sync::Mutex::new(None)))
+    .manage(db::TxOwner(std::sync::Mutex::new(None)))
     .invoke_handler(tauri::generate_handler![
       show_main_window,
       save_gateway_key,

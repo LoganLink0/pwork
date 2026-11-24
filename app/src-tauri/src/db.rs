@@ -12,6 +12,23 @@ use tauri::{AppHandle, Manager, State};
 
 pub struct DbState(pub Mutex<Option<Connection>>);
 
+/// 事务属主（2026-11-24 命令面收口）：记录当前开启事务的窗口 label。此前事务期内
+/// 他窗的 db_write/db_begin 会静默并入持锁窗的事务——A 窗回滚会连带丢弃 B 窗已确认
+/// 的写入（2026-11-15 外部研读报告 §4.4 的残余路径）。现按窗口身份校验，异窗即快败。
+pub struct TxOwner(pub Mutex<Option<String>>);
+
+/// 属主校验纯函数（单测覆盖，不依赖 Tauri 类型）：自动提交态不设防；
+/// 事务期内必须与持锁窗口一致，异窗或属主缺失一律拒绝
+fn tx_guard(owner: &Option<String>, caller: &str, autocommit: bool) -> Result<(), String> {
+  if autocommit {
+    return Ok(());
+  }
+  match owner {
+    Some(w) if w == caller => Ok(()),
+    _ => Err("另一个窗口正在处理数据，请稍后再试".to_string()),
+  }
+}
+
 const DDL: &str = r#"
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, "source" TEXT, "deletedAt" TEXT, "updatedAt" TEXT, payload TEXT NOT NULL);
@@ -290,7 +307,7 @@ pub fn db_probe(app: AppHandle) -> Result<Json, String> {
 }
 
 #[tauri::command]
-pub fn db_open(app: AppHandle, state: State<DbState>) -> Result<Json, String> {
+pub fn db_open(app: AppHandle, state: State<DbState>, owner: State<TxOwner>) -> Result<Json, String> {
   let path = db_path(&app)?;
   // 幂等：连接已在（其他窗口先开）直接返回现状，不换连接——四个窗口启动各调一次
   // db_open，无条件覆盖会让 db_begin/db_commit 跨命令期间 A 窗的连接被 B 窗换掉
@@ -324,6 +341,8 @@ pub fn db_open(app: AppHandle, state: State<DbState>) -> Result<Json, String> {
     .query_row("SELECT COUNT(*) FROM meta WHERE key = 'migration_complete'", [], |r| r.get(0))
     .map_err(|e| e.to_string())?;
   *state.0.lock().map_err(|_| "数据库状态锁不可用")? = Some(conn);
+  // 新连接无在途事务，属主一并复位（db_destroy 后重开路径）
+  *owner.0.lock().map_err(|_| "状态锁不可用")? = None;
   Ok(json!({
     "fresh": fresh,
     "incompleteMigration": started > 0 && complete == 0,
@@ -353,11 +372,16 @@ pub fn db_select(state: State<DbState>, sql: String, params: Vec<Json>) -> Resul
 }
 
 #[tauri::command]
-pub fn db_write(state: State<DbState>, ops: Vec<Json>) -> Result<Json, String> {
+pub fn db_write(state: State<DbState>, owner: State<TxOwner>, window: tauri::WebviewWindow, ops: Vec<Json>) -> Result<Json, String> {
+  let caller = window.label().to_string();
   with_conn(&state, |conn| {
     let in_tx = !conn.is_autocommit();
-    if !in_tx {
+    if in_tx {
+      // 事务期内他窗写入此前会静默并入持锁窗的事务（A 回滚连带丢弃 B 的写入）——快败
+      tx_guard(&*owner.0.lock().map_err(|_| "状态锁不可用")?, &caller, false)?;
+    } else {
       conn.execute_batch("BEGIN IMMEDIATE").map_err(|e| format!("开启事务失败：{}", e))?;
+      *owner.0.lock().map_err(|_| "状态锁不可用")? = Some(caller.clone());
     }
     let mut puts = 0i64;
     let mut dels = 0i64;
@@ -372,16 +396,23 @@ pub fn db_write(state: State<DbState>, ops: Vec<Json>) -> Result<Json, String> {
         Err(e) => {
           if !in_tx {
             let _ = conn.execute_batch("ROLLBACK");
+            *owner.0.lock().map_err(|_| "状态锁不可用")? = None;
           }
           return Err(e);
         }
       }
     }
     if !in_tx {
-      conn.execute_batch("COMMIT").map_err(|e| {
+      if let Err(e) = conn.execute_batch("COMMIT") {
         let _ = conn.execute_batch("ROLLBACK");
-        format!("事务提交失败：{}", e)
-      })?;
+        if let Ok(mut o) = owner.0.lock() {
+          *o = None;
+        }
+        return Err(format!("事务提交失败：{}", e));
+      }
+      if let Ok(mut o) = owner.0.lock() {
+        *o = None;
+      }
     }
     Ok(json!({ "puts": puts, "dels": dels }))
   })
@@ -398,43 +429,56 @@ pub fn db_exec(state: State<DbState>, sql: String, params: Vec<Json>) -> Result<
 }
 
 #[tauri::command]
-pub fn db_begin(state: State<DbState>) -> Result<(), String> {
+pub fn db_begin(state: State<DbState>, owner: State<TxOwner>, window: tauri::WebviewWindow) -> Result<(), String> {
+  let caller = window.label().to_string();
   with_conn(&state, |conn| {
     if !conn.is_autocommit() {
-      return Ok(()); // 已在事务中（嵌套调用并入外层）
+      // 已在事务中：同窗嵌套并入外层；异窗一律拒绝（此前会静默并入他窗事务）
+      return tx_guard(&*owner.0.lock().map_err(|_| "状态锁不可用")?, &caller, false);
     }
     conn.execute_batch("BEGIN IMMEDIATE").map_err(|e| format!("开启事务失败：{}", e))?;
+    *owner.0.lock().map_err(|_| "状态锁不可用")? = Some(caller);
     Ok(())
   })
 }
 
 #[tauri::command]
-pub fn db_commit(state: State<DbState>) -> Result<(), String> {
+pub fn db_commit(state: State<DbState>, owner: State<TxOwner>, window: tauri::WebviewWindow) -> Result<(), String> {
+  let caller = window.label().to_string();
   with_conn(&state, |conn| {
     if conn.is_autocommit() {
       return Ok(());
     }
+    tx_guard(&*owner.0.lock().map_err(|_| "状态锁不可用")?, &caller, false)?;
     conn.execute_batch("COMMIT").map_err(|e| format!("提交事务失败：{}", e))?;
+    *owner.0.lock().map_err(|_| "状态锁不可用")? = None;
     Ok(())
   })
 }
 
 #[tauri::command]
-pub fn db_rollback(state: State<DbState>) -> Result<(), String> {
+pub fn db_rollback(state: State<DbState>, owner: State<TxOwner>, window: tauri::WebviewWindow) -> Result<(), String> {
+  let caller = window.label().to_string();
   with_conn(&state, |conn| {
     if conn.is_autocommit() {
       return Ok(());
     }
+    // 他窗无权回滚本窗事务——此前 B 窗的 rollback 会连带丢弃 A 窗事务里已确认的写入
+    tx_guard(&*owner.0.lock().map_err(|_| "状态锁不可用")?, &caller, false)?;
     conn.execute_batch("ROLLBACK").map_err(|e| format!("回滚事务失败：{}", e))?;
+    *owner.0.lock().map_err(|_| "状态锁不可用")? = None;
     Ok(())
   })
 }
 
 /// 关闭连接并删除库文件（含 WAL 伴生文件）——迁移中断恢复用（08 §R9）
 #[tauri::command]
-pub fn db_destroy(app: AppHandle, state: State<DbState>) -> Result<(), String> {
+pub fn db_destroy(app: AppHandle, state: State<DbState>, owner: State<TxOwner>) -> Result<(), String> {
   if let Ok(mut guard) = state.0.lock() {
     *guard = None;
+  }
+  if let Ok(mut o) = owner.0.lock() {
+    *o = None;
   }
   let path = db_path(&app)?;
   let base = path.to_string_lossy().to_string();
@@ -520,4 +564,31 @@ pub fn db_columns() -> Result<Json, String> {
     m.insert(t.to_string(), json!(columns(t)));
   }
   Ok(json!({ "columns": m, "keyFields": { "meta": "key", "kv": "key" } }))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::tx_guard;
+
+  #[test]
+  fn 持锁窗自己的读写放行() {
+    assert!(tx_guard(&Some("main".into()), "main", false).is_ok());
+  }
+
+  #[test]
+  fn 事务期内异窗写入被拒() {
+    // 此前该场景静默并入持锁窗事务（A 回滚连带丢弃 B 的写入）——现在必须报错
+    assert!(tx_guard(&Some("main".into()), "palette", false).is_err());
+  }
+
+  #[test]
+  fn 属主缺失一律拒绝_防止旧状态放行() {
+    assert!(tx_guard(&None, "main", false).is_err());
+  }
+
+  #[test]
+  fn 自动提交态不设防_常规并发写不受影响() {
+    assert!(tx_guard(&None, "main", true).is_ok());
+    assert!(tx_guard(&Some("palette".into()), "main", true).is_ok());
+  }
 }
