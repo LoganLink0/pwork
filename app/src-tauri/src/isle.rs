@@ -14,6 +14,7 @@
 //! 回顶部收纳。
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -198,6 +199,9 @@ fn set_anchor_form(a: &tauri::WebviewWindow, mode: AnchorMode) {
   let scale = a.scale_factor().unwrap_or(1.0);
   let (aw, ah) = anchor_size_phys(mode, scale);
   let _ = a.set_size(tauri::PhysicalSize::new(aw as u32, ah as u32));
+  if let Ok(mut g) = ANCHOR_FORM.lock() {
+    *g = Some(mode);
+  }
   let name = match mode {
     AnchorMode::Top => "top",
     AnchorMode::Left => "left",
@@ -208,11 +212,85 @@ fn set_anchor_form(a: &tauri::WebviewWindow, mode: AnchorMode) {
 
 /// 锚点切形态并落位：hide→尺寸切换→落位→show（set_size 与 place 都在隐藏状态下
 /// 做，显示态零重排——显示中的 resize/place 会让 WebView2 停止派发 mousedown）。
+/// 锚点窗例外：交互全在 Rust 侧（GetAsyncKeyState 轮询+低级鼠标钩子），页面侧
+/// mousedown 整类不存在，show 后的尺寸守卫（见下）可以用显示态重排。
 fn restyle_anchor(a: &tauri::WebviewWindow, am: AnchorMode, sx: i32, sy: i32) {
   let _ = a.hide();
   set_anchor_form(a, am);
   place_at(a, sx, sy);
   let _ = a.show();
+  verify_anchor_size(a, am, sx, sy);
+}
+
+/// 锚点当前形态（尺寸看护线程的期望值来源；set_anchor_form 落定）
+static ANCHOR_FORM: Mutex<Option<AnchorMode>> = Mutex::new(None);
+/// 尺寸纠正的限频日志时间戳（纠正不收敛时避免每 500ms 刷一条）
+static LAST_SIZE_FIX_LOG: Mutex<Option<std::time::Instant>> = Mutex::new(None);
+
+/// 锚点尺寸守卫（0.1.26 首项定案）：隐藏态 set_size 在「创建态+DWM 隐形边」上偶发
+/// 不归一——装机实测第二次启动右缘竖排锚点 client=60×109（=44+16、100+9），DPI 96
+/// 期望 44×100，首次启动却正常。show 后回读 inner_size，偏差>2px 即显示态补
+/// set_size+place（重试一次后仍偏差则记运行日志——错误立即暴露，禁止静默）。
+/// 仅锚点窗适用：本体窗显示态重排会让 WebView2 停止派发 mousedown（白闪根治成果）。
+fn verify_anchor_size(a: &tauri::WebviewWindow, am: AnchorMode, sx: i32, sy: i32) {
+  let scale = a.scale_factor().unwrap_or(1.0);
+  let (aw, ah) = anchor_size_phys(am, scale);
+  let mut corrected = false;
+  for _ in 0..2 {
+    let Ok(s) = a.inner_size() else { return };
+    if (s.width as f64 - aw).abs() <= 2.0 && (s.height as f64 - ah).abs() <= 2.0 {
+      if corrected {
+        log::warn!("[PWORK 胶囊岛] 锚点尺寸创建态未归一，显示态补齐后已回读确认（形态={am:?}，目标={aw}×{ah}）");
+      }
+      return;
+    }
+    let _ = a.set_size(tauri::PhysicalSize::new(aw as u32, ah as u32));
+    place_at(a, sx, sy);
+    corrected = true;
+    std::thread::sleep(std::time::Duration::from_millis(30));
+  }
+  if corrected {
+    log::error!("[PWORK 胶囊岛] 锚点尺寸守卫重试后仍未归一（形态={am:?}，目标={aw}×{ah}，实际={}×{}）",
+      a.inner_size().map(|s| s.width).unwrap_or(0), a.inner_size().map(|s| s.height).unwrap_or(0));
+  }
+}
+
+/// 锚点尺寸常驻看护（0.1.26 首项实证加强）：装机冷启动实测，创建态+DWM 隐形边的
+/// 偏差可能在 show 后守卫窗口（~60ms）之后才落上（首启 116×41 持续到手动复测），
+/// 一次性校验不够——500ms 周期常驻回读，偏差>2px 即补 set_size（只修尺寸不修位置：
+/// 站位坐标按期望尺寸算好，尺寸归一后原位置重新成立）。拖拽中跳过（钩子在实时
+/// 移窗，避免任何并发 set_position 干扰）；锚点隐藏时无需看护。
+pub fn spawn_anchor_size_watcher(app: tauri::AppHandle) {
+  thread::spawn(move || loop {
+    thread::sleep(std::time::Duration::from_millis(500));
+    let form = ANCHOR_FORM.lock().ok().and_then(|g| *g);
+    let Some(am) = form else { continue };
+    if ANCHOR_DRAGGING.load(Ordering::SeqCst) {
+      continue;
+    }
+    let Some(a) = anchor_window(&app) else { continue };
+    if is_anchor_hidden(&a) {
+      continue;
+    }
+    let scale = a.scale_factor().unwrap_or(1.0);
+    let (aw, ah) = anchor_size_phys(am, scale);
+    let Ok(s) = a.inner_size() else { continue };
+    if (s.width as f64 - aw).abs() <= 2.0 && (s.height as f64 - ah).abs() <= 2.0 {
+      continue;
+    }
+    let _ = a.set_size(tauri::PhysicalSize::new(aw as u32, ah as u32));
+    let log_it = LAST_SIZE_FIX_LOG
+      .lock()
+      .ok()
+      .and_then(|g| *g)
+      .map_or(true, |t| t.elapsed() > std::time::Duration::from_secs(30));
+    if log_it {
+      log::warn!("[PWORK 胶囊岛] 尺寸看护纠正锚点尺寸（形态={am:?}，实际={}×{} → 目标={aw}×{ah}）", s.width, s.height);
+      if let Ok(mut g) = LAST_SIZE_FIX_LOG.lock() {
+        *g = Some(std::time::Instant::now());
+      }
+    }
+  });
 }
 /// 锚点回归显示（最小化还原；锚点位置恒定无需落位）
 fn restore_anchor_show(a: &tauri::WebviewWindow) {

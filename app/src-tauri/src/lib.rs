@@ -515,6 +515,9 @@ pub fn run() {
       // 胶囊岛锚点交互线程：悬停呼出/按住拖动全在 Rust 轮询+低级鼠标钩子驱动
       // （WebView2 对经历隐藏循环的窗不再派发 mousedown——实测，页面侧交互不可靠）
       isle::spawn_anchor_interactor(app.handle().clone());
+      // 锚点尺寸常驻看护（0.1.26 首项）：创建态+DWM 隐形边的尺寸偏差可能在 show 后
+      // 守卫窗口之后才落上（装机冷启动实测 116×41 持续存在），500ms 周期回读补齐
+      isle::spawn_anchor_size_watcher(app.handle().clone());
       // 应用内更新（0.2）：更新包与签名清单挂 GitHub Releases，插件在设置页触发检查/下载/重启
       app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
       app.handle().plugin(tauri_plugin_process::init())?;
