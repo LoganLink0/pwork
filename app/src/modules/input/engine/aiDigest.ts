@@ -2,6 +2,7 @@ import { db } from '../../../db/schema'
 import { itemsOfLocalDay } from '../../../db/collect'
 import type { Item } from '../../../types/models'
 import { chatCompletionCached } from '../../../engine/aiCached'
+import { UNTRUSTED_DATA_RULE } from '../../../engine/promptSafety'
 import { recordError } from '../../../engine/errorLog'
 import { loadCoachConfig } from '../../review/engine/coach'
 
@@ -48,7 +49,9 @@ export async function summarizeItem(
     const { text } = await chatCompletionCached({
       purpose: PURPOSE,
       inputKey: `${item.id}@${item.updatedAt}`,
-      system: '你是资讯摘要助手。把这条资讯压缩成一句不超过 60 字的中文，说清发生了什么、与关注它的读者何干。只输出摘要本身，不要前缀、引号或解释。',
+      system:
+        '你是资讯摘要助手。把这条资讯压缩成一句不超过 60 字的中文，说清发生了什么、与关注它的读者何干。只输出摘要本身，不要前缀、引号或解释。' +
+        UNTRUSTED_DATA_RULE,
       user: buildUserInput(item),
       // 4000 而非 120：思考型模型的推理阶段与正文共用 max_tokens 预算——120 会被
       // 思考吃光导致 finish_reason=length 截断（2026-11-22 实测 10 条仅 4 成功）。

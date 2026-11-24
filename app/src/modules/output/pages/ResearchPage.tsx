@@ -37,6 +37,7 @@ import { chatCompletionCached } from '../../../engine/aiCached'
 import { chatCompletion } from '../../review/engine/llm'
 import { loadCoachConfig, llmConfigFrom, llmConfigured } from '../../review/engine/coach'
 import { gatewaySearchConfigured, gatewayWebSearch } from '../../../engine/webSearch'
+import { UNTRUSTED_DATA_RULE } from '../../../engine/promptSafety'
 import { downloadFile } from '../../../db/repo'
 import { listBlocks } from '../../../db/blocksRepo'
 import { ArticleEditor } from '../components/ArticleEditor'
@@ -44,7 +45,8 @@ import { toast } from '../../../engine/toast'
 import { confirmDialog } from '../../../engine/confirm'
 
 const WEB_ANSWER_SYSTEM =
-  '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。'
+  '你是调研助理。基于用户提供的检索结果回答当前维度的问题：引用来源用[n]标注；检索结果没有覆盖的信息明确说「未检出」，不要编造；不确定的标「未核实」。分点、简体中文。' +
+  UNTRUSTED_DATA_RULE
 
 /**
  * 调研分析（输出模块；2026-10-13 任务式重构，2026-10-21 发现流重设计）：

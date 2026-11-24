@@ -9,6 +9,7 @@ import { db } from '../../../db/schema'
 import { chatCompletion } from '../../review/engine/llm'
 import { llmConfigFrom, loadCoachConfig } from '../../review/engine/coach'
 import { useCollect } from '../../../store/collect'
+import { UNTRUSTED_DATA_RULE } from '../../../engine/promptSafety'
 import { recordError } from '../../../engine/errorLog'
 import { itemTiers } from './itemTier'
 import type { Item } from '../../../types/models'
@@ -63,7 +64,8 @@ export async function refreshInterestProfile(): Promise<{ ok: true; words: numbe
     ? `\n\n其中这些当时没有排进当天前两名，但你标了「多推」——现有词表大概率漏了这类主题，归纳时重点从它们身上找：\n${under.map((t, i) => `${i + 1}. ${t}`).join('\n')}`
     : ''
   const dislikes = useCollect.getState().config.dislikes
-  const system = '你是兴趣画像归纳器。从用户明确标为"多推"（希望多看到这类）的信息标题中，归纳这位用户关注什么的词表。只输出 JSON，不要多余文字。'
+  const system =
+    '你是兴趣画像归纳器。从用户明确标为"多推"（希望多看到这类）的信息标题中，归纳这位用户关注什么的词表。只输出 JSON，不要多余文字。' + UNTRUSTED_DATA_RULE
   const user = `用户标为"多推"的标题（最近 ${titles.length} 条）：\n${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}${underSection}\n\n用户的屏蔽词（归纳时要避开）：${dislikes.join('、') || '无'}\n\n归纳 15–30 个兴趣关键词：中文为主，保留必要的英文专有名词；写"用户关注什么"（如 独立开发、增长打法），不要写"这些文章讲了什么"。输出：{"interests": ["词1", "词2"]}`
   const reply = await chatCompletion(llmConfigFrom(ai), system, user, { maxTokens: 2000, timeoutMs: 60_000, purpose: 'interest-profile' })
   const interests = parseInterests(reply)
