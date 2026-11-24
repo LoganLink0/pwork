@@ -525,6 +525,13 @@ pub fn run() {
       app.handle().plugin(tauri_plugin_notification::init())?;
       // 运行日志（复盘 3.49 教训项）：发布版也落盘——迁移/更新等关键流程偶发出问题时
       // 现场才有取证能力。日志写应用数据目录的 logs/（KeepAll 保留历史），调试另走 stdout
+      // 日志字段白名单（2026-11-24 外部审核 2.9 收口，scan 起点见 lib.rs tests）：
+      //   允许 = 时间戳/级别/模块名、数值（端口/行数/条数/耗时/尺寸/坐标）、枚举与
+      //   状态词（形态/事件名/退出码）、配置元数据（上游地址/是否已配 Key，永不落 Key 本体）、
+      //   库/OS 返回的错误原文。
+      //   禁止 = 剪贴板文本、窗口标题、用户输入的正文/速记/任务名等一切内容性文本
+      //   （剪贴板捕获是既有功能，日志碰内容即触敏——MiniDock 学习点⑤）。
+      //   前端 console 不落盘（未接 plugin-log 前端桥），落盘面仅本仓 Rust log:: 调用点。
       app.handle().plugin(
         tauri_plugin_log::Builder::new()
           .targets([
@@ -733,4 +740,62 @@ pub fn run() {
         _ => {}
       }
     });
+}
+
+#[cfg(test)]
+mod log_privacy_tests {
+  /// 运行日志字段白名单门禁（2026-11-24 外部审核 2.9）：扫描全部 Rust 日志调用点，
+  /// 剥掉字符串字面量后，参数段不得出现内容性来源标识符（剪贴板文本/窗口标题/
+  /// 正文变量）——白名单语义见 setup 里的日志插件注释。lib.rs:581 的「剪贴板速记」
+  /// 是功能名静态文案（位于字面量内，不在参数段），扫描不受影响。
+  #[test]
+  fn 日志触点参数段不含内容性标识符() {
+    use std::fmt::Write as _;
+    use std::path::PathBuf;
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(&src).unwrap() {
+      let p = entry.unwrap().path();
+      if p.extension().map_or(false, |e| e == "rs") {
+        files.push(p);
+      }
+    }
+    assert!(files.len() >= 8, "源文件数量骤降：{}", files.len());
+    let banned = ["clipboard_text", "clipboard", "window_title", "getwindowtext", "note_body", "input_text", "content_text", "user_text"];
+    for f in &files {
+      let text = std::fs::read_to_string(f).unwrap();
+      for (i, line) in text.lines().enumerate() {
+        if !line.contains("log::info!") && !line.contains("log::warn!") && !line.contains("log::error!") {
+          continue;
+        }
+        // 取调用区域（本行 + 至多 6 行，覆盖多行参数），剥掉字符串字面量再扫描参数段
+        let rest = text.lines().skip(i).take(7).collect::<Vec<_>>().join(" ");
+        let mut stripped = String::new();
+        let mut in_str = false;
+        let mut chars = rest.chars().peekable();
+        while let Some(c) = chars.next() {
+          match c {
+            '"' => in_str = !in_str,
+            '\\' if in_str => {
+              chars.next();
+            }
+            _ if in_str => {}
+            _ => {
+              stripped.push(c);
+            }
+          }
+        }
+        let lower = stripped.to_lowercase();
+        let _ = write!(stripped, "");
+        let hit = banned.iter().find(|b| lower.contains(*b));
+        assert!(
+          hit.is_none(),
+          "日志调用点 {}:{} 参数段引用内容性标识符 {:?}——违反日志字段白名单（白名单见 setup 日志插件注释）",
+          f.display(),
+          i + 1,
+          hit
+        );
+      }
+    }
+  }
 }
