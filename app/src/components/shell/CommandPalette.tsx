@@ -9,6 +9,7 @@ import { useActivity } from '../../store/activity'
 import { searchAll, KIND_LABEL, type SearchHit } from '../../engine/searchAll'
 import { askLibrary, type AskAiSource } from '../../engine/askAi'
 import { runLocalIntent, isScheduleIntent } from '../../engine/intent'
+import { llmConfigured } from '../../modules/review/engine/coach'
 import { listSavedFilters, describeFilterState, type SavedFilter } from '../../engine/savedFilters'
 import { paletteActions, type ActionCtx } from '../../engine/actions'
 import { relTime } from '../../engine/datetime'
@@ -76,9 +77,7 @@ function PaletteDialog() {
     setAskBusy(true)
     const activity = useActivity.getState()
     activity.start('ask', '小 P 思考中')
-    // 排期类询问在 AI 之前先行本地路由：全库检索不含待办表，交给 AI 只会拿
-    // 检索结果硬答（0.1.23 实机验证用户抓出「没去找待办反而开始搜索」）
-    if (isScheduleIntent(q)) {
+    const answerLocally = () => {
       void runLocalIntent(q)
         .then((r) => {
           setAsk({ phase: 'done', answer: r.reply, sources: r.sources })
@@ -90,6 +89,17 @@ function PaletteDialog() {
           activity.end('ask', { ok: false, label: '问答失败' })
           setAskBusy(false)
         })
+    }
+    // 排期类询问在 AI 之前先行本地路由：全库检索不含待办表，交给 AI 只会拿
+    // 检索结果硬答（0.1.23 实机验证用户抓出「没去找待办反而开始搜索」）
+    if (isScheduleIntent(q)) {
+      answerLocally()
+      return
+    }
+    // 未配置 AI：按配置态直接走本地意图层——此前降级只靠捕获 askAi 的错误文案，
+    // 文案一改降级就静默失效；配置态判定让主路径不依赖报错原文
+    if (!llmConfigured()) {
+      answerLocally()
       return
     }
     askLibrary(q)
@@ -99,19 +109,9 @@ function PaletteDialog() {
         setAskDone()
       })
       .catch((e: unknown) => {
-        // 未配 AI 不再死在错误上：本地意图层兜底（查排期/本地检索，外部报告 §4.6 缺口）
+        // 半配置态兜底（选了 AI 模式但既无 Key 也未走网关）：askAi 抛错仍降级到本地
         if (e instanceof Error && e.message.includes('还没有配置 AI')) {
-          void runLocalIntent(q)
-            .then((r) => {
-              setAsk({ phase: 'done', answer: r.reply, sources: r.sources })
-              activity.end('ask', { ok: true, label: '本地回答' })
-              setAskDone()
-            })
-            .catch((e2: unknown) => {
-              setAsk({ phase: 'error', error: e2 instanceof Error ? e2.message : String(e2) })
-              activity.end('ask', { ok: false, label: '问答失败' })
-              setAskBusy(false)
-            })
+          answerLocally()
           return
         }
         setAsk({ phase: 'error', error: e instanceof Error ? e.message : String(e) })
