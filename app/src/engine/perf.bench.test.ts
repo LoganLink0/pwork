@@ -10,6 +10,8 @@ import type { Item } from '../types/models'
  * fake-indexeddb 比真实浏览器 IndexedDB 慢 5–10 倍——这里断言的宽松上限
  * 用于抓"复杂度级恶化"（O(n²) 陷阱），不是性能精调。
  * 单独排除本文件：npx vitest run --exclude 后跟本文件路径的 glob。
+ * CI 预算守卫（2026-11-24）：本文件单跑约 600 秒，占 tests.yml 30 分钟预算的 1/3——
+ * 新增基准用例必须先评估预算余量（或给基准单开 CI job），禁止默认追加进本文件。
  */
 
 const N = 50_000

@@ -23,8 +23,9 @@ export interface ImportResult {
   detail: Record<string, { added: number; updated: number; skipped: number }>
 }
 
-/* LWW 合并：updatedAt 更新（或不存在）才写入 */
-async function merge<T extends { id: string; updatedAt?: string }>(
+/* LWW 合并：updatedAt 更新（或不存在）才写入。导出供性质测试（PBT 起步批）
+ * 与恢复演练复用——合并语义是数据不丢的最后防线，值得性质级断言 */
+export async function merge<T extends { id: string; updatedAt?: string }>(
   table: { get(id: string): Promise<T | undefined>; put(v: T): Promise<unknown> },
   incoming: T[],
 ): Promise<{ added: number; updated: number; skipped: number }> {
