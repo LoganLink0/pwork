@@ -26,7 +26,7 @@ const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
 const ANNOUNCES = [
   {
     title: `${__APP_VERSION__} 更新`,
-    desc: '桌面小 P 收放自如：贴边收纳、中间常驻',
+    desc: '锚点尺寸自动归一；未配 AI 也能问小 P',
     to: 'https://loganlink0.github.io/pwork/#changelog',
     internal: false,
   },
