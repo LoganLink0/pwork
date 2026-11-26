@@ -44,7 +44,7 @@ worker/           Cloudflare Worker（云端定时抓取 → D1，独立测试�
 前端 → 本地网关 127.0.0.1:8788（桌面版=Rust 内嵌随应用启停；开发=tools/gateway.mjs，端口被占内嵌版让位）→ 上游 LLM API。Key 双路径加载（%APPDATA%/gateway.env 生产、app/.env.local 开发）。网关记账 JSONL（2MB 滚动）→ /usage 汇总。三层降级：LLM 失败→规则引擎；网关不可达→错误明示；不配 Key→全功能可用。
 
 **备份流**：
-`buildBackupBundle`（12 张表统一包裹 v2，含 collectConfig）→ 桌面版写 AppData/backups/（tauri fs，失败回落浏览器下载）/ 浏览器版下载文件夹 → `importBundle`（按 id+updatedAt 新者为准合并，兼容 FUPAN v1）。roundtrip 测试固化"丢库→全恢复"。
+`buildBackupBundle`（12 张表统一包裹 v2，含 collectConfig）→ 桌面版写 AppData/backups/（tauri fs，失败回落浏览器下载）/ 浏览器版下载文件夹 → `importBundle`（按 id+updatedAt 新者为准合并，兼容 FUPAN v1）。roundtrip 测试固化"丢库→全恢复"。**格式冻结（2026-11-26，1.0 定版门槛②）**：pwork-v2 冻结为长期兼容格式——字段只增不改不删；pwork-v1/fupan-v1 读取通道保持；未来格式演进保留 v2 导入通道；升级链夹具（0.1.10 真实样本）+ roundtrip 测试为回归防线；主库 schema 同纪律（字段只增不删，升级自动迁移+迁移前快照）。
 
 **云端同步**（可选，worker/）：
 Cloudflare cron 定时抓源 → D1 累积 → 本地 `syncFromCloud` 拉取合并（D1 直连模式走 api.cloudflare.com 规避 workers.dev 数据面阻断；端点模式走 workers.dev）。
